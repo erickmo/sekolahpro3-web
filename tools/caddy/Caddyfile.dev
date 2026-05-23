@@ -1,0 +1,38 @@
+{
+    auto_https off
+    local_certs
+}
+
+sekolahpro.localhost:8443 {
+    root * /srv/sekolahpro-web/landing
+    try_files {path} {path}.html /index.html
+    file_server
+}
+
+app.sekolahpro.localhost:8443 {
+    handle /api/*    { reverse_proxy host.docker.internal:8000 }
+    handle /assets/* { reverse_proxy host.docker.internal:8000 }
+    handle {
+        root * /srv/sekolahpro-web/school
+        try_files {path} /index.html
+        file_server
+    }
+}
+
+siswa.sekolahpro.localhost:8443 {
+    handle /api/* { reverse_proxy host.docker.internal:8000 }
+    handle {
+        root * /srv/sekolahpro-web/student
+        try_files {path} /index.html
+        file_server
+    }
+}
+
+saas.sekolahpro.localhost:8443 {
+    handle /api/* { reverse_proxy host.docker.internal:8000 }
+    handle {
+        root * /srv/sekolahpro-web/saas
+        try_files {path} /index.html
+        file_server
+    }
+}
