@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Static server for vite-react-ssg flat HTML + /api proxy to Frappe."""
+import glob
 import os
+import re
 import sys
 import urllib.request
 import urllib.error
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+_MANIFEST_PATTERN = re.compile(r"^/static-loader-data-manifest-[a-z0-9]+\.json$")
 
 ROOT = sys.argv[1] if len(sys.argv) > 1 else "."
 PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 4173
@@ -78,11 +82,20 @@ class Handler(SimpleHTTPRequestHandler):
                     break
             self.path = resolved or "/index.html"
         else:
-            # File with extension. If missing, return a content-type-appropriate
-            # 404 so clients (e.g. JSON.parse on stale vite-react-ssg manifest
-            # fetches) don't choke on Python's default HTML 404 body.
+            # File with extension. If missing, handle gracefully:
+            #   - vite-react-ssg manifest: serve whichever current manifest
+            #     exists in dist (handles stale browser tabs after rebuild —
+            #     hash changes per build, old tabs request old hash).
+            #   - other .json: return JSON 404 (not HTML).
             full = os.path.join(ROOT, path.lstrip("/"))
             if not os.path.isfile(full):
+                if _MANIFEST_PATTERN.match(path):
+                    candidates = sorted(glob.glob(
+                        os.path.join(ROOT, "static-loader-data-manifest-*.json")
+                    ))
+                    if candidates:
+                        self.path = "/" + os.path.basename(candidates[-1])
+                        return super().send_head()
                 if path.endswith(".json"):
                     self.send_response(404)
                     self.send_header("Content-Type", "application/json")
