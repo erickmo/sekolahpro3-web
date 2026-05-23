@@ -41,6 +41,25 @@ Set via `bench --site sekolahpro.localhost set-config landing_rebuild_webhook 'h
 | `REBUILD_PORT` | 9999 | Webhook listen port |
 | `REBUILD_DEBOUNCE` | 10 | Seconds to wait after last POST before rebuilding |
 
-## Production note
+## Production
 
-This stack is for **local development only**. Production deployment uses Caddy + the `deploy.sh` script (`tools/deploy/`) which builds in CI and rsyncs to the VPS. The auto-rebuild webhook is not used in prod — content changes there would trigger a CI build via a Webhook DocType pointing at a GitHub Actions `workflow_dispatch` endpoint instead.
+In production, `frappe.conf.landing_rebuild_webhook` is set to the GitHub
+repository_dispatch URL of the sekolahpro-web repo:
+
+```
+landing_rebuild_webhook = "https://api.github.com/repos/<org>/sekolahpro-web/dispatches"
+landing_rebuild_github_token = "<PAT with repo: dispatch scope>"
+```
+
+The CMS-rebuild GitHub Actions workflow (`.github/workflows/cms-rebuild.yml`)
+catches the `cms-update` event and runs `pnpm build` + rsync to the VPS.
+
+Frappe-side set commands:
+
+```bash
+bench --site <site> set-config landing_rebuild_webhook \
+  "https://api.github.com/repos/<org>/sekolahpro-web/dispatches"
+bench --site <site> set-config landing_rebuild_github_token "<PAT>"
+```
+
+The PAT only needs `repo: dispatch` scope.
