@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button, Card, Input } from "@sekolahpro/ui";
+import { useKontakContent } from "../lib/kontak";
+import { useSiteContent, whatsappHref } from "../lib/site";
 
 const JENJANG_OPTIONS = ["SD", "SMP", "SMA", "SMK", "MI", "MTs", "MA", "Lainnya"] as const;
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
@@ -32,6 +34,8 @@ type SubmitState =
   | { kind: "error"; message: string };
 
 export function Kontak() {
+  const k = useKontakContent();
+  const s = useSiteContent();
   const [params] = useSearchParams();
   const utm = params.get("utm") ?? "";
   const [form, setForm] = useState<FormState>(INITIAL);
@@ -95,13 +99,13 @@ export function Kontak() {
     return (
       <section className="mx-auto max-w-2xl px-4 sm:px-6 py-20 text-center">
         <div className="w-14 h-14 mx-auto rounded-full bg-brand/10 text-brand flex items-center justify-center text-2xl">✓</div>
-        <h1 className="mt-6 text-3xl sm:text-4xl font-semibold text-fg">Terima kasih!</h1>
+        <h1 className="mt-6 text-3xl sm:text-4xl font-semibold text-fg">{k.success_title}</h1>
         <p className="mt-3 text-muted-fg">
-          Pesan Anda sudah kami terima. Tim SekolahPro akan menghubungi Anda dalam 1×24 jam kerja.
+          {k.success_body}
         </p>
         <p className="mt-2 text-xs text-muted-fg">Nomor tiket: {submit.id || "—"}</p>
         <div className="mt-8">
-          <Button onClick={() => setSubmit({ kind: "idle" })}>Kirim pesan lain</Button>
+          <Button onClick={() => setSubmit({ kind: "idle" })}>{k.success_again_label}</Button>
         </div>
       </section>
     );
@@ -111,12 +115,12 @@ export function Kontak() {
     <>
       <section className="border-b border-border bg-muted/30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-          <p className="text-sm font-medium text-brand">— Kontak</p>
+          <p className="text-sm font-medium text-brand">{k.hero_eyebrow}</p>
           <h1 className="mt-2 text-4xl sm:text-5xl font-semibold text-fg leading-tight max-w-2xl">
-            Mari mulai dari <em className="not-italic font-serif italic text-brand">satu obrolan.</em>
+            {k.hero_title_main} <em className="not-italic font-serif italic text-brand">{k.hero_title_italic}</em>
           </h1>
           <p className="mt-4 text-lg text-muted-fg max-w-2xl">
-            Isi formulir di bawah, atau hubungi kami via WhatsApp. Kami balas paling lambat 1×24 jam kerja.
+            {k.hero_lead}
           </p>
         </div>
       </section>
@@ -136,24 +140,24 @@ export function Kontak() {
                 aria-hidden="true"
               />
 
-              <Field label="Nama lengkap" error={errors.nama} required>
+              <Field label={k.field_label_nama} error={errors.nama} required>
                 <Input value={form.nama} onChange={(e) => update("nama", e.target.value)} autoComplete="name" required />
               </Field>
 
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Email" error={errors.email} required>
+                <Field label={k.field_label_email} error={errors.email} required>
                   <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} autoComplete="email" required />
                 </Field>
-                <Field label="Telepon / WhatsApp" error={errors.telepon} required>
-                  <Input type="tel" value={form.telepon} onChange={(e) => update("telepon", e.target.value)} autoComplete="tel" required placeholder="08xxxxxxxx" />
+                <Field label={k.field_label_telepon} error={errors.telepon} required>
+                  <Input type="tel" value={form.telepon} onChange={(e) => update("telepon", e.target.value)} autoComplete="tel" required placeholder={k.field_placeholder_telepon} />
                 </Field>
               </div>
 
-              <Field label="Nama sekolah" error={errors.sekolah} required>
+              <Field label={k.field_label_sekolah} error={errors.sekolah} required>
                 <Input value={form.sekolah} onChange={(e) => update("sekolah", e.target.value)} required />
               </Field>
 
-              <Field label="Jenjang" error={errors.jenjang} required>
+              <Field label={k.field_label_jenjang} error={errors.jenjang} required>
                 <select
                   value={form.jenjang}
                   onChange={(e) => update("jenjang", e.target.value)}
@@ -167,14 +171,14 @@ export function Kontak() {
                 </select>
               </Field>
 
-              <Field label="Pesan (opsional)" error={errors.pesan}>
+              <Field label={k.field_label_pesan} error={errors.pesan}>
                 <textarea
                   value={form.pesan}
                   onChange={(e) => update("pesan", e.target.value)}
                   rows={5}
                   maxLength={2000}
                   className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-y"
-                  placeholder="Ceritakan singkat kebutuhan sekolah Anda."
+                  placeholder={k.field_placeholder_pesan}
                 />
                 <div className="text-xs text-muted-fg text-right mt-1">{form.pesan.length} / 2000</div>
               </Field>
@@ -186,11 +190,11 @@ export function Kontak() {
               )}
 
               <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={submit.kind === "submitting"}>
-                {submit.kind === "submitting" ? "Mengirim…" : "Kirim pesan"}
+                {submit.kind === "submitting" ? k.submit_label_busy : k.submit_label}
               </Button>
 
               <p className="text-xs text-muted-fg">
-                Dengan mengirim formulir ini, Anda setuju kami menghubungi Anda terkait pertanyaan ini.
+                {k.consent_note}
               </p>
             </form>
           </Card>
@@ -198,28 +202,28 @@ export function Kontak() {
           <aside className="space-y-4">
             <Card>
               <h3 className="font-semibold text-fg">WhatsApp</h3>
-              <p className="mt-1 text-sm text-muted-fg">Senin–Jumat, 09.00–17.00 WIB.</p>
+              <p className="mt-1 text-sm text-muted-fg">{s.whatsapp_hours}</p>
               <a
-                href="https://wa.me/6281234567890"
+                href={whatsappHref(s.whatsapp_number)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-3 inline-block text-brand font-medium hover:underline"
               >
-                +62 812-3456-7890 →
+                {s.whatsapp_display} →
               </a>
             </Card>
             <Card>
               <h3 className="font-semibold text-fg">Email</h3>
-              <p className="mt-1 text-sm text-muted-fg">Untuk pertanyaan tidak mendesak.</p>
-              <a href="mailto:halo@sekolahpro.id" className="mt-3 inline-block text-brand font-medium hover:underline">
-                halo@sekolahpro.id →
+              <p className="mt-1 text-sm text-muted-fg">{s.contact_email_note}</p>
+              <a href={`mailto:${s.contact_email}`} className="mt-3 inline-block text-brand font-medium hover:underline">
+                {s.contact_email} →
               </a>
             </Card>
             <Card>
               <h3 className="font-semibold text-fg">Kantor</h3>
               <p className="mt-1 text-sm text-muted-fg">
-                Sekolah Pro Indonesia<br />
-                Jakarta Selatan, DKI Jakarta
+                {s.office_name}<br />
+                {s.office_address}
               </p>
             </Card>
           </aside>
