@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Button } from "@sekolahpro/ui";
 import { useNewsArticle, formatNewsDate } from "../lib/news";
+import { useBeritaPageContent } from "../lib/berita-page";
 
 const qc = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
@@ -18,6 +19,7 @@ export function BeritaDetail() {
 function BeritaDetailInner() {
   const { slug = "" } = useParams<{ slug: string }>();
   const { data, isLoading, isError } = useNewsArticle(slug);
+  const cp = useBeritaPageContent();
 
   if (isLoading) {
     return (
@@ -37,13 +39,11 @@ function BeritaDetailInner() {
   if (isError || !data) {
     return (
       <section className="mx-auto max-w-3xl px-4 sm:px-6 py-24 text-center">
-        <h1 className="text-3xl font-semibold text-fg">Artikel tidak ditemukan</h1>
-        <p className="mt-3 text-muted-fg">
-          Tautan ini mungkin sudah dipindahkan atau dihapus.
-        </p>
+        <h1 className="text-3xl font-semibold text-fg">{cp.detail_not_found_title}</h1>
+        <p className="mt-3 text-muted-fg">{cp.detail_not_found_body}</p>
         <div className="mt-6">
           <Link to="/berita">
-            <Button>Kembali ke daftar berita</Button>
+            <Button>{cp.detail_not_found_action}</Button>
           </Link>
         </div>
       </section>
@@ -55,7 +55,7 @@ function BeritaDetailInner() {
   return (
     <article className="mx-auto max-w-3xl px-4 sm:px-6 py-12 sm:py-16">
       <Link to="/berita" className="text-sm text-brand hover:underline">
-        ← Semua berita
+        {cp.detail_back_label}
       </Link>
 
       <div className="mt-4 text-xs font-medium uppercase tracking-wide text-brand">
@@ -92,10 +92,10 @@ function BeritaDetailInner() {
 
       <div className="mt-16 pt-8 border-t border-border flex items-center justify-between">
         <Link to="/berita" className="text-sm text-brand hover:underline">
-          ← Semua berita
+          {cp.detail_back_label}
         </Link>
         <Link to="/kontak?utm=berita">
-          <Button size="sm">Hubungi Tim</Button>
+          <Button size="sm">{cp.detail_cta_label}</Button>
         </Link>
       </div>
     </article>

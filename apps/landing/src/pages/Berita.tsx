@@ -7,6 +7,7 @@ import {
   useNewsList,
   formatNewsDate,
 } from "../lib/news";
+import { useBeritaPageContent } from "../lib/berita-page";
 
 // Local QueryClient so we don't depend on a global provider that the landing app may not have yet.
 const qc = new QueryClient({
@@ -24,18 +25,18 @@ export function Berita() {
 function BeritaInner() {
   const [active, setActive] = useState<NewsCategory>("Semua");
   const { data, isLoading, isError } = useNewsList(active);
+  const cp = useBeritaPageContent();
 
   return (
     <>
       <section className="border-b border-border bg-muted/30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <p className="text-sm font-medium text-brand">— Berita</p>
+          <p className="text-sm font-medium text-brand">{cp.hero_eyebrow}</p>
           <h1 className="mt-2 text-4xl sm:text-5xl font-semibold text-fg leading-tight">
-            Cerita dari <em className="not-italic font-serif italic text-brand">ruang kelas.</em>
+            {cp.hero_title_main}{" "}
+            <em className="not-italic font-serif italic text-brand">{cp.hero_title_italic}</em>
           </h1>
-          <p className="mt-3 text-muted-fg max-w-2xl">
-            Pengumuman produk, rilis fitur, dan kisah sekolah pengguna SekolahPro.
-          </p>
+          <p className="mt-3 text-muted-fg max-w-2xl">{cp.hero_lead}</p>
         </div>
       </section>
 
@@ -60,13 +61,9 @@ function BeritaInner() {
           </nav>
 
           {isLoading && <SkeletonGrid />}
-          {isError && (
-            <div className="text-muted-fg text-sm">
-              Tidak dapat memuat berita saat ini. Silakan coba lagi sebentar lagi.
-            </div>
-          )}
+          {isError && <div className="text-muted-fg text-sm">{cp.error_message}</div>}
           {!isLoading && !isError && (data?.length ?? 0) === 0 && (
-            <div className="text-muted-fg text-sm">Belum ada artikel pada kategori ini.</div>
+            <div className="text-muted-fg text-sm">{cp.empty_message}</div>
           )}
           {!isLoading && !isError && data && data.length > 0 && (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
