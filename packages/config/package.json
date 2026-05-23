@@ -1,0 +1,24 @@
+{
+  "name": "@sekolahpro/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens.css"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@sekolahpro/tsconfig": "workspace:*",
+    "@sekolahpro/eslint-config": "workspace:*",
+    "vitest": "^1.6.0"
+  }
+}
