@@ -1,0 +1,16 @@
+{
+  "name": "@sekolahpro/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "lint": "echo skip",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@sekolahpro/tsconfig": "workspace:*",
+    "typescript": "^5.4.0"
+  }
+}
