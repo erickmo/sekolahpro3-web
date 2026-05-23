@@ -1,31 +1,11 @@
 import { Link } from "react-router-dom";
-
-const COLS: { title: string; links: { label: string; href: string }[] }[] = [
-  {
-    title: "Produk",
-    links: [
-      { label: "Fitur", href: "/fitur" },
-      { label: "Berita", href: "/berita" },
-      { label: "Partner", href: "/partner" },
-    ],
-  },
-  {
-    title: "Perusahaan",
-    links: [
-      { label: "Kontak", href: "/kontak" },
-      { label: "Masuk Dasbor", href: "/login" },
-    ],
-  },
-  {
-    title: "Legal",
-    links: [
-      { label: "Kebijakan Privasi", href: "/privasi" },
-      { label: "Syarat Layanan", href: "/syarat" },
-    ],
-  },
-];
+import { useSiteContent, whatsappHref } from "../lib/site";
 
 export function Footer() {
+  const site = useSiteContent();
+  const year = new Date().getFullYear();
+  const copyright = site.footer_copyright.replace("{year}", String(year));
+
   return (
     <footer className="border-t border-border bg-muted/40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 grid gap-10 md:grid-cols-4">
@@ -35,10 +15,10 @@ export function Footer() {
             SekolahPro
           </div>
           <p className="text-sm text-muted-fg mt-3 max-w-xs">
-            Sistem informasi sekolah yang dibangun di Indonesia, untuk ritme sekolah Indonesia.
+            {site.footer_blurb}
           </p>
           <a
-            href="https://wa.me/6281234567890"
+            href={whatsappHref(site.whatsapp_number)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 mt-4 text-sm text-brand hover:underline"
@@ -50,7 +30,7 @@ export function Footer() {
           </a>
         </div>
 
-        {COLS.map((col) => (
+        {site.footer_columns.map((col) => (
           <div key={col.title}>
             <h4 className="text-sm font-semibold text-fg">{col.title}</h4>
             <ul className="mt-3 space-y-2">
@@ -68,8 +48,8 @@ export function Footer() {
 
       <div className="border-t border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-fg">
-          <span>© {new Date().getFullYear()} SekolahPro. Dibangun di Indonesia 🇮🇩.</span>
-          <span>v.2026.05 · Edisi Kurikulum Merdeka</span>
+          <span>{copyright}</span>
+          <span>{site.footer_legal_note}</span>
         </div>
       </div>
     </footer>

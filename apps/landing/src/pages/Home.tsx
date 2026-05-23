@@ -1,13 +1,15 @@
 import { Link } from "react-router-dom";
 import { Button } from "@sekolahpro/ui";
 import { useHomepageContent, type HomepageContent } from "../lib/homepage";
+import { useSiteContent } from "../lib/site";
 
 export function Home() {
   const c = useHomepageContent();
+  const site = useSiteContent();
   return (
     <>
       <HeroSection c={c} />
-      <ProofStrip />
+      <ProofStrip items={site.proof_items.map((p) => p.label)} />
       <ModulesSection c={c} />
       <StatsSection c={c} />
       <TestimonialSection c={c} />
@@ -49,8 +51,7 @@ function HeroSection({ c }: { c: HomepageContent }) {
   );
 }
 
-function ProofStrip() {
-  const items = ["Dipakai 120+ sekolah", "ISO-27001 ready", "Dukungan oncall WIB", "Dibangun di Indonesia"];
+function ProofStrip({ items }: { items: string[] }) {
   return (
     <section className="border-y border-border bg-muted/30">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm text-muted-fg">

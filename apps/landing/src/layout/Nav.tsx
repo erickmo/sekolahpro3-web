@@ -1,17 +1,12 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Button, cn } from "@sekolahpro/ui";
-
-const LINKS = [
-  { to: "/", label: "Beranda" },
-  { to: "/fitur", label: "Fitur" },
-  { to: "/berita", label: "Berita" },
-  { to: "/partner", label: "Partner" },
-  { to: "/kontak", label: "Kontak" },
-];
+import { useSiteContent } from "../lib/site";
 
 export function Nav() {
   const [open, setOpen] = useState(false);
+  const site = useSiteContent();
+  const links = site.nav_links;
 
   return (
     <header className="sticky top-0 z-40 bg-bg/90 backdrop-blur border-b border-border">
@@ -22,11 +17,11 @@ export function Nav() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
-          {LINKS.map((l) => (
+          {links.map((l) => (
             <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.to === "/"}
+              key={l.url}
+              to={l.url}
+              end={l.match_end}
               className={({ isActive }) =>
                 cn(
                   "px-3 py-2 rounded-md text-sm transition-colors",
@@ -42,11 +37,11 @@ export function Nav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
-          <Link to="/login">
-            <Button variant="ghost" size="sm">Masuk</Button>
+          <Link to={site.nav_cta_login_url}>
+            <Button variant="ghost" size="sm">{site.nav_cta_login_label}</Button>
           </Link>
-          <Link to="/kontak?utm=nav">
-            <Button size="sm">Coba Gratis</Button>
+          <Link to={site.nav_cta_primary_url}>
+            <Button size="sm">{site.nav_cta_primary_label}</Button>
           </Link>
         </div>
 
@@ -67,11 +62,11 @@ export function Nav() {
       {open && (
         <nav className="md:hidden border-t border-border bg-bg">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex flex-col gap-1">
-            {LINKS.map((l) => (
+            {links.map((l) => (
               <NavLink
-                key={l.to}
-                to={l.to}
-                end={l.to === "/"}
+                key={l.url}
+                to={l.url}
+                end={l.match_end}
                 onClick={() => setOpen(false)}
                 className={({ isActive }) =>
                   cn(
@@ -84,11 +79,11 @@ export function Nav() {
               </NavLink>
             ))}
             <div className="flex gap-2 pt-2">
-              <Link to="/login" className="flex-1" onClick={() => setOpen(false)}>
-                <Button variant="outline" className="w-full">Masuk</Button>
+              <Link to={site.nav_cta_login_url} className="flex-1" onClick={() => setOpen(false)}>
+                <Button variant="outline" className="w-full">{site.nav_cta_login_label}</Button>
               </Link>
-              <Link to="/kontak?utm=nav" className="flex-1" onClick={() => setOpen(false)}>
-                <Button className="w-full">Coba Gratis</Button>
+              <Link to={site.nav_cta_primary_url} className="flex-1" onClick={() => setOpen(false)}>
+                <Button className="w-full">{site.nav_cta_primary_label}</Button>
               </Link>
             </div>
           </div>
