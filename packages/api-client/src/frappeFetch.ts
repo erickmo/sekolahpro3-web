@@ -7,7 +7,8 @@ export function configure(next: Partial<Config>) {
 }
 
 export function setCsrfToken(token: string | undefined) {
-  config.csrfToken = token;
+  const { csrfToken: _omit, ...rest } = config;
+  config = token === undefined ? rest : { ...rest, csrfToken: token };
 }
 
 export class FrappeError extends Error {
