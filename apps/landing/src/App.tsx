@@ -1,30 +1,23 @@
-import { Outlet } from "react-router-dom";
-import { Button } from "@sekolahpro/ui";
-
-export function Home() {
-  return (
-    <main className="max-w-5xl mx-auto px-6 py-20">
-      <h1 className="text-5xl font-semibold text-fg">SekolahPro</h1>
-      <p className="text-lg text-muted-fg mt-4 max-w-2xl">
-        Platform manajemen sekolah modern untuk SD, SMP, SMA — akademik, keuangan, PPDB, koperasi.
-      </p>
-      <div className="mt-8 flex gap-3">
-        <Button>Coba gratis</Button>
-        <Button variant="outline">Lihat fitur</Button>
-      </div>
-    </main>
-  );
-}
-
-export function Fitur() {
-  return (
-    <main className="max-w-5xl mx-auto px-6 py-20">
-      <h1 className="text-3xl font-semibold text-fg">Fitur</h1>
-      <p className="text-muted-fg mt-2">Daftar fitur akan diisi pada spec berikutnya.</p>
-    </main>
-  );
-}
+import { Routes, Route } from "react-router-dom";
+import { SiteLayout } from "./layout/SiteLayout";
+import { Home } from "./pages/Home";
+import { Fitur } from "./pages/Fitur";
+import { Berita } from "./pages/Berita";
+import { BeritaDetail } from "./pages/BeritaDetail";
+import { Partner } from "./pages/Partner";
+import { Kontak } from "./pages/Kontak";
 
 export function App() {
-  return <Outlet />;
+  return (
+    <Routes>
+      <Route element={<SiteLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/fitur" element={<Fitur />} />
+        <Route path="/berita" element={<Berita />} />
+        <Route path="/berita/:slug" element={<BeritaDetail />} />
+        <Route path="/partner" element={<Partner />} />
+        <Route path="/kontak" element={<Kontak />} />
+      </Route>
+    </Routes>
+  );
 }
