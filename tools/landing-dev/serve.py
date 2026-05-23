@@ -77,6 +77,19 @@ class Handler(SimpleHTTPRequestHandler):
                     resolved = cand
                     break
             self.path = resolved or "/index.html"
+        else:
+            # File with extension. If missing, return a content-type-appropriate
+            # 404 so clients (e.g. JSON.parse on stale vite-react-ssg manifest
+            # fetches) don't choke on Python's default HTML 404 body.
+            full = os.path.join(ROOT, path.lstrip("/"))
+            if not os.path.isfile(full):
+                if path.endswith(".json"):
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(b'{"error":"not found"}')
+                    return None
 
         return super().send_head()
 
