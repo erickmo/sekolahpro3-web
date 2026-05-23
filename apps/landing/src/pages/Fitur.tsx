@@ -1,138 +1,30 @@
 import { Link } from "react-router-dom";
 import { Button } from "@sekolahpro/ui";
-
-interface PillarDetail {
-  key: string;
-  title: string;
-  tagline: string;
-  description: string;
-  users: string[];
-  features: string[];
-  workflow: string[];
-}
-
-const PILLARS: PillarDetail[] = [
-  {
-    key: "akademik",
-    title: "Akademik",
-    tagline: "Dari jadwal kelas sampai rapor.",
-    description:
-      "Semua aktivitas akademik dalam satu alur: penjadwalan otomatis, presensi harian, input nilai per mata pelajaran, sampai cetak rapor sesuai format Kurikulum Merdeka.",
-    users: ["Guru", "Wali Kelas", "Kurikulum", "Kepala Sekolah"],
-    features: [
-      "Jadwal otomatis berdasarkan kapasitas kelas + ketersediaan guru",
-      "Presensi harian via QR atau input cepat oleh wali kelas",
-      "Bank soal & ujian online (PG, esai, hybrid)",
-      "Buku nilai per fase + rapor PDF cetak/digital",
-      "Catatan capaian profil pelajar Pancasila",
-    ],
-    workflow: ["Susun jadwal", "Catat presensi", "Input nilai", "Cetak rapor"],
-  },
-  {
-    key: "ppdb",
-    title: "PPDB",
-    tagline: "Penerimaan siswa baru, tanpa antrean.",
-    description:
-      "Formulir online, seleksi otomatis berdasarkan zona/raport, pembayaran daftar ulang via QRIS, sampai SK penerimaan — semuanya satu alur.",
-    users: ["Panitia PPDB", "Calon Orangtua", "Tata Usaha"],
-    features: [
-      "Formulir publik dengan unggah dokumen",
-      "Verifikasi & seleksi otomatis berbasis kuota",
-      "Pembayaran daftar ulang QRIS/virtual account",
-      "SK penerimaan + nomor induk otomatis",
-      "Statistik real-time kuota per jurusan",
-    ],
-    workflow: ["Daftar online", "Seleksi", "Bayar daftar ulang", "Terbit NIS"],
-  },
-  {
-    key: "keuangan",
-    title: "Keuangan",
-    tagline: "Tagihan jelas, kasir cepat, laporan akurat.",
-    description:
-      "SPP bulanan, tagihan ekstra, pembayaran tunai/QRIS, sampai laporan kas harian — terintegrasi dengan data siswa dan rapor.",
-    users: ["Bendahara", "Tata Usaha", "Orangtua", "Kepala Sekolah"],
-    features: [
-      "Master tagihan per kelas + diskon individual",
-      "Pembayaran tunai, QRIS, virtual account, atau split",
-      "Riwayat pembayaran orangtua di portal & WhatsApp",
-      "Tutup kas harian + neraca bulanan otomatis",
-      "Tunggakan jatuh tempo terdeteksi otomatis",
-    ],
-    workflow: ["Terbitkan tagihan", "Terima pembayaran", "Tutup kas", "Cetak laporan"],
-  },
-  {
-    key: "koperasi",
-    title: "Koperasi & Kantin",
-    tagline: "Kartu e-money siswa + kasir cashless.",
-    description:
-      "Top-up saldo siswa via orangtua, transaksi tap-card di kantin/koperasi, laporan harian per stan — orangtua tahu uang anak kemana.",
-    users: ["Pengelola Koperasi", "Penjaga Kantin", "Orangtua", "Siswa"],
-    features: [
-      "Top-up saldo siswa via QRIS oleh orangtua",
-      "Terminal kasir Android + reader kartu RFID",
-      "Limit harian per siswa (atur oleh orangtua)",
-      "Riwayat transaksi siswa real-time",
-      "Laporan stok & penjualan per stan",
-    ],
-    workflow: ["Top-up saldo", "Tap kartu", "Transaksi tercatat", "Laporan harian"],
-  },
-  {
-    key: "komunikasi",
-    title: "Komunikasi",
-    tagline: "Pesan tepat sasaran ke orangtua.",
-    description:
-      "Pengumuman per kelas/sekolah, rapor digital, notifikasi tagihan & presensi anak — terkirim via aplikasi orangtua dan WhatsApp resmi.",
-    users: ["Wali Kelas", "Humas", "Orangtua"],
-    features: [
-      "Broadcast pengumuman per kelas/jenjang/seluruh sekolah",
-      "Template WhatsApp resmi (terverifikasi Meta)",
-      "Rapor & raport tengah semester PDF digital",
-      "Notifikasi presensi & tagihan otomatis",
-      "Chat 2 arah wali kelas ↔ orangtua",
-    ],
-    workflow: ["Susun pesan", "Pilih audiens", "Kirim", "Pantau dibaca"],
-  },
-  {
-    key: "data-induk",
-    title: "Data Induk",
-    tagline: "Satu sumber kebenaran data sekolah.",
-    description:
-      "Siswa, guru, kelas, dan struktur sekolah dalam satu master data — sinkron dengan Dapodik, dan jadi sumber untuk semua modul lain.",
-    users: ["Tata Usaha", "Operator Dapodik", "Kepala Sekolah"],
-    features: [
-      "Master siswa dengan riwayat akademik lintas tahun",
-      "Master guru + SK pengajaran",
-      "Sinkronisasi Dapodik (impor & ekspor)",
-      "Master kelas, jenjang, jurusan, tahun ajaran",
-      "Riwayat perubahan terjamin (audit log)",
-    ],
-    workflow: ["Impor Dapodik", "Edit lokal", "Validasi", "Ekspor ulang"],
-  },
-];
+import { useFiturContent, type FiturContent, type PillarDetail } from "../lib/fitur";
 
 export function Fitur() {
+  const { hero, cta, pillars } = useFiturContent();
   return (
     <>
-      <FiturHero />
-      {PILLARS.map((p, i) => (
+      <FiturHero hero={hero} />
+      {pillars.map((p, i) => (
         <PillarSection key={p.key} pillar={p} reverse={i % 2 === 1} />
       ))}
-      <FiturCTA />
+      <FiturCTA cta={cta} />
     </>
   );
 }
 
-function FiturHero() {
+function FiturHero({ hero }: { hero: FiturContent["hero"] }) {
   return (
     <section className="border-b border-border bg-muted/30">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        <p className="text-sm font-medium text-brand">— Fitur</p>
+        <p className="text-sm font-medium text-brand">{hero.eyebrow}</p>
         <h1 className="mt-2 text-4xl sm:text-5xl font-semibold text-fg leading-tight max-w-3xl">
-          Enam pilar untuk <em className="not-italic font-serif italic text-brand">satu sekolah utuh.</em>
+          {hero.title_main}{" "}
+          <em className="not-italic font-serif italic text-brand">{hero.title_italic}</em>
         </h1>
-        <p className="mt-4 text-lg text-muted-fg max-w-2xl">
-          Setiap pilar bisa berdiri sendiri, namun saling memperkuat. Pakai sesuai kebutuhan sekolah Anda.
-        </p>
+        <p className="mt-4 text-lg text-muted-fg max-w-2xl">{hero.lead}</p>
       </div>
     </section>
   );
@@ -192,22 +84,18 @@ function PillarSection({ pillar, reverse }: { pillar: PillarDetail; reverse: boo
   );
 }
 
-function FiturCTA() {
+function FiturCTA({ cta }: { cta: FiturContent["cta"] }) {
   return (
     <section className="py-16 sm:py-24 bg-muted/30">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
-        <h2 className="text-3xl sm:text-4xl font-semibold text-fg">
-          Mulai dari satu pilar, kembangkan saat siap.
-        </h2>
-        <p className="mt-4 text-muted-fg">
-          Anda tidak harus pakai semua dari awal. Tim kami bantu pilih pilar dengan dampak tercepat untuk sekolah Anda.
-        </p>
+        <h2 className="text-3xl sm:text-4xl font-semibold text-fg">{cta.title}</h2>
+        <p className="mt-4 text-muted-fg">{cta.body}</p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="/kontak?utm=fitur">
-            <Button size="lg" className="w-full sm:w-auto">Konsultasi Gratis</Button>
+          <Link to={cta.primary.url}>
+            <Button size="lg" className="w-full sm:w-auto">{cta.primary.label}</Button>
           </Link>
-          <Link to="/partner">
-            <Button size="lg" variant="outline" className="w-full sm:w-auto">Lihat Sekolah Pengguna</Button>
+          <Link to={cta.secondary.url}>
+            <Button size="lg" variant="outline" className="w-full sm:w-auto">{cta.secondary.label}</Button>
           </Link>
         </div>
       </div>
