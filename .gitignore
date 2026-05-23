@@ -14,3 +14,4 @@ apps/*/src/routeTree.gen.ts
 # playwright outputs
 test-results/
 playwright-report/
+tools/e2e/check_partner.cjs
