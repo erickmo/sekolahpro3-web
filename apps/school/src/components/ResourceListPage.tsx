@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Badge,
   Button,
@@ -12,7 +12,7 @@ import {
   type SelectFilter,
   type SortState,
 } from "@sekolahpro/ui";
-import { useResourceList, type ListParams } from "@sekolahpro/api-client";
+import { useResourceList, type ListParams, type FilterTuple } from "@sekolahpro/api-client";
 
 export interface ResourceListPageProps<T extends Record<string, unknown>> {
   eyebrow?: string;
@@ -29,7 +29,33 @@ export interface ResourceListPageProps<T extends Record<string, unknown>> {
     label: string;
     field: string;
     options: Array<{ value: string; label: string }>;
+    /**
+     * Controlled value. When provided, the filter operates in controlled mode and
+     * `onChange` becomes the sole source of state updates (no internal mirror).
+     * See PERP-ADR-0001 — required for URL-synced filters in /perpustakaan/peminjaman.
+     */
+    value?: string;
+    /**
+     * Controlled change handler. Required when `value` is set. Fires with the new
+     * selected value (e.g. "Semua" sentinel) so the parent can sync URL/search state.
+     * See PERP-ADR-0001.
+     */
+    onChange?: (value: string) => void;
   }>;
+  /**
+   * Extra filter clauses appended unconditionally to the list query (in addition to
+   * `selectFilters` + search). Use for server-side scoping that the user cannot toggle
+   * (e.g. `status in ["Aktif","Terlambat"]` for the default circulation view).
+   * See PERP-ADR-0001.
+   */
+  baseFilters?: FilterTuple[];
+  /**
+   * Async post-processor invoked on each loaded page. Receives the visible rows and
+   * returns a (possibly enriched / filtered) array used for render. Use to fetch
+   * derived data per page (e.g. denda summary) without coupling to the list endpoint.
+   * See PERP-ADR-0001.
+   */
+  decorateRows?: (rows: T[]) => Promise<T[]>;
   extraActions?: ReactNode;
   onAdd?: () => void;
   addLabel?: string;
@@ -49,6 +75,8 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
     defaultSort,
     searchFields = ["name"],
     selectFilters = [],
+    baseFilters,
+    decorateRows,
     extraActions,
     onAdd,
     addLabel = "Tambah",
@@ -66,8 +94,12 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
 
   const filters: ListParams["filters"] = useMemo(() => {
     const out: Array<[string, string, unknown]> = [];
+    if (baseFilters && baseFilters.length) {
+      out.push(...(baseFilters as Array<[string, string, unknown]>));
+    }
     for (const f of selectFilters) {
-      const v = filterVals[f.key];
+      // Controlled mode wins over internal mirror.
+      const v = f.value ?? filterVals[f.key];
       if (v && v !== "Semua") out.push([f.field, "=", v]);
     }
     if (search.trim()) {
@@ -75,7 +107,7 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
       out.push(["name", "like", `%${search.trim()}%`]);
     }
     return out;
-  }, [filterVals, search, selectFilters]);
+  }, [filterVals, search, selectFilters, baseFilters]);
 
   const orFilters: ListParams["or_filters"] = useMemo(() => {
     if (!search.trim() || searchFields.length <= 1) return undefined;
@@ -106,15 +138,43 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
 
   const fetched = q.data ?? [];
   const hasNext = fetched.length > pageSize;
-  const rows = hasNext ? fetched.slice(0, pageSize) : fetched;
+  const baseRows = hasNext ? fetched.slice(0, pageSize) : fetched;
+
+  // Run optional async decorator on the page slice. Falls back to raw rows on error
+  // or while pending. See PERP-ADR-0001 for the use case (denda summary enrichment).
+  const [decorated, setDecorated] = useState<T[] | null>(null);
+  useEffect(() => {
+    if (!decorateRows) {
+      setDecorated(null);
+      return;
+    }
+    let cancelled = false;
+    decorateRows(baseRows)
+      .then((next) => {
+        if (!cancelled) setDecorated(next);
+      })
+      .catch(() => {
+        if (!cancelled) setDecorated(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.data, decorateRows]);
+  const rows = decorateRows ? (decorated ?? baseRows) : baseRows;
 
   const filterUI: SelectFilter[] = selectFilters.map((f) => ({
     key: f.key,
     label: f.label,
-    value: filterVals[f.key] ?? "Semua",
+    value: f.value ?? filterVals[f.key] ?? "Semua",
     options: f.options,
     onChange: (v) => {
-      setFilterVals((prev) => ({ ...prev, [f.key]: v }));
+      if (f.onChange) {
+        // Controlled mode — parent owns state; don't mirror locally.
+        f.onChange(v);
+      } else {
+        setFilterVals((prev) => ({ ...prev, [f.key]: v }));
+      }
       setPage(1);
     },
   }));
