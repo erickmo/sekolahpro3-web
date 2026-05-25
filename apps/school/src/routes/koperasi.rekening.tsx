@@ -1,0 +1,59 @@
+import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Badge, type Column } from "@sekolahpro/ui";
+import { ResourceListPage } from "../components/ResourceListPage";
+import { PermohonanModal } from "../components/koperasi-simpanan/permohonanForms";
+
+type Row = {
+  name: string;
+  anggota: string;
+  produk: string;
+  akad: string;
+  saldo: number;
+  status: string;
+  tanggal_buka: string;
+};
+
+const COLUMNS: Column<Row>[] = [
+  { key: "name", header: "No. Rekening", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
+  { key: "anggota", header: "Anggota", sortable: true, cell: (r) => r.anggota },
+  { key: "produk", header: "Produk", cell: (r) => r.produk },
+  { key: "akad", header: "Akad", cell: (r) => <Badge tone="neutral">{r.akad}</Badge> },
+  { key: "saldo", header: "Saldo", align: "right", sortable: true,
+    cell: (r) => <span className="tabular-nums">Rp {(r.saldo ?? 0).toLocaleString("id-ID")}</span> },
+  { key: "status", header: "Status",
+    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : r.status === "Dormant" ? "warning" : r.status === "Blokir" ? "danger" : "neutral"} dot>{r.status}</Badge> },
+  { key: "tanggal_buka", header: "Tgl Buka", sortable: true, cell: (r) => r.tanggal_buka },
+];
+
+function RekeningPage() {
+  const navigate = useNavigate();
+  const [openBuka, setOpenBuka] = useState(false);
+  return (
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Koperasi"
+        title="Rekening Simpanan"
+        description="Kelola rekening simpanan anggota (Wadiah / Mudharabah)."
+        doctype="Rekening Simpanan"
+        fields={["name", "anggota", "produk", "akad", "saldo", "status", "tanggal_buka"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "tanggal_buka", dir: "desc" }}
+        searchFields={["name", "anggota"]}
+        selectFilters={[
+          { key: "status", label: "Status", field: "status",
+            options: ["Semua", "Aktif", "Dormant", "Blokir", "Tutup"].map((v) => ({ value: v, label: v })) },
+          { key: "akad", label: "Akad", field: "akad",
+            options: ["Semua", "Wadiah", "Mudharabah", "Wadiah Yad Dhamanah"].map((v) => ({ value: v, label: v })) },
+        ]}
+        addLabel="Buka Rekening"
+        onAdd={() => setOpenBuka(true)}
+        onRowClick={(r) => navigate({ to: "/koperasi/rekening/$name", params: { name: r.name } })}
+      />
+      <PermohonanModal kind="buka" open={openBuka} onClose={() => setOpenBuka(false)} />
+    </>
+  );
+}
+
+export const Route = createFileRoute("/koperasi/rekening")({ component: RekeningPage });

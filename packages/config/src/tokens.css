@@ -6,6 +6,7 @@
   --color-muted-fg: 215 16% 47%;
   --color-border: 214 32% 91%;
   --color-danger: 0 84% 60%;
+  --color-warning: 38 92% 50%;
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
@@ -16,4 +17,8 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
   --font-sans: "Inter", system-ui, sans-serif;
+}
+
+body {
+  font-size: 17px;
 }

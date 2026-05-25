@@ -7,6 +7,7 @@ import { Berita } from "./pages/Berita";
 import { BeritaDetail } from "./pages/BeritaDetail";
 import { Partner } from "./pages/Partner";
 import { Kontak } from "./pages/Kontak";
+import { Login } from "./pages/Login";
 import "./styles.css";
 
 const routes: RouteRecord[] = [
@@ -25,6 +26,7 @@ const routes: RouteRecord[] = [
       },
       { path: "partner", element: <Partner />, entry: "src/pages/Partner.tsx" },
       { path: "kontak", element: <Kontak />, entry: "src/pages/Kontak.tsx" },
+      { path: "login", element: <Login />, entry: "src/pages/Login.tsx" },
     ],
   },
 ];

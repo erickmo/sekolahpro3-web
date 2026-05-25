@@ -10,6 +10,7 @@ export default {
         "muted-fg": "hsl(var(--color-muted-fg) / <alpha-value>)",
         border: "hsl(var(--color-border) / <alpha-value>)",
         danger: "hsl(var(--color-danger) / <alpha-value>)",
+        warning: "hsl(var(--color-warning) / <alpha-value>)",
       },
       borderRadius: {
         sm: "var(--radius-sm)",

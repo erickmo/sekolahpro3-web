@@ -15,4 +15,9 @@ describe("parseEnv", () => {
   it("rejects a non-URL API base", () => {
     expect(() => parseEnv({ VITE_API_BASE: "not-a-url", MODE: "development" })).toThrow();
   });
+
+  it("allows an empty API base for same-origin", () => {
+    const env = parseEnv({ VITE_API_BASE: "", MODE: "development" });
+    expect(env.VITE_API_BASE).toBe("");
+  });
 });

@@ -1,14 +1,19 @@
+import { configureResource } from "./frappeResource";
+
 type Config = { baseUrl: string; csrfToken?: string };
 
 let config: Config = { baseUrl: "" };
 
 export function configure(next: Partial<Config>) {
   config = { ...config, ...next };
+  configureResource(next);
 }
 
 export function setCsrfToken(token: string | undefined) {
   const { csrfToken: _omit, ...rest } = config;
   config = token === undefined ? rest : { ...rest, csrfToken: token };
+  if (token === undefined) configureResource({});
+  else configureResource({ csrfToken: token });
 }
 
 export class FrappeError extends Error {

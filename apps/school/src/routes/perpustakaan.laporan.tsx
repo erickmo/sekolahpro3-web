@@ -1,0 +1,33 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { PageHeader, SectionCard, StatCard, IconBook, IconWallet, IconAlert, IconCheck } from "@sekolahpro/ui";
+import { useResourceList } from "@sekolahpro/api-client";
+
+function LaporanPage() {
+  const peminjaman = useResourceList("Peminjaman Buku", { fields: ["name", "status"], limit_page_length: 0 });
+  const denda = useResourceList<{ name: string; nominal: number; status: string }>(
+    "Denda Perpustakaan", { fields: ["name", "nominal", "status"], limit_page_length: 0 },
+  );
+  const anggota = useResourceList("Anggota Perpustakaan", { fields: ["name", "status"], limit_page_length: 0 });
+
+  const aktif = (peminjaman.data ?? []).filter((p: any) => p.status === "Aktif" || p.status === "Terlambat").length;
+  const terlambat = (peminjaman.data ?? []).filter((p: any) => p.status === "Terlambat").length;
+  const outstanding = (denda.data ?? []).filter((d) => d.status === "Belum Lunas").reduce((s, d) => s + (d.nominal ?? 0), 0);
+  const anggotaAktif = (anggota.data ?? []).filter((a: any) => a.status === "Aktif").length;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader eyebrow="Perpustakaan" title="Laporan" description="Ringkasan sirkulasi & denda." />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Peminjaman Aktif" value={aktif.toLocaleString("id-ID")} icon={<IconBook />} accent="brand" />
+        <StatCard label="Terlambat" value={terlambat.toLocaleString("id-ID")} icon={<IconAlert />} accent="rose" />
+        <StatCard label="Denda Outstanding" value={`Rp ${outstanding.toLocaleString("id-ID")}`} icon={<IconWallet />} accent="violet" />
+        <StatCard label="Anggota Aktif" value={anggotaAktif.toLocaleString("id-ID")} icon={<IconCheck />} accent="emerald" />
+      </div>
+      <SectionCard title="Detail laporan">
+        <p className="text-sm text-muted-fg">Laporan rinci (top peminjam, buku terpopuler, literasi per kelas) akan tersedia pada Phase 3.</p>
+      </SectionCard>
+    </div>
+  );
+}
+
+export const Route = createFileRoute("/perpustakaan/laporan")({ component: LaporanPage });

@@ -6,6 +6,7 @@ import { Berita } from "./pages/Berita";
 import { BeritaDetail } from "./pages/BeritaDetail";
 import { Partner } from "./pages/Partner";
 import { Kontak } from "./pages/Kontak";
+import { Login } from "./pages/Login";
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
         <Route path="/berita/:slug" element={<BeritaDetail />} />
         <Route path="/partner" element={<Partner />} />
         <Route path="/kontak" element={<Kontak />} />
+        <Route path="/login" element={<Login />} />
       </Route>
     </Routes>
   );

@@ -2,3 +2,152 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Local landing theme override: Sekolah Pusaka (editorial heritage) ── */
+:root {
+  /* Warm paper cream */
+  --color-bg: 38 35% 95%;
+  /* Deep ink */
+  --color-fg: 28 22% 11%;
+  /* Vermilion — heritage red, batik-adjacent */
+  --color-brand: 12 78% 48%;
+  --color-muted: 36 28% 88%;
+  --color-muted-fg: 28 14% 36%;
+  --color-border: 32 22% 80%;
+  --color-danger: 0 72% 50%;
+  --radius-sm: 0;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --paper-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.18  0 0 0 0 0.13  0 0 0 0 0.09  0 0 0 0.045 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+html, body {
+  background-color: hsl(var(--color-bg));
+  color: hsl(var(--color-fg));
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: var(--paper-grain);
+  opacity: 0.5;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  z-index: 1;
+}
+
+#root { position: relative; z-index: 2; }
+
+.font-display { font-family: var(--font-display); font-optical-sizing: auto; }
+.font-mono    { font-family: var(--font-mono); }
+
+.rule-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: hsl(var(--color-fg) / 0.55);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.rule-label::before {
+  content: "";
+  width: 1.75rem;
+  height: 1px;
+  background: hsl(var(--color-brand));
+}
+
+.dropcap::first-letter {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 4.6em;
+  float: left;
+  line-height: 0.86;
+  margin: 0.08em 0.12em 0 -0.04em;
+  color: hsl(var(--color-brand));
+  font-style: italic;
+}
+
+.ink-underline {
+  background-image: linear-gradient(hsl(var(--color-brand)), hsl(var(--color-brand)));
+  background-position: 0 92%;
+  background-repeat: no-repeat;
+  background-size: 100% 6px;
+}
+
+.shadow-paper {
+  box-shadow:
+    0 1px 0 hsl(var(--color-fg) / 0.06),
+    0 18px 40px -24px hsl(var(--color-fg) / 0.25);
+}
+
+.tick-list > * { position: relative; padding-left: 1.4rem; }
+.tick-list > *::before {
+  content: "§";
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  font-family: var(--font-display);
+  font-style: italic;
+  color: hsl(var(--color-brand));
+}
+
+/* Marquee */
+@keyframes drift-x {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track { animation: drift-x 38s linear infinite; }
+
+/* Reveal on load */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise 0.9s cubic-bezier(.2,.7,.2,1) both; }
+.rise-1  { animation-delay: 0.05s; }
+.rise-2  { animation-delay: 0.18s; }
+.rise-3  { animation-delay: 0.32s; }
+.rise-4  { animation-delay: 0.48s; }
+.rise-5  { animation-delay: 0.66s; }
+
+@keyframes ink-sweep {
+  from { background-size: 0% 6px; }
+  to   { background-size: 100% 6px; }
+}
+.ink-sweep { animation: ink-sweep 1.2s cubic-bezier(.2,.7,.2,1) 0.6s both; }
+
+/* Diagonal hatching for accents */
+.hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    hsl(var(--color-fg) / 0.12) 0 1px,
+    transparent 1px 7px
+  );
+}
+
+/* Numeric display tabular */
+.num-display {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "ss01";
+}
+
+/* Selection */
+::selection { background: hsl(var(--color-brand) / 0.85); color: hsl(var(--color-bg)); }
+
+/* Focus ring more characterful */
+:focus-visible {
+  outline: 2px solid hsl(var(--color-brand));
+  outline-offset: 3px;
+}

@@ -1,0 +1,668 @@
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { useResourceDoc } from "@sekolahpro/api-client";
+import {
+  Avatar,
+  Badge,
+  Breadcrumb,
+  Button,
+  Column,
+  DataTable,
+  DetailPageTemplate,
+  EmptyState,
+  InfoField,
+  InfoGrid,
+  PageHeader,
+  SectionCard,
+  StatCard,
+  Tabs,
+  IconArrowLeft,
+  IconBook,
+  IconCake,
+  IconCalendar,
+  IconCheck,
+  IconChat,
+  IconChart,
+  IconClock,
+  IconDownload,
+  IconEdit,
+  IconFile,
+  IconGrad,
+  IconHome,
+  IconId,
+  IconMail,
+  IconMapPin,
+  IconMore,
+  IconPhone,
+  IconPlus,
+  IconPrint,
+  IconUsers,
+  IconWallet,
+  type TabItem,
+} from "@sekolahpro/ui";
+import { openOrAlert, stubAction } from "../lib/stub";
+import {
+  findPendaftar,
+  formatRupiah,
+  formatTanggal,
+  umur,
+  type AktivitasRow,
+  type DokumenPpdbRow,
+  type NilaiRaporRow,
+  type PembayaranPpdbRow,
+  type Pendaftar,
+  type StatusPendaftaran,
+  type TahapanRow,
+  type WaliPpdbRow,
+  type WawancaraRow,
+} from "../data/ppdb";
+
+type TabKey = "ringkasan" | "profil" | "wali" | "dokumen" | "tahapan" | "akademik" | "wawancara" | "pembayaran" | "aktivitas";
+
+const STATUS_TONE: Record<StatusPendaftaran, "success" | "brand" | "neutral" | "warning" | "danger"> = {
+  Diterima: "success",
+  Lulus: "success",
+  Verifikasi: "brand",
+  Tes: "brand",
+  "Daftar Ulang": "brand",
+  "Tidak Lulus": "danger",
+  "Mengundurkan Diri": "danger",
+  Draft: "neutral",
+  Terkirim: "warning",
+};
+
+const DOKUMEN_TONE = {
+  Diterima: "success",
+  Belum: "warning",
+  Ditolak: "danger",
+} as const;
+
+const TAHAPAN_TONE = {
+  Selesai: "success",
+  Berjalan: "brand",
+  Belum: "neutral",
+} as const;
+
+const PEMBAYARAN_TONE = {
+  Lunas: "success",
+  Tertunda: "warning",
+  Cicilan: "brand",
+} as const;
+
+function persenBayar(p: Pendaftar): number {
+  return p.totalBiaya === 0 ? 0 : Math.min(100, Math.round((p.totalDibayar / p.totalBiaya) * 100));
+}
+
+function persenTahapan(p: Pendaftar): number {
+  const selesai = p.tahapan.filter((t) => t.status === "Selesai").length;
+  return Math.round((selesai / p.tahapan.length) * 100);
+}
+
+function Hero({ pendaftar, onEdit }: { pendaftar: Pendaftar; onEdit: () => void }) {
+  return (
+    <div className="rounded-2xl border border-border bg-gradient-to-br from-brand/5 via-bg to-violet-500/5 p-6 shadow-sm">
+      <div className="flex flex-wrap items-start gap-5">
+        <Avatar name={pendaftar.namaLengkap} src={pendaftar.fotoUrl ?? null} size="lg" className="!h-20 !w-20 !text-xl" />
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-2xl font-bold text-fg truncate">{pendaftar.namaLengkap}</h2>
+            <Badge tone={STATUS_TONE[pendaftar.statusPendaftaran]} dot>{pendaftar.statusPendaftaran}</Badge>
+            <Badge tone="brand">{pendaftar.jalur}</Badge>
+          </div>
+          <div className="mt-1 text-sm text-muted-fg">
+            <span className="tabular-nums">{pendaftar.noPendaftaran}</span>
+            <span className="mx-2">·</span>
+            <span>{pendaftar.jenjangTujuan}</span>
+            <span className="mx-2">·</span>
+            <span>TA {pendaftar.tahunAjaran}</span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-fg">
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5"><IconCake /></span>{formatTanggal(pendaftar.tanggalLahir)} ({umur(pendaftar.tanggalLahir)} th)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5"><IconMail /></span>{pendaftar.email}</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5"><IconPhone /></span>{pendaftar.telepon}</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5"><IconMapPin /></span>{pendaftar.kecamatan}, {pendaftar.kabupaten}</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => stubAction(`Kirim Pesan ke ${pendaftar.namaLengkap}`)}>
+            <span className="h-4 w-4 mr-1.5"><IconChat /></span>Pesan
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => stubAction(`Cetak Kartu Peserta ${pendaftar.noPendaftaran}`)}>
+            <span className="h-4 w-4 mr-1.5"><IconPrint /></span>Cetak Kartu
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Berkas ${pendaftar.noPendaftaran}`)}>
+            <span className="h-4 w-4 mr-1.5"><IconDownload /></span>Unduh
+          </Button>
+          <Button size="sm" onClick={onEdit}>
+            <span className="h-4 w-4 mr-1.5"><IconEdit /></span>Edit
+          </Button>
+          <Button variant="outline" size="sm" className="!px-2" onClick={() => stubAction("Aksi lainnya (menu)")}>
+            <span className="h-4 w-4"><IconMore /></span>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RingkasanTab({ pendaftar, onChangeTab }: { pendaftar: Pendaftar; onChangeTab: (k: TabKey) => void }) {
+  const currentStep = pendaftar.tahapan.find((t) => t.status === "Berjalan") ?? pendaftar.tahapan[pendaftar.tahapan.length - 1]!;
+  const pctBayar = persenBayar(pendaftar);
+  const pctTahapan = persenTahapan(pendaftar);
+  const sisa = Math.max(0, pendaftar.totalBiaya - pendaftar.totalDibayar);
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Skor Tes" value={pendaftar.skorTes ?? "—"} hint={pendaftar.skorTes ? "skala 0-100" : "belum tes"} icon={<IconChart />} accent="brand" />
+        <StatCard label="Skor Wawancara" value={pendaftar.skorWawancara ?? "—"} hint={pendaftar.skorWawancara ? "skala 0-100" : "belum wawancara"} icon={<IconChat />} accent="violet" />
+        <StatCard label="Pembayaran" value={`${pctBayar}%`} hint={formatRupiah(pendaftar.totalDibayar)} icon={<IconWallet />} accent="amber" />
+        <StatCard label="Tahapan" value={`${pctTahapan}%`} hint={`${currentStep.tahap}`} icon={<IconCheck />} accent="emerald" />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <div className="xl:col-span-2 space-y-6">
+          <SectionCard
+            title="Tahapan Pendaftaran"
+            description="Status setiap tahap PPDB"
+            action={<Button variant="ghost" size="sm" onClick={() => onChangeTab("tahapan")}>Lihat detail</Button>}
+            padded={false}
+          >
+            <ol className="divide-y divide-border">
+              {pendaftar.tahapan.map((t, i) => {
+                const active = t.status === "Berjalan";
+                return (
+                  <li key={i} className={`flex items-start gap-3 px-5 py-3.5 ${active ? "bg-brand/5" : ""}`}>
+                    <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full ${t.status === "Selesai" ? "bg-emerald-500/10 text-emerald-600" : t.status === "Berjalan" ? "bg-brand/10 text-brand" : "bg-muted text-muted-fg"}`}>
+                      <span className="h-4 w-4">{t.status === "Selesai" ? <IconCheck /> : <IconClock />}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-fg">{t.tahap}</div>
+                      <div className="text-xs text-muted-fg mt-0.5">
+                        {formatTanggal(t.tanggal)}{t.petugas ? ` · ${t.petugas}` : ""}
+                      </div>
+                    </div>
+                    <Badge tone={TAHAPAN_TONE[t.status]} dot>{t.status}</Badge>
+                  </li>
+                );
+              })}
+            </ol>
+          </SectionCard>
+
+          <SectionCard
+            title="Status Dokumen"
+            description="Kelengkapan berkas pendaftaran"
+            action={<Button variant="ghost" size="sm" onClick={() => onChangeTab("dokumen")}>Lihat semua</Button>}
+          >
+            <div className="grid gap-2 sm:grid-cols-2">
+              {pendaftar.dokumen.map((d) => (
+                <div key={d.nama} className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
+                  <span className="h-8 w-8 rounded-md bg-muted inline-flex items-center justify-center text-muted-fg"><span className="h-4 w-4"><IconFile /></span></span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-fg truncate">{d.nama}</div>
+                    <div className="text-xs text-muted-fg">{d.tipe}</div>
+                  </div>
+                  <Badge tone={DOKUMEN_TONE[d.status]} dot>{d.status}</Badge>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+
+        <div className="space-y-6">
+          <SectionCard title="Wali" padded={false}>
+            <ul className="divide-y divide-border">
+              {pendaftar.wali.map((w, i) => (
+                <li key={i} className="flex items-start gap-3 px-5 py-3.5">
+                  <Avatar name={w.nama} size="sm" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-fg truncate">{w.nama}</div>
+                    <div className="text-xs text-muted-fg">{w.hubungan} · {w.pekerjaan ?? "—"}</div>
+                    {w.telepon ? <div className="text-xs text-muted-fg mt-0.5">{w.telepon}</div> : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+
+          <SectionCard title="Aktivitas Terkini" padded={false}>
+            <ul className="divide-y divide-border">
+              {pendaftar.aktivitas.slice(0, 4).map((a, i) => (
+                <li key={i} className="flex items-start gap-3 px-5 py-3">
+                  <Badge tone={a.tone} dot>·</Badge>
+                  <div className="min-w-0">
+                    <div className="text-sm text-fg">
+                      <span className="font-medium">{a.aktor}</span>{" "}
+                      <span className="text-muted-fg">{a.aksi}</span>
+                    </div>
+                    <div className="text-xs text-muted-fg mt-0.5 inline-flex items-center gap-1">
+                      <span className="h-3 w-3"><IconClock /></span>{a.waktu}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
+
+          <SectionCard title="Aksi Cepat">
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" onClick={() => stubAction(`Verifikasi Berkas ${pendaftar.noPendaftaran}`)}><span className="text-xs">Verifikasi Berkas</span></Button>
+              <Button variant="outline" size="sm" onClick={() => stubAction(`Jadwalkan Wawancara ${pendaftar.noPendaftaran}`)}><span className="text-xs">Jadwal Wawancara</span></Button>
+              <Button variant="outline" size="sm" onClick={() => stubAction(`Kirim Pengumuman ${pendaftar.noPendaftaran}`)}><span className="text-xs">Kirim Pengumuman</span></Button>
+              <Button variant="outline" size="sm" onClick={() => stubAction(`Catat Pembayaran ${pendaftar.noPendaftaran}`)}><span className="text-xs">Catat Pembayaran</span></Button>
+            </div>
+            <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-fg">
+              Sisa pembayaran: <span className="font-medium text-fg tabular-nums">{formatRupiah(sisa)}</span>
+            </div>
+          </SectionCard>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ProfilTab({ pendaftar }: { pendaftar: Pendaftar }) {
+  return (
+    <div className="space-y-6">
+      <SectionCard title="Identitas">
+        <InfoGrid cols={3}>
+          <InfoField label="No. Pendaftaran" icon={<IconId />} value={<span className="tabular-nums">{pendaftar.noPendaftaran}</span>} />
+          <InfoField label="NISN" value={<span className="tabular-nums">{pendaftar.nisn}</span>} />
+          <InfoField label="NIK" value={<span className="tabular-nums">{pendaftar.nik}</span>} />
+          <InfoField label="Nama Lengkap" value={pendaftar.namaLengkap} />
+          <InfoField label="Jenis Kelamin" value={pendaftar.jenisKelamin} />
+          <InfoField label="Tempat, Tanggal Lahir" value={`${pendaftar.tempatLahir}, ${formatTanggal(pendaftar.tanggalLahir)}`} hint={`${umur(pendaftar.tanggalLahir)} tahun`} />
+          <InfoField label="Agama" value={pendaftar.agama} />
+          <InfoField label="Kewarganegaraan" value={pendaftar.kewarganegaraan} />
+        </InfoGrid>
+      </SectionCard>
+
+      <SectionCard title="Asal Sekolah & Jalur">
+        <InfoGrid cols={3}>
+          <InfoField label="Asal Sekolah" value={pendaftar.asalSekolah} />
+          <InfoField label="Nilai Rata-rata" value={pendaftar.nilaiRataRata !== undefined ? pendaftar.nilaiRataRata.toFixed(1) : undefined} />
+          <InfoField label="Jarak ke Sekolah" value={pendaftar.jarakKeSekolah} />
+          <InfoField label="Jalur Pendaftaran" value={<Badge tone="brand">{pendaftar.jalur}</Badge>} />
+          <InfoField label="Jenjang Tujuan" value={pendaftar.jenjangTujuan} />
+          <InfoField label="Tahun Ajaran" value={pendaftar.tahunAjaran} />
+          {pendaftar.rankingZonasi !== undefined ? (
+            <InfoField label="Ranking Zonasi" value={<span className="tabular-nums">#{pendaftar.rankingZonasi}</span>} />
+          ) : null}
+        </InfoGrid>
+      </SectionCard>
+
+      <SectionCard title="Alamat">
+        <InfoGrid cols={3}>
+          <InfoField label="Alamat" icon={<IconMapPin />} value={pendaftar.alamat} className="sm:col-span-2 lg:col-span-2" />
+          <InfoField label="RT/RW" value={`${pendaftar.rt}/${pendaftar.rw}`} />
+          <InfoField label="Desa/Kelurahan" value={pendaftar.desa} />
+          <InfoField label="Kecamatan" value={pendaftar.kecamatan} />
+          <InfoField label="Kabupaten/Kota" value={pendaftar.kabupaten} />
+          <InfoField label="Provinsi" value={pendaftar.provinsi} />
+          <InfoField label="Kode Pos" value={pendaftar.kodePos} />
+        </InfoGrid>
+      </SectionCard>
+
+      <SectionCard title="Kontak">
+        <InfoGrid cols={2}>
+          <InfoField label="Telepon" icon={<IconPhone />} value={pendaftar.telepon} />
+          <InfoField label="Email" icon={<IconMail />} value={pendaftar.email} />
+        </InfoGrid>
+      </SectionCard>
+    </div>
+  );
+}
+
+function WaliTab({ pendaftar }: { pendaftar: Pendaftar }) {
+  const cols: Column<WaliPpdbRow>[] = [
+    { key: "hub", header: "Hubungan", cell: (r) => <Badge tone="brand">{r.hubungan}</Badge> },
+    { key: "nama", header: "Nama", cell: (r) => <span className="font-medium">{r.nama}</span> },
+    { key: "nik", header: "NIK", cell: (r) => <span className="tabular-nums text-muted-fg">{r.nik ?? "—"}</span> },
+    { key: "pekerjaan", header: "Pekerjaan", cell: (r) => r.pekerjaan ?? "—" },
+    { key: "penghasilan", header: "Penghasilan", cell: (r) => r.penghasilan ?? "—" },
+    { key: "telp", header: "Telepon", cell: (r) => r.telepon ?? "—" },
+    { key: "email", header: "Email", cell: (r) => r.email ?? "—" },
+  ];
+  return (
+    <SectionCard
+      title="Data Wali"
+      description="Ayah, Ibu, atau Wali resmi"
+      action={<Button size="sm" onClick={() => stubAction(`Tambah Wali ${pendaftar.noPendaftaran}`)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Tambah Wali</Button>}
+      padded={false}
+    >
+      <DataTable data={pendaftar.wali} columns={cols} rowKey={(r) => `${r.hubungan}-${r.nama}`} />
+    </SectionCard>
+  );
+}
+
+function DokumenTab({ pendaftar }: { pendaftar: Pendaftar }) {
+  const cols: Column<DokumenPpdbRow>[] = [
+    { key: "nama", header: "Dokumen", cell: (r) => (
+      <div className="flex items-center gap-3">
+        <span className="h-8 w-8 rounded-md bg-muted inline-flex items-center justify-center text-muted-fg"><span className="h-4 w-4"><IconFile /></span></span>
+        <span className="font-medium">{r.nama}</span>
+      </div>
+    ) },
+    { key: "tipe", header: "Tipe", cell: (r) => <Badge tone="neutral">{r.tipe}</Badge> },
+    { key: "status", header: "Status", cell: (r) => <Badge tone={DOKUMEN_TONE[r.status]} dot>{r.status}</Badge> },
+    { key: "catatan", header: "Catatan", cell: (r) => <span className="text-muted-fg">{r.catatan ?? "—"}</span> },
+    { key: "ukuran", header: "Ukuran", cell: (r) => <span className="text-muted-fg tabular-nums">{r.ukuran ?? "—"}</span> },
+    { key: "tgl", header: "Diunggah", cell: (r) => r.diunggah ? formatTanggal(r.diunggah) : "—" },
+  ];
+  return (
+    <SectionCard
+      title="Dokumen Pendaftaran"
+      action={<Button size="sm" onClick={() => stubAction(`Unggah Dokumen ${pendaftar.noPendaftaran}`)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Unggah Dokumen</Button>}
+      padded={false}
+    >
+      <DataTable data={pendaftar.dokumen} columns={cols} rowKey={(r) => r.nama} />
+    </SectionCard>
+  );
+}
+
+function TahapanTab({ pendaftar }: { pendaftar: Pendaftar }) {
+  return (
+    <SectionCard
+      title="Linimasa Tahapan PPDB"
+      description="Status dan catatan setiap tahap"
+      padded={false}
+    >
+      <ol className="relative">
+        {pendaftar.tahapan.map((t: TahapanRow, i) => (
+          <li key={i} className="flex gap-4 px-5 py-4 border-b border-border last:border-b-0">
+            <div className="flex flex-col items-center">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-full ${t.status === "Selesai" ? "bg-emerald-500/10 text-emerald-600" : t.status === "Berjalan" ? "bg-brand/10 text-brand" : "bg-muted text-muted-fg"}`}>
+                <span className="h-4 w-4">{t.status === "Selesai" ? <IconCheck /> : <IconClock />}</span>
+              </div>
+              {i < pendaftar.tahapan.length - 1 ? (
+                <div className="mt-1 flex-1 w-px bg-border" />
+              ) : null}
+            </div>
+            <div className="flex-1 min-w-0 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-semibold text-fg">{t.tahap}</div>
+                <Badge tone={TAHAPAN_TONE[t.status]} dot>{t.status}</Badge>
+              </div>
+              <div className="text-xs text-muted-fg mt-1 inline-flex items-center gap-1">
+                <span className="h-3 w-3"><IconCalendar /></span>{formatTanggal(t.tanggal)}
+                {t.petugas ? <><span className="mx-1">·</span>{t.petugas}</> : null}
+              </div>
+              {t.catatan ? <div className="text-sm text-muted-fg mt-2">{t.catatan}</div> : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </SectionCard>
+  );
+}
+
+function AkademikTab({ pendaftar }: { pendaftar: Pendaftar }) {
+  const cols: Column<NilaiRaporRow>[] = [
+    { key: "semester", header: "Semester", cell: (r) => <span className="font-medium">{r.semester}</span> },
+    { key: "kelas", header: "Kelas", cell: (r) => r.kelas },
+    { key: "mapel", header: "Mata Pelajaran", cell: (r) => r.mapel },
+    { key: "nilai", header: "Nilai", align: "right", cell: (r) => <span className="tabular-nums font-semibold">{r.nilai}</span> },
+  ];
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Nilai Rata-rata SMP" value={pendaftar.nilaiRataRata?.toFixed(1) ?? "—"} accent="brand" icon={<IconChart />} />
+        <StatCard label="Skor Tes Akademik" value={pendaftar.skorTes ?? "—"} hint="skala 0-100" accent="violet" icon={<IconGrad />} />
+        <StatCard label="Jumlah Mata Pelajaran" value={pendaftar.raporSmp.length} accent="emerald" icon={<IconBook />} />
+      </div>
+      <SectionCard
+        title="Rapor SMP"
+        description={pendaftar.raporSmp.length === 0 ? "Tidak ada data rapor untuk jenjang ini" : "Riwayat nilai 5 semester terakhir"}
+        action={
+          <Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Rapor ${pendaftar.noPendaftaran}`)}>
+            <span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh
+          </Button>
+        }
+        padded={false}
+      >
+        {pendaftar.raporSmp.length === 0 ? (
+          <EmptyState title="Belum ada data rapor" description="Data rapor tersedia untuk pendaftar jenjang SMA." />
+        ) : (
+          <DataTable data={pendaftar.raporSmp} columns={cols} rowKey={(r) => `${r.semester}-${r.mapel}`} />
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+function WawancaraTab({ pendaftar }: { pendaftar: Pendaftar }) {
+  const cols: Column<WawancaraRow>[] = [
+    { key: "tgl", header: "Tanggal", cell: (r) => formatTanggal(r.tanggal) },
+    { key: "jenis", header: "Jenis", cell: (r) => <Badge tone="brand">{r.jenis}</Badge> },
+    { key: "pew", header: "Pewawancara", cell: (r) => <span className="font-medium">{r.pewawancara}</span> },
+    { key: "skor", header: "Skor", align: "right", cell: (r) => <span className="tabular-nums font-semibold">{r.skor}</span> },
+    { key: "catatan", header: "Catatan", cell: (r) => <span className="text-muted-fg">{r.catatan ?? "—"}</span> },
+  ];
+  return (
+    <SectionCard
+      title="Riwayat Wawancara"
+      action={<Button size="sm" onClick={() => stubAction(`Jadwalkan Wawancara ${pendaftar.noPendaftaran}`)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Jadwal Wawancara</Button>}
+      padded={false}
+    >
+      {pendaftar.wawancara.length === 0 ? (
+        <EmptyState title="Belum ada wawancara" description="Pendaftar belum mengikuti tahap wawancara." />
+      ) : (
+        <DataTable data={pendaftar.wawancara} columns={cols} rowKey={(r) => `${r.tanggal}-${r.jenis}`} />
+      )}
+    </SectionCard>
+  );
+}
+
+function PembayaranTab({ pendaftar }: { pendaftar: Pendaftar }) {
+  const cols: Column<PembayaranPpdbRow>[] = [
+    { key: "id", header: "ID", cell: (r) => <span className="tabular-nums text-muted-fg">{r.id}</span> },
+    { key: "judul", header: "Tagihan", cell: (r) => <span className="font-medium">{r.judul}</span> },
+    { key: "tgl", header: "Tanggal", cell: (r) => formatTanggal(r.tanggal) },
+    { key: "jml", header: "Jumlah", align: "right", cell: (r) => <span className="tabular-nums">{formatRupiah(r.jumlah)}</span> },
+    { key: "metode", header: "Metode", cell: (r) => r.metode ? <Badge tone="neutral">{r.metode}</Badge> : <span className="text-muted-fg">—</span> },
+    { key: "status", header: "Status", cell: (r) => <Badge tone={PEMBAYARAN_TONE[r.status]} dot>{r.status}</Badge> },
+  ];
+  const sisa = Math.max(0, pendaftar.totalBiaya - pendaftar.totalDibayar);
+  const terbuka = pendaftar.pembayaran.filter((p) => p.status !== "Lunas").length;
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Total Biaya" value={formatRupiah(pendaftar.totalBiaya)} accent="brand" icon={<IconWallet />} />
+        <StatCard label="Sudah Dibayar" value={formatRupiah(pendaftar.totalDibayar)} accent="emerald" icon={<IconCheck />} />
+        <StatCard label="Sisa" value={formatRupiah(sisa)} accent="amber" />
+        <StatCard label="Tagihan Terbuka" value={terbuka} hint={`dari ${pendaftar.pembayaran.length} tagihan`} accent="rose" />
+      </div>
+      <SectionCard
+        title="Riwayat Pembayaran"
+        action={
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => stubAction(`Catat Pembayaran ${pendaftar.noPendaftaran}`)}>Catat Pembayaran</Button>
+            <Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Bukti Pembayaran ${pendaftar.noPendaftaran}`)}>
+              <span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh
+            </Button>
+          </div>
+        }
+        padded={false}
+      >
+        <DataTable data={pendaftar.pembayaran} columns={cols} rowKey={(r) => r.id} />
+      </SectionCard>
+    </div>
+  );
+}
+
+function AktivitasTab({ pendaftar }: { pendaftar: Pendaftar }) {
+  return (
+    <SectionCard title="Linimasa Aktivitas" description="Riwayat perubahan dan kejadian terkait pendaftar" padded={false}>
+      {pendaftar.aktivitas.length === 0 ? (
+        <EmptyState title="Belum ada aktivitas" />
+      ) : (
+        <ul className="divide-y divide-border">
+          {pendaftar.aktivitas.map((a: AktivitasRow, i) => (
+            <li key={i} className="flex items-start gap-4 px-5 py-4">
+              <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                <Badge tone={a.tone} dot>·</Badge>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-fg">
+                  <span className="font-medium">{a.aktor}</span>{" "}
+                  <span className="text-muted-fg">{a.aksi}</span>
+                </div>
+                <div className="text-xs text-muted-fg mt-1 inline-flex items-center gap-1">
+                  <span className="h-3 w-3"><IconClock /></span>{a.waktu}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionCard>
+  );
+}
+
+const TAB_META: { key: TabKey; label: string; icon: JSX.Element }[] = [
+  { key: "ringkasan", label: "Ringkasan", icon: <IconHome /> },
+  { key: "profil", label: "Profil", icon: <IconId /> },
+  { key: "wali", label: "Wali", icon: <IconUsers /> },
+  { key: "dokumen", label: "Dokumen", icon: <IconFile /> },
+  { key: "tahapan", label: "Tahapan", icon: <IconCheck /> },
+  { key: "akademik", label: "Akademik", icon: <IconBook /> },
+  { key: "wawancara", label: "Wawancara", icon: <IconChat /> },
+  { key: "pembayaran", label: "Pembayaran", icon: <IconWallet /> },
+  { key: "aktivitas", label: "Aktivitas", icon: <IconClock /> },
+];
+
+const VALID_TABS = new Set<TabKey>([
+  "ringkasan","profil","wali","dokumen","tahapan","akademik","wawancara","pembayaran","aktivitas",
+]);
+
+// Pendaftaran PPDB doctype is sparse (status, gelombang, calon_siswa link,
+// tanggal_daftar) — identity (nama, nisn, jenis_kelamin, dll) lives on the
+// linked Calon Siswa doc and needs a second query (follow-up sprint).
+type PpdbDoc = {
+  name: string;
+  status?: string;
+  gelombang_ppdb?: string;
+  calon_siswa?: string;
+  tanggal_daftar?: string;
+  rombongan_belajar?: string;
+};
+
+function PpdbDetailPage() {
+  const { noPendaftaran } = Route.useParams();
+  const search = Route.useSearch();
+  const docQ = useResourceDoc<PpdbDoc>("Pendaftaran PPDB", noPendaftaran);
+  const mock = findPendaftar(noPendaftaran);
+  // Merge: real top-level overrides override mock; nested falls back. Once
+  // Calon Siswa lookup is wired, identity fields move to that doc.
+  const pendaftar: typeof mock = (() => {
+    if (!mock) return undefined;
+    const d = docQ.data;
+    if (!d) return mock;
+    return {
+      ...mock,
+      noPendaftaran: d.name ?? mock.noPendaftaran,
+      statusPendaftaran: (d.status as typeof mock.statusPendaftaran) ?? mock.statusPendaftaran,
+      tanggalDaftar: d.tanggal_daftar ?? mock.tanggalDaftar,
+    };
+  })();
+  const navigate = useNavigate();
+  const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
+  const setTab = (next: TabKey) => {
+    navigate({ to: "/ppdb/$noPendaftaran", params: { noPendaftaran }, search: { tab: next === "ringkasan" ? undefined : next } });
+  };
+
+  if (!pendaftar) {
+    throw notFound();
+  }
+
+  const counts: Partial<Record<TabKey, number>> = {
+    wali: pendaftar.wali.length,
+    dokumen: pendaftar.dokumen.length,
+    tahapan: pendaftar.tahapan.length,
+    akademik: pendaftar.raporSmp.length,
+    wawancara: pendaftar.wawancara.length,
+    pembayaran: pendaftar.pembayaran.length,
+    aktivitas: pendaftar.aktivitas.length,
+  };
+
+  const tabItems: TabItem[] = TAB_META.map((t) => ({
+    key: t.key,
+    label: t.label,
+    icon: t.icon,
+    count: counts[t.key],
+    active: tab === t.key,
+    render: ({ className, children }) => (
+      <button type="button" onClick={() => setTab(t.key)} className={className}>
+        {children}
+      </button>
+    ),
+  }));
+
+  const renderTab = () => {
+    switch (tab) {
+      case "ringkasan": return <RingkasanTab pendaftar={pendaftar} onChangeTab={setTab} />;
+      case "profil": return <ProfilTab pendaftar={pendaftar} />;
+      case "wali": return <WaliTab pendaftar={pendaftar} />;
+      case "dokumen": return <DokumenTab pendaftar={pendaftar} />;
+      case "tahapan": return <TahapanTab pendaftar={pendaftar} />;
+      case "akademik": return <AkademikTab pendaftar={pendaftar} />;
+      case "wawancara": return <WawancaraTab pendaftar={pendaftar} />;
+      case "pembayaran": return <PembayaranTab pendaftar={pendaftar} />;
+      case "aktivitas": return <AktivitasTab pendaftar={pendaftar} />;
+    }
+  };
+
+  // openOrAlert dipakai oleh aksi unduh berkas, dipertahankan untuk konsistensi.
+  void openOrAlert;
+
+  return (
+    <DetailPageTemplate
+      header={
+        <div className="space-y-3">
+          <Breadcrumb
+            items={[
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
+              { label: "PPDB", render: ({ className, children }) => <Link to="/ppdb" className={className}>{children}</Link> },
+              { label: pendaftar.namaLengkap },
+            ]}
+          />
+          <PageHeader
+            eyebrow="Detail Pendaftar"
+            title={pendaftar.namaLengkap}
+            description={`${pendaftar.noPendaftaran} · ${pendaftar.jenjangTujuan} · ${pendaftar.statusPendaftaran}`}
+            actions={
+              <Button variant="outline" onClick={() => navigate({ to: "/ppdb" })}>
+                <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
+                Kembali ke daftar
+              </Button>
+            }
+          />
+        </div>
+      }
+      hero={<Hero pendaftar={pendaftar} onEdit={() => stubAction(`Edit Pendaftar ${pendaftar.noPendaftaran}`)} />}
+      tabs={<Tabs items={tabItems} />}
+      primary={renderTab()}
+    />
+  );
+}
+
+type SearchParams = { tab?: TabKey | undefined };
+
+export const Route = createFileRoute("/ppdb/$noPendaftaran")({
+  component: PpdbDetailPage,
+  validateSearch: (raw: Record<string, unknown>): SearchParams => {
+    const t = typeof raw.tab === "string" ? raw.tab : undefined;
+    return { tab: t && VALID_TABS.has(t as TabKey) ? (t as TabKey) : undefined };
+  },
+  notFoundComponent: () => (
+    <div className="py-16">
+      <EmptyState
+        title="Pendaftar tidak ditemukan"
+        description="Nomor Pendaftaran yang diminta tidak ada di sistem. Periksa kembali atau kembali ke daftar PPDB."
+        action={
+          <Link to="/ppdb" className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
+          </Link>
+        }
+      />
+    </div>
+  ),
+});
