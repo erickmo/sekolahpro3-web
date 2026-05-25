@@ -27,7 +27,12 @@ type Row = {
   status: string;
 };
 
-type DecoratedRow = Row & { _denda?: DendaSummary[string] };
+type DecoratedRow = Row & {
+  _denda?: DendaSummary[string];
+  /** True when fetchDendaSummary threw — surfaces ambiguity to user vs "no denda".
+   *  See PERP-ADR-0001 audit finding: silent failure hides "Bayar Denda" action. */
+  _dendaFailed?: boolean;
+};
 
 const STATUS_TONE: Record<string, "success" | "brand" | "warning" | "danger" | "neutral"> = {
   Aktif: "brand",
@@ -111,7 +116,10 @@ function PeminjamanPage() {
       key: "total_denda",
       header: "Denda",
       align: "right",
-      cell: (r) => (r._denda?.total ? `Rp ${r._denda.total.toLocaleString("id-ID")}` : "—"),
+      cell: (r) => {
+        if (r._dendaFailed) return <span title="Gagal memuat denda" className="text-warning">?</span>;
+        return r._denda?.total ? `Rp ${r._denda.total.toLocaleString("id-ID")}` : "—";
+      },
     },
     {
       key: "_actions" as never,
@@ -180,14 +188,23 @@ function PeminjamanPage() {
         decorateRows={async (rows) => {
           const names = rows.map((r) => r.name);
           let summary: DendaSummary = {};
+          let failed = false;
           try {
             summary = await fetchDendaSummary(names);
-          } catch {
-            // tolerate: tampil tanpa kolom denda
+          } catch (err) {
+            // Per PERP-ADR-0001 audit: don't hide failure. Flag rows so
+            // the Denda column renders "?" and "Bayar Denda" stays hidden
+            // (we cannot know if the user owes anything).
+            failed = true;
+            // eslint-disable-next-line no-console
+            console.warn("fetchDendaSummary failed:", err);
           }
           const enriched: DecoratedRow[] = rows.map((r) => {
             const entry = summary[r.name];
-            return entry ? { ...r, _denda: entry } : { ...r };
+            const base: DecoratedRow = { ...r };
+            if (entry) base._denda = entry;
+            if (failed) base._dendaFailed = true;
+            return base;
           });
           return search.denda === "ada"
             ? enriched.filter((r) => r._denda?.status_bayar === "Belum Lunas")
