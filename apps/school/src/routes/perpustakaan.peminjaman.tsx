@@ -8,7 +8,7 @@
  *
  * See: PERP-ADR-0001, docs/superpowers/specs/2026-05-25-perpustakaan-sirkulasi-merge-design.md.
  */
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import type { FilterTuple } from "@sekolahpro/api-client";
@@ -176,6 +176,12 @@ function PeminjamanPage() {
 
   return (
     <>
+      <div className="mb-3 inline-flex rounded-md border border-border bg-card p-1">
+        <span className="rounded bg-brand px-3 py-1.5 text-sm text-white">Individu</span>
+        <Link to="/perpustakaan/kolektif" className="rounded px-3 py-1.5 text-sm text-muted-fg hover:text-fg">
+          Kolektif Kelas
+        </Link>
+      </div>
       <ResourceListPage<DecoratedRow>
         eyebrow="Perpustakaan"
         title="Peminjaman & Sirkulasi"
