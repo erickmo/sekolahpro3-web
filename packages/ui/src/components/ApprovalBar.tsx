@@ -5,17 +5,17 @@ import { Button } from "../primitives/button";
 interface Props {
   /** Label aksi approve, e.g. "Setujui sebagai Ka-TU" */
   approveLabel: string;
-  rejectLabel?: string;
+  rejectLabel?: string | undefined;
   /** Disabled when user role does not match required approver level. */
   canApprove: boolean;
   /** Why approve is blocked (shown when canApprove=false). */
-  blockReason?: string;
+  blockReason?: string | undefined;
   onApprove: () => void;
   onReject: () => void;
-  pending?: boolean;
+  pending?: boolean | undefined;
   /** Optional left-side hint or secondary content. */
-  hint?: ReactNode;
-  className?: string;
+  hint?: ReactNode | undefined;
+  className?: string | undefined;
 }
 
 export function ApprovalBar({
