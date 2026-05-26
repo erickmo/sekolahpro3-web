@@ -1,46 +1,65 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Badge } from "@sekolahpro/ui";
+import { useEffect } from "react";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useResourceDoc } from "@sekolahpro/api-client";
-import { ExtraDetailScaffold } from "../components/extra-shared/ExtraDetailScaffold";
+import { Badge, PageHeader, SectionCard } from "@sekolahpro/ui";
 
-interface WaliDoc {
+interface WaliChildDoc {
   name: string;
-  nama_wali?: string;
+  parent?: string;
+  parenttype?: string;
+  parentfield?: string;
+  nama: string;
   hubungan?: string;
-  siswa?: string;
-  nomor_telepon?: string;
-  status?: string;
-  email?: string;
-  alamat?: string;
+  no_hp?: string;
 }
 
 function WaliDetailPage() {
-  const { name } = Route.useParams();
-  const q = useResourceDoc<WaliDoc>("Wali Siswa", name);
+  const { name } = useParams({ from: "/siswa/wali/$name" });
+  const navigate = useNavigate();
+  const q = useResourceDoc<WaliChildDoc>("Wali Siswa", name);
   const doc = q.data;
-  const tone = doc?.status === "Aktif" ? "success" : "neutral";
+
+  useEffect(() => {
+    if (doc?.parent && doc.parenttype === "Siswa") {
+      void navigate({ to: "/siswa/$nis", params: { nis: doc.parent } });
+    }
+  }, [doc?.parent, doc?.parenttype, navigate]);
 
   return (
-    <ExtraDetailScaffold
-      eyebrow="Wali Siswa"
-      title={doc?.nama_wali ?? name}
-      crumbs={[{ label: "Siswa", to: "/siswa" }, { label: "Wali", to: "/siswa/wali" }]}
-      crumbSelf={name}
-      backTo="/siswa/wali"
-      loading={q.isLoading}
-      errorMessage={q.isError ? (q.error as Error).message : undefined}
-      status={doc?.status ? { label: doc.status, tone } : undefined}
-      description={doc?.hubungan ? `Hubungan: ${doc.hubungan}` : undefined}
-      primaryInfo={[
-        { label: "Nama Wali", value: doc?.nama_wali ?? "—" },
-        { label: "Hubungan", value: <Badge tone="neutral">{doc?.hubungan ?? "—"}</Badge> },
-        { label: "Siswa", value: doc?.siswa ?? "—" },
-        { label: "No. Telepon", value: doc?.nomor_telepon ?? "—" },
-        { label: "Email", value: doc?.email ?? "—" },
-        { label: "Status", value: <Badge tone={tone} dot>{doc?.status ?? "—"}</Badge> },
-      ]}
-      secondaryInfo={[{ label: "Alamat", value: doc?.alamat ?? "—" }]}
-    />
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Wali Siswa"
+        title={doc?.nama ?? name}
+        description="Wali kini dikelola sebagai child table dari Siswa."
+        actions={<Badge tone="warning" dot>Deprecated route</Badge>}
+      />
+
+      <SectionCard title="Halaman ini sudah dipindahkan">
+        <p className="text-sm text-fg/90">
+          Data Wali tidak lagi punya halaman detail standalone — perubahan, primary, dan hapus
+          dilakukan di tab <strong>Wali</strong> pada detail siswa pemilik.
+        </p>
+        {doc?.parent ? (
+          <div className="mt-4">
+            <Link
+              to="/siswa/$nis"
+              params={{ nis: doc.parent }}
+              className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
+            >
+              → Buka {doc.parent}
+            </Link>
+          </div>
+        ) : q.isLoading ? (
+          <div className="mt-4 text-sm text-muted-fg">Memuat data parent…</div>
+        ) : (
+          <div className="mt-4">
+            <Link to="/siswa/wali" className="text-brand hover:underline">
+              ← Kembali ke direktori wali
+            </Link>
+          </div>
+        )}
+      </SectionCard>
+    </div>
   );
 }
 

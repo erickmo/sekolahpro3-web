@@ -35,6 +35,10 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
     hubungan: "Ayah",
     nama: "",
     nik: "",
+    nikAyah: "",
+    nikIbu: "",
+    namaAyahKk: "",
+    isPrimary: false,
     pekerjaan: "",
     penghasilan: "",
     pendidikan: "",
@@ -50,17 +54,26 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
     const errs: Record<string, string> = {};
     if (!v.nama.trim()) errs.nama = "Wajib diisi";
     if (v.nik && !/^\d{16}$/.test(v.nik)) errs.nik = "NIK harus 16 digit";
+    if (v.hubungan === "Ayah" && v.nikAyah && !/^\d{16}$/.test(v.nikAyah)) {
+      errs.nikAyah = "NIK Ayah harus 16 digit";
+    }
+    if (v.hubungan === "Ibu" && v.nikIbu && !/^\d{16}$/.test(v.nikIbu)) {
+      errs.nikIbu = "NIK Ibu harus 16 digit";
+    }
     if (Object.keys(errs).length) { setErr(errs); return; }
     onSubmit(v);
     onClose();
   };
+
+  const isAyah = v.hubungan === "Ayah";
+  const isIbu = v.hubungan === "Ibu";
 
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={initial ? "Edit Wali" : "Tambah Wali"}
-      description="Data Ayah, Ibu, atau Wali resmi"
+      description="Data Ayah, Ibu, atau Wali resmi (child table dari Siswa)"
       size="lg"
       footer={
         <>
@@ -81,7 +94,32 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
           <FormField label="Nama Lengkap" required error={err.nama}>
             <Input value={v.nama} onChange={(e) => setV({ ...v, nama: e.target.value })} />
           </FormField>
-          <FormField label="NIK" hint="16 digit" error={err.nik}>
+          {isAyah ? (
+            <>
+              <FormField label="NIK Ayah (KK)" hint="16 digit, dari KK" error={err.nikAyah}>
+                <Input
+                  inputMode="numeric"
+                  maxLength={16}
+                  value={v.nikAyah ?? ""}
+                  onChange={(e) => setV({ ...v, nikAyah: e.target.value.replace(/\D/g, "") })}
+                />
+              </FormField>
+              <FormField label="Nama Ayah (KK)" hint="Sesuai Kartu Keluarga untuk Dapodik">
+                <Input value={v.namaAyahKk ?? ""} onChange={(e) => setV({ ...v, namaAyahKk: e.target.value })} />
+              </FormField>
+            </>
+          ) : null}
+          {isIbu ? (
+            <FormField label="NIK Ibu (KK)" hint="16 digit, dari KK" error={err.nikIbu}>
+              <Input
+                inputMode="numeric"
+                maxLength={16}
+                value={v.nikIbu ?? ""}
+                onChange={(e) => setV({ ...v, nikIbu: e.target.value.replace(/\D/g, "") })}
+              />
+            </FormField>
+          ) : null}
+          <FormField label="NIK (generic)" hint="16 digit — fallback bila NIK Ayah/Ibu kosong" error={err.nik}>
             <Input inputMode="numeric" maxLength={16} value={v.nik ?? ""} onChange={(e) => setV({ ...v, nik: e.target.value.replace(/\D/g, "") })} />
           </FormField>
           <FormField label="Telepon">
@@ -104,6 +142,13 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
           </FormField>
           <FormField label="Alamat" className="sm:col-span-2">
             <Textarea rows={2} value={v.alamat ?? ""} onChange={(e) => setV({ ...v, alamat: e.target.value })} />
+          </FormField>
+          <FormField label="Wali Utama" className="sm:col-span-2" hint="Hanya 1 wali per siswa boleh ditandai sebagai utama — menerima semua notifikasi dan approval portal">
+            <Checkbox
+              checked={!!v.isPrimary}
+              onChange={(e) => setV({ ...v, isPrimary: e.target.checked })}
+              label="Tandai sebagai wali utama (primary contact)"
+            />
           </FormField>
         </FormGrid>
       </form>

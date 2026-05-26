@@ -1,60 +1,84 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
-import { ExtraCreateModal, type ExtraFieldDef } from "../components/extra-shared/ExtraCreateModal";
 
-type Row = { name: string; nama: string; nama_wali?: string; hubungan?: string; siswa?: string; nomor_telepon?: string; status?: string };
+type Row = {
+  name: string;
+  parent?: string;
+  nama: string;
+  hubungan?: "Ayah" | "Ibu" | "Wali";
+  nik?: string;
+  is_primary?: 0 | 1;
+  no_hp?: string;
+};
 
 const COLUMNS: Column<Row>[] = [
-  { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
+  {
+    key: "primary",
+    header: "Utama",
+    cell: (r) => (r.is_primary ? <Badge tone="success" dot>Utama</Badge> : <span className="text-muted-fg">—</span>),
+  },
+  {
+    key: "parent",
+    header: "Siswa",
+    sortable: true,
+    cell: (r) =>
+      r.parent ? (
+        <Link
+          to="/siswa/$nis"
+          params={{ nis: r.parent }}
+          className="font-mono text-xs text-brand hover:underline"
+        >
+          {r.parent}
+        </Link>
+      ) : (
+        "—"
+      ),
+  },
   { key: "nama", header: "Nama Wali", sortable: true, cell: (r) => r.nama },
-  { key: "hubungan", header: "Hubungan", cell: (r) => <Badge tone="neutral">{r.hubungan ?? "—"}</Badge> },
-  { key: "siswa", header: "Siswa", cell: (r) => r.siswa ?? "—" },
-  { key: "nomor_telepon", header: "No. Telepon", cell: (r) => r.nomor_telepon ?? "—" },
-  { key: "status", header: "Status",
-    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : "neutral"} dot>{r.status ?? "—"}</Badge> },
-];
-
-const FORM_FIELDS: ExtraFieldDef[] = [
-  { name: "nama", label: "Nama Wali", type: "text", required: true },
-  { name: "hubungan", label: "Hubungan", type: "select", required: true,
-    options: ["Ayah", "Ibu", "Wali"].map((v) => ({ value: v, label: v })) },
-  { name: "siswa", label: "Siswa (NIS)", type: "text", required: true, hint: "Masukkan ID siswa" },
-  { name: "nomor_telepon", label: "No. Telepon", type: "text" },
-  { name: "status", label: "Status", type: "select",
-    options: ["Aktif", "Tidak Aktif"].map((v) => ({ value: v, label: v })), defaultValue: "Aktif" },
+  {
+    key: "hubungan",
+    header: "Hubungan",
+    cell: (r) => <Badge tone="brand">{r.hubungan ?? "—"}</Badge>,
+  },
+  { key: "no_hp", header: "Telepon", cell: (r) => r.no_hp ?? "—" },
 ];
 
 function WaliPage() {
-  const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
   return (
     <>
+      <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800">
+        Wali sekarang adalah <strong>child table</strong> dari Siswa. Halaman ini hanya direktori
+        read-only (cari wali, jump ke siswa). Untuk tambah/edit/hapus wali, buka detail siswa →
+        tab <strong>Wali</strong>.
+      </div>
       <ResourceListPage<Row>
         eyebrow="Siswa"
-        title="Wali Siswa"
+        title="Direktori Wali"
         doctype="Wali Siswa"
-        fields={["name", "nama", "hubungan", "email"]}
+        fields={["name", "parent", "nama", "hubungan", "nik", "is_primary", "no_hp"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "nama", dir: "asc" }}
-        searchFields={["name", "nama"]}
+        searchFields={["nama", "no_hp"]}
         selectFilters={[
-          { key: "hubungan", label: "Hubungan", field: "hubungan",
-            options: ["Semua", "Ayah", "Ibu", "Wali"].map((v) => ({ value: v, label: v })) },
+          {
+            key: "hubungan",
+            label: "Hubungan",
+            field: "hubungan",
+            options: ["Semua", "Ayah", "Ibu", "Wali"].map((v) => ({ value: v, label: v })),
+          },
+          {
+            key: "primary",
+            label: "Wali Utama",
+            field: "is_primary",
+            options: [
+              { value: "Semua", label: "Semua" },
+              { value: "1", label: "Hanya Utama" },
+              { value: "0", label: "Bukan Utama" },
+            ],
+          },
         ]}
-        addLabel="Tambah Wali"
-        onAdd={() => setOpen(true)}
-        onRowClick={(r) => navigate({ to: "/siswa/wali/$name", params: { name: r.name } })}
-      />
-      <ExtraCreateModal
-        open={open}
-        onClose={() => setOpen(false)}
-        doctype="Wali Siswa"
-        title="Tambah Wali Siswa"
-        description="Catat data wali (orang tua / pengasuh) untuk siswa."
-        fields={FORM_FIELDS}
       />
     </>
   );

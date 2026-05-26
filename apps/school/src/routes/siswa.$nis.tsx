@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useResourceCreate } from "@sekolahpro/api-client";
+import { useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
 import { useSessionStore } from "@sekolahpro/auth";
 import { MaskedField } from "@sekolahpro/ui/components/MaskedField";
 import { ConsentGate } from "@sekolahpro/ui/components/ConsentGate";
@@ -608,31 +608,102 @@ function KeuanganTab({ siswa }: { siswa: Siswa }) {
   );
 }
 
+function serializeWali(rows: WaliRow[]): Record<string, unknown>[] {
+  return rows.map((w) => ({
+    hubungan: w.hubungan,
+    nama: w.nama,
+    nik: w.nik ?? null,
+    nik_ayah: w.nikAyah ?? null,
+    nik_ibu: w.nikIbu ?? null,
+    nama_ayah_kk: w.namaAyahKk ?? null,
+    is_primary: w.isPrimary ? 1 : 0,
+    pekerjaan: w.pekerjaan ?? null,
+    penghasilan: w.penghasilan ?? null,
+    pendidikan: w.pendidikan ?? null,
+    no_hp: w.telepon ?? null,
+    email: w.email ?? null,
+    alamat: w.alamat ?? null,
+  }));
+}
+
+function enforceSinglePrimary(rows: WaliRow[], primaryIdx: number): WaliRow[] {
+  return rows.map((r, i) => ({ ...r, isPrimary: i === primaryIdx }));
+}
+
 function WaliTab({ siswa }: { siswa: Siswa }) {
-  const [open, setOpen] = useState(false);
+  const [openAdd, setOpenAdd] = useState(false);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [localWali, setLocalWali] = useState<WaliRow[]>(siswa.wali);
   const qc = useQueryClient();
-  const createWali = useResourceCreate("Wali Siswa");
+  const updateSiswa = useResourceUpdate("Siswa");
   const roles = useSessionStore((s) => s.roles);
   const canRevealPii = useMemo(() => roles.some((r) => PII_ROLES.has(r)), [roles]);
 
-  const handleWali = async (w: WaliRow) => {
-    try {
-      await createWali.mutateAsync({
-        hubungan: w.hubungan,
-        nama: w.nama,
-        nik_ortu: w.nik ?? "",
-        pendidikan: w.pendidikan ?? "",
-        pekerjaan: w.pekerjaan ?? "",
-        no_hp: w.telepon ?? "",
-        email: w.email ?? "",
-      });
-      qc.invalidateQueries({ queryKey: ["resource:list", "Wali Siswa"] });
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Gagal menyimpan wali.");
-    }
+  const persist = useCallback(
+    async (next: WaliRow[]) => {
+      setBusy(true);
+      setErr(null);
+      try {
+        await updateSiswa.mutateAsync({
+          name: siswa.nis,
+          patch: { wali: serializeWali(next) },
+        });
+        setLocalWali(next);
+        qc.invalidateQueries({ queryKey: ["resource:doc", "Siswa", siswa.nis] });
+      } catch (e) {
+        setErr(e instanceof Error ? e.message : "Gagal menyimpan wali.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [updateSiswa, siswa.nis, qc],
+  );
+
+  const handleAdd = async (w: WaliRow) => {
+    const next = [...localWali, w];
+    const primaryIdx = w.isPrimary ? next.length - 1 : next.findIndex((r) => r.isPrimary);
+    await persist(primaryIdx >= 0 ? enforceSinglePrimary(next, primaryIdx) : next);
   };
 
-  const cols: Column<WaliRow>[] = [
+  const handleEdit = async (w: WaliRow) => {
+    if (editIdx == null) return;
+    const next = localWali.map((r, i) => (i === editIdx ? w : r));
+    const primaryIdx = w.isPrimary ? editIdx : next.findIndex((r) => r.isPrimary);
+    await persist(primaryIdx >= 0 ? enforceSinglePrimary(next, primaryIdx) : next);
+    setEditIdx(null);
+  };
+
+  const handleRemove = async (idx: number) => {
+    if (!window.confirm(`Hapus wali "${localWali[idx]?.nama}"?`)) return;
+    await persist(localWali.filter((_, i) => i !== idx));
+  };
+
+  const handleSetPrimary = async (idx: number) => {
+    await persist(enforceSinglePrimary(localWali, idx));
+  };
+
+  const cols: Column<WaliRow & { __idx: number }>[] = [
+    {
+      key: "primary",
+      header: "Utama",
+      cell: (r) =>
+        r.isPrimary ? (
+          <Badge tone="success" dot>
+            Utama
+          </Badge>
+        ) : (
+          <button
+            type="button"
+            onClick={() => void handleSetPrimary(r.__idx)}
+            disabled={busy}
+            className="text-xs text-muted-fg hover:text-brand hover:underline disabled:opacity-50"
+          >
+            Jadikan Utama
+          </button>
+        ),
+    },
     { key: "hub", header: "Hubungan", cell: (r) => <Badge tone="brand">{r.hubungan}</Badge> },
     { key: "nama", header: "Nama", cell: (r) => <span className="font-medium">{r.nama}</span> },
     {
@@ -640,7 +711,7 @@ function WaliTab({ siswa }: { siswa: Siswa }) {
       header: "NIK",
       cell: (r) => (
         <MaskedField
-          value={r.nik}
+          value={r.nikAyah ?? r.nikIbu ?? r.nik}
           type="nik"
           canReveal={canRevealPii}
           onReveal={(reason) => logPiiAccess(`wali_${r.hubungan.toLowerCase()}_nik`, siswa.nis, reason)}
@@ -648,19 +719,63 @@ function WaliTab({ siswa }: { siswa: Siswa }) {
       ),
     },
     { key: "pekerjaan", header: "Pekerjaan", cell: (r) => r.pekerjaan ?? "—" },
-    { key: "penghasilan", header: "Penghasilan", cell: (r) => r.penghasilan ?? "—" },
-    { key: "pendidikan", header: "Pendidikan", cell: (r) => r.pendidikan ?? "—" },
     { key: "telp", header: "Telepon", cell: (r) => r.telepon ?? "—" },
+    {
+      key: "_actions",
+      header: "Aksi",
+      cell: (r) => (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setEditIdx(r.__idx)}
+            disabled={busy}
+            className="text-xs text-brand hover:underline disabled:opacity-50"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleRemove(r.__idx)}
+            disabled={busy}
+            className="text-xs text-danger hover:underline disabled:opacity-50"
+          >
+            Hapus
+          </button>
+        </div>
+      ),
+    },
   ];
+
+  const indexed = localWali.map((w, i) => ({ ...w, __idx: i }));
+  const editing = editIdx != null ? localWali[editIdx] : undefined;
+
   return (
     <SectionCard
       title="Data Wali"
-      description="Ayah, Ibu, atau Wali resmi"
-      action={<Button size="sm" onClick={() => setOpen(true)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Tambah Wali</Button>}
+      description="Child table dari Siswa — perubahan disimpan ke parent doc."
+      action={
+        <Button size="sm" onClick={() => setOpenAdd(true)} disabled={busy}>
+          <span className="h-3.5 w-3.5 mr-1">
+            <IconPlus />
+          </span>
+          Tambah Wali
+        </Button>
+      }
       padded={false}
     >
-      <DataTable data={siswa.wali} columns={cols} rowKey={(r) => `${r.hubungan}-${r.nama}`} />
-      <WaliModal open={open} onClose={() => setOpen(false)} onSubmit={handleWali} />
+      {err ? (
+        <div className="m-5 rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
+          {err}
+        </div>
+      ) : null}
+      <DataTable data={indexed} columns={cols} rowKey={(r) => `${r.__idx}-${r.hubungan}-${r.nama}`} />
+      <WaliModal open={openAdd} onClose={() => setOpenAdd(false)} onSubmit={handleAdd} />
+      <WaliModal
+        open={editIdx != null}
+        onClose={() => setEditIdx(null)}
+        onSubmit={handleEdit}
+        initial={editing}
+      />
     </SectionCard>
   );
 }
