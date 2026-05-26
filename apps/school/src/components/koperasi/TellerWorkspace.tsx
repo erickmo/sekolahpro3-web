@@ -232,14 +232,18 @@ export function TellerWorkspace() {
 
       <QuickActionGrid disabled={!ctx} onSelect={onQuickAction} />
 
-      <div className="rounded-md border border-dashed border-border bg-bg-subtle px-3 py-2 text-xs text-muted-fg">
-        Hotkey: <kbd className="font-mono">F2</kbd> Setor ·
-        <kbd className="font-mono">F3</kbd> Tarik ·
-        <kbd className="font-mono">F4</kbd> Top-up ·
-        <kbd className="font-mono">F5</kbd> Cek Saldo ·
-        <kbd className="font-mono">/</kbd> Cari ·
-        <kbd className="font-mono">Esc</kbd> Reset
-      </div>
+      <nav
+        aria-label="Daftar hotkey teller workspace"
+        className="rounded-md border border-dashed border-border bg-bg-subtle px-3 py-2 text-xs text-muted-fg"
+      >
+        <span className="sr-only">Hotkey aktif:</span>
+        Hotkey: <kbd className="font-mono" aria-label="F2">F2</kbd> Setor ·{" "}
+        <kbd className="font-mono" aria-label="F3">F3</kbd> Tarik ·{" "}
+        <kbd className="font-mono" aria-label="F4">F4</kbd> Top-up ·{" "}
+        <kbd className="font-mono" aria-label="F5">F5</kbd> Cek Saldo ·{" "}
+        <kbd className="font-mono" aria-label="garis miring">/</kbd> Cari ·{" "}
+        <kbd className="font-mono" aria-label="Escape">Esc</kbd> Reset
+      </nav>
 
       {modal.kind === "transaksi" && ctx ? (
         <TransaksiModal

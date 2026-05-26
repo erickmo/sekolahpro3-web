@@ -25,10 +25,15 @@ export function QuickActionGrid({ disabled, onSelect }: QuickActionGridProps) {
           type="button"
           disabled={disabled}
           onClick={() => onSelect(a)}
-          className="group flex min-h-[5.5rem] flex-col items-start justify-between rounded-lg border border-border bg-bg p-4 text-left transition hover:border-brand hover:bg-brand-subtle disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label={`${a.label} (hotkey ${a.hotkey})`}
+          aria-keyshortcuts={a.hotkey}
+          className="group flex min-h-[5.5rem] flex-col items-start justify-between rounded-lg border border-border bg-bg p-4 text-left transition hover:border-brand hover:bg-brand-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <span className="text-base font-medium">{a.label}</span>
-          <kbd className="mt-2 rounded border border-border bg-bg-subtle px-2 py-0.5 text-xs font-mono">
+          <kbd
+            aria-hidden="true"
+            className="mt-2 rounded border border-border bg-bg-subtle px-2 py-0.5 text-xs font-mono"
+          >
             {a.hotkey}
           </kbd>
         </button>

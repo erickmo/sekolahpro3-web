@@ -25,9 +25,17 @@ function formatRupiah(v: number | undefined): string {
 export function AnggotaContextCard({ ctx }: { ctx: AnggotaContext | null }) {
   if (!ctx) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-bg-subtle p-6 text-center">
+      <div
+        role="status"
+        aria-live="polite"
+        className="rounded-lg border border-dashed border-border bg-bg-subtle p-6 text-center"
+      >
         <p className="text-sm text-muted-fg">
-          Scan kartu RFID atau tekan <kbd className="rounded border border-border bg-bg px-1.5 py-0.5 text-xs">/</kbd> untuk cari anggota.
+          Scan kartu RFID atau tekan{" "}
+          <kbd aria-label="garis miring" className="rounded border border-border bg-bg px-1.5 py-0.5 text-xs">
+            /
+          </kbd>{" "}
+          untuk cari anggota.
         </p>
       </div>
     );
@@ -36,7 +44,12 @@ export function AnggotaContextCard({ ctx }: { ctx: AnggotaContext | null }) {
   const tone = ctx.status ? STATUS_TONE[ctx.status] ?? "neutral" : "neutral";
 
   return (
-    <div className="rounded-lg border border-border bg-bg p-4">
+    <div
+      role="region"
+      aria-label={`Anggota aktif ${ctx.nasabah ?? ctx.anggotaName}`}
+      aria-live="polite"
+      className="rounded-lg border border-border bg-bg p-4"
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="text-xs uppercase tracking-wide text-muted-fg">Anggota Aktif</div>

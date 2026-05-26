@@ -144,10 +144,15 @@ export function ShuWizard({ open, onClose, onSuccess }: ShuWizardProps) {
   return (
     <Modal open={open} onClose={handleClose} title={`SHU Wizard — Step ${step + 1}/4 · ${STEPS[step]}`} size="lg">
       <div className="space-y-4">
-        <ol className="flex items-center gap-2 text-xs">
+        <ol
+          aria-label="Progres wizard SHU"
+          role="list"
+          className="flex items-center gap-2 text-xs"
+        >
           {STEPS.map((label, i) => (
             <li
               key={label}
+              aria-current={i === step ? "step" : undefined}
               className={[
                 "flex-1 rounded-md border px-2 py-1 text-center",
                 i === step ? "border-brand bg-brand-subtle font-medium" :
@@ -155,7 +160,8 @@ export function ShuWizard({ open, onClose, onSuccess }: ShuWizardProps) {
                 "border-border text-muted-fg",
               ].join(" ")}
             >
-              {i + 1}. {label}
+              <span className="sr-only">Step </span>{i + 1}. {label}
+              {i < step ? <span className="sr-only"> (selesai)</span> : null}
             </li>
           ))}
         </ol>
