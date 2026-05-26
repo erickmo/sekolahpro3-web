@@ -30,4 +30,8 @@ export * from "./components/SetupBanner";
 export * from "./components/GlossaryTooltip";
 export * from "./components/AttentionList";
 export * from "./components/GettingStartedCard";
+export * from "./components/WorkflowStepper";
+export * from "./components/ApprovalBar";
+export * from "./components/RejectModal";
+export * from "./components/AuditTrailTimeline";
 export * from "./icons";
