@@ -66,6 +66,8 @@ const GROUPS: NavGroup[] = [
     label: "Admin",
     members: [
       { to: "/koperasi/persetujuan", label: "Persetujuan" },
+      { to: "/koperasi/period-close", label: "Period Close" },
+      { to: "/koperasi/ppatk", label: "PPATK" },
       { to: "/koperasi/laporan", label: "Laporan" },
       { to: "/koperasi/pengaturan", label: "Pengaturan" },
     ],
