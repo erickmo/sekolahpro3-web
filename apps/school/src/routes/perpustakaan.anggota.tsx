@@ -51,11 +51,11 @@ function AnggotaPage() {
         eyebrow="Perpustakaan"
         title="Anggota Perpustakaan"
         doctype="Anggota Perpustakaan"
-        fields={["name", "nama_lengkap", "tipe_anggota", "nis_nip", "kelas", "status", "saldo_denda"]}
+        fields={["name", "nama_lengkap", "tipe_anggota", "status"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "nama_lengkap", dir: "asc" }}
-        searchFields={["name", "nama_lengkap", "nis_nip"]}
+        searchFields={["name", "nama_lengkap"]}
         selectFilters={[
           { key: "tipe", label: "Tipe", field: "tipe_anggota",
             options: ["Semua", "Siswa", "Guru", "Staff"].map((v) => ({ value: v, label: v })) },

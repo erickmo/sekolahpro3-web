@@ -10,13 +10,10 @@ function KurikulumDetailPage() {
       eyebrow="Detail Kurikulum"
       parentLabel="Kurikulum"
       parentTo="/akademik/kurikulum"
-      titleField="nama_kurikulum"
-      statusField="status"
+      titleField="nama"
       fields={[
-        { label: "Nama", field: "nama_kurikulum" },
+        { label: "Nama", field: "nama" },
         { label: "Tahun Berlaku", field: "tahun_berlaku" },
-        { label: "Jenjang", field: "jenjang" },
-        { label: "Status", field: "status" },
       ]}
     />
   );

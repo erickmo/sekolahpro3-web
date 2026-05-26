@@ -6,23 +6,19 @@ import { TransaksiModal } from "../components/koperasi-simpanan/transaksiForm";
 
 type Row = {
   name: string;
-  rekening: string;
+  rekening_simpanan: string;
   jenis: string;
-  nominal: number;
-  saldo_akhir?: number;
+  jumlah: number;
   tanggal: string;
-  teller?: string;
 };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID Transaksi", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "rekening", header: "Rekening", cell: (r) => <span className="font-mono text-xs">{r.rekening}</span> },
+  { key: "rekening_simpanan", header: "Rekening", cell: (r) => <span className="font-mono text-xs">{r.rekening_simpanan}</span> },
   { key: "jenis", header: "Jenis",
     cell: (r) => <Badge tone={r.jenis === "Setor" ? "success" : r.jenis === "Tarik" ? "warning" : r.jenis === "Transfer" ? "brand" : "neutral"}>{r.jenis}</Badge> },
-  { key: "nominal", header: "Nominal", align: "right", sortable: true,
-    cell: (r) => <span className="tabular-nums">Rp {r.nominal.toLocaleString("id-ID")}</span> },
-  { key: "saldo_akhir", header: "Saldo Akhir", align: "right",
-    cell: (r) => r.saldo_akhir !== undefined ? <span className="tabular-nums">Rp {r.saldo_akhir.toLocaleString("id-ID")}</span> : "—" },
+  { key: "jumlah", header: "Nominal", align: "right", sortable: true,
+    cell: (r) => <span className="tabular-nums">Rp {r.jumlah.toLocaleString("id-ID")}</span> },
   { key: "tanggal", header: "Tanggal", sortable: true, cell: (r) => r.tanggal },
 ];
 
@@ -36,11 +32,11 @@ function TransaksiPage() {
         title="Transaksi Simpanan"
         description="Setor, tarik, transfer, dan mutasi rekening."
         doctype="Transaksi Simpanan"
-        fields={["name", "rekening", "jenis", "nominal", "saldo_akhir", "tanggal", "teller"]}
+        fields={["name", "rekening_simpanan", "jenis", "jumlah", "tanggal"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "tanggal", dir: "desc" }}
-        searchFields={["name", "rekening"]}
+        searchFields={["name", "rekening_simpanan"]}
         selectFilters={[
           { key: "jenis", label: "Jenis", field: "jenis",
             options: ["Semua", "Setor", "Tarik", "Transfer", "Bagi Hasil", "Koreksi"].map((v) => ({ value: v, label: v })) },

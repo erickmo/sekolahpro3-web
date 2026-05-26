@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
-type Row = { name: string; pendaftaran?: string; calon_siswa?: string; total?: number; metode?: string; status?: string; tanggal_bayar?: string };
+type Row = { name: string; pendaftaran_ppdb?: string; calon_siswa?: string; total?: number; metode?: string; status?: string; tanggal_bayar?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "No. Bayar", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
@@ -21,11 +21,11 @@ function PembayaranPpdbPage() {
       eyebrow="PPDB"
       title="Pembayaran PPDB"
       doctype="Pembayaran PPDB"
-      fields={["name", "pendaftaran", "calon_siswa", "total", "metode", "status", "tanggal_bayar"]}
+      fields={["name", "pendaftaran_ppdb", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "tanggal_bayar", dir: "desc" }}
-      searchFields={["name", "calon_siswa"]}
+      defaultSort={{ key: "name", dir: "desc" }}
+      searchFields={["name"]}
       selectFilters={[
         { key: "status", label: "Status", field: "status",
           options: ["Semua", "Belum Lunas", "Lunas", "Gagal", "Refund"].map((v) => ({ value: v, label: v })) },

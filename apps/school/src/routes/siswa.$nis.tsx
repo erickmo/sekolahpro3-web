@@ -56,7 +56,7 @@ import {
   IconWallet,
   type TabItem,
 } from "@sekolahpro/ui";
-import { useResourceDoc } from "@sekolahpro/api-client";
+import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
   findSiswa,
   formatRupiah,
@@ -706,9 +706,22 @@ const VALID_TABS = new Set<TabKey>([
   "ringkasan","profil","akademik","absensi","keuangan","wali","mutasi","dokumen","aktivitas",
 ]);
 
-// Backend Siswa doctype shape (snake_case). Only fields rendered on this
-// page are listed; nested child tables (nilai, absensi, tagihan, wali,
-// mutasi, dokumen) need their own queries in a follow-up sprint.
+// Wali Siswa child row (siswa/doctype/wali_siswa). Returned inline on the
+// parent Siswa doc fetch.
+type WaliSiswaRow = {
+  name: string;
+  hubungan?: "Ayah" | "Ibu" | "Wali";
+  nama?: string;
+  nik_ortu?: string;
+  pendidikan?: string;
+  pekerjaan?: string;
+  no_hp?: string;
+  email?: string;
+};
+
+// Backend Siswa doctype shape (snake_case). Nested child tables not yet
+// embedded here (nilai, absensi, tagihan, mutasi, dokumen) need their own
+// queries in a follow-up sprint.
 type SiswaDoc = {
   name: string;
   nis?: string;
@@ -726,7 +739,72 @@ type SiswaDoc = {
   tahun_masuk?: string;
   asal_sekolah?: string;
   kebutuhan_khusus?: string;
+  wali?: WaliSiswaRow[];
 };
+
+// Entri Nilai list-row shape (akademik/doctype/entri_nilai). Only ref fields
+// available from list; numeric components live in `Nilai Komponen` child
+// table fetched via a follow-up doc query (out of scope here).
+type EntriNilaiRow = {
+  name: string;
+  siswa?: string;
+  mata_pelajaran?: string;
+};
+
+// Mutasi Siswa list-row shape (siswa/doctype/mutasi_siswa).
+type MutasiSiswaDoc = {
+  name: string;
+  siswa?: string;
+  jenis_mutasi?: "Naik Kelas" | "Tinggal Kelas" | "Pindah Keluar" | "Drop Out";
+  tanggal_mutasi?: string;
+  rombel_asal?: string;
+  rombel_tujuan?: string;
+  sekolah_tujuan?: string;
+  alasan_pindah?: string;
+  alasan_do?: string;
+  keterangan_do?: string;
+};
+
+function mapMutasiRows(rows: MutasiSiswaDoc[]): MutasiRow[] {
+  return rows.map((r) => {
+    const jenis: MutasiRow["jenis"] =
+      r.jenis_mutasi === "Drop Out" ? "DO" : (r.jenis_mutasi ?? "Naik Kelas");
+    const ket = r.alasan_pindah ?? r.keterangan_do ?? r.alasan_do ?? undefined;
+    const row: MutasiRow = {
+      tanggal: r.tanggal_mutasi ?? "",
+      jenis,
+    };
+    if (r.rombel_asal) row.dari = r.rombel_asal;
+    if (r.rombel_tujuan ?? r.sekolah_tujuan) row.ke = r.rombel_tujuan ?? r.sekolah_tujuan;
+    if (ket) row.keterangan = ket;
+    return row;
+  });
+}
+
+function mapEntriNilaiRows(rows: EntriNilaiRow[]): NilaiRow[] {
+  return rows.map((r) => ({
+    mapel: r.mata_pelajaran ?? r.name,
+    guru: "—",
+    pengetahuan: 0,
+    keterampilan: 0,
+    predikat: "C",
+  }));
+}
+
+function mapWaliRows(wali: WaliSiswaRow[]): WaliRow[] {
+  return wali.map((w) => {
+    const row: WaliRow = {
+      hubungan: w.hubungan ?? "Wali",
+      nama: w.nama ?? "",
+    };
+    if (w.nik_ortu) row.nik = w.nik_ortu;
+    if (w.pekerjaan) row.pekerjaan = w.pekerjaan;
+    if (w.pendidikan) row.pendidikan = w.pendidikan;
+    if (w.no_hp) row.telepon = w.no_hp;
+    if (w.email) row.email = w.email;
+    return row;
+  });
+}
 
 function SiswaDetailPage() {
   const { nis } = Route.useParams();
@@ -735,14 +813,33 @@ function SiswaDetailPage() {
   // mutasi, dokumen) still come from mock until each child-table endpoint
   // gets its own useResourceList wiring.
   const docQ = useResourceDoc<SiswaDoc>("Siswa", nis);
+  const nilaiQ = useResourceList<EntriNilaiRow>("Entri Nilai", {
+    filters: { siswa: nis },
+    fields: ["name", "siswa", "mata_pelajaran"],
+    limit_page_length: 50,
+  });
+  const mutasiQ = useResourceList<MutasiSiswaDoc>("Mutasi Siswa", {
+    filters: { siswa: nis },
+    fields: [
+      "name", "siswa", "jenis_mutasi", "tanggal_mutasi",
+      "rombel_asal", "rombel_tujuan", "sekolah_tujuan",
+      "alasan_pindah", "alasan_do", "keterangan_do",
+    ],
+    order_by: "tanggal_mutasi desc",
+    limit_page_length: 50,
+  });
   const mock = findSiswa(nis);
   // Merge: real top-level fields override mock; nested arrays fall back.
   const siswa: Siswa | undefined = (() => {
     if (!mock) return undefined;
     const d = docQ.data;
-    if (!d) return mock;
+    const nilaiRows = nilaiQ.data?.length ? mapEntriNilaiRows(nilaiQ.data) : mock.nilai;
+    const mutasiRows = mutasiQ.data?.length ? mapMutasiRows(mutasiQ.data) : mock.mutasi;
+    if (!d) return { ...mock, nilai: nilaiRows, mutasi: mutasiRows };
     return {
       ...mock,
+      nilai: nilaiRows,
+      mutasi: mutasiRows,
       nis: d.nis ?? d.name ?? mock.nis,
       nisn: d.nisn ?? mock.nisn,
       nik: d.nik ?? mock.nik,
@@ -758,6 +855,7 @@ function SiswaDetailPage() {
       tahunMasuk: d.tahun_masuk ?? mock.tahunMasuk,
       asalSekolah: d.asal_sekolah ?? mock.asalSekolah,
       kebutuhanKhusus: d.kebutuhan_khusus ?? mock.kebutuhanKhusus,
+      wali: d.wali?.length ? mapWaliRows(d.wali) : mock.wali,
     };
   })();
   const navigate = useNavigate();

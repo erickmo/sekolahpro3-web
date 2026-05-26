@@ -1,30 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
-import { ResourceListPage } from "../components/ResourceListPage";
+import { MasterResourcePage } from "../components/master/MasterResourcePage";
+import { ORGANISASI_FIELDS } from "../components/master/schemas";
 
-type Row = { name: string; nama_organisasi: string; jenis?: string; status?: string };
+type Row = { name: string; nama: string; jenis_organisasi?: string; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "nama_organisasi", header: "Nama", sortable: true, cell: (r) => r.nama_organisasi },
-  { key: "jenis", header: "Jenis", cell: (r) => <Badge tone="neutral">{r.jenis ?? "—"}</Badge> },
+  { key: "nama", header: "Nama", sortable: true, cell: (r) => r.nama },
+  { key: "jenis_organisasi", header: "Jenis", cell: (r) => <Badge tone="neutral">{r.jenis_organisasi ?? "—"}</Badge> },
   { key: "status", header: "Status",
     cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : "neutral"} dot>{r.status ?? "—"}</Badge> },
 ];
 
 function OrganisasiPage() {
   return (
-    <ResourceListPage<Row>
+    <MasterResourcePage<Row>
       eyebrow="Master Data"
       title="Organisasi"
       doctype="Organisasi"
-      fields={["name", "nama_organisasi", "jenis", "status"]}
+      fields={["name", "nama", "jenis_organisasi", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "nama_organisasi", dir: "asc" }}
-      searchFields={["name", "nama_organisasi"]}
+      defaultSort={{ key: "nama", dir: "asc" }}
+      searchFields={["name", "nama"]}
       addLabel="Tambah Organisasi"
-      onAdd={() => alert("Form organisasi (P2)")}
+      detailRoute="/master/organisasi/$name"
+      detailParams={(r) => ({ name: r.name })}
+      formTitle="Tambah Organisasi"
+      formFields={ORGANISASI_FIELDS}
     />
   );
 }

@@ -51,13 +51,21 @@ async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   return (json as { data: T }).data;
 }
 
+// Frappe REST filter tuple. The 3-tuple `[field, op, val]` targets the
+// queried doctype directly. The 4-tuple `[child_doctype, field, op, val]`
+// filters the parent doc by a value on one of its child rows — Frappe's
+// canonical way to query parents by child columns without writing SQL.
+export type FilterTuple3 = [string, string, unknown];
+export type FilterTuple4 = [string, string, string, unknown];
+export type FilterTuple = FilterTuple3 | FilterTuple4;
+
 export interface ListParams {
   fields?: string[];
-  filters?: Array<[string, string, unknown]> | Record<string, unknown>;
+  filters?: FilterTuple[] | Record<string, unknown>;
   order_by?: string;
   limit_start?: number;
   limit_page_length?: number;
-  or_filters?: Array<[string, string, unknown]>;
+  or_filters?: FilterTuple[];
 }
 
 export function listResource<T = Record<string, unknown>>(doctype: string, params: ListParams = {}): Promise<T[]> {

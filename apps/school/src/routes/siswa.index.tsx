@@ -46,7 +46,7 @@ const AKTIVITAS_LIMIT = 5;
 
 function SiswaDashboardPage() {
   const q = useResourceList<SiswaRow>("Siswa", {
-    fields: ["name", "status", "jenis_kelamin", "kelas", "nama_lengkap"],
+    fields: ["name", "status", "jenis_kelamin", "nama_lengkap"],
     limit_page_length: 0,
   });
 

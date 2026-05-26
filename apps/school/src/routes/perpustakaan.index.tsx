@@ -35,6 +35,12 @@ type PeminjamanRow = {
   status?: string;
 };
 
+type DendaRow = {
+  name: string;
+  nominal?: number;
+  status?: string;
+};
+
 const QUICK_ACTIONS: { to: string; label: string; description: string; icon: React.ReactNode }[] = [
   { to: "/perpustakaan/peminjaman", label: "Peminjaman", description: "Catat peminjaman buku baru.", icon: <IconBook /> },
   { to: "/perpustakaan/pengembalian", label: "Pengembalian", description: "Proses pengembalian dan pemeriksaan kondisi.", icon: <IconCheck /> },
@@ -64,8 +70,15 @@ function PerpustakaanDashboardPage() {
     limit_page_length: 200,
   });
 
+  const dendaQ = useResourceList<DendaRow>("Denda Perpustakaan", {
+    fields: ["name", "nominal", "status"],
+    filters: { status: "Belum Lunas" },
+    limit_page_length: 0,
+  });
+
   const buku = bukuQ.data ?? [];
   const pinjam = pinjamQ.data ?? [];
+  const denda = dendaQ.data ?? [];
 
   const TODAY = "2026-05-25";
 
@@ -77,9 +90,10 @@ function PerpustakaanDashboardPage() {
     const jatuhTempoHariIni = pinjam.filter(
       (p) => p.status === "Aktif" && p.tanggal_kembali_rencana === TODAY,
     ).length;
-    // TODO(api): denda agregat dari `Denda Perpustakaan` (status != Lunas).
-    return { totalJudul, aktif, terlambat, jatuhTempoHariIni };
-  }, [buku, pinjam]);
+    const dendaOutstanding = denda.reduce((s, d) => s + (d.nominal ?? 0), 0);
+    const dendaCount = denda.length;
+    return { totalJudul, aktif, terlambat, jatuhTempoHariIni, dendaOutstanding, dendaCount };
+  }, [buku, pinjam, denda]);
 
   const perluPerhatianItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = [];
@@ -185,11 +199,11 @@ function PerpustakaanDashboardPage() {
         />
         <StatCard
           label="Denda Belum Dibayar"
-          value="—"
-          hint="butuh agregasi backend"
+          value={dendaQ.isLoading ? "…" : `Rp ${stats.dendaOutstanding.toLocaleString("id-ID")}`}
+          hint={dendaQ.isLoading ? "memuat..." : `${stats.dendaCount.toLocaleString("id-ID")} tagihan terbuka`}
           icon={<IconCheck />}
           accent="amber"
-          urgency="warn"
+          urgency={stats.dendaOutstanding > 0 ? "warn" : "normal"}
           actionHref="/perpustakaan/denda"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />

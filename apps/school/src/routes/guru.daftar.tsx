@@ -6,25 +6,14 @@ import {
 } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
-// TODO confirm field names in backend doctype "Guru":
-// guessing snake_case: nama_lengkap, nip, nuptk, jabatan, jenis_ptk, status_kepegawaian, jenis_kelamin
 type Row = {
   name: string;
   nama_lengkap?: string;
   nip?: string;
   nuptk?: string;
-  jabatan?: string;
-  jenis_ptk?: string;
+  jabatan_fungsional?: string;
   status_kepegawaian?: string;
-  jenis_kelamin?: string;
-  status?: string;
-};
-
-const TONE_BY_STATUS: Record<string, "success" | "warning" | "neutral"> = {
-  Aktif: "success",
-  Cuti: "warning",
-  "Non-aktif": "neutral",
-  Pensiun: "neutral",
+  is_aktif?: 0 | 1;
 };
 
 const COLUMNS: Column<Row>[] = [
@@ -45,22 +34,10 @@ const COLUMNS: Column<Row>[] = [
     ),
   },
   {
-    key: "jabatan",
-    header: "Jabatan / Jenis PTK",
+    key: "jabatan_fungsional",
+    header: "Jabatan Fungsional",
     sortable: true,
-    cell: (g) => (
-      <div>
-        <div className="text-fg">{g.jabatan ?? "—"}</div>
-        <div className="text-xs text-muted-fg">{g.jenis_ptk ?? "—"}</div>
-      </div>
-    ),
-  },
-  {
-    key: "jenis_kelamin",
-    header: "JK",
-    cell: (g) => <span className="text-xs">{g.jenis_kelamin === "Laki-laki" ? "L" : g.jenis_kelamin === "Perempuan" ? "P" : "—"}</span>,
-    width: "60px",
-    align: "center",
+    cell: (g) => <div className="text-fg">{g.jabatan_fungsional ?? "—"}</div>,
   },
   {
     key: "status_kepegawaian",
@@ -68,12 +45,12 @@ const COLUMNS: Column<Row>[] = [
     cell: (g) => <Badge tone="brand">{g.status_kepegawaian ?? "—"}</Badge>,
   },
   {
-    key: "status",
+    key: "is_aktif",
     header: "Status",
     sortable: true,
     cell: (g) => (
-      <Badge tone={TONE_BY_STATUS[g.status ?? ""] ?? "neutral"} dot>
-        {g.status ?? "—"}
+      <Badge tone={g.is_aktif === 1 ? "success" : "neutral"} dot>
+        {g.is_aktif === 1 ? "Aktif" : "Non-aktif"}
       </Badge>
     ),
   },
@@ -87,7 +64,7 @@ function GuruListPage() {
       title="Guru"
       description="Kelola data guru, jadwal mengajar, dan kepegawaian."
       doctype="Guru"
-      fields={["name", "nama_lengkap", "nip", "nuptk", "jabatan", "jenis_ptk", "status_kepegawaian", "jenis_kelamin", "status"]}
+      fields={["name", "nama_lengkap", "nip", "nuptk", "jabatan_fungsional", "status_kepegawaian", "is_aktif"]}
       rowKey={(g) => g.name}
       columns={COLUMNS}
       defaultSort={{ key: "nama_lengkap", dir: "asc" }}

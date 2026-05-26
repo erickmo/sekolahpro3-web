@@ -26,11 +26,14 @@ const PEMBAYARAN_DOCTYPE = "Pembayaran Angsuran";
 
 interface JadwalDoc {
   name: string;
+  ke?: number;
+  total?: number;
+  status?: string;
+  // legacy/optional
   akad?: string;
   angsuran_ke?: number;
   jatuh_tempo?: string;
   nominal?: number;
-  status?: string;
   tanggal_bayar?: string;
 }
 
@@ -61,9 +64,9 @@ function JadwalDetailPage() {
   const docQuery = useResourceDoc<JadwalDoc>(JADWAL_DOCTYPE, name);
   const payParams: ListParams = useMemo(
     () => ({
-      fields: ["name", "jadwal", "akad", "tanggal_bayar", "metode", "nominal", "denda"],
+      fields: ["name", "jadwal", "nominal"],
       filters: [["jadwal", "=", name]],
-      order_by: "`tanggal_bayar` desc",
+      order_by: "`name` desc",
       limit_page_length: 50,
     }),
     [name],

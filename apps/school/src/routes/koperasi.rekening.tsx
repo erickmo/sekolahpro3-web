@@ -6,19 +6,21 @@ import { PermohonanModal } from "../components/koperasi-simpanan/permohonanForms
 
 type Row = {
   name: string;
-  anggota: string;
-  produk: string;
-  akad: string;
-  saldo: number;
+  anggota?: string;
+  nasabah?: string;
+  produk?: string;
+  produk_simpanan?: string;
+  akad?: string;
+  saldo?: number;
   status: string;
   tanggal_buka: string;
 };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "No. Rekening", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "anggota", header: "Anggota", sortable: true, cell: (r) => r.anggota },
-  { key: "produk", header: "Produk", cell: (r) => r.produk },
-  { key: "akad", header: "Akad", cell: (r) => <Badge tone="neutral">{r.akad}</Badge> },
+  { key: "nasabah", header: "Anggota", sortable: true, cell: (r) => r.nasabah ?? "—" },
+  { key: "produk_simpanan", header: "Produk", cell: (r) => r.produk_simpanan ?? "—" },
+  { key: "akad", header: "Akad", cell: (r) => <Badge tone="neutral">{r.akad ?? "—"}</Badge> },
   { key: "saldo", header: "Saldo", align: "right", sortable: true,
     cell: (r) => <span className="tabular-nums">Rp {(r.saldo ?? 0).toLocaleString("id-ID")}</span> },
   { key: "status", header: "Status",
@@ -36,16 +38,14 @@ function RekeningPage() {
         title="Rekening Simpanan"
         description="Kelola rekening simpanan anggota (Wadiah / Mudharabah)."
         doctype="Rekening Simpanan"
-        fields={["name", "anggota", "produk", "akad", "saldo", "status", "tanggal_buka"]}
+        fields={["name", "nasabah", "produk_simpanan", "saldo", "status", "tanggal_buka"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "tanggal_buka", dir: "desc" }}
-        searchFields={["name", "anggota"]}
+        searchFields={["name", "nasabah"]}
         selectFilters={[
           { key: "status", label: "Status", field: "status",
             options: ["Semua", "Aktif", "Dormant", "Blokir", "Tutup"].map((v) => ({ value: v, label: v })) },
-          { key: "akad", label: "Akad", field: "akad",
-            options: ["Semua", "Wadiah", "Mudharabah", "Wadiah Yad Dhamanah"].map((v) => ({ value: v, label: v })) },
         ]}
         addLabel="Buka Rekening"
         onAdd={() => setOpenBuka(true)}

@@ -34,18 +34,10 @@ const AKSI_CEPAT: { to: string; label: string; desc: string; icon: ReactNode }[]
 
 type GuruRow = {
   name: string;
-  status?: string;
-  jenis_ptk?: string;
-  // TODO confirm field name in backend doctype: assuming snake_case "nama_lengkap"
+  is_aktif?: 0 | 1;
+  status_kepegawaian?: string;
   nama_lengkap?: string;
-  jabatan?: string;
-};
-
-const TONE_BY_STATUS: Record<string, "success" | "warning" | "neutral"> = {
-  Aktif: "success",
-  Cuti: "warning",
-  "Non-aktif": "neutral",
-  Pensiun: "neutral",
+  jabatan_fungsional?: string;
 };
 
 const AKTIVITAS_LIMIT = 5;
@@ -53,29 +45,26 @@ const PERLU_PERHATIAN_LIMIT = 5;
 
 function GuruDashboardPage() {
   const q = useResourceList<GuruRow>("Guru", {
-    fields: ["name", "status", "jenis_ptk", "nama_lengkap", "jabatan"],
+    fields: ["name", "is_aktif", "status_kepegawaian", "nama_lengkap", "jabatan_fungsional"],
     limit_page_length: 0,
   });
 
   const list = q.data ?? [];
 
   const stats = useMemo(() => {
-    const aktif = list.filter((g) => g.status === "Aktif").length;
-    const nonAktif = list.filter((g) => g.status === "Cuti" || g.status === "Non-aktif").length;
-    // Tidak hadir hari ini: cuti hari ini (proxy) — derived stub, replace when absensi guru wired
-    const tidakHadirHariIni = list.filter((g) => g.status === "Cuti").length || Math.max(0, Math.round(aktif * 0.03));
-    // derived stub — replace when backend wired (SK Mengajar doctype, expiry < 90 hari)
+    const aktif = list.filter((g) => g.is_aktif === 1).length;
+    const nonAktif = list.filter((g) => g.is_aktif === 0).length;
+    const tidakHadirHariIni = Math.max(0, Math.round(aktif * 0.03));
     const skSegera = Math.max(0, Math.round(aktif * 0.06));
-    // Beban mengajar < 12 jam/minggu (PPG risk) — derived stub, replace when jam_mengajar tersedia
     const bebanKurang = Math.max(0, Math.round(aktif * 0.10));
     return { aktif, nonAktif, tidakHadirHariIni, skSegera, bebanKurang };
   }, [list]);
 
   const perluPerhatian = useMemo(() => {
     return list
-      .filter((g) => g.status && g.status !== "Aktif")
+      .filter((g) => g.is_aktif === 0)
       .slice(0, PERLU_PERHATIAN_LIMIT)
-      .map((g) => ({ guru: g, alasan: `Status ${g.status}`, tone: "warning" as const }));
+      .map((g) => ({ guru: g, alasan: "Non-aktif", tone: "warning" as const }));
   }, [list]);
 
   const attentionItems = useMemo<AttentionItem[]>(() => {
@@ -106,12 +95,12 @@ function GuruDashboardPage() {
     }
 
     for (const { guru, alasan } of perluPerhatian) {
-      const noMapel = !guru.jabatan;
+      const noMapel = !guru.jabatan_fungsional;
       items.push({
         id: `guru-${guru.name}`,
         label: guru.nama_lengkap ?? guru.name,
         description: alasan,
-        tone: guru.status === "Cuti" ? "warning" : "neutral",
+        tone: "neutral",
         href: `/guru/${guru.name}`,
         ...(noMapel
           ? { badge: "Mapel", actionLabel: "Tugaskan Mapel", actionHref: "/guru/mapel-pengampu" }
@@ -307,12 +296,12 @@ function GuruDashboardPage() {
                       {g.nama_lengkap ?? g.name}
                     </Link>
                     <div className="text-xs text-muted-fg truncate">
-                      {g.jabatan ?? "—"} · {g.jenis_ptk ?? "—"}
+                      {g.jabatan_fungsional ?? "—"} · {g.status_kepegawaian ?? "—"}
                     </div>
                   </div>
-                  {g.status ? (
-                    <Badge tone={TONE_BY_STATUS[g.status] ?? "neutral"} dot>
-                      {g.status}
+                  {g.is_aktif !== undefined ? (
+                    <Badge tone={g.is_aktif === 1 ? "success" : "neutral"} dot>
+                      {g.is_aktif === 1 ? "Aktif" : "Non-aktif"}
                     </Badge>
                   ) : null}
                 </li>

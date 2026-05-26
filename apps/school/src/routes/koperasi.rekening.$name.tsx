@@ -39,10 +39,9 @@ interface RekeningDoc {
 
 interface TransaksiRow {
   name: string;
-  rekening: string;
+  rekening_simpanan: string;
   jenis: string;
-  nominal: number;
-  saldo_akhir?: number;
+  jumlah: number;
   tanggal: string;
 }
 
@@ -71,8 +70,8 @@ function RekeningDetailPage() {
 
   const doc = useResourceDoc<RekeningDoc>("Rekening Simpanan", name);
   const tx = useResourceList<TransaksiRow>("Transaksi Simpanan", {
-    fields: ["name", "rekening", "jenis", "nominal", "saldo_akhir", "tanggal"],
-    filters: [["rekening", "=", name]],
+    fields: ["name", "rekening_simpanan", "jenis", "jumlah", "tanggal"],
+    filters: [["rekening_simpanan", "=", name]],
     order_by: "`tanggal` desc",
     limit_page_length: 50,
   });
@@ -227,10 +226,7 @@ function RekeningDetailPage() {
                       <div className="text-xs text-muted-fg mt-1">{t.tanggal}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-semibold tabular-nums">{formatRupiah(t.nominal)}</div>
-                      {t.saldo_akhir !== undefined ? (
-                        <div className="text-xs text-muted-fg tabular-nums">Saldo: {formatRupiah(t.saldo_akhir)}</div>
-                      ) : null}
+                      <div className="text-sm font-semibold tabular-nums">{formatRupiah(t.jumlah)}</div>
                     </div>
                   </li>
                 ))}

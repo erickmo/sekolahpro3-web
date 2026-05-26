@@ -21,15 +21,11 @@ function EntriNilaiPage() {
       title="Entri Nilai"
       description="Sesi input nilai per mapel & kelas."
       doctype="Entri Nilai"
-      fields={["name", "mata_pelajaran", "kelas", "guru", "status", "tanggal"]}
+      fields={["name", "mata_pelajaran"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "tanggal", dir: "desc" }}
+      defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "mata_pelajaran"]}
-      selectFilters={[
-        { key: "status", label: "Status", field: "status",
-          options: ["Semua", "Draft", "Final", "Dikunci"].map((v) => ({ value: v, label: v })) },
-      ]}
       addLabel="Mulai Entri"
       onAdd={() => alert("Form entri nilai (P2)")}
     />

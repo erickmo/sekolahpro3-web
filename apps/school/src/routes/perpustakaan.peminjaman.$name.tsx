@@ -1,12 +1,24 @@
+/**
+ * Detail Peminjaman Buku — pusat sirkulasi single-doc.
+ *
+ * Per PERP-ADR-0001 (merge sirkulasi perpustakaan):
+ * - Action "Kembalikan" wajib lewat doctype Pengembalian Buku (insert + submit)
+ *   agar hook on_submit jalan: release eksemplar, auto-generate denda, update
+ *   status peminjaman. Patch langsung `status=Selesai` (perilaku lama) dilarang.
+ * - Denda dilihat & dilunasi inline lewat DendaDrawer.
+ */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, FormField, Input, Modal } from "@sekolahpro/ui";
-import { useResourceDoc, updateResource } from "@sekolahpro/api-client";
+import { useResourceDoc, useResourceList, updateResource } from "@sekolahpro/api-client";
 import { PerpDetailScaffold } from "../components/perpustakaan/PerpDetailScaffold";
 import { perpFormatDate } from "../components/perpustakaan/perpFormatters";
+import { ReturnModal } from "../components/perpustakaan/ReturnModal";
+import { DendaDrawer } from "../components/perpustakaan/DendaDrawer";
 
 const DOCTYPE = "Peminjaman Buku";
+const DOCTYPE_PENGEMBALIAN = "Pengembalian Buku";
 
 type Doc = {
   name: string;
@@ -18,6 +30,12 @@ type Doc = {
   tanggal_kembali_aktual?: string;
   status?: string;
   petugas?: string;
+  catatan?: string;
+};
+
+type PengembalianRow = {
+  name: string;
+  tanggal_kembali_aktual?: string;
   catatan?: string;
 };
 
@@ -34,8 +52,19 @@ function PeminjamanDetailPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data, isLoading, error } = useResourceDoc<Doc>(DOCTYPE, name);
+
+  // Pengembalian terkait — ditampilkan inline (rute pengembalian/$name dihapus).
+  const { data: returnDocs = [] } = useResourceList<PengembalianRow>(DOCTYPE_PENGEMBALIAN, {
+    filters: [["peminjaman", "=", name]],
+    fields: ["name", "tanggal_kembali_aktual", "catatan"],
+    limit_page_length: 5,
+  });
+  const pengembalian = returnDocs[0];
+
   const [perpanjangOpen, setPerpanjangOpen] = useState(false);
   const [perpanjangDate, setPerpanjangDate] = useState("");
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [dendaOpen, setDendaOpen] = useState(false);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["resource:doc", DOCTYPE, name] });
@@ -46,14 +75,6 @@ function PeminjamanDetailPage() {
     mutationFn: ({ patch }) => updateResource<Doc>(DOCTYPE, name, patch),
     onSuccess: () => invalidate(),
   });
-
-  const handleKembalikan = () => {
-    if (!confirm("Tandai peminjaman ini sebagai selesai (dikembalikan)?")) return;
-    workflowMut.mutate({
-      patch: { status: "Selesai", tanggal_kembali_aktual: new Date().toISOString().slice(0, 10) },
-      label: "Kembalikan",
-    });
-  };
 
   const handleBatalkan = () => {
     if (!confirm("Batalkan peminjaman ini?")) return;
@@ -75,6 +96,7 @@ function PeminjamanDetailPage() {
 
   const doc = data;
   const status = doc?.status;
+  const isActive = status === "Aktif" || status === "Terlambat";
 
   return (
     <>
@@ -95,19 +117,21 @@ function PeminjamanDetailPage() {
           { label: "Kopi", value: doc?.kopi ?? "—" },
           { label: "Tgl Pinjam", value: perpFormatDate(doc?.tanggal_pinjam) },
           { label: "Rencana Kembali", value: perpFormatDate(doc?.tanggal_rencana_kembali) },
-          { label: "Kembali Aktual", value: perpFormatDate(doc?.tanggal_kembali_aktual) },
+          { label: "Kembali Aktual", value: perpFormatDate(pengembalian?.tanggal_kembali_aktual ?? doc?.tanggal_kembali_aktual) },
+          { label: "No. Pengembalian", value: pengembalian ? <span className="font-mono text-xs">{pengembalian.name}</span> : "—" },
           { label: "Petugas", value: doc?.petugas ?? "—" },
           { label: "Catatan", value: doc?.catatan ?? "—" },
         ]}
         actions={
           <>
-            {status === "Aktif" || status === "Terlambat" ? (
+            {isActive ? (
               <>
-                <Button size="sm" onClick={handleKembalikan} disabled={workflowMut.isPending}>Kembalikan</Button>
+                <Button size="sm" onClick={() => setReturnOpen(true)} disabled={workflowMut.isPending}>Kembalikan</Button>
                 <Button size="sm" variant="outline" onClick={() => setPerpanjangOpen(true)} disabled={workflowMut.isPending}>Perpanjang</Button>
                 <Button size="sm" variant="destructive" onClick={handleBatalkan} disabled={workflowMut.isPending}>Batalkan</Button>
               </>
             ) : null}
+            <Button size="sm" variant="outline" onClick={() => setDendaOpen(true)}>Lihat Denda</Button>
             <Button size="sm" variant="outline" onClick={() => navigate({ to: "/perpustakaan/peminjaman" })}>Tutup</Button>
           </>
         }
@@ -129,6 +153,20 @@ function PeminjamanDetailPage() {
           <Input id="perpanjang-date" type="date" value={perpanjangDate} onChange={(e) => setPerpanjangDate(e.target.value)} />
         </FormField>
       </Modal>
+      {returnOpen && (
+        <ReturnModal
+          open
+          peminjaman={name}
+          onClose={() => setReturnOpen(false)}
+          onSuccess={() => {
+            setReturnOpen(false);
+            invalidate();
+          }}
+        />
+      )}
+      {dendaOpen && (
+        <DendaDrawer open peminjaman={name} onClose={() => setDendaOpen(false)} />
+      )}
     </>
   );
 }

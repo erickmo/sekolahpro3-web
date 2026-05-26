@@ -2,11 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
-type Row = { name: string; nama_gedung: string; jumlah_lantai?: number; alamat?: string; status?: string };
+type Row = { name: string; nama: string; nama_gedung?: string; jumlah_lantai?: number; alamat?: string; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "nama_gedung", header: "Nama Gedung", sortable: true, cell: (r) => r.nama_gedung },
+  { key: "nama", header: "Nama Gedung", sortable: true, cell: (r) => r.nama },
   { key: "jumlah_lantai", header: "Lantai", align: "right", cell: (r) => r.jumlah_lantai ?? "—" },
   { key: "alamat", header: "Alamat", cell: (r) => r.alamat ?? "—" },
   { key: "status", header: "Status",
@@ -19,11 +19,11 @@ function GedungPage() {
       eyebrow="Infrastruktur"
       title="Gedung"
       doctype="Gedung"
-      fields={["name", "nama_gedung", "jumlah_lantai", "alamat", "status"]}
+      fields={["name", "nama", "jumlah_lantai", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "nama_gedung", dir: "asc" }}
-      searchFields={["name", "nama_gedung"]}
+      defaultSort={{ key: "nama", dir: "asc" }}
+      searchFields={["name", "nama"]}
       addLabel="Tambah Gedung"
       onAdd={() => alert("Form gedung (P2)")}
     />

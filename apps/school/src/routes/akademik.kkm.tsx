@@ -31,7 +31,7 @@ function KkmPage() {
         eyebrow="Akademik"
         title="KKM (Kriteria Ketuntasan Minimal)"
         doctype="KKM"
-        fields={["name", "mata_pelajaran", "kelas", "nilai_kkm", "tahun_ajaran"]}
+        fields={["name", "mata_pelajaran", "nilai_kkm", "tahun_ajaran"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "mata_pelajaran", dir: "asc" }}

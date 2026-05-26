@@ -18,10 +18,10 @@ function KonfigPage() {
       eyebrow="Akademik"
       title="Konfigurasi Penilaian"
       doctype="Konfigurasi Penilaian"
-      fields={["name", "jenjang", "tahun_ajaran", "skala_nilai", "metode"]}
+      fields={["name"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "tahun_ajaran", dir: "desc" }}
+      defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name"]}
       addLabel="Tambah Konfigurasi"
       onAdd={() => alert("Form konfigurasi (P2)")}

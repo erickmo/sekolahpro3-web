@@ -4,9 +4,8 @@ import { Tabs, type TabItem } from "@sekolahpro/ui";
 const TABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/perpustakaan", label: "Dashboard", exact: true },
   { to: "/perpustakaan/daftar", label: "Katalog Buku" },
+  { to: "/perpustakaan/kategori", label: "Kategori" },
   { to: "/perpustakaan/peminjaman", label: "Peminjaman" },
-  { to: "/perpustakaan/pengembalian", label: "Pengembalian" },
-  { to: "/perpustakaan/denda", label: "Denda" },
   { to: "/perpustakaan/reservasi", label: "Reservasi" },
   { to: "/perpustakaan/anggota", label: "Anggota" },
   { to: "/perpustakaan/laporan", label: "Laporan" },

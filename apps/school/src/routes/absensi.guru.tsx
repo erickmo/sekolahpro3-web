@@ -20,15 +20,11 @@ function AbsensiGuruPage() {
       eyebrow="Absensi"
       title="Absensi Guru"
       doctype="Absensi Guru"
-      fields={["name", "tanggal", "guru", "jam_masuk", "jam_pulang", "status"]}
+      fields={["name", "tanggal"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "tanggal", dir: "desc" }}
-      searchFields={["name", "guru"]}
-      selectFilters={[
-        { key: "status", label: "Status", field: "status",
-          options: ["Semua", "Hadir", "Izin", "Sakit", "Alpa", "Dinas"].map((v) => ({ value: v, label: v })) },
-      ]}
+      searchFields={["name"]}
       addLabel="Input Absensi"
       onAdd={() => alert("Form absensi guru (P2)")}
     />

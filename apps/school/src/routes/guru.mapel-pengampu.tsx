@@ -19,11 +19,11 @@ function MapelPengampuPage() {
       title="Mapel Pengampu"
       description="Pemetaan guru ↔ mata pelajaran ↔ kelas."
       doctype="Mapel Pengampu Guru"
-      fields={["name", "guru", "mata_pelajaran", "kelas", "tahun_ajaran"]}
+      fields={["name", "mata_pelajaran"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "guru", dir: "asc" }}
-      searchFields={["name", "guru", "mata_pelajaran"]}
+      defaultSort={{ key: "name", dir: "asc" }}
+      searchFields={["name", "mata_pelajaran"]}
       addLabel="Tetapkan Pengampu"
       onAdd={() => alert("Form mapel pengampu (P2)")}
     />

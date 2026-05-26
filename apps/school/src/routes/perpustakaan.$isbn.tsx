@@ -1,5 +1,13 @@
+// PERP-ADR-0001 — Buku detail page wires the "Sedang Dipinjam" section to
+// active Peminjaman Buku (status Aktif/Terlambat) joined via the Item
+// Peminjaman child table 4-tuple filter `[child_dt, field, op, val]`. Each
+// row exposes a "Kembalikan" action that opens `ReturnModal`, which submits
+// `Pengembalian Buku` and invalidates the peminjaman cache so this view
+// refetches automatically.
+import { useState } from "react";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { stubAction } from "../lib/stub";
+import { ReturnModal } from "../components/perpustakaan/ReturnModal";
 import {
   Avatar,
   Badge,
@@ -34,7 +42,7 @@ import {
   IconWallet,
   type TabItem,
 } from "@sekolahpro/ui";
-import { useResourceDoc } from "@sekolahpro/api-client";
+import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
   findBuku,
   formatRupiah,
@@ -429,19 +437,186 @@ type BukuDoc = {
   deskripsi?: string;
 };
 
+type EksemplarDoc = {
+  name: string;
+  buku?: string;
+  nomor_inventaris?: string;
+  kondisi?: "Baik" | "Rusak" | "Hilang";
+  status?: "Tersedia" | "Dipinjam" | "Dipesan" | "Tidak Aktif";
+};
+
+type PeminjamanDoc = {
+  name: string;
+  anggota?: string;
+  tanggal_pinjam?: string;
+  tanggal_kembali_rencana?: string;
+  status?: "Aktif" | "Selesai" | "Terlambat";
+};
+
+const KONDISI_MAP: Record<NonNullable<EksemplarDoc["kondisi"]>, KopiRow["kondisi"]> = {
+  Baik: "Baik",
+  Rusak: "Rusak Ringan",
+  Hilang: "Hilang",
+};
+
+const EKS_STATUS_MAP: Record<NonNullable<EksemplarDoc["status"]>, StatusBuku> = {
+  Tersedia: "Tersedia",
+  Dipinjam: "Dipinjam",
+  Dipesan: "Dipesan",
+  "Tidak Aktif": "Arsip",
+};
+
+const PINJ_STATUS_MAP: Record<NonNullable<PeminjamanDoc["status"]>, PeminjamanRow["status"]> = {
+  Aktif: "Aktif",
+  Selesai: "Dikembalikan",
+  Terlambat: "Terlambat",
+};
+
+function mapEksemplarToKopi(rows: EksemplarDoc[], fallbackLokasi: KopiRow["lokasi"]): KopiRow[] {
+  return rows.map((r) => ({
+    kodeKopi: r.nomor_inventaris ?? r.name,
+    kondisi: r.kondisi ? KONDISI_MAP[r.kondisi] : "Baik",
+    lokasi: fallbackLokasi,
+    status: r.status ? EKS_STATUS_MAP[r.status] : "Tersedia",
+  }));
+}
+
+function mapPeminjamanRows(rows: PeminjamanDoc[]): PeminjamanRow[] {
+  return rows.map((r) => {
+    const row: PeminjamanRow = {
+      id: r.name,
+      peminjam: r.anggota ?? "—",
+      tanggalPinjam: r.tanggal_pinjam ?? "",
+      tanggalKembali: r.tanggal_kembali_rencana ?? "",
+      status: r.status ? PINJ_STATUS_MAP[r.status] : "Aktif",
+      petugas: "—",
+    };
+    return row;
+  });
+}
+
+const KATEGORI_SET = new Set<Buku["kategori"]>([
+  "Fiksi", "Non-Fiksi", "Pelajaran", "Referensi", "Majalah",
+  "Komik", "Biografi", "Sejarah", "Sains", "Agama",
+]);
+
+function deriveStatus(kopi: KopiRow[]): StatusBuku {
+  if (kopi.length === 0) return "Arsip";
+  if (kopi.some((k) => k.status === "Tersedia")) return "Tersedia";
+  if (kopi.some((k) => k.status === "Dipinjam")) return "Dipinjam";
+  if (kopi.some((k) => k.status === "Dipesan")) return "Dipesan";
+  return "Arsip";
+}
+
+// Build a Buku purely from backend data when no mock fixture exists for this
+// ISBN (e.g. records freshly created via the daftar modal).
+function bukuFromBackend(d: BukuDoc, kopi: KopiRow[], peminjaman: PeminjamanRow[]): Buku {
+  const kategoriRaw = d.kategori as Buku["kategori"] | undefined;
+  const kategori: Buku["kategori"] = kategoriRaw && KATEGORI_SET.has(kategoriRaw) ? kategoriRaw : "Referensi";
+  const tersedia = kopi.filter((k) => k.status === "Tersedia").length;
+  const dipinjam = kopi.filter((k) => k.status === "Dipinjam").length;
+  return {
+    isbn: d.isbn ?? d.name,
+    kodeBuku: d.name,
+    judul: d.judul ?? d.name,
+    penulis: d.pengarang ? d.pengarang.split(",").map((s) => s.trim()).filter(Boolean) : [],
+    penerbit: d.penerbit ?? "—",
+    tahunTerbit: d.tahun_terbit ?? 0,
+    kategori,
+    bahasa: "Indonesia",
+    jumlahHalaman: 0,
+    deskripsi: d.deskripsi ?? "—",
+    jumlahKopi: kopi.length,
+    kopiTersedia: tersedia,
+    kopiDipinjam: dipinjam,
+    lokasi: "—",
+    ratingRata: 0,
+    jumlahReview: 0,
+    jumlahDipinjam: peminjaman.length,
+    ditambahkan: "",
+    status: deriveStatus(kopi),
+    kopi,
+    peminjaman,
+    review: [],
+    stokTransaksi: [],
+    aktivitas: [],
+  };
+}
+
+type ActivePinjaman = Pick<PeminjamanDoc, "name" | "anggota" | "tanggal_kembali_rencana" | "status">;
+
+function isActivePinjaman(p: PeminjamanDoc): p is ActivePinjaman & PeminjamanDoc {
+  return p.status === "Aktif" || p.status === "Terlambat";
+}
+
+function SedangDipinjamSection({
+  rows,
+  onReturn,
+}: {
+  rows: PeminjamanDoc[];
+  onReturn: (name: string) => void;
+}) {
+  const active = rows.filter(isActivePinjaman);
+  return (
+    <SectionCard title={`Sedang Dipinjam (${active.length})`} padded={false}>
+      {active.length === 0 ? (
+        <div className="px-5 py-6 text-sm text-muted-fg text-center">
+          Tidak ada peminjaman aktif untuk buku ini.
+        </div>
+      ) : (
+        <ul className="divide-y divide-border">
+          {active.map((p) => (
+            <li key={p.name} className="flex items-center gap-3 px-5 py-3.5">
+              <div className="flex-1 min-w-0 text-sm text-fg">
+                <span className="font-medium tabular-nums">{p.name}</span>
+                <span className="text-muted-fg"> — peminjam {p.anggota ?? "—"} — rencana {formatTanggal(p.tanggal_kembali_rencana ?? "")}</span>
+              </div>
+              <Badge tone={p.status === "Terlambat" ? "warning" : "brand"} dot>{p.status ?? "Aktif"}</Badge>
+              <Button size="sm" onClick={() => onReturn(p.name)}>Kembalikan</Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionCard>
+  );
+}
+
 function BukuDetailPage() {
   const { isbn } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<BukuDoc>("Buku", isbn);
+  const bukuName = docQ.data?.name ?? isbn;
+  const kopiQ = useResourceList<EksemplarDoc>("Eksemplar Buku", {
+    fields: ["name", "buku", "nomor_inventaris", "kondisi", "status"],
+    filters: { buku: bukuName },
+    limit_page_length: 200,
+  });
+  const eksemplarNames = (kopiQ.data ?? []).map((e) => e.name);
+  // Peminjaman Buku is the loan parent; eksemplar links live on its child
+  // rows (Item Peminjaman). Use the 4-tuple `[child_doctype, field, op, val]`
+  // filter so Frappe joins on the child without an extra round-trip.
+  const pinjQ = useResourceList<PeminjamanDoc>("Peminjaman Buku", {
+    fields: ["name", "anggota", "tanggal_pinjam", "tanggal_kembali_rencana", "status"],
+    filters: [["Item Peminjaman", "eksemplar", "in", eksemplarNames]],
+    limit_page_length: 200,
+  }, { enabled: eksemplarNames.length > 0 });
   const mock = findBuku(isbn);
   const buku: Buku | undefined = (() => {
-    if (!mock) return undefined;
     const d = docQ.data;
+    // Backend-only path: no mock fixture but doc exists → render from backend.
+    if (!mock) {
+      if (!d) return undefined;
+      const kopi = kopiQ.data ? mapEksemplarToKopi(kopiQ.data, "Rak A") : [];
+      const peminjaman = pinjQ.data ? mapPeminjamanRows(pinjQ.data) : [];
+      return bukuFromBackend(d, kopi, peminjaman);
+    }
     if (!d) return mock;
     // `pengarang` is single Data on backend; split for stub's string[] shape.
     const penulis = d.pengarang
       ? d.pengarang.split(",").map((s) => s.trim()).filter(Boolean)
       : mock.penulis;
+    const kopiBackend = kopiQ.data?.length ? mapEksemplarToKopi(kopiQ.data, mock.lokasi as KopiRow["lokasi"]) : mock.kopi;
+    const pinjBackend = pinjQ.data?.length ? mapPeminjamanRows(pinjQ.data) : mock.peminjaman;
     return {
       ...mock,
       isbn: d.isbn ?? mock.isbn,
@@ -451,15 +626,23 @@ function BukuDetailPage() {
       tahunTerbit: d.tahun_terbit ?? mock.tahunTerbit,
       kategori: (d.kategori as Buku["kategori"]) ?? mock.kategori,
       deskripsi: d.deskripsi ?? mock.deskripsi,
+      kopi: kopiBackend,
+      peminjaman: pinjBackend,
     };
   })();
   const navigate = useNavigate();
+  const [returnFor, setReturnFor] = useState<string | null>(null);
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
     navigate({ to: "/perpustakaan/$isbn", params: { isbn }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
   if (!buku) {
+    if (docQ.isLoading) {
+      return (
+        <div className="py-16 text-center text-sm text-muted-fg">Memuat detail buku…</div>
+      );
+    }
     throw notFound();
   }
 
@@ -522,7 +705,20 @@ function BukuDetailPage() {
       }
       hero={<Hero buku={buku} onEdit={() => stubAction(`Edit Buku ${buku.kodeBuku}`)} />}
       tabs={<Tabs items={tabItems} />}
-      primary={renderTab()}
+      primary={
+        <div className="space-y-6">
+          <SedangDipinjamSection rows={pinjQ.data ?? []} onReturn={setReturnFor} />
+          {renderTab()}
+          {returnFor && (
+            <ReturnModal
+              open
+              peminjaman={returnFor}
+              onClose={() => setReturnFor(null)}
+              onSuccess={() => setReturnFor(null)}
+            />
+          )}
+        </div>
+      }
     />
   );
 }

@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,6 +16,7 @@ import {
   IconEdit,
 } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceDelete } from "@sekolahpro/api-client";
+import { MasterCreateModal, type MasterFieldDef } from "./MasterCreateModal";
 
 export interface DetailFieldDef<T> {
   label: string;
@@ -31,6 +32,8 @@ export interface MasterDetailPageProps<T extends Record<string, unknown>> {
   title: (doc: T) => string;
   subtitle?: (doc: T) => string;
   fields: Array<DetailFieldDef<T>>;
+  editFields?: MasterFieldDef[];
+  editTitle?: string;
   extraSections?: (doc: T) => ReactNode;
   workflowActions?: (doc: T, refresh: () => void) => ReactNode;
 }
@@ -45,6 +48,8 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
     title,
     subtitle,
     fields,
+    editFields,
+    editTitle,
     extraSections,
     workflowActions,
   } = props;
@@ -52,6 +57,7 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
   const qc = useQueryClient();
   const q = useResourceDoc<T>(doctype, name);
   const del = useResourceDelete(doctype);
+  const [editOpen, setEditOpen] = useState(false);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["resource:doc", doctype, name] });
@@ -89,7 +95,23 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
     }
   };
 
+  const canEdit = !!(editFields && editFields.length);
+
   return (
+    <>
+    {canEdit ? (
+      <MasterCreateModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        doctype={doctype}
+        title={editTitle ?? `Edit ${title(doc)}`}
+        fields={editFields!}
+        mode="edit"
+        recordName={name}
+        initialDoc={doc}
+        onSaved={refresh}
+      />
+    ) : null}
     <DetailPageTemplate
       header={
         <div className="space-y-3">
@@ -134,7 +156,7 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
           ) : null}
           <SectionCard title="Aksi">
             <div className="flex flex-col gap-2">
-              <Button variant="outline" size="sm" onClick={() => window.alert("Edit master (P3)")}>
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} disabled={!canEdit}>
                 <span className="h-4 w-4 mr-1.5"><IconEdit /></span>Edit
               </Button>
               <Button variant="outline" size="sm" onClick={handleDelete} disabled={del.isPending}>
@@ -145,11 +167,12 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
         </>
       }
     />
+    </>
   );
 }
 
 // Convenience badge for "Aktif" status
-export function StatusBadge({ status }: { status?: string }) {
+export function StatusBadge({ status }: { status?: string | undefined }) {
   return (
     <Badge tone={status === "Aktif" ? "success" : "neutral"} dot>
       {status === "Aktif" ? (

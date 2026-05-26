@@ -21,10 +21,10 @@ function KelulusanPage() {
       eyebrow="Siswa"
       title="Kelulusan Siswa"
       doctype="Kelulusan Siswa"
-      fields={["name", "siswa", "tahun_kelulusan", "status_kelulusan", "nilai_akhir", "tanggal_sah"]}
+      fields={["name", "siswa", "status_kelulusan"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "tanggal_sah", dir: "desc" }}
+      defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "siswa"]}
       addLabel="Proses Kelulusan"
       onAdd={() => alert("Form kelulusan (P2)")}

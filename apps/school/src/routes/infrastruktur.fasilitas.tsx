@@ -19,11 +19,11 @@ function FasilitasPage() {
       eyebrow="Infrastruktur"
       title="Fasilitas Ruangan"
       doctype="Fasilitas Ruangan"
-      fields={["name", "ruangan", "nama_fasilitas", "jumlah", "kondisi"]}
+      fields={["name", "nama_fasilitas", "jumlah", "kondisi"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "ruangan", dir: "asc" }}
-      searchFields={["name", "ruangan", "nama_fasilitas"]}
+      defaultSort={{ key: "name", dir: "asc" }}
+      searchFields={["name", "nama_fasilitas"]}
       addLabel="Tambah Fasilitas"
       onAdd={() => alert("Form fasilitas (P2)")}
     />

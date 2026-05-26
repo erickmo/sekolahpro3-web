@@ -35,7 +35,7 @@ import {
   IconWallet,
   type TabItem,
 } from "@sekolahpro/ui";
-import { useResourceDoc } from "@sekolahpro/api-client";
+import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
   findAnggota,
   formatRupiah,
@@ -507,15 +507,82 @@ type AnggotaDoc = {
   status?: string;
 };
 
+// Backend Akad Pembiayaan rows (filtered by nasabah). Mapped into
+// PinjamanRow shape for the Pinjaman tab.
+type AkadPembiayaanRow = {
+  name: string;
+  nomor_akad?: string;
+  jumlah_pokok?: number;
+  margin_total?: number;
+  total_kewajiban?: number;
+  tenor?: number;
+  tanggal_akad?: string;
+  tanggal_jatuh_tempo?: string;
+  status?: string;
+};
+
+const AKAD_STATUS_MAP: Record<string, PinjamanRow["status"]> = {
+  Aktif: "Berjalan",
+  Lunas: "Lunas",
+  Macet: "Macet",
+};
+
+function mapAkadToPinjamanRows(rows: AkadPembiayaanRow[]): PinjamanRow[] {
+  return rows.map((r) => {
+    const pokok = r.jumlah_pokok ?? 0;
+    const margin = r.margin_total ?? 0;
+    const tenor = r.tenor ?? 0;
+    const totalKewajiban = r.total_kewajiban ?? pokok + margin;
+    const bunga = pokok > 0 ? Number(((margin / pokok) * 100).toFixed(2)) : 0;
+    const angsuran = tenor > 0 ? Math.floor(totalKewajiban / tenor) : 0;
+    const status = AKAD_STATUS_MAP[r.status ?? ""] ?? "Berjalan";
+    const sisaPokok = status === "Lunas" ? 0 : pokok;
+    return {
+      id: r.nomor_akad ?? r.name,
+      tanggal: r.tanggal_akad ?? "",
+      jumlah: pokok,
+      tenor,
+      bunga,
+      angsuran,
+      sisaPokok,
+      status,
+      jatuhTempo: r.tanggal_jatuh_tempo ?? "",
+    };
+  });
+}
+
 function AnggotaDetailPage() {
   const { noAnggota } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<AnggotaDoc>("Anggota Koperasi", noAnggota);
+  const nasabah = docQ.data?.nasabah;
+  const akadListQ = useResourceList<AkadPembiayaanRow>(
+    "Akad Pembiayaan",
+    {
+      filters: { nasabah: nasabah ?? "" },
+      fields: [
+        "name",
+        "nomor_akad",
+        "jumlah_pokok",
+        "margin_total",
+        "total_kewajiban",
+        "tenor",
+        "tanggal_akad",
+        "tanggal_jatuh_tempo",
+        "status",
+      ],
+    },
+    { enabled: Boolean(nasabah) },
+  );
   const mock = findAnggota(noAnggota);
   const anggota: Anggota | undefined = (() => {
     if (!mock) return undefined;
     const d = docQ.data;
-    if (!d) return mock;
+    const akadRows = akadListQ.data ?? [];
+    const pinjamanBackend = akadRows.length > 0 ? mapAkadToPinjamanRows(akadRows) : undefined;
+    if (!d) {
+      return pinjamanBackend ? { ...mock, pinjaman: pinjamanBackend } : mock;
+    }
     return {
       ...mock,
       noAnggota: d.nomor_anggota ?? d.name ?? mock.noAnggota,
@@ -523,6 +590,7 @@ function AnggotaDetailPage() {
       tipeAnggota: (d.jenis_anggota as TipeAnggota) ?? mock.tipeAnggota,
       tanggalGabung: d.tanggal_masuk ?? mock.tanggalGabung,
       status: (d.status as StatusAnggota) ?? mock.status,
+      pinjaman: pinjamanBackend ?? mock.pinjaman,
     };
   })();
   const navigate = useNavigate();

@@ -1,30 +1,34 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
-import { ResourceListPage } from "../components/ResourceListPage";
+import { MasterResourcePage } from "../components/master/MasterResourcePage";
+import { FEATURE_FLAG_FIELDS } from "../components/master/schemas";
 
-type Row = { name: string; flag_name: string; enabled?: number; deskripsi?: string };
+type Row = { name: string; key: string; enabled?: number; description?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "flag_name", header: "Flag", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.flag_name}</span> },
+  { key: "key", header: "Flag", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.key}</span> },
   { key: "enabled", header: "Status",
     cell: (r) => <Badge tone={r.enabled ? "success" : "neutral"} dot>{r.enabled ? "On" : "Off"}</Badge> },
-  { key: "deskripsi", header: "Deskripsi", cell: (r) => r.deskripsi ?? "—" },
+  { key: "description", header: "Deskripsi", cell: (r) => r.description ?? "—" },
 ];
 
 function FeatureFlagPage() {
   return (
-    <ResourceListPage<Row>
+    <MasterResourcePage<Row>
       eyebrow="Master Data"
       title="Feature Flag"
       doctype="Feature Flag"
-      fields={["name", "flag_name", "enabled", "deskripsi"]}
+      fields={["name", "key", "enabled", "description"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "flag_name", dir: "asc" }}
-      searchFields={["name", "flag_name"]}
+      defaultSort={{ key: "key", dir: "asc" }}
+      searchFields={["name", "key"]}
       addLabel="Tambah Flag"
-      onAdd={() => alert("Form feature flag (P2)")}
+      detailRoute="/master/feature-flag/$name"
+      detailParams={(r) => ({ name: r.name })}
+      formTitle="Tambah Feature Flag"
+      formFields={FEATURE_FLAG_FIELDS}
     />
   );
 }

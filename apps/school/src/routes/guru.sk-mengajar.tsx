@@ -20,11 +20,11 @@ function SkMengajarPage() {
       eyebrow="Guru"
       title="SK Mengajar"
       doctype="SK Mengajar"
-      fields={["name", "guru", "nomor_sk", "tanggal_sk", "berlaku_mulai", "berlaku_sampai", "status"]}
+      fields={["name", "guru", "tanggal_sk", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "tanggal_sk", dir: "desc" }}
-      searchFields={["name", "guru", "nomor_sk"]}
+      searchFields={["name", "guru"]}
       addLabel="Terbitkan SK"
       onAdd={() => alert("Form SK Mengajar (P2)")}
     />

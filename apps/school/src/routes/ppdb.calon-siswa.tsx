@@ -20,7 +20,7 @@ function CalonSiswaPage() {
       eyebrow="PPDB"
       title="Calon Siswa"
       doctype="Calon Siswa"
-      fields={["name", "nama_lengkap", "nisn", "jenis_kelamin", "asal_sekolah", "status"]}
+      fields={["name", "nama_lengkap", "nisn", "jenis_kelamin", "asal_sekolah"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "nama_lengkap", dir: "asc" }}

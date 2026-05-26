@@ -17,11 +17,11 @@ function SlotOverridePage() {
       eyebrow="Jadwal"
       title="Slot Override"
       doctype="Slot Override"
-      fields={["name", "jadwal_override", "slot_jadwal", "tipe"]}
+      fields={["name"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "name", dir: "desc" }}
-      searchFields={["name", "jadwal_override"]}
+      searchFields={["name"]}
       addLabel="Tambah Slot Override"
       onAdd={() => alert("Form slot override (P2)")}
     />

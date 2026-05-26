@@ -20,11 +20,11 @@ function AbsensiPelajaranPage() {
       eyebrow="Absensi"
       title="Absensi per Pelajaran"
       doctype="Absensi Pelajaran"
-      fields={["name", "tanggal", "mata_pelajaran", "kelas", "guru", "status"]}
+      fields={["name", "tanggal", "mata_pelajaran", "guru"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "tanggal", dir: "desc" }}
-      searchFields={["name", "mata_pelajaran", "kelas"]}
+      searchFields={["name", "mata_pelajaran"]}
       addLabel="Input Absensi"
       onAdd={() => alert("Form absensi pelajaran (P2)")}
     />

@@ -1,11 +1,57 @@
+/**
+ * Anggota Perpustakaan detail page.
+ *
+ * Renders member info + workflow actions, plus a cross-context "Peminjaman
+ * Aktif" section that surfaces in-flight loans (Aktif/Terlambat) with a
+ * one-click `Kembalikan` trigger to ReturnModal. See PERP-ADR-0001 and
+ * docs/superpowers/specs/2026-05-25-perpustakaan-sirkulasi-merge-design.md.
+ */
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@sekolahpro/ui";
-import { useResourceDoc, updateResource } from "@sekolahpro/api-client";
+import { useResourceDoc, useResourceList, updateResource } from "@sekolahpro/api-client";
 import { PerpDetailScaffold } from "../components/perpustakaan/PerpDetailScaffold";
 import { perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
+import { ReturnModal } from "../components/perpustakaan/ReturnModal";
 
 const DOCTYPE = "Anggota Perpustakaan";
+const PEMINJAMAN_DOCTYPE = "Peminjaman Buku";
+const ACTIVE_STATUSES = ["Aktif", "Terlambat"] as const;
+const ACTIVE_LIMIT = 50;
+
+type PeminjamanAktif = {
+  name: string;
+  tanggal_kembali_rencana?: string;
+  status: string;
+};
+
+interface PeminjamanAktifSectionProps {
+  items: PeminjamanAktif[];
+  onReturn: (name: string) => void;
+}
+
+function PeminjamanAktifSection({ items, onReturn }: PeminjamanAktifSectionProps) {
+  return (
+    <section className="mt-6">
+      <h3 className="text-sm font-semibold mb-2">Peminjaman Aktif ({items.length})</h3>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Tidak ada peminjaman aktif</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {items.map((p) => (
+            <li key={p.name} className="py-2 flex items-center justify-between">
+              <span className="font-mono text-xs">
+                {p.name} — rencana {p.tanggal_kembali_rencana ?? "—"} ({p.status})
+              </span>
+              <Button size="sm" onClick={() => onReturn(p.name)}>Kembalikan</Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 type Doc = {
   name: string;
@@ -35,6 +81,12 @@ function AnggotaDetailPage() {
   const { data, isLoading, error } = useResourceDoc<Doc>(DOCTYPE, name);
   const doc = data;
   const status = doc?.status;
+  const [returnFor, setReturnFor] = useState<string | null>(null);
+  const { data: aktif = [] } = useResourceList<PeminjamanAktif>(PEMINJAMAN_DOCTYPE, {
+    filters: [["anggota", "=", name], ["status", "in", [...ACTIVE_STATUSES]]],
+    fields: ["name", "tanggal_kembali_rencana", "status"],
+    limit_page_length: ACTIVE_LIMIT,
+  });
 
   const workflowMut = useMutation<Doc, Error, Record<string, unknown>>({
     mutationFn: (patch) => updateResource<Doc>(DOCTYPE, name, patch),
@@ -54,6 +106,7 @@ function AnggotaDetailPage() {
   };
 
   return (
+    <>
     <PerpDetailScaffold
       eyebrow="Anggota Perpustakaan"
       title={doc?.nama_lengkap ?? name}
@@ -87,7 +140,17 @@ function AnggotaDetailPage() {
           <Button size="sm" variant="outline" onClick={() => navigate({ to: "/perpustakaan/anggota" })}>Tutup</Button>
         </>
       }
+      extraSections={<PeminjamanAktifSection items={aktif} onReturn={setReturnFor} />}
     />
+    {returnFor && (
+      <ReturnModal
+        open
+        peminjaman={returnFor}
+        onClose={() => setReturnFor(null)}
+        onSuccess={() => setReturnFor(null)}
+      />
+    )}
+    </>
   );
 }
 

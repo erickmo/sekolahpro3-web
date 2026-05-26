@@ -23,11 +23,11 @@ function HarianPage() {
       eyebrow="Absensi"
       title="Absensi Harian"
       doctype="Absensi Harian"
-      fields={["name", "tanggal", "kelas", "jumlah_hadir", "jumlah_izin", "jumlah_sakit", "jumlah_alpa", "status"]}
+      fields={["name", "tanggal"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "tanggal", dir: "desc" }}
-      searchFields={["name", "kelas"]}
+      searchFields={["name"]}
       addLabel="Input Absensi"
       onAdd={() => alert("Form absensi harian (P2)")}
     />

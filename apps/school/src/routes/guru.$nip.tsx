@@ -37,7 +37,7 @@ import {
   IconUsers,
   type TabItem,
 } from "@sekolahpro/ui";
-import { useResourceDoc } from "@sekolahpro/api-client";
+import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
   findGuru,
   formatTanggal,
@@ -498,6 +498,12 @@ const VALID_TABS = new Set<TabKey>([
 // on this page are mapped; nested arrays (jadwalMengajar, kelasAmpu,
 // kehadiran, riwayatMengajar, sertifikasi, dokumen, aktivitas) still need
 // per-table queries — follow-up sprint.
+type MapelPengampuRow = {
+  name: string;
+  mata_pelajaran?: string;
+  tingkat?: string;
+};
+
 type GuruDoc = {
   name: string;
   nip?: string;
@@ -510,20 +516,104 @@ type GuruDoc = {
   jabatan_fungsional?: string;
   golongan?: string;
   tmt_cpns?: string;
+  mapel_pengampu?: MapelPengampuRow[];
 };
+
+function uniqueMapel(rows: MapelPengampuRow[]): string[] {
+  const set = new Set<string>();
+  for (const r of rows) if (r.mata_pelajaran) set.add(r.mata_pelajaran);
+  return [...set];
+}
+
+// Slot Jadwal child row + parent Jadwal Pelajaran shape. Frappe REST list
+// returns child Table rows inline when requested via `fields`.
+type SlotJadwalRow = {
+  name: string;
+  hari?: JadwalMengajarRow["hari"];
+  jam_mulai?: string;
+  jam_selesai?: string;
+  mata_pelajaran?: string;
+  guru?: string;
+  ruangan?: string;
+};
+
+type JadwalPelajaranDoc = {
+  name: string;
+  rombel?: string;
+  slots?: SlotJadwalRow[];
+};
+
+function formatJam(jamMulai?: string, jamSelesai?: string): string {
+  const trim = (s?: string) => (s ?? "").slice(0, 5);
+  return `${trim(jamMulai)} - ${trim(jamSelesai)}`;
+}
+
+function mapToJadwalMengajar(
+  docs: JadwalPelajaranDoc[],
+  nip: string,
+): JadwalMengajarRow[] {
+  const out: JadwalMengajarRow[] = [];
+  for (const d of docs) {
+    const slots = d.slots ?? [];
+    for (const s of slots) {
+      if (s.guru !== nip) continue;
+      if (!s.hari) continue;
+      out.push({
+        hari: s.hari,
+        jam: formatJam(s.jam_mulai, s.jam_selesai),
+        mapel: s.mata_pelajaran ?? "",
+        kelas: d.rombel ?? "",
+        ruang: s.ruangan ?? "",
+      });
+    }
+  }
+  return out;
+}
+
+function mapToKelasAmpu(
+  docs: JadwalPelajaranDoc[],
+  nip: string,
+): KelasAmpuRow[] {
+  const map = new Map<string, KelasAmpuRow>();
+  for (const d of docs) {
+    const rombel = d.rombel ?? "";
+    const slots = d.slots ?? [];
+    for (const s of slots) {
+      if (s.guru !== nip) continue;
+      const mapel = s.mata_pelajaran ?? "";
+      const key = `${rombel}|${mapel}`;
+      if (map.has(key)) continue;
+      map.set(key, { kelas: rombel, mapel, jumlahSiswa: 0, rataNilai: 0 });
+    }
+  }
+  return [...map.values()];
+}
 
 function GuruDetailPage() {
   const { nip } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<GuruDoc>("Guru", nip);
+  const jadwalListQ = useResourceList<JadwalPelajaranDoc>("Jadwal Pelajaran", {
+    filters: [["Slot Jadwal", "guru", "=", nip], ["is_aktif", "=", 1]],
+    fields: ["name", "rombel", "slots"],
+    limit_page_length: 50,
+  });
   const mock = findGuru(nip);
   // Merge: real top-level fields override mock; nested arrays fall back.
   const guru: Guru | undefined = (() => {
     if (!mock) return undefined;
     const d = docQ.data;
-    if (!d) return mock;
-    return {
+    const jadwalDocs = jadwalListQ.data ?? [];
+    const jadwalRows = mapToJadwalMengajar(jadwalDocs, nip);
+    const kelasRows = mapToKelasAmpu(jadwalDocs, nip);
+    const base: Guru = {
       ...mock,
+      jadwalMengajar: jadwalRows.length > 0 ? jadwalRows : mock.jadwalMengajar,
+      kelasAmpu: kelasRows.length > 0 ? kelasRows : mock.kelasAmpu,
+    };
+    if (!d) return base;
+    return {
+      ...base,
       nip: d.nip ?? d.name ?? mock.nip,
       nuptk: d.nuptk ?? mock.nuptk,
       namaLengkap: d.nama_lengkap ?? mock.namaLengkap,
@@ -532,6 +622,9 @@ function GuruDetailPage() {
       statusKepegawaian: (d.status_kepegawaian as Guru["statusKepegawaian"]) ?? mock.statusKepegawaian,
       jabatan: d.jabatan_fungsional ?? mock.jabatan,
       pangkat: d.golongan ?? mock.pangkat,
+      mataPelajaran: d.mapel_pengampu?.length
+        ? uniqueMapel(d.mapel_pengampu)
+        : mock.mataPelajaran,
     };
   })();
   const navigate = useNavigate();

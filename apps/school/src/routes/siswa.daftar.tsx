@@ -6,15 +6,13 @@ import {
 } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
-// TODO confirm field names in backend doctype "Siswa":
-// guessing snake_case: nama_lengkap, nis, nisn, kelas, rombel, tahun_masuk, jenis_kelamin, agama
 type Row = {
   name: string;
   nama_lengkap?: string;
   nis?: string;
   nisn?: string;
-  kelas?: string;
-  rombel?: string;
+  jenjang?: string;
+  sekolah?: string;
   tahun_masuk?: string;
   jenis_kelamin?: string;
   agama?: string;
@@ -47,13 +45,13 @@ const COLUMNS: Column<Row>[] = [
     ),
   },
   {
-    key: "kelas",
-    header: "Kelas / Rombel",
+    key: "jenjang",
+    header: "Jenjang / Sekolah",
     sortable: true,
     cell: (s) => (
       <div>
-        <div className="text-fg">{s.kelas ?? "—"}</div>
-        <div className="text-xs text-muted-fg">{s.rombel ?? "—"}</div>
+        <div className="text-fg">{s.jenjang ?? "—"}</div>
+        <div className="text-xs text-muted-fg">{s.sekolah ?? "—"}</div>
       </div>
     ),
   },
@@ -86,7 +84,7 @@ function SiswaListPage() {
       title="Siswa"
       description="Kelola data siswa, profil, dan kelas."
       doctype="Siswa"
-      fields={["name", "nama_lengkap", "nis", "nisn", "kelas", "rombel", "tahun_masuk", "jenis_kelamin", "agama", "status"]}
+      fields={["name", "nama_lengkap", "nis", "nisn", "jenjang", "sekolah", "tahun_masuk", "jenis_kelamin", "agama", "status"]}
       rowKey={(s) => s.name}
       columns={COLUMNS}
       defaultSort={{ key: "nama_lengkap", dir: "asc" }}

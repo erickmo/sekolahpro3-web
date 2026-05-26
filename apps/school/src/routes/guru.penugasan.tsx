@@ -20,10 +20,10 @@ function PenugasanPage() {
       eyebrow="Guru"
       title="Penugasan Guru"
       doctype="Penugasan Guru"
-      fields={["name", "guru", "jenis_penugasan", "tahun_ajaran", "status", "tanggal_mulai"]}
+      fields={["name", "guru", "tahun_ajaran", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "tanggal_mulai", dir: "desc" }}
+      defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "guru"]}
       addLabel="Buat Penugasan"
       onAdd={() => alert("Form penugasan (P2)")}
