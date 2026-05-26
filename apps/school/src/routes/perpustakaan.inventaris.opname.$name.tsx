@@ -100,7 +100,7 @@ function OpnameScanPage() {
           setDoc({
             ...defaultHeader(),
             ...d,
-            items: (d.items ?? []).map((i) => ({ scanned_at: Date.now(), ...i })),
+            items: (d.items ?? []).map((i) => ({ ...i, scanned_at: i.scanned_at ?? Date.now() })),
           });
         }
       } catch (e) {

@@ -41,13 +41,19 @@ type DendaRow = {
   status?: string;
 };
 
+type BARow = { name: string; docstatus?: number; tanggal_kejadian?: string };
+type OpnameRow = { name: string; docstatus?: number; tanggal?: string };
+type PengadaanRow = { name: string; tanggal_pengadaan?: string; total_eksemplar?: number };
+
 const QUICK_ACTIONS: { to: string; label: string; description: string; icon: React.ReactNode }[] = [
-  { to: "/perpustakaan/peminjaman", label: "Peminjaman", description: "Catat peminjaman buku baru.", icon: <IconBook /> },
-  { to: "/perpustakaan/pengembalian", label: "Pengembalian", description: "Proses pengembalian dan pemeriksaan kondisi.", icon: <IconCheck /> },
-  { to: "/perpustakaan/reservasi", label: "Reservasi", description: "Kelola antrian dan reservasi buku.", icon: <IconClock /> },
-  { to: "/perpustakaan/denda", label: "Denda", description: "Tagih dan kelola denda peminjam.", icon: <IconWallet /> },
+  { to: "/perpustakaan/terminal", label: "Terminal RFID", description: "Mode kios scan kartu + eksemplar.", icon: <IconBook /> },
+  { to: "/perpustakaan/peminjaman", label: "Peminjaman", description: "Catat peminjaman individu / kolektif.", icon: <IconCheck /> },
+  { to: "/perpustakaan/reservasi", label: "Reservasi", description: "Kelola antrian reservasi buku.", icon: <IconClock /> },
+  { to: "/perpustakaan/pengadaan", label: "Pengadaan", description: "Pembelian / hibah / sumbangan koleksi.", icon: <IconWallet /> },
+  { to: "/perpustakaan/inventaris/opname", label: "Stock Opname", description: "Audit inventaris via scan.", icon: <IconChart /> },
+  { to: "/perpustakaan/inventaris/berita-acara", label: "BA Kerusakan", description: "Insiden rusak / hilang per eksemplar.", icon: <IconAlert /> },
   { to: "/perpustakaan/anggota", label: "Anggota", description: "Kelola data anggota perpustakaan.", icon: <IconUsers /> },
-  { to: "/perpustakaan/laporan", label: "Laporan", description: "Lihat ringkasan sirkulasi dan koleksi.", icon: <IconChart /> },
+  { to: "/perpustakaan/laporan", label: "Laporan", description: "Ringkasan sirkulasi & koleksi.", icon: <IconChart /> },
 ];
 
 const PINJAM_TONE: Record<string, "brand" | "success" | "warning" | "danger" | "neutral"> = {
@@ -76,9 +82,35 @@ function PerpustakaanDashboardPage() {
     limit_page_length: 0,
   });
 
+  const baQ = useResourceList<BARow>("Berita Acara Kerusakan Buku", {
+    fields: ["name", "docstatus", "tanggal_kejadian"],
+    filters: { docstatus: 0 },
+    order_by: "tanggal_kejadian desc",
+    limit_page_length: 0,
+  });
+
+  const opnameDraftQ = useResourceList<OpnameRow>("Stock Opname Perpustakaan", {
+    fields: ["name", "docstatus", "tanggal"],
+    filters: { docstatus: 0 },
+    order_by: "tanggal desc",
+    limit_page_length: 0,
+  });
+
+  const pengadaanBulanIniQ = useResourceList<PengadaanRow>("Pengadaan Buku", {
+    fields: ["name", "tanggal_pengadaan", "total_eksemplar"],
+    filters: [
+      ["tanggal_pengadaan", ">=", "2026-05-01"],
+      ["tanggal_pengadaan", "<=", "2026-05-31"],
+    ],
+    limit_page_length: 0,
+  });
+
   const buku = bukuQ.data ?? [];
   const pinjam = pinjamQ.data ?? [];
   const denda = dendaQ.data ?? [];
+  const baPending = baQ.data ?? [];
+  const opnameDrafts = opnameDraftQ.data ?? [];
+  const pengadaanBulanIni = pengadaanBulanIniQ.data ?? [];
 
   const TODAY = "2026-05-25";
 
@@ -92,12 +124,40 @@ function PerpustakaanDashboardPage() {
     ).length;
     const dendaOutstanding = denda.reduce((s, d) => s + (d.nominal ?? 0), 0);
     const dendaCount = denda.length;
-    return { totalJudul, aktif, terlambat, jatuhTempoHariIni, dendaOutstanding, dendaCount };
-  }, [buku, pinjam, denda]);
+    const baPendingCount = baPending.length;
+    const opnameDraftCount = opnameDrafts.length;
+    const pengadaanEksBulanIni = pengadaanBulanIni.reduce((s, p) => s + (p.total_eksemplar ?? 0), 0);
+    return {
+      totalJudul, aktif, terlambat, jatuhTempoHariIni, dendaOutstanding, dendaCount,
+      baPendingCount, opnameDraftCount, pengadaanEksBulanIni,
+    };
+  }, [buku, pinjam, denda, baPending, opnameDrafts, pengadaanBulanIni]);
 
   const perluPerhatianItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = [];
 
+    for (const op of opnameDrafts) {
+      items.push({
+        id: `opname-${op.name}`,
+        label: `Opname ${op.name}`,
+        description: `Draft sesi ${op.tanggal ?? "—"} belum disubmit — lanjutkan scan`,
+        tone: "neutral",
+        badge: "Draft",
+        actionLabel: "Resume",
+        actionHref: `/perpustakaan/inventaris/opname/${op.name}`,
+      });
+    }
+    for (const ba of baPending) {
+      items.push({
+        id: `ba-${ba.name}`,
+        label: `BA ${ba.name}`,
+        description: `Insiden ${ba.tanggal_kejadian ?? "—"} menunggu approval Kepala Perpustakaan`,
+        tone: "warning",
+        badge: "Approval",
+        actionLabel: "Review",
+        actionHref: `/perpustakaan/inventaris/berita-acara/${ba.name}`,
+      });
+    }
     for (const p of pinjam) {
       if (p.status === "Terlambat") {
         items.push({
@@ -204,7 +264,40 @@ function PerpustakaanDashboardPage() {
           icon={<IconCheck />}
           accent="amber"
           urgency={stats.dendaOutstanding > 0 ? "warn" : "normal"}
-          actionHref="/perpustakaan/denda"
+          actionHref="/perpustakaan/peminjaman"
+          renderLink={(href, children) => <Link to={href}>{children}</Link>}
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label="BA Kerusakan Menunggu Approval"
+          value={baQ.isLoading ? "…" : stats.baPendingCount.toLocaleString("id-ID")}
+          hint="Kepala Perpustakaan perlu review"
+          icon={<IconAlert />}
+          accent="rose"
+          urgency={stats.baPendingCount > 0 ? "warn" : "normal"}
+          actionHref="/perpustakaan/inventaris/berita-acara"
+          renderLink={(href, children) => <Link to={href}>{children}</Link>}
+        />
+        <StatCard
+          label="Opname Draft Tertinggal"
+          value={opnameDraftQ.isLoading ? "…" : stats.opnameDraftCount.toLocaleString("id-ID")}
+          hint="Sesi audit belum disubmit"
+          icon={<IconChart />}
+          accent="violet"
+          urgency={stats.opnameDraftCount > 0 ? "warn" : "normal"}
+          actionHref="/perpustakaan/inventaris/opname"
+          renderLink={(href, children) => <Link to={href}>{children}</Link>}
+        />
+        <StatCard
+          label="Eksemplar Baru Bulan Ini"
+          value={pengadaanBulanIniQ.isLoading ? "…" : stats.pengadaanEksBulanIni.toLocaleString("id-ID")}
+          hint={`${pengadaanBulanIni.length} pengadaan tercatat`}
+          icon={<IconBook />}
+          accent="emerald"
+          urgency="normal"
+          actionHref="/perpustakaan/pengadaan"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>

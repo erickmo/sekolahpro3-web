@@ -69,11 +69,11 @@ async function searchEksemplar(q: string): Promise<SearchableOption[]> {
     limit_page_length: 20,
     order_by: "modified desc",
   });
-  return rows.map((r) => ({
-    value: r.name,
-    label: r.nomor_inventaris ?? r.name,
-    hint: r.buku,
-  }));
+  return rows.map((r) => {
+    const opt: SearchableOption = { value: r.name, label: r.nomor_inventaris ?? r.name };
+    if (r.buku) opt.hint = r.buku;
+    return opt;
+  });
 }
 
 async function uploadFoto(file: File): Promise<string> {

@@ -85,7 +85,11 @@ async function searchBuku(q: string): Promise<SearchableOption[]> {
     limit_page_length: 20,
     order_by: "modified desc",
   });
-  return rows.map((r) => ({ value: r.name, label: r.judul ?? r.name, hint: r.judul ? r.name : undefined }));
+  return rows.map((r) => {
+    const opt: SearchableOption = { value: r.name, label: r.judul ?? r.name };
+    if (r.judul) opt.hint = r.name;
+    return opt;
+  });
 }
 
 function PengadaanDetailPage() {
