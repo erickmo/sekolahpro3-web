@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useResourceCreate } from "@sekolahpro/api-client";
 import { useSessionStore } from "@sekolahpro/auth";
 import { MaskedField } from "@sekolahpro/ui/components/MaskedField";
+import { ConsentGate } from "@sekolahpro/ui/components/ConsentGate";
 
 const PII_ROLES = new Set([
   "System Manager",
@@ -125,7 +126,17 @@ function Hero({ siswa, onEdit, onMessage, onPrintCard, onDownloadRapor, onMore }
   return (
     <div className="rounded-2xl border border-border bg-gradient-to-br from-brand/5 via-bg to-violet-500/5 p-6 shadow-sm">
       <div className="flex flex-wrap items-start gap-5">
-        <Avatar name={siswa.namaLengkap} src={siswa.fotoUrl ?? null} size="lg" className="!h-20 !w-20 !text-xl" />
+        <ConsentGate
+          granted={!!siswa.fotoConsentId}
+          purpose="Publikasi Foto"
+          variant="inline"
+          className="self-start"
+          onRequestConsent={() => {
+            window.location.href = `/siswa/persetujuan/new?siswa=${encodeURIComponent(siswa.nis)}`;
+          }}
+        >
+          <Avatar name={siswa.namaLengkap} src={siswa.fotoUrl ?? null} size="lg" className="!h-20 !w-20 !text-xl" />
+        </ConsentGate>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-bold text-fg truncate">{siswa.namaLengkap}</h2>
