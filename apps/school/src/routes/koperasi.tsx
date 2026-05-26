@@ -34,9 +34,10 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
-    to: "/koperasi/transaksi",
+    to: "/koperasi/workspace",
     label: "Operasional",
     members: [
+      { to: "/koperasi/workspace", label: "Workspace" },
       { to: "/koperasi/transaksi", label: "Transaksi" },
       { to: "/koperasi/kas-teller", label: "Kas Teller" },
       { to: "/koperasi/kartu", label: "Kartu RFID" },
