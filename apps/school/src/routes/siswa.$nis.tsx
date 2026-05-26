@@ -1,7 +1,22 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResourceCreate } from "@sekolahpro/api-client";
+import { useSessionStore } from "@sekolahpro/auth";
+import { MaskedField } from "@sekolahpro/ui/components/MaskedField";
+
+const PII_ROLES = new Set([
+  "System Manager",
+  "Tata Usaha",
+  "Kepala Tata Usaha",
+  "Kepala Sekolah",
+  "Operator Dapodik",
+]);
+
+async function logPiiAccess(field: string, siswaId: string, reason: string): Promise<void> {
+  // TODO wire to backend audit endpoint when available.
+  console.info("[pii_access_log]", { field, siswaId, reason, ts: new Date().toISOString() });
+}
 import {
   AbsensiModal,
   CatatanModal,
@@ -332,17 +347,54 @@ function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: T
 }
 
 function ProfilTab({ siswa }: { siswa: Siswa }) {
+  const roles = useSessionStore((s) => s.roles);
+  const canRevealPii = useMemo(() => roles.some((r) => PII_ROLES.has(r)), [roles]);
   return (
     <div className="space-y-6">
       <SectionCard title="Identitas">
         <InfoGrid cols={3}>
           <InfoField label="NIS" icon={<IconId />} value={<span className="tabular-nums">{siswa.nis}</span>} />
           <InfoField label="NISN" value={<span className="tabular-nums">{siswa.nisn}</span>} />
-          <InfoField label="NIK" value={<span className="tabular-nums">{siswa.nik}</span>} />
+          <InfoField
+            label="NIK"
+            value={
+              <MaskedField
+                value={siswa.nik}
+                type="nik"
+                canReveal={canRevealPii}
+                onReveal={(reason) => logPiiAccess("nik", siswa.nis, reason)}
+              />
+            }
+          />
+          <InfoField
+            label="No. Kartu Keluarga"
+            value={
+              <MaskedField
+                value={siswa.noKk}
+                type="nokk"
+                canReveal={canRevealPii}
+                onReveal={(reason) => logPiiAccess("no_kk", siswa.nis, reason)}
+              />
+            }
+          />
           <InfoField label="Nama Lengkap" value={siswa.namaLengkap} />
           <InfoField label="Nama Panggilan" value={siswa.namaPanggilan} />
           <InfoField label="Jenis Kelamin" value={siswa.jenisKelamin} />
-          <InfoField label="Tempat, Tanggal Lahir" value={`${siswa.tempatLahir}, ${formatTanggal(siswa.tanggalLahir)}`} hint={`${umur(siswa.tanggalLahir)} tahun`} />
+          <InfoField
+            label="Tempat, Tanggal Lahir"
+            value={
+              <div className="flex items-center gap-2">
+                <span>{siswa.tempatLahir},</span>
+                <MaskedField
+                  value={siswa.tanggalLahir}
+                  type="tanggal"
+                  canReveal={canRevealPii}
+                  onReveal={(reason) => logPiiAccess("tanggal_lahir", siswa.nis, reason)}
+                />
+              </div>
+            }
+            hint={`${umur(siswa.tanggalLahir)} tahun`}
+          />
           <InfoField label="Agama" value={siswa.agama} />
           <InfoField label="Kewarganegaraan" value={siswa.kewarganegaraan} />
         </InfoGrid>
@@ -549,6 +601,8 @@ function WaliTab({ siswa }: { siswa: Siswa }) {
   const [open, setOpen] = useState(false);
   const qc = useQueryClient();
   const createWali = useResourceCreate("Wali Siswa");
+  const roles = useSessionStore((s) => s.roles);
+  const canRevealPii = useMemo(() => roles.some((r) => PII_ROLES.has(r)), [roles]);
 
   const handleWali = async (w: WaliRow) => {
     try {
@@ -570,7 +624,18 @@ function WaliTab({ siswa }: { siswa: Siswa }) {
   const cols: Column<WaliRow>[] = [
     { key: "hub", header: "Hubungan", cell: (r) => <Badge tone="brand">{r.hubungan}</Badge> },
     { key: "nama", header: "Nama", cell: (r) => <span className="font-medium">{r.nama}</span> },
-    { key: "nik", header: "NIK", cell: (r) => <span className="tabular-nums text-muted-fg">{r.nik ?? "—"}</span> },
+    {
+      key: "nik",
+      header: "NIK",
+      cell: (r) => (
+        <MaskedField
+          value={r.nik}
+          type="nik"
+          canReveal={canRevealPii}
+          onReveal={(reason) => logPiiAccess(`wali_${r.hubungan.toLowerCase()}_nik`, siswa.nis, reason)}
+        />
+      ),
+    },
     { key: "pekerjaan", header: "Pekerjaan", cell: (r) => r.pekerjaan ?? "—" },
     { key: "penghasilan", header: "Penghasilan", cell: (r) => r.penghasilan ?? "—" },
     { key: "pendidikan", header: "Pendidikan", cell: (r) => r.pendidikan ?? "—" },
