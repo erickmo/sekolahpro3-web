@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, Button, type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ShuWizard } from "../components/koperasi/ShuWizard";
 
 type Row = {
   name: string;
@@ -24,27 +26,24 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function ShuPage() {
+  const [wizardOpen, setWizardOpen] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Koperasi"
-      title="Pembagian SHU"
-      description="Sisa Hasil Usaha tahunan setelah RAT."
-      doctype="Pembagian SHU"
-      fields={["name", "periode", "shu_total"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "periode", dir: "desc" }}
-      searchFields={["name", "periode"]}
-      extraActions={
-        <Button
-          variant="outline"
-          disabled
-          title="Form pembagian SHU dijadwalkan sprint berikutnya."
-        >
-          Buat Periode SHU
-        </Button>
-      }
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Koperasi"
+        title="Pembagian SHU"
+        description="Sisa Hasil Usaha tahunan setelah RAT."
+        doctype="Pembagian SHU"
+        fields={["name", "periode", "shu_total"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "periode", dir: "desc" }}
+        searchFields={["name", "periode"]}
+        addLabel="Buat Periode SHU"
+        onAdd={() => setWizardOpen(true)}
+      />
+      <ShuWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
+    </>
   );
 }
 
