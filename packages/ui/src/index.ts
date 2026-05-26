@@ -5,6 +5,8 @@ export * from "./primitives/select";
 export * from "./primitives/textarea";
 export * from "./primitives/checkbox";
 export * from "./primitives/card";
+export * from "./primitives/skeleton";
+export * from "./primitives/alert";
 export * from "./components/AppShell";
 export * from "./components/PageHeader";
 export * from "./components/EmptyState";

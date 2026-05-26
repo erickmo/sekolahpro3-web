@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, type Column } from "@sekolahpro/ui";
+import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
 type Row = {
@@ -35,8 +35,15 @@ function ShuPage() {
       columns={COLUMNS}
       defaultSort={{ key: "periode", dir: "desc" }}
       searchFields={["name", "periode"]}
-      addLabel="Buat Periode SHU"
-      onAdd={() => alert("Form pembagian SHU (P2)")}
+      extraActions={
+        <Button
+          variant="outline"
+          disabled
+          title="Form pembagian SHU dijadwalkan sprint berikutnya."
+        >
+          Buat Periode SHU
+        </Button>
+      }
     />
   );
 }

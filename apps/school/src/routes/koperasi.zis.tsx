@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, type Column } from "@sekolahpro/ui";
+import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
 type Row = {
@@ -38,8 +38,15 @@ function ZisPage() {
         { key: "jenis", label: "Jenis", field: "jenis_dana",
           options: ["Semua", "Zakat", "Infak", "Sedekah", "Wakaf Tunai"].map((v) => ({ value: v, label: v })) },
       ]}
-      addLabel="Catat Penerimaan"
-      onAdd={() => alert("Form penerimaan ZIS (P2)")}
+      extraActions={
+        <Button
+          variant="outline"
+          disabled
+          title="Form penerimaan ZIS dijadwalkan sprint berikutnya."
+        >
+          Catat Penerimaan
+        </Button>
+      }
     />
   );
 }

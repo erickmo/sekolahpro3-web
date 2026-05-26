@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, type Column } from "@sekolahpro/ui";
+import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
 type Row = {
@@ -33,8 +33,15 @@ function WakafPage() {
       columns={COLUMNS}
       defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "nama_aset", "wakif"]}
-      addLabel="Catat Wakaf"
-      onAdd={() => alert("Form aset wakaf (P2)")}
+      extraActions={
+        <Button
+          variant="outline"
+          disabled
+          title="Form aset wakaf dijadwalkan sprint berikutnya."
+        >
+          Catat Wakaf
+        </Button>
+      }
     />
   );
 }
