@@ -7,7 +7,10 @@ const TABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/perpustakaan/kategori", label: "Kategori" },
   { to: "/perpustakaan/peminjaman", label: "Peminjaman" },
   { to: "/perpustakaan/reservasi", label: "Reservasi" },
+  { to: "/perpustakaan/pengadaan", label: "Pengadaan" },
+  { to: "/perpustakaan/inventaris", label: "Inventaris" },
   { to: "/perpustakaan/anggota", label: "Anggota" },
+  { to: "/perpustakaan/terminal", label: "Terminal" },
   { to: "/perpustakaan/laporan", label: "Laporan" },
 ];
 
