@@ -4,11 +4,32 @@
 export type StatusSiswa = "Calon" | "Aktif" | "Alumni" | "Pindah Keluar" | "DO";
 export type JenisKelamin = "Laki-laki" | "Perempuan";
 export type Agama = "Islam" | "Kristen" | "Katolik" | "Hindu" | "Budha" | "Konghucu";
+export type NisnStatus = "Belum Diajukan" | "Diajukan" | "Diterbitkan" | "Ditolak";
+
+// Kebutuhan khusus codes per Dapodik (A-Q). Stored as free string; valid codes listed for picker.
+export const KEBUTUHAN_KHUSUS_CODES = [
+  "Normal", "A", "B", "C", "C1", "D", "D1",
+  "E", "F", "G", "H", "I", "J", "K", "N", "O", "P", "Q",
+] as const;
+export type KebutuhanKhususCode = (typeof KEBUTUHAN_KHUSUS_CODES)[number];
+
+export interface Koordinat {
+  lat: number;
+  lng: number;
+}
 
 export interface WaliRow {
   hubungan: "Ayah" | "Ibu" | "Wali";
   nama: string;
   nik?: string | undefined;
+  /** NIK ayah sesuai KK (digunakan jika hubungan=Ayah). */
+  nikAyah?: string | undefined;
+  /** NIK ibu sesuai KK (digunakan jika hubungan=Ibu). */
+  nikIbu?: string | undefined;
+  /** Nama ayah sesuai KK (untuk verifikasi Dapodik). */
+  namaAyahKk?: string | undefined;
+  /** Penanda wali utama yang menerima notifikasi & approval. Wajib tepat 1 per siswa. */
+  isPrimary?: boolean | undefined;
   pekerjaan?: string | undefined;
   penghasilan?: string | undefined;
   pendidikan?: string | undefined;
@@ -76,7 +97,16 @@ export interface AktivitasRow {
 export interface Siswa {
   nis: string;
   nisn: string;
+  /** Status NISN di Dapodik. "Belum Diajukan" untuk siswa baru sebelum batch submit. */
+  nisnStatus: NisnStatus;
+  tanggalRequestNisn?: string | undefined;
   nik?: string | undefined;
+  /** No Kartu Keluarga 16-digit. Wajib sebelum status Aktif. */
+  noKk?: string | undefined;
+  /** Link ke Persetujuan Wali aktif untuk publikasi foto. Null = foto dikunci. */
+  fotoConsentId?: string | undefined;
+  /** Koordinat rumah untuk hitung jarak ke sekolah (privacy: wali consent required). */
+  koordinat?: Koordinat | undefined;
   namaLengkap: string;
   namaPanggilan?: string | undefined;
   jenisKelamin: JenisKelamin;
@@ -225,11 +255,15 @@ function buildSiswa(idx: number): Siswa {
     { waktu: "5 hari lalu", aktor: "Sistem", aksi: "Mengirim pengingat tagihan", tone: "warning" },
   ];
 
+  const namaAyah = pick(namaList, idx + 17);
   const wali: WaliRow[] = [
     {
       hubungan: "Ayah",
-      nama: pick(namaList, idx + 17),
+      nama: namaAyah,
       nik: `3273${pad(idx * 31, 12)}`,
+      nikAyah: `3273${pad(idx * 31, 12)}`,
+      namaAyahKk: namaAyah,
+      isPrimary: true,
       pekerjaan: pick(["Pegawai Swasta","Wirausaha","Guru","PNS","Petani"], idx),
       penghasilan: "Rp 3-5 juta",
       pendidikan: "S1",
@@ -239,16 +273,28 @@ function buildSiswa(idx: number): Siswa {
     {
       hubungan: "Ibu",
       nama: pick(namaList, idx + 23),
+      nikIbu: `3273${pad(idx * 37, 12)}`,
       pekerjaan: "Ibu Rumah Tangga",
       pendidikan: "SMA",
       telepon: `0813${pad(idx * 119, 8)}`,
     },
   ];
 
+  const nisnStatusList: NisnStatus[] = [
+    "Diterbitkan", "Diterbitkan", "Diterbitkan", "Diterbitkan",
+    "Diajukan", "Belum Diajukan", "Ditolak",
+  ];
+  const nisnStatus = nisnStatusList[idx % nisnStatusList.length]!;
+
   return {
     nis,
     nisn,
+    nisnStatus,
+    tanggalRequestNisn: nisnStatus !== "Belum Diajukan" ? `${tahun}-08-${pad((idx % 27) + 1, 2)}` : undefined,
     nik: `3273${pad(idx * 41, 12)}`,
+    noKk: `3273${pad(idx * 53, 12)}`,
+    fotoConsentId: idx % 4 === 0 ? undefined : `CONSENT-${pad(idx + 1, 5)}`,
+    koordinat: { lat: -6.9 - (idx % 10) * 0.001, lng: 107.6 + (idx % 10) * 0.001 },
     namaLengkap: nama,
     namaPanggilan: nama.split(" ")[0]!,
     jenisKelamin: gender,
@@ -264,7 +310,8 @@ function buildSiswa(idx: number): Siswa {
     asalSekolah: pick(["SMP Negeri 1","SMP Negeri 5","SMP Tunas Bangsa","SMP Islam Al-Azhar"], idx),
     noSttb: `STTB-${pad(idx + 100, 6)}`,
     tanggalDiterima: `${tahun}-07-01`,
-    kebutuhanKhusus: idx % 17 === 0 ? "F (Kesulitan Belajar)" : "Normal",
+    kebutuhanKhusus: idx % 17 === 0 ? "F" : "Normal",
+    // KEBUTUHAN_KHUSUS_CODES re-exported for picker UI.
     alatTransportasi: pick(["Sepeda Motor","Jalan Kaki","Jemputan Sekolah","Angkutan Umum"], idx),
     jarakRumah: pick(["<1 km","1-3","3-5","5-10"], idx),
     waktuTempuh: pick(["<30 menit","30-60"], idx),
