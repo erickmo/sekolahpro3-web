@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "../lib/cn";
 
 interface Props {
-  title?: string | undefined;
+  title?: ReactNode | undefined;
   description?: string | undefined;
   action?: ReactNode | undefined;
   children: ReactNode;

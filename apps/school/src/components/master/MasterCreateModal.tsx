@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -10,9 +10,9 @@ import {
   Select,
   Textarea,
 } from "@sekolahpro/ui";
-import { useResourceCreate } from "@sekolahpro/api-client";
+import { useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
 
-// Reusable create-form modal for master.* domain. Mirrors PerpCreateModal shape.
+// Reusable create/edit-form modal for master.* domain. Mirrors PerpCreateModal shape.
 
 export type MasterFieldType = "text" | "number" | "date" | "select" | "textarea" | "checkbox";
 
@@ -24,6 +24,7 @@ export interface MasterFieldDef {
   hint?: string;
   options?: Array<{ value: string; label: string }>;
   defaultValue?: string | number;
+  disabledOnEdit?: boolean;
 }
 
 export interface MasterCreateModalProps {
@@ -34,7 +35,12 @@ export interface MasterCreateModalProps {
   description?: string;
   fields: MasterFieldDef[];
   submitLabel?: string;
+  onSaved?: (doc: Record<string, unknown>) => void;
+  // Backwards compat alias
   onCreated?: (doc: Record<string, unknown>) => void;
+  mode?: "create" | "edit";
+  recordName?: string;
+  initialDoc?: Record<string, unknown> | null;
 }
 
 function emptyValues(fields: MasterFieldDef[]): Record<string, string> {
@@ -49,20 +55,59 @@ function emptyValues(fields: MasterFieldDef[]): Record<string, string> {
   return out;
 }
 
+function valuesFromDoc(fields: MasterFieldDef[], doc: Record<string, unknown> | null | undefined): Record<string, string> {
+  const out = emptyValues(fields);
+  if (!doc) return out;
+  for (const f of fields) {
+    const raw = doc[f.name];
+    if (raw === undefined || raw === null) continue;
+    if (f.type === "checkbox") {
+      out[f.name] = raw ? "1" : "0";
+    } else {
+      out[f.name] = String(raw);
+    }
+  }
+  return out;
+}
+
 export function MasterCreateModal(props: MasterCreateModalProps) {
-  const { open, onClose, doctype, title, description, fields, submitLabel = "Simpan", onCreated } = props;
-  const [values, setValues] = useState<Record<string, string>>(() => emptyValues(fields));
+  const {
+    open,
+    onClose,
+    doctype,
+    title,
+    description,
+    fields,
+    submitLabel,
+    onSaved,
+    onCreated,
+    mode = "create",
+    recordName,
+    initialDoc,
+  } = props;
+  const isEdit = mode === "edit";
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    isEdit ? valuesFromDoc(fields, initialDoc) : emptyValues(fields),
+  );
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const qc = useQueryClient();
-  const mut = useResourceCreate(doctype);
+  const create = useResourceCreate(doctype);
+  const update = useResourceUpdate(doctype);
+  const pending = isEdit ? update.isPending : create.isPending;
+
+  useEffect(() => {
+    if (!open) return;
+    setValues(isEdit ? valuesFromDoc(fields, initialDoc) : emptyValues(fields));
+    setErrMsg(null);
+  }, [open, isEdit, initialDoc, fields]);
 
   const reset = () => {
-    setValues(emptyValues(fields));
+    setValues(isEdit ? valuesFromDoc(fields, initialDoc) : emptyValues(fields));
     setErrMsg(null);
   };
 
   const handleClose = () => {
-    if (mut.isPending) return;
+    if (pending) return;
     reset();
     onClose();
   };
@@ -80,6 +125,7 @@ export function MasterCreateModal(props: MasterCreateModalProps) {
 
     const payload: Record<string, unknown> = {};
     for (const f of fields) {
+      if (isEdit && f.disabledOnEdit) continue;
       const raw = values[f.name];
       if (f.type === "checkbox") {
         payload[f.name] = raw === "1" ? 1 : 0;
@@ -99,9 +145,17 @@ export function MasterCreateModal(props: MasterCreateModalProps) {
     }
 
     try {
-      const doc = await mut.mutateAsync(payload);
+      let doc: Record<string, unknown>;
+      if (isEdit) {
+        if (!recordName) throw new Error("recordName wajib di mode edit.");
+        doc = (await update.mutateAsync({ name: recordName, patch: payload })) as Record<string, unknown>;
+        qc.invalidateQueries({ queryKey: ["resource:doc", doctype, recordName] });
+      } else {
+        doc = (await create.mutateAsync(payload)) as Record<string, unknown>;
+      }
       qc.invalidateQueries({ queryKey: ["resource:list", doctype] });
-      onCreated?.(doc as Record<string, unknown>);
+      onSaved?.(doc);
+      onCreated?.(doc);
       reset();
       onClose();
     } catch (err) {
@@ -110,22 +164,24 @@ export function MasterCreateModal(props: MasterCreateModalProps) {
   };
 
   const renderField = (f: MasterFieldDef): ReactNode => {
-    const id = `master-create-${f.name}`;
+    const id = `master-form-${f.name}`;
     const val = values[f.name] ?? "";
     const onChange = (v: string) => setValues((prev) => ({ ...prev, [f.name]: v }));
+    const disabled = isEdit && f.disabledOnEdit ? true : false;
 
     if (f.type === "checkbox") {
       return (
         <Checkbox
           id={id}
           checked={val === "1"}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.checked ? "1" : "0")}
         />
       );
     }
     if (f.type === "select" && f.options) {
       return (
-        <Select id={id} value={val} onChange={(e) => onChange(e.target.value)}>
+        <Select id={id} value={val} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
           <option value="">— Pilih —</option>
           {f.options.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -134,11 +190,13 @@ export function MasterCreateModal(props: MasterCreateModalProps) {
       );
     }
     if (f.type === "textarea") {
-      return <Textarea id={id} value={val} onChange={(e) => onChange(e.target.value)} />;
+      return <Textarea id={id} value={val} disabled={disabled} onChange={(e) => onChange(e.target.value)} />;
     }
     const inputType = f.type === "number" ? "number" : f.type === "date" ? "date" : "text";
-    return <Input id={id} type={inputType} value={val} onChange={(e) => onChange(e.target.value)} />;
+    return <Input id={id} type={inputType} value={val} disabled={disabled} onChange={(e) => onChange(e.target.value)} />;
   };
+
+  const finalLabel = submitLabel ?? (isEdit ? "Simpan Perubahan" : "Simpan");
 
   return (
     <Modal
@@ -149,9 +207,9 @@ export function MasterCreateModal(props: MasterCreateModalProps) {
       size="lg"
       footer={
         <>
-          <Button variant="outline" onClick={handleClose} disabled={mut.isPending}>Batal</Button>
-          <Button onClick={handleSubmit} disabled={mut.isPending}>
-            {mut.isPending ? "Menyimpan..." : submitLabel}
+          <Button variant="outline" onClick={handleClose} disabled={pending}>Batal</Button>
+          <Button onClick={handleSubmit} disabled={pending}>
+            {pending ? "Menyimpan..." : finalLabel}
           </Button>
         </>
       }
@@ -167,7 +225,7 @@ export function MasterCreateModal(props: MasterCreateModalProps) {
             <FormField
               key={f.name}
               label={f.label}
-              htmlFor={`master-create-${f.name}`}
+              htmlFor={`master-form-${f.name}`}
               {...(f.required ? { required: true } : {})}
               {...(f.hint ? { hint: f.hint } : {})}
             >

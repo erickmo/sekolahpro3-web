@@ -55,9 +55,29 @@ const STATUS_OPTIONS = [
 const DEFAULT_STATUS = "BelumKembali";
 
 const CREATE_FIELDS: PerpFieldDef[] = [
-  { name: "anggota", label: "Anggota (ID)", type: "text", required: true, hint: "ID Anggota Perpustakaan" },
-  { name: "buku", label: "Buku (ISBN/Kode)", type: "text", required: true },
-  { name: "kopi", label: "Kopi (Kode Kopi)", type: "text" },
+  {
+    name: "anggota",
+    label: "Anggota",
+    type: "link",
+    required: true,
+    linkDoctype: "Anggota Perpustakaan",
+    linkLabelField: "nama_lengkap",
+  },
+  {
+    name: "buku",
+    label: "Buku",
+    type: "link",
+    required: true,
+    linkDoctype: "Buku",
+    linkLabelField: "judul",
+  },
+  {
+    name: "kopi",
+    label: "Kopi",
+    type: "link",
+    linkDoctype: "Eksemplar Buku",
+    linkLabelField: "nomor_inventaris",
+  },
   { name: "tanggal_pinjam", label: "Tgl Pinjam", type: "date", required: true, defaultValue: perpToday() },
   { name: "tanggal_rencana_kembali", label: "Rencana Kembali", type: "date", required: true },
   { name: "petugas", label: "Petugas", type: "text" },

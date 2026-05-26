@@ -24,18 +24,18 @@ type Mapel = {
   name: string;
   nama_mapel: string;
   kode_mapel: string;
-  kelompok?: string;
+  kelompok_mapel?: string;
   jenjang?: string;
   status?: string;
   modified?: string;
 };
 type Kkm = { name: string; mata_pelajaran: string; nilai_kkm: number };
-type Kurikulum = { name: string; nama_kurikulum?: string; status?: string };
+type Kurikulum = { name: string; nama?: string; nama_kurikulum?: string; status?: string };
 type Komponen = { name: string; mata_pelajaran?: string };
 
-const MAPEL_FIELDS = ["name", "nama_mapel", "kode_mapel", "kelompok", "jenjang", "status", "modified"];
+const MAPEL_FIELDS = ["name", "nama_mapel", "kode_mapel", "kelompok_mapel", "modified"];
 const KKM_FIELDS = ["name", "mata_pelajaran", "nilai_kkm"];
-const KURIKULUM_FIELDS = ["name", "nama_kurikulum", "status"];
+const KURIKULUM_FIELDS = ["name", "nama"];
 const KOMPONEN_FIELDS = ["name", "mata_pelajaran"];
 
 const PAGE_LIMIT = 200;
@@ -332,7 +332,7 @@ function AkademikDashboardPage() {
                     <div className="font-medium text-fg truncate">{m.nama_mapel}</div>
                     <div className="text-xs text-muted-fg">
                       <span className="font-mono">{m.kode_mapel}</span>
-                      {m.kelompok ? ` · ${m.kelompok}` : ""}
+                      {m.kelompok_mapel ? ` · ${m.kelompok_mapel}` : ""}
                       {m.jenjang ? ` · ${m.jenjang}` : ""}
                     </div>
                   </div>

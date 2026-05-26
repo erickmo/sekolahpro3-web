@@ -4,14 +4,14 @@ import { useResourceList } from "@sekolahpro/api-client";
 
 function LaporanPage() {
   const peminjaman = useResourceList("Peminjaman Buku", { fields: ["name", "status"], limit_page_length: 0 });
-  const denda = useResourceList<{ name: string; nominal: number; status: string }>(
-    "Denda Perpustakaan", { fields: ["name", "nominal", "status"], limit_page_length: 0 },
+  const denda = useResourceList<{ name: string; total_denda: number; status_bayar: string }>(
+    "Denda Perpustakaan", { fields: ["name", "total_denda", "status_bayar"], limit_page_length: 0 },
   );
   const anggota = useResourceList("Anggota Perpustakaan", { fields: ["name", "status"], limit_page_length: 0 });
 
   const aktif = (peminjaman.data ?? []).filter((p: any) => p.status === "Aktif" || p.status === "Terlambat").length;
   const terlambat = (peminjaman.data ?? []).filter((p: any) => p.status === "Terlambat").length;
-  const outstanding = (denda.data ?? []).filter((d) => d.status === "Belum Lunas").reduce((s, d) => s + (d.nominal ?? 0), 0);
+  const outstanding = (denda.data ?? []).filter((d) => d.status_bayar === "Belum Lunas").reduce((s, d) => s + (d.total_denda ?? 0), 0);
   const anggotaAktif = (anggota.data ?? []).filter((a: any) => a.status === "Aktif").length;
 
   return (

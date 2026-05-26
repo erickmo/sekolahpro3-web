@@ -1,6 +1,8 @@
 # Perpustakaan Sirkulasi Merge — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status (2026-05-25):** Implemented on branch `feat/perpustakaan-sirkulasi-merge`. FE tasks shipped in commits `9f5da06`…`237fb35`. Backend tasks (1–4) live in repo `apps/sekolahpro`. ADR: [PERP-ADR-0001](../adr/PERP-ADR-0001-sirkulasi-merge.md).
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Merge perpustakaan peminjaman, pengembalian, dan denda routes jadi satu hub Peminjaman. Hapus rute pengembalian + denda. Return flow lewat doctype `Pengembalian Buku.submit()` agar backend auto-generate denda. Denda dilunasi inline dari konteks peminjaman.
 
@@ -61,11 +63,11 @@
 **Files:**
 - Modify: `apps/sekolahpro/sekolahpro/perpustakaan/doctype/denda_perpustakaan/denda_perpustakaan.json`
 
-- [ ] **Step 1: Buka JSON doctype**
+- [x] **Step 1: Buka JSON doctype**
 
 Read `apps/sekolahpro/sekolahpro/perpustakaan/doctype/denda_perpustakaan/denda_perpustakaan.json`. Confirm `field_order` array and `fields` array shape.
 
-- [ ] **Step 2: Tambah field `peminjaman` setelah `pengembalian`**
+- [x] **Step 2: Tambah field `peminjaman` setelah `pengembalian`**
 
 Sisipkan ke `fields` (setelah entry `pengembalian`):
 
@@ -82,7 +84,7 @@ Sisipkan ke `fields` (setelah entry `pengembalian`):
 
 Tambah `"peminjaman"` di `field_order` setelah `"pengembalian"`. Bump `modified` timestamp ke now ISO.
 
-- [ ] **Step 3: Migrate dev site**
+- [x] **Step 3: Migrate dev site**
 
 Run dari bench dir:
 ```bash
@@ -94,7 +96,7 @@ bench --site sekolahpro.localhost console <<< "import frappe; print(frappe.get_m
 ```
 Expected: prints DocField object (not None).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/sekolahpro/sekolahpro/perpustakaan/doctype/denda_perpustakaan/denda_perpustakaan.json
@@ -109,7 +111,7 @@ git commit -m "feat(perpustakaan): add denormalized peminjaman link on Denda Per
 - Modify: `apps/sekolahpro/sekolahpro/perpustakaan/doctype/pengembalian_buku/pengembalian_buku.py`
 - Test: `apps/sekolahpro/sekolahpro/perpustakaan/doctype/pengembalian_buku/test_pengembalian_buku.py` (atau buat baru kalau belum ada)
 
-- [ ] **Step 1: Check existing tests**
+- [x] **Step 1: Check existing tests**
 
 Run:
 ```bash
@@ -117,7 +119,7 @@ ls apps/sekolahpro/sekolahpro/perpustakaan/doctype/pengembalian_buku/
 ```
 Jika tidak ada `test_pengembalian_buku.py`, buat file baru.
 
-- [ ] **Step 2: Tulis failing test**
+- [x] **Step 2: Tulis failing test**
 
 Append/create di `test_pengembalian_buku.py`:
 
@@ -151,14 +153,14 @@ class TestPengembalianBuku(unittest.TestCase):
 
 Tambah helper `_make_peminjaman_terlambat()` di file yang sama (gunakan pattern dari test peminjaman existing kalau ada).
 
-- [ ] **Step 3: Run test, expect failure**
+- [x] **Step 3: Run test, expect failure**
 
 ```bash
 bench --site sekolahpro.localhost run-tests --module sekolahpro.perpustakaan.doctype.pengembalian_buku.test_pengembalian_buku
 ```
 Expected: FAIL — `denda[0].peminjaman` is `None` karena field belum di-populate.
 
-- [ ] **Step 4: Patch `_buat_denda_jika_terlambat`**
+- [x] **Step 4: Patch `_buat_denda_jika_terlambat`**
 
 Di `pengembalian_buku.py` method `_buat_denda_jika_terlambat`, tambah `"peminjaman": peminjaman.name` di dict insert:
 
@@ -175,14 +177,14 @@ frappe.get_doc({
 }).insert(ignore_permissions=True)
 ```
 
-- [ ] **Step 5: Run test, expect pass**
+- [x] **Step 5: Run test, expect pass**
 
 ```bash
 bench --site sekolahpro.localhost run-tests --module sekolahpro.perpustakaan.doctype.pengembalian_buku.test_pengembalian_buku
 ```
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/sekolahpro/sekolahpro/perpustakaan/doctype/pengembalian_buku/
@@ -197,7 +199,7 @@ git commit -m "feat(perpustakaan): populate Denda.peminjaman on auto-generate"
 - Create: `apps/sekolahpro/sekolahpro/patches/v0_6_0/backfill_denda_peminjaman.py`
 - Modify: `apps/sekolahpro/sekolahpro/patches.txt`
 
-- [ ] **Step 1: Buat patch file**
+- [x] **Step 1: Buat patch file**
 
 ```python
 # apps/sekolahpro/sekolahpro/patches/v0_6_0/backfill_denda_peminjaman.py
@@ -230,7 +232,7 @@ def execute():
     frappe.db.commit()
 ```
 
-- [ ] **Step 2: Registrasi patch**
+- [x] **Step 2: Registrasi patch**
 
 Tambah baris di `apps/sekolahpro/sekolahpro/patches.txt` (paling bawah, dalam blok v0.6.0):
 
@@ -238,28 +240,28 @@ Tambah baris di `apps/sekolahpro/sekolahpro/patches.txt` (paling bawah, dalam bl
 sekolahpro.patches.v0_6_0.backfill_denda_peminjaman
 ```
 
-- [ ] **Step 3: Run patch**
+- [x] **Step 3: Run patch**
 
 ```bash
 bench --site sekolahpro.localhost migrate
 ```
 Expected: patch executed, no errors.
 
-- [ ] **Step 4: Verifikasi**
+- [x] **Step 4: Verifikasi**
 
 ```bash
 bench --site sekolahpro.localhost console <<< "import frappe; print(frappe.db.count('Denda Perpustakaan', {'peminjaman': ['is', 'not set']}))"
 ```
 Expected: 0 (atau hanya denda yang `pengembalian` nya juga kosong, yang harusnya tidak ada).
 
-- [ ] **Step 5: Re-run patch (idempotency check)**
+- [x] **Step 5: Re-run patch (idempotency check)**
 
 ```bash
 bench --site sekolahpro.localhost execute sekolahpro.patches.v0_6_0.backfill_denda_peminjaman.execute
 ```
 Expected: success, no rows updated.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/sekolahpro/sekolahpro/patches/v0_6_0/backfill_denda_peminjaman.py apps/sekolahpro/sekolahpro/patches.txt
@@ -275,7 +277,7 @@ git commit -m "feat(perpustakaan): backfill Denda.peminjaman from Pengembalian"
 - Create: `apps/sekolahpro/sekolahpro/perpustakaan/api/denda.py`
 - Create: `apps/sekolahpro/sekolahpro/perpustakaan/api/test_denda.py`
 
-- [ ] **Step 1: Tulis failing test**
+- [x] **Step 1: Tulis failing test**
 
 ```python
 # apps/sekolahpro/sekolahpro/perpustakaan/api/test_denda.py
@@ -303,14 +305,14 @@ class TestGetDendaSummary(unittest.TestCase):
 
 Helper `_make_peminjaman_with_denda` mirror dari test Task 2 (reuse via import kalau bisa).
 
-- [ ] **Step 2: Run, expect import failure**
+- [x] **Step 2: Run, expect import failure**
 
 ```bash
 bench --site sekolahpro.localhost run-tests --module sekolahpro.perpustakaan.api.test_denda
 ```
 Expected: ImportError — module belum ada.
 
-- [ ] **Step 3: Implementasi**
+- [x] **Step 3: Implementasi**
 
 ```python
 # apps/sekolahpro/sekolahpro/perpustakaan/api/denda.py
@@ -359,14 +361,14 @@ def get_denda_summary(peminjaman_names: List[str]) -> Dict[str, Dict]:
     }
 ```
 
-- [ ] **Step 4: Run, expect pass**
+- [x] **Step 4: Run, expect pass**
 
 ```bash
 bench --site sekolahpro.localhost run-tests --module sekolahpro.perpustakaan.api.test_denda
 ```
 Expected: 3 passed.
 
-- [ ] **Step 5: Smoke test via API**
+- [x] **Step 5: Smoke test via API**
 
 ```bash
 curl -s -X POST http://localhost:5181/api/method/sekolahpro.perpustakaan.api.denda.get_denda_summary \
@@ -375,7 +377,7 @@ curl -s -X POST http://localhost:5181/api/method/sekolahpro.perpustakaan.api.den
 ```
 Expected: 200 dengan body `{"message": {...}}`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/sekolahpro/sekolahpro/perpustakaan/api/
@@ -390,7 +392,7 @@ git commit -m "feat(perpustakaan): get_denda_summary whitelisted method"
 - Create: `apps/school/src/components/perpustakaan/dendaSummary.ts`
 - Test: `apps/school/src/components/perpustakaan/__tests__/dendaSummary.test.ts`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```typescript
 // apps/school/src/components/perpustakaan/__tests__/dendaSummary.test.ts
@@ -425,14 +427,14 @@ describe("fetchDendaSummary", () => {
 });
 ```
 
-- [ ] **Step 2: Run, expect failure**
+- [x] **Step 2: Run, expect failure**
 
 ```bash
 cd apps/school && pnpm vitest run src/components/perpustakaan/__tests__/dendaSummary.test.ts
 ```
 Expected: FAIL (module not found).
 
-- [ ] **Step 3: Implementasi**
+- [x] **Step 3: Implementasi**
 
 ```typescript
 // apps/school/src/components/perpustakaan/dendaSummary.ts
@@ -456,14 +458,14 @@ export async function fetchDendaSummary(peminjamanNames: string[]): Promise<Dend
 }
 ```
 
-- [ ] **Step 4: Run, expect pass**
+- [x] **Step 4: Run, expect pass**
 
 ```bash
 cd apps/school && pnpm vitest run src/components/perpustakaan/__tests__/dendaSummary.test.ts
 ```
 Expected: 2 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/school/src/components/perpustakaan/dendaSummary.ts apps/school/src/components/perpustakaan/__tests__/dendaSummary.test.ts
@@ -478,7 +480,7 @@ git commit -m "feat(school): fetchDendaSummary helper"
 - Create: `apps/school/src/components/perpustakaan/ReturnModal.tsx`
 - Test: `apps/school/src/components/perpustakaan/__tests__/ReturnModal.test.tsx`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```tsx
 // apps/school/src/components/perpustakaan/__tests__/ReturnModal.test.tsx
@@ -543,14 +545,14 @@ describe("ReturnModal", () => {
 });
 ```
 
-- [ ] **Step 2: Run, expect failure**
+- [x] **Step 2: Run, expect failure**
 
 ```bash
 cd apps/school && pnpm vitest run src/components/perpustakaan/__tests__/ReturnModal.test.tsx
 ```
 Expected: FAIL — module not found.
 
-- [ ] **Step 3: Implementasi**
+- [x] **Step 3: Implementasi**
 
 ```tsx
 // apps/school/src/components/perpustakaan/ReturnModal.tsx
@@ -631,14 +633,14 @@ export function ReturnModal({ open, peminjaman, onClose, onSuccess }: Props) {
 }
 ```
 
-- [ ] **Step 4: Run, expect pass**
+- [x] **Step 4: Run, expect pass**
 
 ```bash
 cd apps/school && pnpm vitest run src/components/perpustakaan/__tests__/ReturnModal.test.tsx
 ```
 Expected: 2 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/school/src/components/perpustakaan/ReturnModal.tsx apps/school/src/components/perpustakaan/__tests__/ReturnModal.test.tsx
@@ -653,7 +655,7 @@ git commit -m "feat(school): ReturnModal posts + submits Pengembalian Buku"
 - Create: `apps/school/src/components/perpustakaan/DendaDrawer.tsx`
 - Test: `apps/school/src/components/perpustakaan/__tests__/DendaDrawer.test.tsx`
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 ```tsx
 // apps/school/src/components/perpustakaan/__tests__/DendaDrawer.test.tsx
@@ -707,14 +709,14 @@ describe("DendaDrawer", () => {
 });
 ```
 
-- [ ] **Step 2: Run, expect failure**
+- [x] **Step 2: Run, expect failure**
 
 ```bash
 cd apps/school && pnpm vitest run src/components/perpustakaan/__tests__/DendaDrawer.test.tsx
 ```
 Expected: FAIL.
 
-- [ ] **Step 3: Implementasi**
+- [x] **Step 3: Implementasi**
 
 ```tsx
 // apps/school/src/components/perpustakaan/DendaDrawer.tsx
@@ -794,14 +796,14 @@ export function DendaDrawer({ open, peminjaman, onClose }: Props) {
 }
 ```
 
-- [ ] **Step 4: Run, expect pass**
+- [x] **Step 4: Run, expect pass**
 
 ```bash
 cd apps/school && pnpm vitest run src/components/perpustakaan/__tests__/DendaDrawer.test.tsx
 ```
 Expected: 1 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/school/src/components/perpustakaan/DendaDrawer.tsx apps/school/src/components/perpustakaan/__tests__/DendaDrawer.test.tsx
@@ -815,7 +817,7 @@ git commit -m "feat(school): DendaDrawer with inline mark-lunas action"
 **Files:**
 - Modify: `apps/school/src/routes/perpustakaan.peminjaman.tsx`
 
-- [ ] **Step 1: Replace full file**
+- [x] **Step 1: Replace full file**
 
 ```tsx
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
@@ -982,7 +984,7 @@ export const Route = createFileRoute("/perpustakaan/peminjaman")({
 
 **Note:** Plan asumsi `ResourceListPage` punya prop `baseFilters`, `decorateRows`, dan `selectFilters[].value/onChange`. Jika belum:
 
-- [ ] **Step 2: Verifikasi `ResourceListPage` API**
+- [x] **Step 2: Verifikasi `ResourceListPage` API**
 
 ```bash
 grep -n "baseFilters\|decorateRows\|selectFilters" apps/school/src/components/ResourceListPage.tsx
@@ -994,7 +996,7 @@ Jika prop tidak ada, tambah dulu (small modification) sebelum lanjut. Pattern:
 
 Jika modifikasi diperlukan, lakukan, jalankan test ResourceListPage existing, commit terpisah dgn pesan `refactor(school): controllable filters + row decoration on ResourceListPage`.
 
-- [ ] **Step 3: Run app, manual smoke**
+- [x] **Step 3: Run app, manual smoke**
 
 ```bash
 pnpm --filter @sekolahpro/school dev
@@ -1005,7 +1007,7 @@ Buka `http://localhost:5181/perpustakaan/peminjaman`. Verifikasi:
 - Tombol "Kembalikan" hanya muncul di row Aktif/Terlambat.
 - Klik tombol → ReturnModal terbuka.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/school/src/routes/perpustakaan.peminjaman.tsx apps/school/src/components/ResourceListPage.tsx
@@ -1019,7 +1021,7 @@ git commit -m "feat(school): unify perpustakaan circulation into peminjaman list
 **Files:**
 - Modify: `apps/school/src/routes/perpustakaan.peminjaman.$name.tsx`
 
-- [ ] **Step 1: Ganti handler `handleKembalikan`**
+- [x] **Step 1: Ganti handler `handleKembalikan`**
 
 Hapus pemanggilan `workflowMut` untuk return. Tambah state `returnOpen` + render `<ReturnModal>`. Tombol "Kembalikan" jadi `onClick={() => setReturnOpen(true)}`.
 
@@ -1044,7 +1046,7 @@ const [dendaOpen, setDendaOpen] = useState(false);
 {dendaOpen && <DendaDrawer open peminjaman={name} onClose={() => setDendaOpen(false)} />}
 ```
 
-- [ ] **Step 2: Tambah section Pengembalian inline**
+- [x] **Step 2: Tambah section Pengembalian inline**
 
 Query Pengembalian Buku terkait via `useResourceList`:
 
@@ -1060,14 +1062,14 @@ Tambah `primaryInfo` entry kalau `returnDocs.length > 0`:
 { label: "Tgl Kembali Aktual", value: returnDocs[0].tanggal_kembali_aktual ?? "—" },
 ```
 
-- [ ] **Step 3: Manual smoke**
+- [x] **Step 3: Manual smoke**
 
 ```bash
 pnpm --filter @sekolahpro/school dev
 ```
 Buka detail peminjaman aktif. Klik "Kembalikan" → modal. Submit → list invalidated, status berubah jadi "Selesai", section Pengembalian muncul.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/school/src/routes/perpustakaan.peminjaman.$name.tsx
@@ -1081,7 +1083,7 @@ git commit -m "feat(school): peminjaman detail uses ReturnModal + DendaDrawer"
 **Files:**
 - Modify: `apps/school/src/routes/perpustakaan.anggota.$name.tsx`
 
-- [ ] **Step 1: Tambah section "Peminjaman Aktif"**
+- [x] **Step 1: Tambah section "Peminjaman Aktif"**
 
 ```tsx
 import { useState } from "react";
@@ -1117,11 +1119,11 @@ const { data: aktif = [] } = useResourceList<{ name: string; tanggal_kembali_ren
 )}
 ```
 
-- [ ] **Step 2: Smoke**
+- [x] **Step 2: Smoke**
 
 Buka `/perpustakaan/anggota/{nama}`. Verifikasi section muncul, button "Kembalikan" buka modal.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/school/src/routes/perpustakaan.anggota.$name.tsx
@@ -1135,7 +1137,7 @@ git commit -m "feat(school): return trigger from anggota detail"
 **Files:**
 - Modify: `apps/school/src/routes/perpustakaan.$isbn.tsx`
 
-- [ ] **Step 1: Tambah section "Sedang Dipinjam"**
+- [x] **Step 1: Tambah section "Sedang Dipinjam"**
 
 Query mirip Task 10 tapi filter via eksemplar atau via child table `items.buku = {isbn}`. Frappe biasanya butuh query lewat parent:
 
@@ -1155,7 +1157,7 @@ const { data: aktif = [] } = useResourceList<{ name: string; anggota: string; ta
 
 Tambah `<ReturnModal>` toggle sama seperti Task 10.
 
-- [ ] **Step 2: Verifikasi child-table filter**
+- [x] **Step 2: Verifikasi child-table filter**
 
 Tes via curl untuk konfirmasi sintaks Frappe `["Item Peminjaman", "buku", "=", ...]`:
 ```bash
@@ -1166,7 +1168,7 @@ curl -s -G http://localhost:5181/api/method/frappe.client.get_list \
 ```
 Jika gagal, fallback: query `Item Peminjaman` dulu untuk dapatkan `parent` names, lalu query parent.
 
-- [ ] **Step 3: Smoke + commit**
+- [x] **Step 3: Smoke + commit**
 
 ```bash
 git add apps/school/src/routes/perpustakaan.$isbn.tsx
@@ -1183,7 +1185,7 @@ git commit -m "feat(school): return trigger from buku detail"
 - Replace: `apps/school/src/routes/perpustakaan.denda.tsx`
 - Replace: `apps/school/src/routes/perpustakaan.denda.$name.tsx`
 
-- [ ] **Step 1: Tulis stub `perpustakaan.pengembalian.tsx`**
+- [x] **Step 1: Tulis stub `perpustakaan.pengembalian.tsx`**
 
 ```tsx
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -1195,7 +1197,7 @@ export const Route = createFileRoute("/perpustakaan/pengembalian")({
 });
 ```
 
-- [ ] **Step 2: Tulis stub `perpustakaan.pengembalian.$name.tsx`**
+- [x] **Step 2: Tulis stub `perpustakaan.pengembalian.$name.tsx`**
 
 ```tsx
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -1220,7 +1222,7 @@ export const Route = createFileRoute("/perpustakaan/pengembalian/$name")({
 });
 ```
 
-- [ ] **Step 3: Tulis stub `perpustakaan.denda.tsx`**
+- [x] **Step 3: Tulis stub `perpustakaan.denda.tsx`**
 
 ```tsx
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -1232,7 +1234,7 @@ export const Route = createFileRoute("/perpustakaan/denda")({
 });
 ```
 
-- [ ] **Step 4: Tulis stub `perpustakaan.denda.$name.tsx`**
+- [x] **Step 4: Tulis stub `perpustakaan.denda.$name.tsx`**
 
 ```tsx
 import { createFileRoute, redirect } from "@tanstack/react-router";
@@ -1257,14 +1259,14 @@ export const Route = createFileRoute("/perpustakaan/denda/$name")({
 });
 ```
 
-- [ ] **Step 5: Smoke**
+- [x] **Step 5: Smoke**
 
 ```bash
 curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" http://localhost:5181/perpustakaan/denda
 ```
 TanStack redirect terjadi di client; verifikasi manual: buka URL di browser, harus berakhir di `/perpustakaan/peminjaman?denda=ada`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/school/src/routes/perpustakaan.pengembalian.tsx apps/school/src/routes/perpustakaan.pengembalian.\$name.tsx apps/school/src/routes/perpustakaan.denda.tsx apps/school/src/routes/perpustakaan.denda.\$name.tsx
@@ -1278,7 +1280,7 @@ git commit -m "feat(school): redirect old pengembalian/denda URLs to peminjaman"
 **Files:**
 - Modify: `apps/school/src/routes/perpustakaan.tsx`
 
-- [ ] **Step 1: Hapus tab Pengembalian + Denda**
+- [x] **Step 1: Hapus tab Pengembalian + Denda**
 
 ```tsx
 const TABS: { to: string; label: string; exact?: boolean }[] = [
@@ -1291,11 +1293,11 @@ const TABS: { to: string; label: string; exact?: boolean }[] = [
 ];
 ```
 
-- [ ] **Step 2: Smoke**
+- [x] **Step 2: Smoke**
 
 Buka `/perpustakaan`. Verifikasi tab pengembalian + denda hilang.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/school/src/routes/perpustakaan.tsx
@@ -1310,7 +1312,7 @@ git commit -m "feat(school): drop pengembalian + denda tabs"
 - Modify: `apps/sekolahpro/docs/domains/perpustakaan/spec.html`
 - Modify: `apps/sekolahpro/docs/domains/perpustakaan/README.html`
 
-- [ ] **Step 1: Edit spec.html**
+- [x] **Step 1: Edit spec.html**
 
 Locate section yang menyebut workflow peminjaman/pengembalian/denda. Tambah/ganti dengan:
 
@@ -1325,18 +1327,18 @@ Locate section yang menyebut workflow peminjaman/pengembalian/denda. Tambah/gant
 <p>Rute web <code>/perpustakaan/pengembalian</code> dan <code>/perpustakaan/denda</code> dihapus (di-redirect ke <code>/perpustakaan/peminjaman</code>).</p>
 ```
 
-- [ ] **Step 2: Edit README.html**
+- [x] **Step 2: Edit README.html**
 
 Sinkronisasi narasi singkat: ganti penyebutan "tiga tab terpisah" jadi "satu hub Peminjaman dengan return + denda inline". Hapus reference URL `/perpustakaan/pengembalian` dan `/perpustakaan/denda` di prosa.
 
-- [ ] **Step 3: Cek entitas**
+- [x] **Step 3: Cek entitas**
 
 ```bash
 ls apps/sekolahpro/docs/domains/perpustakaan/entities/
 ```
 Untuk setiap file HTML yang menyebut `Denda Perpustakaan`, tambahkan field baru `peminjaman` (Link → Peminjaman Buku). Jika tidak ada diagram explicit, skip.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/sekolahpro/docs/domains/perpustakaan/
@@ -1347,35 +1349,35 @@ git commit -m "docs(perpustakaan): document merged circulation flow"
 
 ## Task 15: Final regression sweep
 
-- [ ] **Step 1: Run all FE tests**
+- [x] **Step 1: Run all FE tests**
 
 ```bash
 pnpm --filter @sekolahpro/school test
 ```
 Expected: green.
 
-- [ ] **Step 2: Run backend tests untuk perpustakaan**
+- [x] **Step 2: Run backend tests untuk perpustakaan**
 
 ```bash
 bench --site sekolahpro.localhost run-tests --app sekolahpro --module sekolahpro.perpustakaan
 ```
 Expected: green.
 
-- [ ] **Step 3: Lint**
+- [x] **Step 3: Lint**
 
 ```bash
 pnpm --filter @sekolahpro/school lint
 ```
 Expected: no errors.
 
-- [ ] **Step 4: Type check**
+- [x] **Step 4: Type check**
 
 ```bash
 pnpm --filter @sekolahpro/school typecheck
 ```
 Expected: no errors.
 
-- [ ] **Step 5: Manual end-to-end smoke**
+- [x] **Step 5: Manual end-to-end smoke**
 
 Skenario:
 1. Buat peminjaman baru dengan `tanggal_kembali_rencana` 5 hari lalu (atau ubah doc lewat console agar terlambat).
@@ -1388,7 +1390,7 @@ Skenario:
 
 Catatan: jika rute peminjaman mengalami pre-existing error "Rendered more hooks" (lihat verifikasi sebelumnya), debug terpisah sebelum sweep ini.
 
-- [ ] **Step 6: Final commit + PR**
+- [x] **Step 6: Final commit + PR**
 
 Pastikan working tree bersih. Buka PR.
 
@@ -1404,10 +1406,10 @@ gh pr create --title "feat(perpustakaan): merge peminjaman/pengembalian/denda in
 - Docs updated.
 
 ## Test plan
-- [ ] pnpm --filter @sekolahpro/school test
-- [ ] bench --site sekolahpro.localhost run-tests --app sekolahpro --module sekolahpro.perpustakaan
-- [ ] Manual e2e: pinjam terlambat → kembalikan → denda muncul → lunas
-- [ ] Old URLs /perpustakaan/denda and /perpustakaan/pengembalian redirect
+- [x] pnpm --filter @sekolahpro/school test
+- [x] bench --site sekolahpro.localhost run-tests --app sekolahpro --module sekolahpro.perpustakaan
+- [x] Manual e2e: pinjam terlambat → kembalikan → denda muncul → lunas
+- [x] Old URLs /perpustakaan/denda and /perpustakaan/pengembalian redirect
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF

@@ -4,12 +4,12 @@ import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { CreateResourceModal, type FieldSpec } from "../components/akademik/CreateResourceModal";
 
-type Row = { name: string; nama_mapel: string; kode_mapel: string; kelompok?: string; jenjang?: string; status?: string };
+type Row = { name: string; nama_mapel: string; kode_mapel: string; kelompok_mapel?: string; jenjang?: string; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "kode_mapel", header: "Kode", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.kode_mapel}</span> },
   { key: "nama_mapel", header: "Nama Mata Pelajaran", sortable: true, cell: (r) => r.nama_mapel },
-  { key: "kelompok", header: "Kelompok", cell: (r) => r.kelompok ?? "—" },
+  { key: "kelompok_mapel", header: "Kelompok", cell: (r) => r.kelompok_mapel ?? "—" },
   { key: "jenjang", header: "Jenjang", cell: (r) => r.jenjang ?? "—" },
   { key: "status", header: "Status",
     cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : "neutral"} dot>{r.status ?? "—"}</Badge> },
@@ -40,7 +40,7 @@ function MapelPage() {
         eyebrow="Akademik"
         title="Mata Pelajaran"
         doctype="Mata Pelajaran"
-        fields={["name", "nama_mapel", "kode_mapel", "kelompok", "jenjang", "status"]}
+        fields={["name", "nama_mapel", "kode_mapel", "kelompok_mapel"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "kode_mapel", dir: "asc" }}

@@ -21,7 +21,7 @@ function RaportPage() {
       eyebrow="Akademik"
       title="Raport"
       doctype="Raport"
-      fields={["name", "siswa", "kelas", "semester", "rata_rata", "status"]}
+      fields={["name", "siswa", "semester", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "name", dir: "desc" }}

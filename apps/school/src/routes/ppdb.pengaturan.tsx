@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, SectionCard } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 
+// TODO: speculative doctypes (Pengaturan PPDB, Item Pembayaran PPDB) — fields
+// not verified against backend. May return HTTP 417 until doctype confirmed.
 function PengaturanPpdbPage() {
   const pengaturan = useResourceList<{ name: string; tahun_ajaran?: string; status?: string }>(
     "Pengaturan PPDB", { fields: ["name", "tahun_ajaran", "status"], limit_page_length: 0 },

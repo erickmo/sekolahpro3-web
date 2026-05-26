@@ -16,7 +16,7 @@ import {
   IconUsers,
   IconWallet,
 } from "@sekolahpro/ui";
-import { ONBOARDING_STEPS } from "../data/onboarding";
+import { useOnboardingSteps } from "../data/onboarding";
 
 const ONBOARDING_DISMISS_KEY = "sekolahpro:onboarding-dismissed";
 
@@ -198,6 +198,7 @@ function Home() {
       localStorage.getItem(ONBOARDING_DISMISS_KEY) === "1",
   );
   const [mode] = useState<DayMode>(() => getDayMode());
+  const onboardingSteps = useOnboardingSteps();
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -212,7 +213,7 @@ function Home() {
         <div className="space-y-6">
           {!dismissed ? (
             <OnboardingChecklist
-              steps={ONBOARDING_STEPS.map((s) => ({ ...s }))}
+              steps={onboardingSteps}
               onDismiss={handleDismiss}
               renderLink={(href, children) => (
                 <Link to={href} className="block">

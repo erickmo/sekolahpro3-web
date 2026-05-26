@@ -27,8 +27,22 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 const CREATE_FIELDS: PerpFieldDef[] = [
-  { name: "buku", label: "Buku (ISBN/Kode)", type: "text", required: true },
-  { name: "anggota", label: "Anggota (ID)", type: "text", required: true },
+  {
+    name: "buku",
+    label: "Buku",
+    type: "link",
+    required: true,
+    linkDoctype: "Buku",
+    linkLabelField: "judul",
+  },
+  {
+    name: "anggota",
+    label: "Anggota",
+    type: "link",
+    required: true,
+    linkDoctype: "Anggota Perpustakaan",
+    linkLabelField: "nama_lengkap",
+  },
   { name: "tanggal_reservasi", label: "Tgl Reservasi", type: "date", required: true, defaultValue: perpToday() },
   { name: "berlaku_sampai", label: "Berlaku Sampai", type: "date" },
   { name: "catatan", label: "Catatan", type: "textarea" },
@@ -45,7 +59,7 @@ function ReservasiPage() {
         title="Reservasi Buku"
         description="Antrian reservasi FIFO per judul buku."
         doctype="Reservasi Buku"
-        fields={["name", "buku", "anggota", "posisi_antrian", "status", "tanggal_reservasi", "berlaku_sampai"]}
+        fields={["name", "buku", "anggota", "status", "tanggal_reservasi"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "tanggal_reservasi", dir: "desc" }}

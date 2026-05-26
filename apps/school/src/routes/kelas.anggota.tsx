@@ -22,11 +22,11 @@ function AnggotaRombelPage() {
       eyebrow="Kelas"
       title="Anggota Rombel"
       doctype="Anggota Rombel"
-      fields={["name", "siswa", "rombongan_belajar"]}
+      fields={["name", "siswa"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "name", dir: "asc" }}
-      searchFields={["name", "siswa", "rombongan_belajar"]}
+      searchFields={["name", "siswa"]}
       addLabel="Tambah Anggota"
       onAdd={() => alert("Form anggota rombel (P2)")}
     />

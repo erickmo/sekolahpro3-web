@@ -21,11 +21,11 @@ function BerkasPage() {
       title="Berkas Guru"
       description="Ijazah, sertifikat, NUPTK, kontrak, dll."
       doctype="Berkas Guru"
-      fields={["name", "guru", "jenis_berkas", "nomor_berkas", "tanggal_terbit", "status"]}
+      fields={["name", "guru", "jenis_berkas"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "tanggal_terbit", dir: "desc" }}
-      searchFields={["name", "guru", "nomor_berkas"]}
+      defaultSort={{ key: "name", dir: "desc" }}
+      searchFields={["name", "guru"]}
       addLabel="Unggah Berkas"
       onAdd={() => alert("Form berkas guru (P2)")}
     />

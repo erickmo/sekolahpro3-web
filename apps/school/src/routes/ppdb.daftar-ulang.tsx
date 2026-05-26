@@ -19,11 +19,11 @@ function DaftarUlangPage() {
       eyebrow="PPDB"
       title="Daftar Ulang"
       doctype="Daftar Ulang PPDB"
-      fields={["name", "calon_siswa", "tanggal_daftar_ulang", "status", "petugas"]}
+      fields={["name", "tanggal_daftar_ulang", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "tanggal_daftar_ulang", dir: "desc" }}
-      searchFields={["name", "calon_siswa"]}
+      searchFields={["name"]}
       addLabel="Proses Daftar Ulang"
       onAdd={() => alert("Form daftar ulang (P2)")}
     />

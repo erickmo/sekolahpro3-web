@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useResourceDoc } from "@sekolahpro/api-client";
+import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
   Avatar,
   Badge,
@@ -535,7 +535,7 @@ const VALID_TABS = new Set<TabKey>([
 
 // Pendaftaran PPDB doctype is sparse (status, gelombang, calon_siswa link,
 // tanggal_daftar) — identity (nama, nisn, jenis_kelamin, dll) lives on the
-// linked Calon Siswa doc and needs a second query (follow-up sprint).
+// linked Calon Siswa doc, fetched as a follow-up query below.
 type PpdbDoc = {
   name: string;
   status?: string;
@@ -545,23 +545,113 @@ type PpdbDoc = {
   rombongan_belajar?: string;
 };
 
+type CalonSiswaDoc = {
+  name: string;
+  nama_lengkap?: string;
+  jenis_kelamin?: string;
+  tempat_lahir?: string;
+  tanggal_lahir?: string;
+  agama?: string;
+  kewarganegaraan?: string;
+  nik?: string;
+  nisn?: string;
+  asal_sekolah?: string;
+  alamat?: string;
+  no_hp?: string;
+  email?: string;
+  foto?: string;
+  nama_wali?: string;
+  hubungan_wali?: string;
+  no_hp_wali?: string;
+  pekerjaan_wali?: string;
+  penghasilan_wali?: string;
+};
+
+type PembayaranPpdbDoc = {
+  name: string;
+  pendaftaran_ppdb?: string;
+  jumlah_tagihan?: number;
+  jumlah_terbayar?: number;
+  status?: string;
+};
+
+const BAYAR_STATUS_MAP: Record<string, PembayaranPpdbRow["status"]> = {
+  Lunas: "Lunas",
+  Partial: "Cicilan",
+  "Belum Bayar": "Tertunda",
+};
+
+function mapPembayaranRows(rows: PembayaranPpdbDoc[]): PembayaranPpdbRow[] {
+  return rows.map((r) => ({
+    id: r.name,
+    judul: "Biaya Pendaftaran",
+    tanggal: "",
+    jumlah: r.jumlah_tagihan ?? 0,
+    status: BAYAR_STATUS_MAP[r.status ?? ""] ?? "Tertunda",
+  }));
+}
+
+function mapWaliFromCalonSiswa(c: CalonSiswaDoc): WaliPpdbRow[] {
+  if (!c.nama_wali) return [];
+  const hub = (c.hubungan_wali === "Ayah" || c.hubungan_wali === "Ibu" ? c.hubungan_wali : "Wali") as WaliPpdbRow["hubungan"];
+  const row: WaliPpdbRow = { hubungan: hub, nama: c.nama_wali };
+  if (c.pekerjaan_wali) row.pekerjaan = c.pekerjaan_wali;
+  if (c.penghasilan_wali) row.penghasilan = c.penghasilan_wali;
+  if (c.no_hp_wali) row.telepon = c.no_hp_wali;
+  return [row];
+}
+
 function PpdbDetailPage() {
   const { noPendaftaran } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<PpdbDoc>("Pendaftaran PPDB", noPendaftaran);
+  const calonSiswaName = docQ.data?.calon_siswa;
+  const calonQ = useResourceDoc<CalonSiswaDoc>("Calon Siswa", calonSiswaName);
+  const pembayaranQ = useResourceList<PembayaranPpdbDoc>(
+    "Pembayaran PPDB",
+    {
+      fields: ["name", "pendaftaran_ppdb", "jumlah_tagihan", "jumlah_terbayar", "status"],
+      filters: { pendaftaran_ppdb: noPendaftaran },
+    },
+  );
   const mock = findPendaftar(noPendaftaran);
-  // Merge: real top-level overrides override mock; nested falls back. Once
-  // Calon Siswa lookup is wired, identity fields move to that doc.
+  // Merge: top-level pendaftaran overrides mock; identity from Calon Siswa;
+  // pembayaran list from Pembayaran PPDB. Each layer falls back to mock.
   const pendaftar: typeof mock = (() => {
     if (!mock) return undefined;
     const d = docQ.data;
-    if (!d) return mock;
-    return {
-      ...mock,
-      noPendaftaran: d.name ?? mock.noPendaftaran,
-      statusPendaftaran: (d.status as typeof mock.statusPendaftaran) ?? mock.statusPendaftaran,
-      tanggalDaftar: d.tanggal_daftar ?? mock.tanggalDaftar,
-    };
+    const c = calonQ.data;
+    const payRows = pembayaranQ.data;
+    const base = d
+      ? {
+          ...mock,
+          noPendaftaran: d.name ?? mock.noPendaftaran,
+          statusPendaftaran: (d.status as typeof mock.statusPendaftaran) ?? mock.statusPendaftaran,
+          tanggalDaftar: d.tanggal_daftar ?? mock.tanggalDaftar,
+        }
+      : mock;
+    const withIdentity = c
+      ? {
+          ...base,
+          namaLengkap: c.nama_lengkap ?? base.namaLengkap,
+          nisn: c.nisn ?? base.nisn,
+          nik: c.nik ?? base.nik,
+          jenisKelamin: (c.jenis_kelamin as typeof base.jenisKelamin) ?? base.jenisKelamin,
+          tempatLahir: c.tempat_lahir ?? base.tempatLahir,
+          tanggalLahir: c.tanggal_lahir ?? base.tanggalLahir,
+          agama: (c.agama as typeof base.agama) ?? base.agama,
+          kewarganegaraan: (c.kewarganegaraan as typeof base.kewarganegaraan) ?? base.kewarganegaraan,
+          asalSekolah: c.asal_sekolah ?? base.asalSekolah,
+          alamat: c.alamat ?? base.alamat,
+          telepon: c.no_hp ?? base.telepon,
+          email: c.email ?? base.email,
+          fotoUrl: c.foto ?? base.fotoUrl,
+          wali: c.nama_wali ? mapWaliFromCalonSiswa(c) : base.wali,
+        }
+      : base;
+    return payRows && payRows.length > 0
+      ? { ...withIdentity, pembayaran: mapPembayaranRows(payRows) }
+      : withIdentity;
   })();
   const navigate = useNavigate();
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";

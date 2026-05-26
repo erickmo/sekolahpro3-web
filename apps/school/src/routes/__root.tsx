@@ -33,7 +33,7 @@ import {
 } from "@sekolahpro/ui";
 import { logout, useSession } from "@sekolahpro/auth";
 import { useTenant } from "@sekolahpro/tenant";
-import { MASTER_TAHUN_AJARAN } from "../data/master";
+import { useResourceList } from "@sekolahpro/api-client";
 import { globalSearch, groupHitsByCategory } from "../lib/global-search";
 
 const SEARCH_MIN_QUERY = 2;
@@ -191,11 +191,34 @@ function Layout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+  // Setup-banner gate: probe Tahun Ajaran with aktif=1; show banner only on
+  // a definitive empty result so banner does not flash during initial fetch.
+  // Hook MUST stay above early returns — otherwise hook count varies between
+  // renders (loading → authenticated) and React throws
+  // "Rendered fewer hooks than expected".
+  const taActiveQ = useResourceList<{ name: string }>(
+    "Tahun Ajaran",
+    {
+      filters: { aktif: 1 },
+      fields: ["name"],
+      limit_page_length: 1,
+    },
+    { enabled: session.status === "authenticated" },
+  );
+
   useEffect(() => {
     if (session.status === "guest" && pathname !== "/login") {
       navigate({ to: "/login" });
     }
   }, [session.status, pathname, navigate]);
+
+  // Auth lapsed mid-session: API 401/403 → force logout, redirect to /login.
+  useEffect(() => {
+    const err = taActiveQ.error as { status?: number } | null;
+    if (err && (err.status === 401 || err.status === 403)) {
+      void logout().then(() => navigate({ to: "/login" }));
+    }
+  }, [taActiveQ.error, navigate]);
 
   if (session.status === "loading") {
     return (
@@ -285,8 +308,9 @@ function Layout() {
   const sections: SidebarNavSection[] = filtered.length > 0 ? filtered : rawSections;
 
   const tenantName = tenant.data?.name ?? "SekolahPro";
-  const taAktif = MASTER_TAHUN_AJARAN.some((t) => t.status === "Aktif");
-  const showSetupBanner = pathname !== "/login" && !taAktif;
+  const taAktif = (taActiveQ.data?.length ?? 0) > 0;
+  const showSetupBanner =
+    pathname !== "/login" && taActiveQ.isSuccess && !taAktif;
 
   return (
     <AppShell

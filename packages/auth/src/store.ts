@@ -24,13 +24,15 @@ export const useSessionStore = create<SessionState>()(
     {
       name: "sekolahpro.session",
       storage: createJSONStorage(() => localStorage),
-      partialize: (s) => ({ user: s.user, roles: s.roles, status: s.status }),
+      partialize: (s) => ({
+        user: s.user,
+        roles: s.roles,
+        csrfToken: s.csrfToken,
+        status: s.status,
+      }),
       onRehydrateStorage: () => (state) => {
-        if (state && state.user && state.status === "authenticated") {
-          state.status = "authenticated";
-        } else if (state) {
-          state.status = "loading";
-        }
+        if (!state) return;
+        state.status = state.user ? "authenticated" : "loading";
       },
     },
   ),

@@ -55,7 +55,7 @@ function toMinutes(hhmm: string): number {
 
 function JadwalDashboardPage() {
   const q = useResourceList<JadwalRow>("Jadwal Pelajaran", {
-    fields: ["name", "hari", "jam_mulai", "jam_selesai", "mapel", "kelas", "rombel", "guru", "is_aktif"],
+    fields: ["name", "jam_selesai", "rombel", "is_aktif"],
     limit_page_length: 0,
   });
   const rows = q.data ?? [];

@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PerpCreateModal, type PerpFieldDef } from "../components/perpustakaan/PerpCreateModal";
 
 // Verified fields on `Buku` doctype:
 // judul (Data), isbn (Data), pengarang (Data), penerbit (Data),
 // tahun_terbit (Int), kategori (Link Kategori Buku), deskripsi, cover.
-// NOTE: stock/availability is on `Eksemplar Buku` (per-copy), not Buku itself —
-// TODO: compute stok via a child-list fetch or backend report.
+// Stok/availability lives on `Eksemplar Buku` (per-copy) — surfaced on the
+// detail page, not aggregated here to avoid an N+1 list fetch.
 type Row = {
   name: string;
   judul?: string;
@@ -57,23 +59,57 @@ const COLUMNS: Column<Row>[] = [
   },
 ];
 
+const CREATE_FIELDS: PerpFieldDef[] = [
+  { name: "judul", label: "Judul", type: "text", required: true },
+  { name: "isbn", label: "ISBN", type: "text" },
+  { name: "pengarang", label: "Pengarang", type: "text" },
+  { name: "penerbit", label: "Penerbit", type: "text" },
+  { name: "tahun_terbit", label: "Tahun Terbit", type: "number" },
+  {
+    name: "kategori",
+    label: "Kategori",
+    type: "link",
+    linkDoctype: "Kategori Buku",
+    linkLabelField: "nama_kategori",
+  },
+  { name: "deskripsi", label: "Deskripsi", type: "textarea" },
+];
+
 function PerpustakaanListPage() {
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Layanan"
-      title="Perpustakaan"
-      description="Kelola koleksi buku, peminjaman, dan pengembalian."
-      doctype="Buku"
-      fields={["name", "judul", "isbn", "pengarang", "penerbit", "tahun_terbit", "kategori"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "judul", dir: "asc" }}
-      searchFields={["name", "judul", "isbn", "pengarang"]}
-      addLabel="Tambah Buku"
-      onAdd={() => alert("Form buku (TODO)")}
-      onRowClick={(r) => navigate({ to: "/perpustakaan/$isbn", params: { isbn: r.isbn ?? r.name } })}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Layanan"
+        title="Perpustakaan"
+        description="Kelola koleksi buku, peminjaman, dan pengembalian."
+        doctype="Buku"
+        fields={["name", "judul", "isbn", "pengarang", "penerbit", "tahun_terbit", "kategori"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "judul", dir: "asc" }}
+        searchFields={["name", "judul", "isbn", "pengarang"]}
+        addLabel="Tambah Buku"
+        onAdd={() => setOpen(true)}
+        onRowClick={(r) => navigate({ to: "/perpustakaan/$isbn", params: { isbn: r.isbn ?? r.name } })}
+      />
+      <PerpCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Buku"
+        title="Tambah Buku"
+        description="Catat koleksi baru. Tambahkan eksemplar lewat halaman detail buku."
+        fields={CREATE_FIELDS}
+        submitLabel="Simpan"
+        onCreated={(doc) => {
+          const isbn = (doc as { isbn?: string; name?: string }).isbn;
+          const name = (doc as { name?: string }).name;
+          const target = isbn ?? name;
+          if (target) navigate({ to: "/perpustakaan/$isbn", params: { isbn: target } });
+        }}
+      />
+    </>
   );
 }
 

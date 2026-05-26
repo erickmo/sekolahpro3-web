@@ -20,16 +20,14 @@ function MutasiPage() {
       eyebrow="Siswa"
       title="Mutasi Siswa"
       doctype="Mutasi Siswa"
-      fields={["name", "siswa", "jenis_mutasi", "tanggal_efektif", "status", "alasan"]}
+      fields={["name", "siswa", "jenis_mutasi"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "tanggal_efektif", dir: "desc" }}
+      defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "siswa"]}
       selectFilters={[
         { key: "jenis", label: "Jenis", field: "jenis_mutasi",
           options: ["Semua", "Masuk", "Keluar", "Naik Kelas", "Pindah Kelas"].map((v) => ({ value: v, label: v })) },
-        { key: "status", label: "Status", field: "status",
-          options: ["Semua", "Pengajuan", "Disetujui", "Ditolak"].map((v) => ({ value: v, label: v })) },
       ]}
       addLabel="Ajukan Mutasi"
       onAdd={() => alert("Form mutasi (P2)")}

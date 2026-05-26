@@ -16,8 +16,7 @@ function MapelDetailPage() {
       fields={[
         { label: "Kode", field: "kode_mapel", format: (v) => <span className="font-mono">{v ? String(v) : "—"}</span> },
         { label: "Nama", field: "nama_mapel" },
-        { label: "Kelompok", field: "kelompok", format: (v) => v ? <Badge tone="neutral">{String(v)}</Badge> : "—" },
-        { label: "Jenjang", field: "jenjang" },
+        { label: "Kelompok", field: "kelompok_mapel", format: (v) => v ? <Badge tone="neutral">{String(v)}</Badge> : "—" },
       ]}
     />
   );

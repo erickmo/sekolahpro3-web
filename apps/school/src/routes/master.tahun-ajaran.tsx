@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
-import { ResourceListPage } from "../components/ResourceListPage";
+import { MasterResourcePage } from "../components/master/MasterResourcePage";
+import { TAHUN_AJARAN_FIELDS } from "../components/master/schemas";
 
-type Row = { name: string; tahun: string; tanggal_mulai?: string; tanggal_selesai?: string; status?: string };
+type Row = { name: string; nama: string; tanggal_mulai?: string; tanggal_selesai?: string; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "tahun", header: "Tahun", sortable: true, cell: (r) => r.tahun },
+  { key: "nama", header: "Tahun", sortable: true, cell: (r) => r.nama },
   { key: "tanggal_mulai", header: "Mulai", cell: (r) => r.tanggal_mulai ?? "—" },
   { key: "tanggal_selesai", header: "Selesai", cell: (r) => r.tanggal_selesai ?? "—" },
   { key: "status", header: "Status",
@@ -15,17 +16,20 @@ const COLUMNS: Column<Row>[] = [
 
 function TahunAjaranPage() {
   return (
-    <ResourceListPage<Row>
+    <MasterResourcePage<Row>
       eyebrow="Master Data"
       title="Tahun Ajaran"
       doctype="Tahun Ajaran"
-      fields={["name", "tahun", "tanggal_mulai", "tanggal_selesai", "status"]}
+      fields={["name", "nama", "tanggal_mulai", "tanggal_selesai", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "tahun", dir: "desc" }}
-      searchFields={["name", "tahun"]}
+      defaultSort={{ key: "nama", dir: "desc" }}
+      searchFields={["name", "nama"]}
       addLabel="Tambah TA"
-      onAdd={() => alert("Form tahun ajaran (P2)")}
+      detailRoute="/master/tahun-ajaran/$name"
+      detailParams={(r) => ({ name: r.name })}
+      formTitle="Tambah Tahun Ajaran"
+      formFields={TAHUN_AJARAN_FIELDS}
     />
   );
 }

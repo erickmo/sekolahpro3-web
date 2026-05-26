@@ -18,7 +18,7 @@ function StaffJabatanPage() {
       eyebrow="Staff"
       title="Jenis Jabatan Staff"
       doctype="Jenis Jabatan"
-      fields={["name", "nama_jabatan", "tingkat", "status"]}
+      fields={["name", "nama_jabatan"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "nama_jabatan", dir: "asc" }}

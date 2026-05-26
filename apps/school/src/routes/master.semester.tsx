@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
-import { ResourceListPage } from "../components/ResourceListPage";
+import { MasterResourcePage } from "../components/master/MasterResourcePage";
+import { SEMESTER_FIELDS } from "../components/master/schemas";
 
-type Row = { name: string; nama_semester: string; tahun_ajaran?: string; tanggal_mulai?: string; tanggal_selesai?: string; status?: string };
+type Row = { name: string; nama: string; tahun_ajaran?: string; tanggal_mulai?: string; tanggal_selesai?: string; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "nama_semester", header: "Semester", sortable: true, cell: (r) => r.nama_semester },
+  { key: "nama", header: "Semester", sortable: true, cell: (r) => r.nama },
   { key: "tahun_ajaran", header: "TA", cell: (r) => r.tahun_ajaran ?? "—" },
   { key: "tanggal_mulai", header: "Mulai", cell: (r) => r.tanggal_mulai ?? "—" },
   { key: "tanggal_selesai", header: "Selesai", cell: (r) => r.tanggal_selesai ?? "—" },
@@ -16,17 +17,20 @@ const COLUMNS: Column<Row>[] = [
 
 function SemesterPage() {
   return (
-    <ResourceListPage<Row>
+    <MasterResourcePage<Row>
       eyebrow="Master Data"
       title="Semester"
       doctype="Semester"
-      fields={["name", "nama_semester", "tahun_ajaran", "tanggal_mulai", "tanggal_selesai", "status"]}
+      fields={["name", "nama", "tahun_ajaran", "tanggal_mulai", "tanggal_selesai", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "tanggal_mulai", dir: "desc" }}
-      searchFields={["name", "nama_semester"]}
+      searchFields={["name", "nama"]}
       addLabel="Tambah Semester"
-      onAdd={() => alert("Form semester (P2)")}
+      detailRoute="/master/semester/$name"
+      detailParams={(r) => ({ name: r.name })}
+      formTitle="Tambah Semester"
+      formFields={SEMESTER_FIELDS}
     />
   );
 }

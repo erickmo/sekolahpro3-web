@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-25
 **Scope:** apps/school (frontend) + apps/sekolahpro/docs (docs only)
-**Status:** Design approved, ready for plan
+**Status:** Implemented 2026-05-25 — FE on branch `feat/perpustakaan-sirkulasi-merge` (commits `9f5da06`…`237fb35`). Backend tasks (doctype field, patch, whitelisted method) live in repo `apps/sekolahpro` and are tracked separately under [PERP-ADR-0001](../adr/PERP-ADR-0001-sirkulasi-merge.md).
 
 ## Problem
 

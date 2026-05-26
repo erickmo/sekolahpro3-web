@@ -6,14 +6,14 @@ function LaporanKoperasiPage() {
   const rekening = useResourceList<{ name: string; saldo: number; status: string }>(
     "Rekening Simpanan", { fields: ["name", "saldo", "status"], limit_page_length: 0 },
   );
-  const pembiayaan = useResourceList<{ name: string; pokok_pembiayaan: number; status: string }>(
-    "Akad Pembiayaan", { fields: ["name", "pokok_pembiayaan", "status"], limit_page_length: 0 },
+  const pembiayaan = useResourceList<{ name: string; jumlah_pokok: number; status: string }>(
+    "Akad Pembiayaan", { fields: ["name", "jumlah_pokok", "status"], limit_page_length: 0 },
   );
   const anggota = useResourceList("Anggota Koperasi", { fields: ["name", "status"], limit_page_length: 0 });
 
   const totalSimpanan = (rekening.data ?? []).reduce((s, r) => s + (r.saldo ?? 0), 0);
   const pembiayaanBerjalan = (pembiayaan.data ?? []).filter((p) => p.status === "Berjalan");
-  const totalPembiayaan = pembiayaanBerjalan.reduce((s, p) => s + (p.pokok_pembiayaan ?? 0), 0);
+  const totalPembiayaan = pembiayaanBerjalan.reduce((s, p) => s + (p.jumlah_pokok ?? 0), 0);
   const macet = (pembiayaan.data ?? []).filter((p) => p.status === "Macet").length;
   const anggotaAktif = (anggota.data ?? []).filter((a: any) => a.status === "Aktif").length;
 

@@ -18,11 +18,11 @@ function RombelPage() {
       eyebrow="Siswa"
       title="Anggota Rombel"
       doctype="Anggota Rombel"
-      fields={["name", "siswa", "rombongan_belajar", "tahun_ajaran", "nomor_absen"]}
+      fields={["name", "siswa"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "rombongan_belajar", dir: "asc" }}
-      searchFields={["name", "siswa", "rombongan_belajar"]}
+      defaultSort={{ key: "name", dir: "asc" }}
+      searchFields={["name", "siswa"]}
       addLabel="Tambah Anggota"
       onAdd={() => alert("Form anggota rombel (P2)")}
     />

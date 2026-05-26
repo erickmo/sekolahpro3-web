@@ -45,11 +45,14 @@ interface AkadDoc {
 
 interface JadwalRow {
   name: string;
-  akad: string;
-  angsuran_ke: number;
-  jatuh_tempo: string;
-  nominal: number;
+  ke?: number;
+  total?: number;
   status: string;
+  // legacy fields kept optional for cells
+  akad?: string;
+  angsuran_ke?: number;
+  jatuh_tempo?: string;
+  nominal?: number;
   tanggal_bayar?: string;
 }
 
@@ -80,9 +83,8 @@ function AkadDetailPage() {
   const docQuery = useResourceDoc<AkadDoc>(AKAD_DOCTYPE, name);
   const jadwalParams: ListParams = useMemo(
     () => ({
-      fields: ["name", "akad", "angsuran_ke", "jatuh_tempo", "nominal", "status", "tanggal_bayar"],
-      filters: [["akad", "=", name]],
-      order_by: "`angsuran_ke` asc",
+      fields: ["name", "ke", "total", "status"],
+      order_by: "`ke` asc",
       limit_page_length: 200,
     }),
     [name],
@@ -99,7 +101,7 @@ function AkadDetailPage() {
   const totals = useMemo(() => {
     const lunas = jadwal.filter((j) => j.status === "Lunas");
     const tunggakan = jadwal.filter((j) => j.status === "Tunggakan");
-    const sisa = jadwal.filter((j) => j.status !== "Lunas").reduce((a, j) => a + (j.nominal ?? 0), 0);
+    const sisa = jadwal.filter((j) => j.status !== "Lunas").reduce((a, j) => a + (j.total ?? 0), 0);
     return { lunas: lunas.length, tunggakan: tunggakan.length, sisa, total: jadwal.length };
   }, [jadwal]);
 

@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
-import { ResourceListPage } from "../components/ResourceListPage";
+import { MasterResourcePage } from "../components/master/MasterResourcePage";
+import { SEKOLAH_FIELDS } from "../components/master/schemas";
 
-type Row = { name: string; nama_sekolah: string; npsn?: string; alamat?: string; jenjang?: string; status?: string };
+type Row = { name: string; nama: string; npsn?: string; alamat?: string; tingkat?: string; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "nama_sekolah", header: "Nama Sekolah", sortable: true, cell: (r) => r.nama_sekolah },
+  { key: "nama", header: "Nama Sekolah", sortable: true, cell: (r) => r.nama },
   { key: "npsn", header: "NPSN", cell: (r) => <span className="font-mono text-xs">{r.npsn ?? "—"}</span> },
-  { key: "jenjang", header: "Jenjang", cell: (r) => <Badge tone="neutral">{r.jenjang ?? "—"}</Badge> },
+  { key: "tingkat", header: "Jenjang", cell: (r) => <Badge tone="neutral">{r.tingkat ?? "—"}</Badge> },
   { key: "alamat", header: "Alamat", cell: (r) => r.alamat ?? "—" },
   { key: "status", header: "Status",
     cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : "neutral"} dot>{r.status ?? "—"}</Badge> },
@@ -16,17 +17,20 @@ const COLUMNS: Column<Row>[] = [
 
 function SekolahPage() {
   return (
-    <ResourceListPage<Row>
+    <MasterResourcePage<Row>
       eyebrow="Master Data"
       title="Sekolah"
       doctype="Sekolah"
-      fields={["name", "nama_sekolah", "npsn", "alamat", "jenjang", "status"]}
+      fields={["name", "nama", "npsn", "alamat", "tingkat", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "nama_sekolah", dir: "asc" }}
-      searchFields={["name", "nama_sekolah", "npsn"]}
+      defaultSort={{ key: "nama", dir: "asc" }}
+      searchFields={["name", "nama", "npsn"]}
       addLabel="Tambah Sekolah"
-      onAdd={() => alert("Form sekolah (P2)")}
+      detailRoute="/master/daftar/$name"
+      detailParams={(r) => ({ name: r.name })}
+      formTitle="Tambah Sekolah"
+      formFields={SEKOLAH_FIELDS}
     />
   );
 }

@@ -36,7 +36,7 @@ function SlotJadwalPage() {
         title="Slot Jadwal"
         description="Definisi slot waktu pelajaran (jam pelajaran, istirahat, upacara)."
         doctype="Slot Jadwal"
-        fields={["name", "hari", "jam_mulai", "jam_selesai", "durasi_menit", "tipe"]}
+        fields={["name", "hari", "jam_mulai", "jam_selesai"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "hari", dir: "asc" }}

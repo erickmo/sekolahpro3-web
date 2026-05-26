@@ -20,11 +20,11 @@ function SkJabatanPage() {
       eyebrow="Guru"
       title="SK Jabatan"
       doctype="SK Jabatan"
-      fields={["name", "guru", "jabatan", "nomor_sk", "tanggal_sk", "status"]}
+      fields={["name", "guru", "tanggal_sk", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
       defaultSort={{ key: "tanggal_sk", dir: "desc" }}
-      searchFields={["name", "guru", "nomor_sk"]}
+      searchFields={["name", "guru"]}
       addLabel="Terbitkan SK"
       onAdd={() => alert("Form SK Jabatan (P2)")}
     />

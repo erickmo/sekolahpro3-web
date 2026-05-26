@@ -28,7 +28,7 @@ import {
   IconUsers,
   type TabItem,
 } from "@sekolahpro/ui";
-import { useResourceDoc } from "@sekolahpro/api-client";
+import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
   findKelas,
   formatTanggal,
@@ -94,6 +94,75 @@ function mapAnggotaToSiswaRows(
       persenKehadiran: fallback?.persenKehadiran ?? 0,
     };
   });
+}
+
+// Slot Jadwal child row shape (akademik/doctype/slot_jadwal). Returned
+// inline when fetching the parent Jadwal Pelajaran doc by name.
+type SlotJadwalRow = {
+  name: string;
+  hari?: JadwalMapelRow["hari"];
+  jam_mulai?: string;
+  jam_selesai?: string;
+  mata_pelajaran?: string;
+  guru?: string;
+  ruangan?: string;
+};
+
+type JadwalPelajaranDoc = {
+  name: string;
+  slots?: SlotJadwalRow[];
+};
+
+function formatJam(jamMulai?: string, jamSelesai?: string): string {
+  if (!jamMulai && !jamSelesai) return "";
+  const trim = (s?: string) => (s ?? "").slice(0, 5);
+  return `${trim(jamMulai)} - ${trim(jamSelesai)}`;
+}
+
+// Audit Log SekolahPro row shape (verified against
+// pengaturan/doctype/audit_log_sekolahpro/audit_log_sekolahpro.json).
+type AuditLogRow = {
+  name: string;
+  timestamp?: string;
+  user?: string;
+  action?: string;
+  severity?: "info" | "warning" | "error" | "critical" | string;
+};
+
+const SEVERITY_TONE: Record<string, AktivitasRow["tone"]> = {
+  info: "neutral",
+  warning: "warning",
+  error: "danger",
+  critical: "danger",
+};
+
+function mapAuditToAktivitas(rows: AuditLogRow[]): AktivitasRow[] {
+  return rows.map((r) => {
+    const ts = r.timestamp ?? "";
+    const waktu = ts ? new Date(ts).toLocaleString("id-ID") : "—";
+    const aksi = r.severity ? `${r.action ?? ""} (${r.severity})`.trim() : (r.action ?? "");
+    return {
+      waktu,
+      aktor: r.user ?? "Sistem",
+      aksi: aksi || "—",
+      tone: SEVERITY_TONE[r.severity ?? "info"] ?? "neutral",
+    };
+  });
+}
+
+function mapSlotsToJadwalRows(
+  slots: SlotJadwalRow[],
+  defaultRuang: string,
+): JadwalMapelRow[] {
+  return slots
+    .filter((s) => !!s.hari)
+    .map((s) => ({
+      hari: s.hari as JadwalMapelRow["hari"],
+      jam: formatJam(s.jam_mulai, s.jam_selesai),
+      mapel: s.mata_pelajaran ?? "—",
+      guru: s.guru ?? "—",
+      ruang: s.ruangan ?? defaultRuang,
+    }));
 }
 
 type TabKey = "ringkasan" | "siswa" | "jadwal" | "nilai" | "absensi" | "jurnal" | "aktivitas";
@@ -473,10 +542,27 @@ function KelasDetailPage() {
   const { kodeKelas } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<RombelDoc>("Rombongan Belajar", kodeKelas);
-  // Remaining nested data (jadwal, rekapNilai, rekapAbsensi, jurnal,
-  // aktivitas) still comes from mock until each gets its own resource wiring.
+  // Active Jadwal Pelajaran for this rombel (2-hop chain: list returns name,
+  // doc fetch returns slots inline). React Query dedups across remounts.
+  const jadwalListQ = useResourceList<{ name: string }>("Jadwal Pelajaran", {
+    filters: { rombel: kodeKelas, is_aktif: 1 },
+    fields: ["name"],
+    limit_page_length: 1,
+  });
+  const jadwalName = jadwalListQ.data?.[0]?.name;
+  const jadwalDocQ = useResourceDoc<JadwalPelajaranDoc>(
+    "Jadwal Pelajaran",
+    jadwalName,
+  );
+  const auditQ = useResourceList<AuditLogRow>("Audit Log SekolahPro", {
+    filters: { docname: kodeKelas, doctype_name: "Rombongan Belajar" },
+    fields: ["name", "timestamp", "user", "action", "severity"],
+    order_by: "timestamp desc",
+    limit_page_length: 20,
+  });
+  // Remaining nested data (rekapNilai, rekapAbsensi, jurnal, aktivitas) still
+  // comes from mock until each gets its own resource wiring.
   // TODO(/kelas/$kodeKelas): wire remaining tabs to:
-  //   - Jadwal Pelajaran + Slot Jadwal (jadwal mingguan)
   //   - Absensi Harian / Absensi Pelajaran (rekap absensi)
   //   - Entri Nilai (rekap nilai)
   const mock = findKelas(kodeKelas);
@@ -489,6 +575,13 @@ function KelasDetailPage() {
     const siswa = d.anggota?.length
       ? mapAnggotaToSiswaRows(d.anggota, mock.siswa)
       : mock.siswa;
+    const ruang = d.ruangan ?? mock.ruang;
+    const jadwal = jadwalDocQ.data?.slots?.length
+      ? mapSlotsToJadwalRows(jadwalDocQ.data.slots, ruang)
+      : mock.jadwal;
+    const aktivitas = auditQ.data?.length
+      ? mapAuditToAktivitas(auditQ.data)
+      : mock.aktivitas;
     return {
       ...mock,
       kodeKelas: d.name,
@@ -498,9 +591,11 @@ function KelasDetailPage() {
       waliKelas: d.wali_kelas ?? mock.waliKelas,
       kapasitas: d.kapasitas ?? mock.kapasitas,
       jumlahSiswa: d.jumlah_siswa ?? siswa.length ?? mock.jumlahSiswa,
-      ruang: d.ruangan ?? mock.ruang,
+      ruang,
       status: ((d.status as Kelas["status"]) ?? mock.status),
       siswa,
+      jadwal,
+      aktivitas,
     };
   })();
   const navigate = useNavigate();

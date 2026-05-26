@@ -4,17 +4,26 @@ import {
   Button,
   FormField,
   FormGrid,
+  IconPlus,
   Input,
   Modal,
+  SearchableSelect,
   Select,
   Textarea,
+  type SearchableOption,
 } from "@sekolahpro/ui";
-import { useResourceCreate } from "@sekolahpro/api-client";
+import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 
 // Generic create-form modal for any Frappe DocType.
 // Each list route declares a schema; the modal renders fields and POSTs to the DocType.
 
-export type ResourceFieldType = "text" | "number" | "date" | "select" | "textarea";
+export type ResourceFieldType =
+  | "text"
+  | "number"
+  | "date"
+  | "select"
+  | "textarea"
+  | "link";
 
 export interface ResourceFieldDef {
   name: string;
@@ -25,6 +34,10 @@ export interface ResourceFieldDef {
   options?: Array<{ value: string; label: string }>;
   defaultValue?: string | number;
   colSpan?: 1 | 2;
+  /** For `link`: target DocType to query. */
+  linkDoctype?: string;
+  /** For `link`: extra display field on the linked doc (e.g. "judul"). */
+  linkLabelField?: string;
 }
 
 export interface ResourceCreateModalProps {
@@ -44,6 +57,35 @@ function emptyValues(fields: ResourceFieldDef[]): Record<string, string> {
   const out: Record<string, string> = {};
   for (const f of fields) out[f.name] = f.defaultValue !== undefined ? String(f.defaultValue) : "";
   return out;
+}
+
+async function searchLink(
+  doctype: string,
+  labelField: string | undefined,
+  q: string,
+): Promise<SearchableOption[]> {
+  const fields = labelField ? ["name", labelField] : ["name"];
+  const orFilters = q
+    ? labelField
+      ? ([
+          ["name", "like", `%${q}%`],
+          [labelField, "like", `%${q}%`],
+        ] as [string, string, unknown][])
+      : ([["name", "like", `%${q}%`]] as [string, string, unknown][])
+    : undefined;
+  const rows = await listResource<Record<string, unknown>>(doctype, {
+    fields,
+    ...(orFilters ? { or_filters: orFilters } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => {
+    const name = String(r.name ?? "");
+    const lbl = labelField ? String(r[labelField] ?? name) : name;
+    const opt: SearchableOption = { value: name, label: lbl };
+    if (labelField && lbl !== name) opt.hint = name;
+    return opt;
+  });
 }
 
 export function ResourceCreateModal(props: ResourceCreateModalProps) {
@@ -117,6 +159,33 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
     const val = values[f.name] ?? "";
     const onChange = (v: string) => setValues((prev) => ({ ...prev, [f.name]: v }));
 
+    if (f.type === "link" && f.linkDoctype) {
+      const dt = f.linkDoctype;
+      const lf = f.linkLabelField;
+      return (
+        <SearchableSelect
+          id={id}
+          value={val}
+          onChange={(v) => onChange(v)}
+          loadOptions={(q) => searchLink(dt, lf, q)}
+          resolveLabel={async (v) => {
+            if (!lf) return v;
+            try {
+              const rows = await listResource<Record<string, unknown>>(dt, {
+                fields: ["name", lf],
+                filters: { name: v },
+                limit_page_length: 1,
+              });
+              const r = rows[0];
+              return r ? String(r[lf] ?? r.name ?? v) : v;
+            } catch {
+              return v;
+            }
+          }}
+          placeholder={`Cari ${f.label.toLowerCase()}…`}
+        />
+      );
+    }
     if (f.type === "select" && f.options) {
       return (
         <Select id={id} value={val} onChange={(e) => onChange(e.target.value)}>
@@ -140,7 +209,9 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
       onClose={handleClose}
       title={title}
       {...(description ? { description } : {})}
-      size="lg"
+      size="mega"
+      tone="brand"
+      icon={<IconPlus />}
       footer={
         <>
           <Button variant="outline" onClick={handleClose} disabled={mut.isPending}>Batal</Button>
