@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { PENUGASAN_GURU_FIELDS } from "../components/guru-extra/sub-fields";
 
 type Row = { name: string; guru: string; jenis_penugasan?: string; tahun_ajaran?: string; status?: string; tanggal_mulai?: string };
 
@@ -15,19 +18,30 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function PenugasanPage() {
+  const [open, setOpen] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Guru"
-      title="Penugasan Guru"
-      doctype="Penugasan Guru"
-      fields={["name", "guru", "tahun_ajaran", "status"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "name", dir: "desc" }}
-      searchFields={["name", "guru"]}
-      addLabel="Buat Penugasan"
-      onAdd={() => alert("Form penugasan (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Guru"
+        title="Penugasan Guru"
+        doctype="Penugasan Guru"
+        fields={["name", "guru", "tahun_ajaran", "status"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "name", dir: "desc" }}
+        searchFields={["name", "guru"]}
+        addLabel="Buat Penugasan"
+        onAdd={() => setOpen(true)}
+      />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Penugasan Guru"
+        title="Buat Penugasan Guru"
+        description="Header penugasan. Detail per-mapel diisi via halaman detail/desk."
+        fields={PENUGASAN_GURU_FIELDS}
+      />
+    </>
   );
 }
 

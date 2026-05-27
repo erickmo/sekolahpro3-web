@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { BERKAS_GURU_FIELDS } from "../components/guru-extra/sub-fields";
 
 type Row = { name: string; guru: string; jenis_berkas?: string; nomor_berkas?: string; tanggal_terbit?: string; status?: string };
 
@@ -15,20 +18,31 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function BerkasPage() {
+  const [open, setOpen] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Guru"
-      title="Berkas Guru"
-      description="Ijazah, sertifikat, NUPTK, kontrak, dll."
-      doctype="Berkas Guru"
-      fields={["name", "guru", "jenis_berkas"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "name", dir: "desc" }}
-      searchFields={["name", "guru"]}
-      addLabel="Unggah Berkas"
-      onAdd={() => alert("Form berkas guru (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Guru"
+        title="Berkas Guru"
+        description="Ijazah, sertifikat, NUPTK, kontrak, dll."
+        doctype="Berkas Guru"
+        fields={["name", "guru", "jenis_berkas"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "name", dir: "desc" }}
+        searchFields={["name", "guru"]}
+        addLabel="Unggah Berkas"
+        onAdd={() => setOpen(true)}
+      />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Berkas Guru"
+        title="Unggah Berkas Guru"
+        description="Catat berkas guru baru."
+        fields={BERKAS_GURU_FIELDS}
+      />
+    </>
   );
 }
 

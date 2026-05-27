@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { StaffFormModal } from "../components/staff/StaffFormModal";
 import {
   Avatar,
   AttentionList,
@@ -40,6 +41,7 @@ interface Issue {
 }
 
 function StaffDashboardPage() {
+  const [showCreate, setShowCreate] = useState(false);
   const stats = useMemo(() => {
     const aktif = STAFF_LIST.filter((s) => s.status === "Aktif").length;
     const skHabis = STAFF_LIST.filter((s) => {
@@ -101,14 +103,21 @@ function StaffDashboardPage() {
         title="Dashboard Staff"
         description="Ringkasan tenaga kependidikan dan staf non-pengajar."
         actions={
-          <Link to="/staff/daftar">
-            <Button variant="outline">
-              <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
-              Lihat Daftar
+          <>
+            <Link to="/staff/daftar">
+              <Button variant="outline">
+                <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
+                Lihat Daftar
+              </Button>
+            </Link>
+            <Button onClick={() => setShowCreate(true)}>
+              <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
+              Tambah Staff
             </Button>
-          </Link>
+          </>
         }
       />
+      <StaffFormModal open={showCreate} onClose={() => setShowCreate(false)} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Staff Aktif" value={stats.aktif} hint={`dari ${STAFF_LIST.length} total`} icon={<IconCheck />} accent="emerald" urgency="normal" />

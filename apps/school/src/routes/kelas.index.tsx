@@ -31,8 +31,22 @@ function KelasDashboardPage() {
     fields: ["name", "nama_rombel", "tingkat", "jumlah_siswa", "wali_kelas", "kapasitas", "status"],
     limit_page_length: 0,
   });
+  const jadwalQ = useResourceList<{ rombel?: string }>("Jadwal Pelajaran", {
+    fields: ["rombel"],
+    filters: [["is_aktif", "=", 1]],
+    limit_page_length: 0,
+  });
   const rows = q.data ?? [];
+  const rombelDenganJadwal = useMemo(() => {
+    const set = new Set<string>();
+    for (const j of jadwalQ.data ?? []) {
+      if (j.rombel) set.add(j.rombel);
+    }
+    return set;
+  }, [jadwalQ.data]);
+  const tanpaJadwalCount = rows.filter((k) => k.status === "Aktif" && !rombelDenganJadwal.has(k.name)).length;
 
+  // Real count: rombel yang status Aktif tapi penuh (jumlah_siswa >= kapasitas, kapasitas > 0).
   const stats = useMemo(() => {
     const tanpaWali = rows.filter((k) => !k.wali_kelas || String(k.wali_kelas).trim() === "").length;
     const overKapasitas = rows.filter((k) => {
@@ -40,14 +54,23 @@ function KelasDashboardPage() {
       const c = k.kapasitas ?? 0;
       return c > 0 && j > c;
     }).length;
-    const rombelPenuh = rows.filter((k) => k.status === "Penuh").length;
-    // derived stub — replace when backend wired (Jadwal Pelajaran cross-join per rombel)
-    const tanpaJadwal = Math.max(0, Math.round(rows.length * 0.05));
-    return { tanpaWali, overKapasitas, rombelPenuh, tanpaJadwal };
+    const rombelPenuh = rows.filter((k) => {
+      const j = k.jumlah_siswa ?? 0;
+      const c = k.kapasitas ?? 0;
+      return c > 0 && j >= c && k.status === "Aktif";
+    }).length;
+    const rombelDitutup = rows.filter((k) => k.status === "Ditutup").length;
+    return { tanpaWali, overKapasitas, rombelPenuh, rombelDitutup };
   }, [rows]);
 
   const perhatian = useMemo(() => {
-    const penuh = rows.filter((k) => k.status === "Penuh").slice(0, 4);
+    const penuh = rows
+      .filter((k) => {
+        const j = k.jumlah_siswa ?? 0;
+        const c = k.kapasitas ?? 0;
+        return c > 0 && j >= c && k.status === "Aktif";
+      })
+      .slice(0, 4);
     const tanpaWali = rows
       .filter((k) => !k.wali_kelas || String(k.wali_kelas).trim() === "")
       .slice(0, 4);
@@ -56,17 +79,6 @@ function KelasDashboardPage() {
 
   const attentionItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = [];
-
-    // cross-menu SPP signal — wire to backend aggregate when ready
-    items.push({
-      id: "spp-rombel",
-      label: "8 rombel punya siswa nunggak SPP >30 hari",
-      description: "Cross-menu signal dari modul Keuangan.",
-      tone: "danger",
-      badge: "SPP",
-      actionLabel: "Tinjau",
-      actionHref: "/keuangan",
-    });
 
     for (const k of perhatian.tanpaWali) {
       items.push({
@@ -139,7 +151,7 @@ function KelasDashboardPage() {
         <StatCard
           label="Rombel Penuh"
           value={stats.rombelPenuh.toLocaleString("id-ID")}
-          hint="status = Penuh"
+          hint="kapasitas tercapai"
           icon={<IconAlert />}
           accent="amber"
           urgency="warn"
@@ -148,8 +160,8 @@ function KelasDashboardPage() {
         />
         <StatCard
           label="Rombel Tanpa Jadwal"
-          value={stats.tanpaJadwal.toLocaleString("id-ID")}
-          hint="belum ada jadwal pelajaran"
+          value={tanpaJadwalCount.toLocaleString("id-ID")}
+          hint="rombel aktif tanpa jadwal aktif"
           icon={<IconBook />}
           accent="amber"
           urgency="warn"

@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { JENIS_JABATAN_FIELDS } from "../components/guru-extra/sub-fields";
 
 type Row = { name: string; nama_jabatan: string; tingkat?: string; deskripsi?: string; status?: string };
 
@@ -13,19 +16,29 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function JabatanPage() {
+  const [open, setOpen] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Guru"
-      title="Jenis Jabatan"
-      doctype="Jenis Jabatan"
-      fields={["name", "nama_jabatan"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "nama_jabatan", dir: "asc" }}
-      searchFields={["name", "nama_jabatan"]}
-      addLabel="Tambah Jabatan"
-      onAdd={() => alert("Form jabatan (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Guru"
+        title="Jenis Jabatan"
+        doctype="Jenis Jabatan"
+        fields={["name", "nama_jabatan"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "nama_jabatan", dir: "asc" }}
+        searchFields={["name", "nama_jabatan"]}
+        addLabel="Tambah Jabatan"
+        onAdd={() => setOpen(true)}
+      />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Jenis Jabatan"
+        title="Tambah Jenis Jabatan"
+        fields={JENIS_JABATAN_FIELDS}
+      />
+    </>
   );
 }
 

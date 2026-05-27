@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { SK_MENGAJAR_FIELDS } from "../components/guru-extra/sub-fields";
 
 type Row = { name: string; guru: string; nomor_sk?: string; tanggal_sk?: string; berlaku_mulai?: string; berlaku_sampai?: string; status?: string };
 
@@ -15,19 +18,30 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function SkMengajarPage() {
+  const [open, setOpen] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Guru"
-      title="SK Mengajar"
-      doctype="SK Mengajar"
-      fields={["name", "guru", "tanggal_sk", "status"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "tanggal_sk", dir: "desc" }}
-      searchFields={["name", "guru"]}
-      addLabel="Terbitkan SK"
-      onAdd={() => alert("Form SK Mengajar (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Guru"
+        title="SK Mengajar"
+        doctype="SK Mengajar"
+        fields={["name", "guru", "tanggal_sk", "status"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "tanggal_sk", dir: "desc" }}
+        searchFields={["name", "guru"]}
+        addLabel="Terbitkan SK"
+        onAdd={() => setOpen(true)}
+      />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="SK Mengajar"
+        title="Terbitkan SK Mengajar"
+        description="Buat draft SK Mengajar baru."
+        fields={SK_MENGAJAR_FIELDS}
+      />
+    </>
   );
 }
 

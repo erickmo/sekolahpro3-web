@@ -12,7 +12,7 @@ const COLUMNS: Column<Row>[] = [
   { key: "jumlah_siswa", header: "Siswa", align: "right", cell: (r) => r.jumlah_siswa ?? 0 },
   { key: "tahun_ajaran", header: "TA", cell: (r) => r.tahun_ajaran ?? "—" },
   { key: "status", header: "Status",
-    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : "neutral"} dot>{r.status ?? "—"}</Badge> },
+    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : r.status === "Ditutup" ? "neutral" : "neutral"} dot>{r.status ?? "—"}</Badge> },
 ];
 
 function RombelPage() {

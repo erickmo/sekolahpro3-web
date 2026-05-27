@@ -20,7 +20,7 @@ const COLUMNS: Column<Row>[] = [
   { key: "jumlah_siswa", header: "Siswa", align: "right",
     cell: (r) => <span className="tabular-nums">{r.jumlah_siswa ?? 0}{r.kapasitas ? ` / ${r.kapasitas}` : ""}</span> },
   { key: "status", header: "Status",
-    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : r.status === "Penuh" ? "warning" : "neutral"} dot>{r.status ?? "—"}</Badge> },
+    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : r.status === "Ditutup" ? "neutral" : "neutral"} dot>{r.status ?? "—"}</Badge> },
 ];
 
 function KelasListPage() {
