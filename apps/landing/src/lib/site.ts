@@ -32,6 +32,7 @@ const STATIC_FALLBACK: SiteContent = {
     { label: "Fitur", url: "/fitur", match_end: false },
     { label: "Berita", url: "/berita", match_end: false },
     { label: "Partner", url: "/partner", match_end: false },
+    { label: "PPDB", url: "/ppdb", match_end: false },
     { label: "Kontak", url: "/kontak", match_end: false },
   ],
   nav_cta_login_label: "Masuk",
