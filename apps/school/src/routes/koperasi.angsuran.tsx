@@ -1,6 +1,12 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import {
+  JADWAL_ANGSURAN_BASE_VALUES,
+  JADWAL_ANGSURAN_FIELDS,
+} from "../data/create-schemas";
 
 type Row = {
   name: string;
@@ -25,7 +31,9 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function AngsuranPage() {
+  const [open, setOpen] = useState(false);
   return (
+    <>
     <ResourceListPage<Row>
       eyebrow="Koperasi"
       title="Jadwal & Pembayaran Angsuran"
@@ -39,9 +47,19 @@ function AngsuranPage() {
         { key: "status", label: "Status", field: "status",
           options: ["Semua", "Belum", "Lunas", "Tunggakan"].map((v) => ({ value: v, label: v })) },
       ]}
-      addLabel="Bayar Angsuran"
-      onAdd={() => alert("Form pembayaran angsuran (P2)")}
+      addLabel="Tambah Baris Angsuran"
+      onAdd={() => setOpen(true)}
     />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Jadwal Angsuran"
+        title="Tambah Baris Jadwal Angsuran"
+        description="Baris angsuran pada Akad Pembiayaan terpilih."
+        fields={JADWAL_ANGSURAN_FIELDS}
+        baseValues={JADWAL_ANGSURAN_BASE_VALUES}
+      />
+    </>
   );
 }
 

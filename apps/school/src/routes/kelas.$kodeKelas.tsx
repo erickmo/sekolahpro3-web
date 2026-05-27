@@ -592,7 +592,15 @@ function KelasDetailPage() {
       kapasitas: d.kapasitas ?? mock.kapasitas,
       jumlahSiswa: d.jumlah_siswa ?? siswa.length ?? mock.jumlahSiswa,
       ruang,
-      status: ((d.status as Kelas["status"]) ?? mock.status),
+      status: ((): Kelas["status"] => {
+        // Doctype Rombongan Belajar.status: Aktif | Ditutup.
+        // UI StatusKelas: Aktif | Penuh | Arsip — derive Penuh dari kapasitas.
+        if (!d.status) return mock.status;
+        if (d.status === "Ditutup") return "Arsip";
+        const cap = d.kapasitas ?? 0;
+        const isi = d.jumlah_siswa ?? d.anggota?.length ?? 0;
+        return cap > 0 && isi >= cap ? "Penuh" : "Aktif";
+      })(),
       siswa,
       jadwal,
       aktivitas,

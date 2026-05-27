@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Avatar, Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { StaffFormModal } from "../components/staff/StaffFormModal";
@@ -96,6 +96,7 @@ const COLUMNS: Column<Row>[] = [
 
 function StaffListPage() {
   const [showCreate, setShowCreate] = useState(false);
+  const navigate = useNavigate();
   return (
     <>
       <ResourceListPage<Row>
@@ -125,6 +126,7 @@ function StaffListPage() {
         ]}
         addLabel="Tambah Staff"
         onAdd={() => setShowCreate(true)}
+        onRowClick={(r) => navigate({ to: "/staff/$nip", params: { nip: r.name } })}
       />
       <StaffFormModal open={showCreate} onClose={() => setShowCreate(false)} />
     </>
