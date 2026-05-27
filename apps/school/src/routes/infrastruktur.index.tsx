@@ -100,7 +100,7 @@ function InfraDashboardPage() {
       items.push({
         id: "fasilitas-rusak",
         label: `${stats.fasilitasRusak} fasilitas rusak`,
-        description: "Ruangan berstatus perbaikan",
+        description: "Fasilitas Ruangan berstatus Rusak",
         tone: stats.fasilitasRusak > FASILITAS_CRITICAL_THRESHOLD ? "danger" : "warning",
         badge: "Fasilitas",
         actionLabel: "Buat Perbaikan",
@@ -110,8 +110,8 @@ function InfraDashboardPage() {
     if (stats.utilitasAnomali > 0) {
       items.push({
         id: "utilitas-anomali",
-        label: `${stats.utilitasAnomali} utilitas anomali`,
-        description: "PLN/PDAM/internet di luar ambang normal",
+        label: `${stats.utilitasAnomali} utilitas nonaktif`,
+        description: "Utilitas Gedung berstatus Nonaktif",
         tone: "danger",
         badge: "Utilitas",
         actionLabel: "Investigasi",
