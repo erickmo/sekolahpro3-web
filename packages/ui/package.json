@@ -9,7 +9,7 @@
     "./components/*": "./src/components/*.tsx",
     "./tailwind-preset": "./tailwind.preset.js"
   },
-  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "scripts": { "lint": "ESLINT_USE_FLAT_CONFIG=true eslint 'src/**/*.{ts,tsx}'", "typecheck": "tsc --noEmit", "test": "vitest run" },
   "dependencies": {
     "@sekolahpro/config": "workspace:*",
     "class-variance-authority": "^0.7.0",

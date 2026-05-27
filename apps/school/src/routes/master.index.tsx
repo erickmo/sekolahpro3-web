@@ -49,7 +49,7 @@ function MasterDashboardPage() {
 
   const penggunaList = penggunaQ.data ?? [];
   const tahunList = tahunQ.data ?? [];
-  const modulList = modulQ.data ?? [];
+  const _modulList = modulQ.data ?? [];
 
   const stats = useMemo(() => {
     const penggunaAktif = penggunaList.filter((p) => p.status === "Aktif").length;

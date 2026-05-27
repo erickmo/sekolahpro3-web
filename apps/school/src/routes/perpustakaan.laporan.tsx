@@ -9,10 +9,10 @@ function LaporanPage() {
   );
   const anggota = useResourceList("Anggota Perpustakaan", { fields: ["name", "status"], limit_page_length: 0 });
 
-  const aktif = (peminjaman.data ?? []).filter((p: any) => p.status === "Aktif" || p.status === "Terlambat").length;
-  const terlambat = (peminjaman.data ?? []).filter((p: any) => p.status === "Terlambat").length;
+  const aktif = (peminjaman.data ?? []).filter((p: { status?: string }) => p.status === "Aktif" || p.status === "Terlambat").length;
+  const terlambat = (peminjaman.data ?? []).filter((p: { status?: string }) => p.status === "Terlambat").length;
   const outstanding = (denda.data ?? []).filter((d) => d.status_bayar === "Belum Lunas").reduce((s, d) => s + (d.total_denda ?? 0), 0);
-  const anggotaAktif = (anggota.data ?? []).filter((a: any) => a.status === "Aktif").length;
+  const anggotaAktif = (anggota.data ?? []).filter((a: { status?: string }) => a.status === "Aktif").length;
 
   return (
     <div className="space-y-6">

@@ -22,7 +22,6 @@ import {
   IconChat,
   IconChart,
   IconClock,
-  IconDownload,
   IconEdit,
   IconFile,
   IconGrad,
