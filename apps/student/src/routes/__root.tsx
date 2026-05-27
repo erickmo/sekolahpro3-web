@@ -19,6 +19,7 @@ import {
   IconChat,
   IconBell,
   IconLogout,
+  IconWallet,
 } from "@sekolahpro/ui";
 import { logout, useSession } from "@sekolahpro/auth";
 import { useTenant } from "@sekolahpro/tenant";
@@ -91,6 +92,14 @@ function Layout() {
         mk("/nilai", "Nilai", <IconChart />),
         mk("/jadwal", "Jadwal", <IconCalendar />),
         mk("/absensi", "Absensi", <IconCheck />),
+      ],
+    },
+    {
+      title: "Koperasi",
+      items: [
+        mk("/koperasi", "Ringkasan", <IconWallet />),
+        mk("/koperasi/mutasi", "Mutasi", <IconChart />),
+        mk("/koperasi/pembiayaan", "Pembiayaan", <IconCheck />),
       ],
     },
     {
