@@ -31,7 +31,6 @@ import {
   IconId,
   IconMail,
   IconMapPin,
-  IconMore,
   IconPhone,
   IconPlus,
   IconPrint,
@@ -55,14 +54,12 @@ import {
   formatTanggal,
   umur,
   type AktivitasRow,
-  type DokumenPpdbRow,
   type NilaiRaporRow,
   type PembayaranPpdbRow,
   type Pendaftar,
   type StatusPendaftaran,
   type TahapanRow,
   type WaliPpdbRow,
-  type WawancaraRow,
 } from "../data/ppdb";
 
 type TabKey = "ringkasan" | "profil" | "wali" | "dokumen" | "tahapan" | "akademik" | "wawancara" | "pembayaran" | "aktivitas";

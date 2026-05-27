@@ -1,8 +1,6 @@
-import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
-import { PembayaranAngsuranModal } from "../components/koperasi-pembiayaan/pembayaranForm";
 
 type Row = {
   name: string;

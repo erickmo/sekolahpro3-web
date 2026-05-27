@@ -80,7 +80,7 @@ function stateBadgeTone(state: WorkflowState): "neutral" | "warning" | "success"
 
 function MutasiDetailPage() {
   const { id } = useParams({ from: "/siswa/mutasi/$id" });
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
   const qc = useQueryClient();
   const docQuery = useResourceDoc<MutasiDoc>("Mutasi Siswa", id);
 

@@ -18,7 +18,6 @@ import {
   IconBook,
   IconCalendar,
   IconChart,
-  IconChat,
   IconCheck,
   IconClock,
   IconDownload,

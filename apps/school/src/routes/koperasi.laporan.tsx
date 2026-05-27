@@ -15,7 +15,7 @@ function LaporanKoperasiPage() {
   const pembiayaanBerjalan = (pembiayaan.data ?? []).filter((p) => p.status === "Berjalan");
   const totalPembiayaan = pembiayaanBerjalan.reduce((s, p) => s + (p.jumlah_pokok ?? 0), 0);
   const macet = (pembiayaan.data ?? []).filter((p) => p.status === "Macet").length;
-  const anggotaAktif = (anggota.data ?? []).filter((a: any) => a.status === "Aktif").length;
+  const anggotaAktif = (anggota.data ?? []).filter((a: { status?: string }) => a.status === "Aktif").length;
 
   return (
     <div className="space-y-6">

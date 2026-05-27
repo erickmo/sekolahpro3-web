@@ -153,7 +153,7 @@ function buildAnggota(idx: number): Anggota {
   const angsuran = angsuranPokok + angsuranBunga;
   const cicilanLewat = punyaPinjaman ? Math.min(tenor, 3 + (idx % 6)) : 0;
   const sisaPokok = punyaPinjaman ? jumlahPinjaman - (angsuranPokok * cicilanLewat) : 0;
-  const jatuhTempo = `${tahunGabung + Math.floor((tenor + (idx % 12) + 1) / 12)}-${pad(((tenor + (idx % 12)) % 12) + 1, 2)}-15`;
+  const _jatuhTempo = `${tahunGabung + Math.floor((tenor + (idx % 12) + 1) / 12)}-${pad(((tenor + (idx % 12)) % 12) + 1, 2)}-15`;
 
   // Histori simpanan: ambil dari beberapa setoran wajib + sukarela
   const simpanan: SimpananRow[] = Array.from({ length: 8 }).map((_, i) => {

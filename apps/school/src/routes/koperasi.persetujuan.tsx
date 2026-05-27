@@ -91,7 +91,10 @@ function PersetujuanPage() {
 
   // Hitung badge count per jenis — query paralel via useResourceList.
   // Setiap query mandiri (Tanstack Query); hindari N+1 dengan cap fields ringan.
+  // TYPES is a module-level constant so hook order stays stable.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const countQueries = TYPES.map((t) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     useResourceList<{ name: string }>(t.doctype, {
       fields: ["name"],
       filters: [["status_permohonan", "=", "Diajukan"]],

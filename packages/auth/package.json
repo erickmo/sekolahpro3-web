@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
-  "scripts": { "lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "scripts": { "lint": "ESLINT_USE_FLAT_CONFIG=true eslint 'src/**/*.{ts,tsx}'", "typecheck": "tsc --noEmit", "test": "vitest run" },
   "dependencies": {
     "@sekolahpro/api-client": "workspace:*",
     "@tanstack/react-router": "^1.45.0",
