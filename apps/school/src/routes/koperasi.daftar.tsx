@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { ANGGOTA_KOPERASI_FIELDS } from "../data/create-schemas";
 
 // Verified fields on `Anggota Koperasi` doctype:
 // nomor_anggota (Data), nasabah (Link Nasabah), jenis_anggota (Select),
@@ -76,7 +79,9 @@ const COLUMNS: Column<Row>[] = [
 
 function KoperasiDaftarPage() {
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   return (
+    <>
     <ResourceListPage<Row>
       eyebrow="Layanan"
       title="Koperasi"
@@ -108,11 +113,20 @@ function KoperasiDaftarPage() {
         },
       ]}
       addLabel="Tambah Anggota"
-      onAdd={() => alert("Form anggota koperasi (TODO)")}
+      onAdd={() => setOpen(true)}
       onRowClick={(r) =>
         navigate({ to: "/koperasi/$noAnggota", params: { noAnggota: r.nomor_anggota ?? r.name } })
       }
     />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Anggota Koperasi"
+        title="Tambah Anggota Koperasi"
+        description="Daftarkan nasabah sebagai anggota koperasi."
+        fields={ANGGOTA_KOPERASI_FIELDS}
+      />
+    </>
   );
 }
 
