@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { LAPORAN_TERJADWAL_FIELDS } from "../data/create-schemas";
 
 // Wired to backend DocType: "Laporan Terjadwal"
 // /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro/sekolahpro/laporan/doctype/laporan_terjadwal
@@ -48,7 +51,9 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function LaporanPage() {
+  const [open, setOpen] = useState(false);
   return (
+    <>
     <ResourceListPage<Row>
       eyebrow="Operasional"
       title="Laporan"
@@ -64,8 +69,17 @@ function LaporanPage() {
         { key: "format", label: "Format", field: "format", options: FORMAT_OPTS },
       ]}
       addLabel="Jadwalkan Laporan"
-      onAdd={() => alert("Form jadwal laporan (P2)")}
+      onAdd={() => setOpen(true)}
     />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Laporan Terjadwal"
+        title="Jadwalkan Laporan"
+        description="Buat jadwal laporan terjadwal baru."
+        fields={LAPORAN_TERJADWAL_FIELDS}
+      />
+    </>
   );
 }
 

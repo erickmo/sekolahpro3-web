@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { StaffFormModal } from "../components/staff/StaffFormModal";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Avatar,
   AttentionList,
@@ -17,87 +16,113 @@ import {
   GlossaryTooltip,
   type AttentionItem,
 } from "@sekolahpro/ui";
-import { STAFF_LIST, formatTanggal, type Staff } from "../data/staff";
+import { useResourceList } from "@sekolahpro/api-client";
+import { StaffFormModal } from "../components/staff/StaffFormModal";
 import { GLOSSARY } from "../lib/glossary";
 
-const TODAY = new Date("2026-05-24");
 const SK_WARNING_DAYS = 90;
-const BERKAS_REQUIRED_MIN = 5;
 const RECENT_LIMIT = 5;
 const ATTENTION_LIMIT = 6;
 
-function daysUntil(iso: string | undefined): number | null {
+type GuruRow = {
+  name: string;
+  nama_lengkap?: string;
+  nip?: string;
+  jabatan_fungsional?: string;
+  sekolah?: string;
+  is_aktif?: 0 | 1;
+  tmt_pertama_kerja?: string;
+  creation?: string;
+};
+
+type SkRow = {
+  name: string;
+  guru?: string;
+  jenis_jabatan?: string;
+  tanggal_berakhir?: string;
+  status?: string;
+};
+
+type BerkasRow = { name: string };
+
+function formatTanggal(iso?: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function daysUntil(iso?: string): number | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return Math.floor((d.getTime() - TODAY.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-interface Issue {
-  staff: Staff;
-  label: string;
-  tone: "warning" | "danger" | "neutral";
-  kind: "sk" | "berkas";
+  const now = new Date();
+  return Math.floor((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function StaffDashboardPage() {
   const [showCreate, setShowCreate] = useState(false);
+  const navigate = useNavigate();
+
+  const guruQ = useResourceList<GuruRow>("Guru", {
+    fields: ["name", "nama_lengkap", "nip", "jabatan_fungsional", "sekolah", "is_aktif", "tmt_pertama_kerja", "creation"],
+    order_by: "creation desc",
+    limit_page_length: 0,
+  });
+  const skQ = useResourceList<SkRow>("SK Jabatan", {
+    fields: ["name", "guru", "jenis_jabatan", "tanggal_berakhir", "status"],
+    filters: [["status", "!=", "Dicabut"]],
+    limit_page_length: 0,
+  });
+  const berkasQ = useResourceList<BerkasRow>("Berkas Guru", {
+    fields: ["name"],
+    limit_page_length: 0,
+  });
+
+  const gurus = guruQ.data ?? [];
+  const sks = skQ.data ?? [];
+  const berkas = berkasQ.data ?? [];
+
   const stats = useMemo(() => {
-    const aktif = STAFF_LIST.filter((s) => s.status === "Aktif").length;
-    const skHabis = STAFF_LIST.filter((s) => {
-      const d = daysUntil(s.masaKontrakBerakhir);
+    const aktif = gurus.filter((g) => g.is_aktif === 1).length;
+    const skHabis = sks.filter((s) => {
+      const d = daysUntil(s.tanggal_berakhir);
       return d !== null && d >= 0 && d <= SK_WARNING_DAYS;
     }).length;
-    const berkasKurang = STAFF_LIST.filter((s) => s.dokumen.length < BERKAS_REQUIRED_MIN).length;
-    // Cuti hari ini — derived stub, replace when absensi staff wired
-    const cutiHariIni = STAFF_LIST.filter((s) => s.status === "Cuti").length || Math.max(0, Math.round(aktif * 0.04));
-    return { aktif, cutiHariIni, skHabis, berkasKurang };
-  }, []);
-
-  const perluPerhatian = useMemo<Issue[]>(() => {
-    const list: Issue[] = [];
-    for (const s of STAFF_LIST) {
-      const d = daysUntil(s.masaKontrakBerakhir);
-      if (d !== null && d >= 0 && d <= SK_WARNING_DAYS) {
-        list.push({
-          staff: s,
-          label: `SK habis dalam ${d} hari (${formatTanggal(s.masaKontrakBerakhir!)})`,
-          tone: d <= 30 ? "danger" : "warning",
-          kind: "sk",
-        });
-      } else if (s.dokumen.length < BERKAS_REQUIRED_MIN) {
-        list.push({
-          staff: s,
-          label: `Berkas tidak lengkap (${s.dokumen.length}/${BERKAS_REQUIRED_MIN})`,
-          tone: "warning",
-          kind: "berkas",
-        });
-      }
-    }
-    return list.slice(0, ATTENTION_LIMIT);
-  }, []);
+    return { total: gurus.length, aktif, skHabis, berkas: berkas.length };
+  }, [gurus, sks, berkas]);
 
   const attentionItems = useMemo<AttentionItem[]>(() => {
-    return perluPerhatian.map((it) => ({
-      id: `${it.staff.nip}-${it.kind}`,
-      label: it.staff.namaLengkap,
-      description: `${it.staff.jabatan} · ${it.staff.departemen} — ${it.label}`,
-      tone: it.tone,
-      badge: it.kind === "sk" ? "SK" : "Berkas",
-      href: `/staff/${it.staff.nip}`,
-      actionLabel: it.kind === "sk" ? "Perpanjang" : "Upload",
-      actionHref: it.kind === "sk" ? "/staff/sk-jabatan" : "/staff/berkas",
-    }));
-  }, [perluPerhatian]);
+    const guruByName = new Map(gurus.map((g) => [g.name, g]));
+    return sks
+      .map((s) => {
+        const d = daysUntil(s.tanggal_berakhir);
+        if (d === null || d < 0 || d > SK_WARNING_DAYS) return null;
+        const g = s.guru ? guruByName.get(s.guru) : undefined;
+        return {
+          id: s.name,
+          label: g?.nama_lengkap ?? s.guru ?? s.name,
+          description: `${s.jenis_jabatan ?? "SK"} — habis dalam ${d} hari (${formatTanggal(s.tanggal_berakhir)})`,
+          tone: d <= 30 ? ("danger" as const) : ("warning" as const),
+          badge: "SK",
+          href: "/staff/sk-jabatan",
+          actionLabel: "Perpanjang",
+          actionHref: "/staff/sk-jabatan",
+        } satisfies AttentionItem;
+      })
+      .filter((x): x is AttentionItem => !!x)
+      .slice(0, ATTENTION_LIMIT);
+  }, [sks, gurus]);
 
-  const terbaru = useMemo<Staff[]>(() => {
-    return [...STAFF_LIST]
-      .sort((a, b) => b.tmtKerja.localeCompare(a.tmtKerja))
+  const terbaru = useMemo(() => {
+    return [...gurus]
+      .sort((a, b) => (b.creation ?? "").localeCompare(a.creation ?? ""))
       .slice(0, RECENT_LIMIT);
-  }, []);
+  }, [gurus]);
 
   return (
     <div className="space-y-6">
+      <StaffFormModal open={showCreate} onClose={() => setShowCreate(false)} />
       <PageHeader
         eyebrow="Direktori"
         title="Dashboard Staff"
@@ -117,19 +142,22 @@ function StaffDashboardPage() {
           </>
         }
       />
-      <StaffFormModal open={showCreate} onClose={() => setShowCreate(false)} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Staff Aktif" value={stats.aktif} hint={`dari ${STAFF_LIST.length} total`} icon={<IconCheck />} accent="emerald" urgency="normal" />
         <StatCard
-          label="Cuti Hari Ini"
-          value={stats.cutiHariIni}
-          hint="tidak hadir hari ini"
+          label="Staff Aktif"
+          value={stats.aktif}
+          hint={`dari ${stats.total} total`}
+          icon={<IconCheck />}
+          accent="emerald"
+          urgency="normal"
+        />
+        <StatCard
+          label="Total Staff"
+          value={stats.total}
+          hint="seluruh staf terdaftar"
           icon={<IconUsers />}
           accent="brand"
-          urgency="warn"
-          actionHref="/absensi/guru"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
           label={<><GlossaryTooltip term="SK" definition={GLOSSARY.SK} /> Akan Habis</>}
@@ -142,12 +170,11 @@ function StaffDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
-          label="Berkas Tidak Lengkap"
-          value={stats.berkasKurang}
-          hint={`< ${BERKAS_REQUIRED_MIN} dokumen`}
+          label="Total Berkas"
+          value={stats.berkas}
+          hint="berkas terdaftar"
           icon={<IconFile />}
           accent="violet"
-          urgency="warn"
           actionHref="/staff/berkas"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
@@ -185,45 +212,55 @@ function StaffDashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <SectionCard
           title="Perlu Perhatian"
-          description="Staff dengan SK akan habis atau berkas tidak lengkap."
+          description={skQ.isLoading ? "Memuat..." : "SK akan habis dalam 90 hari."}
         >
-          <AttentionList
-            items={attentionItems}
-            maxItems={5}
-            renderLink={(href, children, className) => (
-              <Link to={href} className={className}>
-                {children}
-              </Link>
-            )}
-          />
+          {attentionItems.length === 0 && !skQ.isLoading ? (
+            <div className="text-sm text-muted-fg">Tidak ada SK yang akan habis dalam 90 hari.</div>
+          ) : (
+            <AttentionList
+              items={attentionItems}
+              maxItems={5}
+              renderLink={(href, children, className) => (
+                <Link to={href} className={className}>
+                  {children}
+                </Link>
+              )}
+            />
+          )}
         </SectionCard>
 
         <SectionCard
           title="Aktivitas Terbaru"
-          description={`${RECENT_LIMIT} staff dengan TMT terbaru.`}
+          description={guruQ.isLoading ? "Memuat..." : `${RECENT_LIMIT} staff terbaru terdaftar.`}
           padded={false}
         >
-          <ul className="divide-y divide-border">
-            {terbaru.map((s) => (
-              <li key={s.nip}>
-                <Link
-                  to="/staff/$nip"
-                  params={{ nip: s.nip }}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
-                >
-                  <Avatar name={s.namaLengkap} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-fg truncate">{s.namaLengkap}</div>
-                    <div className="text-xs text-muted-fg truncate">NIP {s.nip} - {s.jabatan}</div>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-fg whitespace-nowrap">
-                    <span className="h-3.5 w-3.5"><IconClock /></span>
-                    <span>TMT {formatTanggal(s.tmtKerja)}</span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {terbaru.length === 0 && !guruQ.isLoading ? (
+            <div className="px-4 py-6 text-sm text-muted-fg">Belum ada staff terdaftar.</div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {terbaru.map((s) => (
+                <li key={s.name}>
+                  <button
+                    type="button"
+                    onClick={() => navigate({ to: "/staff/$nip", params: { nip: s.name } })}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
+                  >
+                    <Avatar name={s.nama_lengkap ?? s.name} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-fg truncate">{s.nama_lengkap ?? s.name}</div>
+                      <div className="text-xs text-muted-fg truncate">
+                        {s.nip ? `NIP ${s.nip}` : s.name}{s.jabatan_fungsional ? ` · ${s.jabatan_fungsional}` : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-fg whitespace-nowrap">
+                      <span className="h-3.5 w-3.5"><IconClock /></span>
+                      <span>TMT {formatTanggal(s.tmt_pertama_kerja)}</span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </SectionCard>
       </div>
     </div>
