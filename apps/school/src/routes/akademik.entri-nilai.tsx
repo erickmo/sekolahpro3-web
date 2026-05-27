@@ -1,33 +1,94 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Badge, type Column } from "@sekolahpro/ui";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { useAkademikContextOptional } from "../lib/akademikContext";
+import { useMemo } from "react";
 
-type Row = { name: string; mata_pelajaran: string; kelas?: string; guru?: string; status?: string; tanggal?: string };
+type Row = {
+  name: string;
+  siswa: string;
+  mata_pelajaran: string;
+  semester?: string;
+  tahun_ajaran?: string;
+  tingkat?: string;
+  nilai_akhir?: number;
+  predikat?: string;
+};
+
+const PREDIKAT_TONE: Record<string, "success" | "brand" | "warning" | "danger"> = {
+  A: "success",
+  B: "brand",
+  C: "warning",
+  D: "danger",
+};
 
 const COLUMNS: Column<Row>[] = [
-  { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "mata_pelajaran", header: "Mapel", sortable: true, cell: (r) => r.mata_pelajaran },
-  { key: "kelas", header: "Kelas", cell: (r) => r.kelas ?? "—" },
-  { key: "guru", header: "Guru", cell: (r) => r.guru ?? "—" },
-  { key: "tanggal", header: "Tanggal", sortable: true, cell: (r) => r.tanggal ?? "—" },
-  { key: "status", header: "Status",
-    cell: (r) => <Badge tone={r.status === "Final" ? "success" : r.status === "Draft" ? "warning" : "neutral"} dot>{r.status ?? "—"}</Badge> },
+  { key: "siswa", header: "Siswa", sortable: true, cell: (r) => r.siswa },
+  { key: "mata_pelajaran", header: "Mata Pelajaran", sortable: true, cell: (r) => r.mata_pelajaran },
+  { key: "tingkat", header: "Tingkat", align: "center", cell: (r) => r.tingkat ?? "—" },
+  { key: "semester", header: "Semester", cell: (r) => r.semester ?? "—" },
+  { key: "tahun_ajaran", header: "TA", cell: (r) => r.tahun_ajaran ?? "—" },
+  {
+    key: "nilai_akhir",
+    header: "Nilai Akhir",
+    align: "right",
+    sortable: true,
+    cell: (r) => (r.nilai_akhir != null ? <span className="tabular-nums">{r.nilai_akhir.toFixed(2)}</span> : "—"),
+  },
+  {
+    key: "predikat",
+    header: "Predikat",
+    align: "center",
+    cell: (r) => (r.predikat ? <Badge tone={PREDIKAT_TONE[r.predikat] ?? "neutral"}>{r.predikat}</Badge> : "—"),
+  },
 ];
 
 function EntriNilaiPage() {
+  const navigate = useNavigate();
+  const ctx = useAkademikContextOptional();
+
+  const baseFilters = useMemo(() => {
+    const out: Array<[string, string, string]> = [];
+    if (ctx?.tahunAjaran) out.push(["tahun_ajaran", "=", ctx.tahunAjaran]);
+    if (ctx?.semester) out.push(["semester", "=", ctx.semester]);
+    return out.length > 0 ? out : undefined;
+  }, [ctx?.tahunAjaran, ctx?.semester]);
+
+  const openEditor = () => {
+    const search: Record<string, string> = {};
+    if (ctx?.semester) search.semester = ctx.semester;
+    if (ctx?.tahunAjaran) search.ta = ctx.tahunAjaran;
+    navigate({ to: "/akademik/entri-nilai/edit", search });
+  };
+
   return (
     <ResourceListPage<Row>
       eyebrow="Akademik"
       title="Entri Nilai"
-      description="Sesi input nilai per mapel & kelas."
+      description="Rekap dokumen entri nilai per siswa × mapel × semester. Gunakan editor grid untuk input cepat."
       doctype="Entri Nilai"
-      fields={["name", "mata_pelajaran"]}
+      fields={[
+        "name",
+        "siswa",
+        "mata_pelajaran",
+        "tingkat",
+        "semester",
+        "tahun_ajaran",
+        "nilai_akhir",
+        "predikat",
+      ]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "name", dir: "desc" }}
-      searchFields={["name", "mata_pelajaran"]}
-      addLabel="Mulai Entri"
-      onAdd={() => alert("Form entri nilai (P2)")}
+      defaultSort={{ key: "modified", dir: "desc" }}
+      searchFields={["name", "siswa", "mata_pelajaran"]}
+      {...(baseFilters ? { baseFilters } : {})}
+      addLabel="Buka Editor Grid"
+      onAdd={openEditor}
+      extraActions={
+        <Button variant="outline" onClick={openEditor}>
+          Editor Grid
+        </Button>
+      }
     />
   );
 }

@@ -12,6 +12,24 @@ import {
   type SelectFilter,
   type SortState,
 } from "@sekolahpro/ui";
+
+function SkeletonRows({ count, cols }: { count: number; cols: number }) {
+  return (
+    <div className="divide-y divide-border" aria-hidden>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex gap-4 px-4 py-3 animate-pulse">
+          {Array.from({ length: cols }).map((__, j) => (
+            <div
+              key={j}
+              className="h-3 rounded bg-muted"
+              style={{ width: `${60 + ((i * 7 + j * 13) % 30)}%` }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 import { useResourceList, type ListParams, type FilterTuple } from "@sekolahpro/api-client";
 
 export interface ResourceListPageProps<T extends Record<string, unknown>> {
@@ -213,41 +231,59 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
       />
 
       <SectionCard
-        title={`${rows.length} baris${q.isFetching ? " · memuat..." : ""}`}
+        title={`${rows.length} baris${q.isFetching && rows.length > 0 ? " · memuat..." : ""}`}
         action={
-          q.isError ? <Badge tone="danger">Gagal memuat</Badge> : null
+          q.isError ? (
+            <div className="flex items-center gap-2">
+              <Badge tone="danger">Gagal memuat</Badge>
+              <Button variant="outline" onClick={() => q.refetch()}>
+                Coba lagi
+              </Button>
+            </div>
+          ) : null
         }
         padded={false}
       >
-        <DataTable
-          data={rows}
-          columns={columns}
-          rowKey={rowKey}
-          sort={sort}
-          onSortChange={setSort}
-          {...(onRowClick ? { onRowClick } : {})}
-          empty={
-            <div>
-              <div className="font-medium text-fg">
-                {q.isLoading ? "Memuat data..." : "Belum ada data"}
+        {q.isLoading && rows.length === 0 ? (
+          <SkeletonRows count={pageSize > 8 ? 8 : pageSize} cols={Math.min(columns.length, 5)} />
+        ) : (
+          <DataTable
+            data={rows}
+            columns={columns}
+            rowKey={rowKey}
+            sort={sort}
+            onSortChange={setSort}
+            {...(onRowClick ? { onRowClick } : {})}
+            empty={
+              <div>
+                <div className="font-medium text-fg">
+                  {q.isError ? "Gagal memuat data" : "Belum ada data"}
+                </div>
+                <div className="text-xs mt-1">
+                  {q.isError
+                    ? (q.error as Error).message
+                    : "Coba ubah filter atau buat data baru."}
+                </div>
+                {q.isError ? (
+                  <div className="mt-3">
+                    <Button variant="outline" onClick={() => q.refetch()}>
+                      Coba lagi
+                    </Button>
+                  </div>
+                ) : null}
               </div>
-              <div className="text-xs mt-1">
-                {q.isError
-                  ? (q.error as Error).message
-                  : "Coba ubah filter atau buat data baru."}
-              </div>
-            </div>
-          }
-          footer={
-            <Pagination
-              page={page}
-              pageSize={pageSize}
-              total={(page - 1) * pageSize + rows.length + (hasNext ? 1 : 0)}
-              onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-            />
-          }
-        />
+            }
+            footer={
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={(page - 1) * pageSize + rows.length + (hasNext ? 1 : 0)}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            }
+          />
+        )}
       </SectionCard>
     </div>
   );

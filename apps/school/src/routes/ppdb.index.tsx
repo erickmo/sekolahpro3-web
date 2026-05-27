@@ -5,6 +5,7 @@ import {
   type AttentionItem,
   Avatar,
   Badge,
+  Button,
   PageHeader,
   SectionCard,
   StatCard,
@@ -14,11 +15,13 @@ import {
   IconCalendar,
   IconSettings,
   IconGrad,
+  IconPlus,
   GlossaryTooltip,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
 import { PPDB_LIST } from "../data/ppdb";
+import { PIPELINE_STAGES } from "../lib/ppdbApi";
 
 // Konstanta agregasi PPDB — STUB sampai backend wired.
 // TODO(api): ganti dengan field `kuota` di doctype Gelombang PPDB.
@@ -197,6 +200,14 @@ function PpdbDashboard() {
             ajaran berjalan.
           </>
         }
+        actions={
+          <Link to="/ppdb/buat">
+            <Button>
+              <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
+              Buat Pendaftaran
+            </Button>
+          </Link>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -255,6 +266,8 @@ function PpdbDashboard() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <PipelineFunnel rows={rows} loading={pendaftaranQ.isLoading} />
 
       <SectionCard title="Aksi Cepat" description="Buka modul PPDB lainnya.">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -342,6 +355,64 @@ function PpdbDashboard() {
         untuk daftar lengkap.
       </p>
     </div>
+  );
+}
+
+// Pipeline funnel — visualisasi jumlah pendaftar per stage, dipakai
+// untuk pandangan Kepala Sekolah/Yayasan + panitia melihat bottleneck.
+function PipelineFunnel({ rows, loading }: { rows: PendaftaranRow[]; loading: boolean }) {
+  const counts = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const s of PIPELINE_STAGES) out[s.key] = 0;
+    for (const r of rows) {
+      const k = r.status ?? "";
+      if (k in out) out[k] = (out[k] ?? 0) + 1;
+    }
+    return out;
+  }, [rows]);
+  const max = Math.max(1, ...PIPELINE_STAGES.map((s) => counts[s.key] ?? 0));
+  const total = rows.length;
+
+  const TONE_BAR: Record<string, string> = {
+    neutral: "bg-slate-400",
+    warning: "bg-amber-500",
+    brand: "bg-indigo-500",
+    success: "bg-emerald-500",
+    danger: "bg-rose-500",
+  };
+
+  return (
+    <SectionCard
+      title="Pipeline PPDB"
+      description={`Distribusi ${total.toLocaleString("id-ID")} pendaftaran per tahap.`}
+    >
+      {loading ? (
+        <div className="py-8 text-center text-sm text-muted-fg">Memuat...</div>
+      ) : (
+        <div className="space-y-2.5">
+          {PIPELINE_STAGES.map((s) => {
+            const c = counts[s.key] ?? 0;
+            const pct = total ? Math.round((c / total) * 100) : 0;
+            const barPct = Math.round((c / max) * 100);
+            return (
+              <div key={s.key} className="grid grid-cols-[160px_1fr_90px] items-center gap-3">
+                <div className="text-xs font-medium text-fg">{s.label}</div>
+                <div className="h-7 overflow-hidden rounded-md bg-muted">
+                  <div
+                    className={`h-full ${TONE_BAR[s.tone] ?? "bg-slate-400"} transition-all`}
+                    style={{ width: `${barPct}%` }}
+                  />
+                </div>
+                <div className="text-right tabular-nums text-xs">
+                  <strong>{c.toLocaleString("id-ID")}</strong>
+                  <span className="text-muted-fg"> · {pct}%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </SectionCard>
   );
 }
 

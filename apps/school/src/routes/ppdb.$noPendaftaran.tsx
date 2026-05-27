@@ -39,7 +39,16 @@ import {
   IconWallet,
   type TabItem,
 } from "@sekolahpro/ui";
-import { openOrAlert, stubAction } from "../lib/stub";
+import { useState } from "react";
+import { downloadCsv, openOrAlert, printDocument, stubAction } from "../lib/stub";
+import { PpdbActionPanel } from "../components/ppdb-extra/PpdbActionPanel";
+import {
+  EditWaliModal,
+  JadwalWawancaraModal,
+  UploadDokumenModal,
+  openMailto,
+  openWa,
+} from "../components/ppdb-extra/PpdbDetailModals";
 import {
   findPendaftar,
   formatRupiah,
@@ -57,6 +66,22 @@ import {
 } from "../data/ppdb";
 
 type TabKey = "ringkasan" | "profil" | "wali" | "dokumen" | "tahapan" | "akademik" | "wawancara" | "pembayaran" | "aktivitas";
+
+// Action handlers terikat ke konteks detail page (pendaftaran + calon).
+// Tabs konsumsi via prop sehingga UI bisa di-test tanpa membuka detail page.
+interface PpdbActions {
+  onKirimPesan: () => void;
+  onKirimWa: () => void;
+  onCetakKartu: () => void;
+  onUnduhBerkas: () => void;
+  onEditProfil: () => void;
+  onTambahWali: () => void;
+  onUnggahDokumen: () => void;
+  onCatatPembayaran: () => void;
+  onUnduhBuktiBayar: () => void;
+  onJadwalWawancara: () => void;
+  onUnduhRapor: () => void;
+}
 
 const STATUS_TONE: Record<StatusPendaftaran, "success" | "brand" | "neutral" | "warning" | "danger"> = {
   Diterima: "success",
@@ -97,7 +122,7 @@ function persenTahapan(p: Pendaftar): number {
   return Math.round((selesai / p.tahapan.length) * 100);
 }
 
-function Hero({ pendaftar, onEdit }: { pendaftar: Pendaftar; onEdit: () => void }) {
+function Hero({ pendaftar, actions }: { pendaftar: Pendaftar; actions: PpdbActions }) {
   return (
     <div className="rounded-2xl border border-border bg-gradient-to-br from-brand/5 via-bg to-violet-500/5 p-6 shadow-sm">
       <div className="flex flex-wrap items-start gap-5">
@@ -123,20 +148,20 @@ function Hero({ pendaftar, onEdit }: { pendaftar: Pendaftar; onEdit: () => void 
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => stubAction(`Kirim Pesan ke ${pendaftar.namaLengkap}`)}>
-            <span className="h-4 w-4 mr-1.5"><IconChat /></span>Pesan
+          <Button variant="outline" size="sm" onClick={actions.onKirimPesan}>
+            <span className="h-4 w-4 mr-1.5"><IconMail /></span>Email
           </Button>
-          <Button variant="outline" size="sm" onClick={() => stubAction(`Cetak Kartu Peserta ${pendaftar.noPendaftaran}`)}>
+          <Button variant="outline" size="sm" onClick={actions.onKirimWa}>
+            <span className="h-4 w-4 mr-1.5"><IconChat /></span>WhatsApp
+          </Button>
+          <Button variant="outline" size="sm" onClick={actions.onCetakKartu}>
             <span className="h-4 w-4 mr-1.5"><IconPrint /></span>Cetak Kartu
           </Button>
-          <Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Berkas ${pendaftar.noPendaftaran}`)}>
-            <span className="h-4 w-4 mr-1.5"><IconDownload /></span>Unduh
+          <Button variant="outline" size="sm" onClick={actions.onUnduhBerkas}>
+            <span className="h-4 w-4 mr-1.5"><IconDownload /></span>Unduh CSV
           </Button>
-          <Button size="sm" onClick={onEdit}>
+          <Button size="sm" onClick={actions.onEditProfil}>
             <span className="h-4 w-4 mr-1.5"><IconEdit /></span>Edit
-          </Button>
-          <Button variant="outline" size="sm" className="!px-2" onClick={() => stubAction("Aksi lainnya (menu)")}>
-            <span className="h-4 w-4"><IconMore /></span>
           </Button>
         </div>
       </div>
@@ -242,14 +267,12 @@ function RingkasanTab({ pendaftar, onChangeTab }: { pendaftar: Pendaftar; onChan
             </ul>
           </SectionCard>
 
-          <SectionCard title="Aksi Cepat">
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" onClick={() => stubAction(`Verifikasi Berkas ${pendaftar.noPendaftaran}`)}><span className="text-xs">Verifikasi Berkas</span></Button>
-              <Button variant="outline" size="sm" onClick={() => stubAction(`Jadwalkan Wawancara ${pendaftar.noPendaftaran}`)}><span className="text-xs">Jadwal Wawancara</span></Button>
-              <Button variant="outline" size="sm" onClick={() => stubAction(`Kirim Pengumuman ${pendaftar.noPendaftaran}`)}><span className="text-xs">Kirim Pengumuman</span></Button>
-              <Button variant="outline" size="sm" onClick={() => stubAction(`Catat Pembayaran ${pendaftar.noPendaftaran}`)}><span className="text-xs">Catat Pembayaran</span></Button>
-            </div>
-            <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-fg">
+          <SectionCard title="Alur Pendaftaran" description="Aksi sesuai status terkini.">
+            <PpdbActionPanel
+              pendaftaranName={pendaftar.noPendaftaran}
+              currentStatus={pendaftar.statusPendaftaran}
+            />
+            <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-fg">
               Sisa pembayaran: <span className="font-medium text-fg tabular-nums">{formatRupiah(sisa)}</span>
             </div>
           </SectionCard>
@@ -311,7 +334,7 @@ function ProfilTab({ pendaftar }: { pendaftar: Pendaftar }) {
   );
 }
 
-function WaliTab({ pendaftar }: { pendaftar: Pendaftar }) {
+function WaliTab({ pendaftar, actions }: { pendaftar: Pendaftar; actions: PpdbActions }) {
   const cols: Column<WaliPpdbRow>[] = [
     { key: "hub", header: "Hubungan", cell: (r) => <Badge tone="brand">{r.hubungan}</Badge> },
     { key: "nama", header: "Nama", cell: (r) => <span className="font-medium">{r.nama}</span> },
@@ -325,7 +348,7 @@ function WaliTab({ pendaftar }: { pendaftar: Pendaftar }) {
     <SectionCard
       title="Data Wali"
       description="Ayah, Ibu, atau Wali resmi"
-      action={<Button size="sm" onClick={() => stubAction(`Tambah Wali ${pendaftar.noPendaftaran}`)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Tambah Wali</Button>}
+      action={<Button size="sm" onClick={actions.onTambahWali}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Edit Wali</Button>}
       padded={false}
     >
       <DataTable data={pendaftar.wali} columns={cols} rowKey={(r) => `${r.hubungan}-${r.nama}`} />
@@ -333,27 +356,83 @@ function WaliTab({ pendaftar }: { pendaftar: Pendaftar }) {
   );
 }
 
-function DokumenTab({ pendaftar }: { pendaftar: Pendaftar }) {
-  const cols: Column<DokumenPpdbRow>[] = [
-    { key: "nama", header: "Dokumen", cell: (r) => (
-      <div className="flex items-center gap-3">
-        <span className="h-8 w-8 rounded-md bg-muted inline-flex items-center justify-center text-muted-fg"><span className="h-4 w-4"><IconFile /></span></span>
-        <span className="font-medium">{r.nama}</span>
-      </div>
-    ) },
-    { key: "tipe", header: "Tipe", cell: (r) => <Badge tone="neutral">{r.tipe}</Badge> },
-    { key: "status", header: "Status", cell: (r) => <Badge tone={DOKUMEN_TONE[r.status]} dot>{r.status}</Badge> },
+type DokumenPpdbDoc = {
+  name: string;
+  jenis?: string;
+  status?: string;
+  catatan?: string;
+  berkas?: string;
+  uploaded_by?: string;
+  modified?: string;
+};
+
+function DokumenTab({ pendaftar, actions }: { pendaftar: Pendaftar; actions: PpdbActions }) {
+  // Live data dari doctype Dokumen PPDB (gantikan mock fallback).
+  const q = useResourceList<DokumenPpdbDoc>("Dokumen PPDB", {
+    fields: ["name", "jenis", "status", "catatan", "berkas", "uploaded_by", "modified"],
+    filters: [["pendaftaran_ppdb", "=", pendaftar.noPendaftaran]],
+    order_by: "`modified` desc",
+    limit_page_length: 100,
+  });
+  const rows = q.data ?? [];
+
+  const statTone = (s: string | undefined): "success" | "warning" | "danger" | "neutral" => {
+    if (s === "Diterima") return "success";
+    if (s === "Ditolak") return "danger";
+    if (s === "Belum") return "warning";
+    return "neutral";
+  };
+
+  const cols: Column<DokumenPpdbDoc>[] = [
+    {
+      key: "jenis",
+      header: "Dokumen",
+      cell: (r) => (
+        <div className="flex items-center gap-3">
+          <span className="h-8 w-8 rounded-md bg-muted inline-flex items-center justify-center text-muted-fg">
+            <span className="h-4 w-4"><IconFile /></span>
+          </span>
+          <span className="font-medium">{r.jenis ?? "—"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      cell: (r) => <Badge tone={statTone(r.status)} dot>{r.status ?? "—"}</Badge>,
+    },
     { key: "catatan", header: "Catatan", cell: (r) => <span className="text-muted-fg">{r.catatan ?? "—"}</span> },
-    { key: "ukuran", header: "Ukuran", cell: (r) => <span className="text-muted-fg tabular-nums">{r.ukuran ?? "—"}</span> },
-    { key: "tgl", header: "Diunggah", cell: (r) => r.diunggah ? formatTanggal(r.diunggah) : "—" },
+    {
+      key: "berkas",
+      header: "Berkas",
+      cell: (r) =>
+        r.berkas ? (
+          <a href={r.berkas} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline text-xs">
+            Buka
+          </a>
+        ) : (
+          "—"
+        ),
+    },
+    { key: "modified", header: "Diunggah", cell: (r) => r.modified ? formatTanggal(r.modified) : "—" },
   ];
+
   return (
     <SectionCard
       title="Dokumen Pendaftaran"
-      action={<Button size="sm" onClick={() => stubAction(`Unggah Dokumen ${pendaftar.noPendaftaran}`)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Unggah Dokumen</Button>}
+      description={q.isLoading ? "Memuat..." : `${rows.length} berkas`}
+      action={
+        <Button size="sm" onClick={actions.onUnggahDokumen}>
+          <span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Unggah Dokumen
+        </Button>
+      }
       padded={false}
     >
-      <DataTable data={pendaftar.dokumen} columns={cols} rowKey={(r) => r.nama} />
+      {rows.length === 0 ? (
+        <EmptyState title={q.isLoading ? "Memuat..." : "Belum ada dokumen"} description="Unggah berkas pendukung (akta, KK, rapor, dst.)." />
+      ) : (
+        <DataTable data={rows} columns={cols} rowKey={(r) => r.name} />
+      )}
     </SectionCard>
   );
 }
@@ -394,7 +473,7 @@ function TahapanTab({ pendaftar }: { pendaftar: Pendaftar }) {
   );
 }
 
-function AkademikTab({ pendaftar }: { pendaftar: Pendaftar }) {
+function AkademikTab({ pendaftar, actions }: { pendaftar: Pendaftar; actions: PpdbActions }) {
   const cols: Column<NilaiRaporRow>[] = [
     { key: "semester", header: "Semester", cell: (r) => <span className="font-medium">{r.semester}</span> },
     { key: "kelas", header: "Kelas", cell: (r) => r.kelas },
@@ -412,7 +491,7 @@ function AkademikTab({ pendaftar }: { pendaftar: Pendaftar }) {
         title="Rapor SMP"
         description={pendaftar.raporSmp.length === 0 ? "Tidak ada data rapor untuk jenjang ini" : "Riwayat nilai 5 semester terakhir"}
         action={
-          <Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Rapor ${pendaftar.noPendaftaran}`)}>
+          <Button variant="outline" size="sm" onClick={actions.onUnduhRapor}>
             <span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh
           </Button>
         }
@@ -428,30 +507,59 @@ function AkademikTab({ pendaftar }: { pendaftar: Pendaftar }) {
   );
 }
 
-function WawancaraTab({ pendaftar }: { pendaftar: Pendaftar }) {
-  const cols: Column<WawancaraRow>[] = [
-    { key: "tgl", header: "Tanggal", cell: (r) => formatTanggal(r.tanggal) },
-    { key: "jenis", header: "Jenis", cell: (r) => <Badge tone="brand">{r.jenis}</Badge> },
-    { key: "pew", header: "Pewawancara", cell: (r) => <span className="font-medium">{r.pewawancara}</span> },
-    { key: "skor", header: "Skor", align: "right", cell: (r) => <span className="tabular-nums font-semibold">{r.skor}</span> },
+type WawancaraPpdbDoc = {
+  name: string;
+  tanggal_wawancara?: string;
+  pewawancara?: string;
+  status?: string;
+  skor?: number;
+  rekomendasi?: string;
+  catatan?: string;
+};
+
+function WawancaraTab({ pendaftar, actions }: { pendaftar: Pendaftar; actions: PpdbActions }) {
+  // Live data dari doctype Wawancara PPDB.
+  const q = useResourceList<WawancaraPpdbDoc>("Wawancara PPDB", {
+    fields: ["name", "tanggal_wawancara", "pewawancara", "status", "skor", "rekomendasi", "catatan"],
+    filters: [["pendaftaran_ppdb", "=", pendaftar.noPendaftaran]],
+    order_by: "`tanggal_wawancara` desc",
+    limit_page_length: 50,
+  });
+  const rows = q.data ?? [];
+
+  const statTone = (s: string | undefined): "success" | "warning" | "danger" | "brand" => {
+    if (s === "Selesai") return "success";
+    if (s === "Dibatalkan") return "danger";
+    if (s === "Terjadwal") return "warning";
+    return "brand";
+  };
+
+  const cols: Column<WawancaraPpdbDoc>[] = [
+    { key: "tanggal_wawancara", header: "Tanggal", cell: (r) => r.tanggal_wawancara ? formatTanggal(r.tanggal_wawancara) : "—" },
+    { key: "status", header: "Status", cell: (r) => <Badge tone={statTone(r.status)} dot>{r.status ?? "—"}</Badge> },
+    { key: "pewawancara", header: "Pewawancara", cell: (r) => <span className="font-medium">{r.pewawancara ?? "—"}</span> },
+    { key: "skor", header: "Skor", align: "right", cell: (r) => r.skor !== undefined ? <span className="tabular-nums font-semibold">{r.skor}</span> : "—" },
+    { key: "rekomendasi", header: "Rekomendasi", cell: (r) => r.rekomendasi ?? "—" },
     { key: "catatan", header: "Catatan", cell: (r) => <span className="text-muted-fg">{r.catatan ?? "—"}</span> },
   ];
+
   return (
     <SectionCard
       title="Riwayat Wawancara"
-      action={<Button size="sm" onClick={() => stubAction(`Jadwalkan Wawancara ${pendaftar.noPendaftaran}`)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Jadwal Wawancara</Button>}
+      description={q.isLoading ? "Memuat..." : `${rows.length} sesi`}
+      action={<Button size="sm" onClick={actions.onJadwalWawancara}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Jadwal Wawancara</Button>}
       padded={false}
     >
-      {pendaftar.wawancara.length === 0 ? (
-        <EmptyState title="Belum ada wawancara" description="Pendaftar belum mengikuti tahap wawancara." />
+      {rows.length === 0 ? (
+        <EmptyState title={q.isLoading ? "Memuat..." : "Belum ada wawancara"} description="Pendaftar belum mengikuti tahap wawancara." />
       ) : (
-        <DataTable data={pendaftar.wawancara} columns={cols} rowKey={(r) => `${r.tanggal}-${r.jenis}`} />
+        <DataTable data={rows} columns={cols} rowKey={(r) => r.name} />
       )}
     </SectionCard>
   );
 }
 
-function PembayaranTab({ pendaftar }: { pendaftar: Pendaftar }) {
+function PembayaranTab({ pendaftar, actions }: { pendaftar: Pendaftar; actions: PpdbActions }) {
   const cols: Column<PembayaranPpdbRow>[] = [
     { key: "id", header: "ID", cell: (r) => <span className="tabular-nums text-muted-fg">{r.id}</span> },
     { key: "judul", header: "Tagihan", cell: (r) => <span className="font-medium">{r.judul}</span> },
@@ -474,8 +582,8 @@ function PembayaranTab({ pendaftar }: { pendaftar: Pendaftar }) {
         title="Riwayat Pembayaran"
         action={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => stubAction(`Catat Pembayaran ${pendaftar.noPendaftaran}`)}>Catat Pembayaran</Button>
-            <Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Bukti Pembayaran ${pendaftar.noPendaftaran}`)}>
+            <Button variant="outline" size="sm" onClick={actions.onCatatPembayaran}>Catat Pembayaran</Button>
+            <Button variant="outline" size="sm" onClick={actions.onUnduhBuktiBayar}>
               <span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh
             </Button>
           </div>
@@ -686,51 +794,155 @@ function PpdbDetailPage() {
     ),
   }));
 
+  // Modal-state untuk action wiring (Upload Dokumen, Jadwal Wawancara, Edit Wali).
+  const [showUploadDok, setShowUploadDok] = useState(false);
+  const [showJadwalWwc, setShowJadwalWwc] = useState(false);
+  const [showEditWali, setShowEditWali] = useState(false);
+
+  const calonName = calonQ.data?.name;
+
+  const actions: PpdbActions = {
+    onKirimPesan: () => openMailto(pendaftar.email, `PPDB ${pendaftar.noPendaftaran} — ${pendaftar.namaLengkap}`),
+    onKirimWa: () =>
+      openWa(
+        pendaftar.telepon,
+        `Halo ${pendaftar.namaLengkap}, terkait pendaftaran ${pendaftar.noPendaftaran} di SekolahPro.`,
+      ),
+    onCetakKartu: () =>
+      printDocument({
+        title: `Kartu Peserta ${pendaftar.noPendaftaran}`,
+        heading: "KARTU PESERTA PPDB",
+        subheading: `${pendaftar.namaLengkap} · ${pendaftar.jenjangTujuan} · TA ${pendaftar.tahunAjaran}`,
+        rows: [
+          { label: "No. Pendaftaran", value: pendaftar.noPendaftaran },
+          { label: "Nama", value: pendaftar.namaLengkap },
+          { label: "NISN", value: pendaftar.nisn ?? "—" },
+          { label: "Tempat, Tgl Lahir", value: `${pendaftar.tempatLahir}, ${formatTanggal(pendaftar.tanggalLahir)}` },
+          { label: "Asal Sekolah", value: pendaftar.asalSekolah },
+          { label: "Status", value: pendaftar.statusPendaftaran },
+          { label: "Jalur", value: pendaftar.jalur },
+        ],
+      }),
+    onUnduhBerkas: () =>
+      downloadCsv(`biodata-${pendaftar.noPendaftaran}.csv`, [
+        {
+          no_pendaftaran: pendaftar.noPendaftaran,
+          nama: pendaftar.namaLengkap,
+          nisn: pendaftar.nisn,
+          nik: pendaftar.nik,
+          tempat_lahir: pendaftar.tempatLahir,
+          tanggal_lahir: pendaftar.tanggalLahir,
+          jenis_kelamin: pendaftar.jenisKelamin,
+          asal_sekolah: pendaftar.asalSekolah,
+          email: pendaftar.email,
+          telepon: pendaftar.telepon,
+          alamat: pendaftar.alamat,
+          status: pendaftar.statusPendaftaran,
+        },
+      ]),
+    onEditProfil: () => navigate({ to: "/ppdb/calon-siswa" }),
+    onTambahWali: () => {
+      if (!calonName) {
+        window.alert("Data Calon Siswa belum dimuat.");
+        return;
+      }
+      setShowEditWali(true);
+    },
+    onUnggahDokumen: () => setShowUploadDok(true),
+    onCatatPembayaran: () => navigate({ to: "/ppdb/pembayaran" }),
+    onUnduhBuktiBayar: () =>
+      downloadCsv(`pembayaran-${pendaftar.noPendaftaran}.csv`, pendaftar.pembayaran.map((p) => ({
+        id: p.id,
+        judul: p.judul,
+        tanggal: p.tanggal,
+        jumlah: p.jumlah,
+        metode: p.metode ?? "",
+        status: p.status,
+      }))),
+    onJadwalWawancara: () => setShowJadwalWwc(true),
+    onUnduhRapor: () =>
+      downloadCsv(`rapor-${pendaftar.noPendaftaran}.csv`, pendaftar.raporSmp.map((r) => ({
+        semester: r.semester,
+        mapel: r.mapel,
+        nilai: r.nilai,
+      }))),
+  };
+
   const renderTab = () => {
     switch (tab) {
       case "ringkasan": return <RingkasanTab pendaftar={pendaftar} onChangeTab={setTab} />;
       case "profil": return <ProfilTab pendaftar={pendaftar} />;
-      case "wali": return <WaliTab pendaftar={pendaftar} />;
-      case "dokumen": return <DokumenTab pendaftar={pendaftar} />;
+      case "wali": return <WaliTab pendaftar={pendaftar} actions={actions} />;
+      case "dokumen": return <DokumenTab pendaftar={pendaftar} actions={actions} />;
       case "tahapan": return <TahapanTab pendaftar={pendaftar} />;
-      case "akademik": return <AkademikTab pendaftar={pendaftar} />;
-      case "wawancara": return <WawancaraTab pendaftar={pendaftar} />;
-      case "pembayaran": return <PembayaranTab pendaftar={pendaftar} />;
+      case "akademik": return <AkademikTab pendaftar={pendaftar} actions={actions} />;
+      case "wawancara": return <WawancaraTab pendaftar={pendaftar} actions={actions} />;
+      case "pembayaran": return <PembayaranTab pendaftar={pendaftar} actions={actions} />;
       case "aktivitas": return <AktivitasTab pendaftar={pendaftar} />;
     }
   };
 
-  // openOrAlert dipakai oleh aksi unduh berkas, dipertahankan untuk konsistensi.
+  // openOrAlert + stubAction kept for backward compat with legacy stubs (none active).
   void openOrAlert;
+  void stubAction;
 
   return (
-    <DetailPageTemplate
-      header={
-        <div className="space-y-3">
-          <Breadcrumb
-            items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "PPDB", render: ({ className, children }) => <Link to="/ppdb" className={className}>{children}</Link> },
-              { label: pendaftar.namaLengkap },
-            ]}
-          />
-          <PageHeader
-            eyebrow="Detail Pendaftar"
-            title={pendaftar.namaLengkap}
-            description={`${pendaftar.noPendaftaran} · ${pendaftar.jenjangTujuan} · ${pendaftar.statusPendaftaran}`}
-            actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/ppdb" })}>
-                <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
-                Kembali ke daftar
-              </Button>
-            }
-          />
-        </div>
-      }
-      hero={<Hero pendaftar={pendaftar} onEdit={() => stubAction(`Edit Pendaftar ${pendaftar.noPendaftaran}`)} />}
-      tabs={<Tabs items={tabItems} />}
-      primary={renderTab()}
-    />
+    <>
+      <DetailPageTemplate
+        header={
+          <div className="space-y-3">
+            <Breadcrumb
+              items={[
+                { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
+                { label: "PPDB", render: ({ className, children }) => <Link to="/ppdb" className={className}>{children}</Link> },
+                { label: pendaftar.namaLengkap },
+              ]}
+            />
+            <PageHeader
+              eyebrow="Detail Pendaftar"
+              title={pendaftar.namaLengkap}
+              description={`${pendaftar.noPendaftaran} · ${pendaftar.jenjangTujuan} · ${pendaftar.statusPendaftaran}`}
+              actions={
+                <Button variant="outline" onClick={() => navigate({ to: "/ppdb" })}>
+                  <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
+                  Kembali ke daftar
+                </Button>
+              }
+            />
+          </div>
+        }
+        hero={<Hero pendaftar={pendaftar} actions={actions} />}
+        tabs={<Tabs items={tabItems} />}
+        primary={renderTab()}
+      />
+
+      <UploadDokumenModal
+        open={showUploadDok}
+        onClose={() => setShowUploadDok(false)}
+        pendaftaranName={pendaftar.noPendaftaran}
+        onSaved={() => pembayaranQ.refetch()}
+      />
+      <JadwalWawancaraModal
+        open={showJadwalWwc}
+        onClose={() => setShowJadwalWwc(false)}
+        pendaftaranName={pendaftar.noPendaftaran}
+      />
+      {calonName && (
+        <EditWaliModal
+          open={showEditWali}
+          onClose={() => setShowEditWali(false)}
+          calonName={calonName}
+          initial={{
+            nama_wali: calonQ.data?.nama_wali,
+            hubungan_wali: calonQ.data?.hubungan_wali,
+            no_hp_wali: calonQ.data?.no_hp_wali,
+            pekerjaan_wali: calonQ.data?.pekerjaan_wali,
+            penghasilan_wali: calonQ.data?.penghasilan_wali,
+          }}
+          onSaved={() => calonQ.refetch()}
+        />
+      )}
+    </>
   );
 }
 

@@ -70,7 +70,7 @@ const CREATE_FIELDS: PerpFieldDef[] = [
     label: "Kategori",
     type: "link",
     linkDoctype: "Kategori Buku",
-    linkLabelField: "nama_kategori",
+    linkLabelField: "nama",
   },
   { name: "deskripsi", label: "Deskripsi", type: "textarea" },
 ];

@@ -3,6 +3,7 @@ import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/ppdb", label: "Dashboard", exact: true },
+  { to: "/ppdb/buat", label: "Buat PPDB" },
   { to: "/ppdb/daftar", label: "Pendaftaran" },
   { to: "/ppdb/calon-siswa", label: "Calon Siswa" },
   { to: "/ppdb/gelombang", label: "Gelombang" },
