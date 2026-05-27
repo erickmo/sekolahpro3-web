@@ -11,15 +11,18 @@ export async function apiCall<T>(
   endpoint: string,
   body?: unknown,
 ): Promise<T> {
-  const res = await fetch(`${BASE_URL}/api/method/${endpoint}`, {
+  const init: RequestInit = {
     method,
     headers: {
       "Content-Type": "application/json",
       "X-Frappe-CSRF-Token": "guest",
     },
     credentials: "omit",
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  };
+  if (body !== undefined) {
+    init.body = JSON.stringify(body);
+  }
+  const res = await fetch(`${BASE_URL}/api/method/${endpoint}`, init);
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     const msg =
