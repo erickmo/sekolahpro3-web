@@ -119,7 +119,7 @@ export function InfraDetailScaffold(props: InfraDetailScaffoldProps) {
       side={
         secondaryInfo && secondaryInfo.length ? (
           <SectionCard title="Detail Tambahan">
-            <InfoGrid cols={1}>
+            <InfoGrid cols={2}>
               {secondaryInfo.map((it) => (
                 <InfoField key={it.label} label={it.label} value={it.value} />
               ))}

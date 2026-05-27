@@ -22,6 +22,7 @@ import {
   type SortState,
 } from "@sekolahpro/ui";
 import { STAFF_LIST, FILTER_OPTIONS, type Staff, type StatusStaff } from "../data/staff";
+import { StaffFormModal } from "../components/staff/StaffFormModal";
 
 const TONE_BY_STATUS: Record<StatusStaff, "success" | "warning" | "neutral" | "danger"> = {
   Aktif: "success",
@@ -55,6 +56,7 @@ function StaffListPage() {
   const [sort, setSort] = useState<SortState>({ key: "nama", dir: "asc" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [showCreate, setShowCreate] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -210,6 +212,7 @@ function StaffListPage() {
 
   return (
     <div className="space-y-6">
+      <StaffFormModal open={showCreate} onClose={() => setShowCreate(false)} />
       <PageHeader
         eyebrow="Direktori"
         title="Staff"
@@ -224,7 +227,7 @@ function StaffListPage() {
               <span className="h-4 w-4 mr-1.5"><IconFile /></span>
               Impor
             </Button>
-            <Button>
+            <Button onClick={() => setShowCreate(true)}>
               <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
               Tambah Staff
             </Button>

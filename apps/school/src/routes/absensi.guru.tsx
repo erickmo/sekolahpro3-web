@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { AbsensiGuruFormModal } from "../components/absensi/AbsensiGuruFormModal";
 
 type Row = { name: string; tanggal: string; guru?: string; jam_masuk?: string; jam_pulang?: string; status?: string };
 
@@ -15,19 +17,23 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function AbsensiGuruPage() {
+  const [showCreate, setShowCreate] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Absensi"
-      title="Absensi Guru"
-      doctype="Absensi Guru"
-      fields={["name", "tanggal"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "tanggal", dir: "desc" }}
-      searchFields={["name"]}
-      addLabel="Input Absensi"
-      onAdd={() => alert("Form absensi guru (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Absensi"
+        title="Absensi Guru"
+        doctype="Absensi Guru"
+        fields={["name", "tanggal"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "tanggal", dir: "desc" }}
+        searchFields={["name"]}
+        addLabel="Input Absensi"
+        onAdd={() => setShowCreate(true)}
+      />
+      <AbsensiGuruFormModal open={showCreate} onClose={() => setShowCreate(false)} />
+    </>
   );
 }
 

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { AbsensiHarianFormModal } from "../components/absensi/AbsensiHarianFormModal";
 
 type Row = { name: string; tanggal: string; kelas?: string; jumlah_hadir?: number; jumlah_izin?: number; jumlah_sakit?: number; jumlah_alpa?: number; status?: string };
 
@@ -18,19 +20,23 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function HarianPage() {
+  const [showCreate, setShowCreate] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Absensi"
-      title="Absensi Harian"
-      doctype="Absensi Harian"
-      fields={["name", "tanggal"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "tanggal", dir: "desc" }}
-      searchFields={["name"]}
-      addLabel="Input Absensi"
-      onAdd={() => alert("Form absensi harian (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Absensi"
+        title="Absensi Harian"
+        doctype="Absensi Harian"
+        fields={["name", "tanggal"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "tanggal", dir: "desc" }}
+        searchFields={["name"]}
+        addLabel="Input Absensi"
+        onAdd={() => setShowCreate(true)}
+      />
+      <AbsensiHarianFormModal open={showCreate} onClose={() => setShowCreate(false)} />
+    </>
   );
 }
 

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Avatar,
@@ -5,6 +6,8 @@ import {
   type Column,
 } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { GURU_DOCTYPE, GURU_FIELDS } from "../components/guru-extra/guru-fields";
 
 type Row = {
   name: string;
@@ -58,21 +61,36 @@ const COLUMNS: Column<Row>[] = [
 
 function GuruListPage() {
   const navigate = useNavigate();
+  const [openCreate, setOpenCreate] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Direktori"
-      title="Guru"
-      description="Kelola data guru, jadwal mengajar, dan kepegawaian."
-      doctype="Guru"
-      fields={["name", "nama_lengkap", "nip", "nuptk", "jabatan_fungsional", "status_kepegawaian", "is_aktif"]}
-      rowKey={(g) => g.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "nama_lengkap", dir: "asc" }}
-      searchFields={["name", "nama_lengkap", "nip", "nuptk"]}
-      addLabel="Tambah Guru"
-      onAdd={() => alert("Form guru (P2)")}
-      onRowClick={(g) => navigate({ to: "/guru/$nip", params: { nip: g.name } })}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Direktori"
+        title="Guru"
+        description="Kelola data guru, jadwal mengajar, dan kepegawaian."
+        doctype="Guru"
+        fields={["name", "nama_lengkap", "nip", "nuptk", "jabatan_fungsional", "status_kepegawaian", "is_aktif"]}
+        rowKey={(g) => g.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "nama_lengkap", dir: "asc" }}
+        searchFields={["name", "nama_lengkap", "nip", "nuptk"]}
+        addLabel="Tambah Guru"
+        onAdd={() => setOpenCreate(true)}
+        onRowClick={(g) => navigate({ to: "/guru/$nip", params: { nip: g.name } })}
+      />
+      <ResourceCreateModal
+        open={openCreate}
+        onClose={() => setOpenCreate(false)}
+        doctype={GURU_DOCTYPE}
+        title="Tambah Guru"
+        description="Daftarkan guru baru dan kaitkan dengan akun pengguna."
+        fields={GURU_FIELDS}
+        onCreated={(doc) => {
+          const nm = (doc as { name?: string }).name;
+          if (nm) navigate({ to: "/guru/$nip", params: { nip: nm } });
+        }}
+      />
+    </>
   );
 }
 

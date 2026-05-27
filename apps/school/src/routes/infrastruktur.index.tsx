@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { GedungFormModal } from "../components/infrastruktur/GedungFormModal";
 import {
   AttentionList,
   type AttentionItem,
@@ -43,27 +44,40 @@ const AKSI_CEPAT: { to: string; label: string; desc: string; icon: React.ReactNo
 ];
 
 function InfraDashboardPage() {
+  const [showCreate, setShowCreate] = useState(false);
   const ruanganQ = useResourceList<Ruangan>("Ruangan", {
     fields: RUANGAN_FIELDS,
     limit_page_length: PAGE_LIMIT,
   });
 
+  const fasilitasRusakQ = useResourceList<{ name: string }>("Fasilitas Ruangan", {
+    fields: ["name"],
+    filters: [
+      ["parenttype", "=", "Ruangan"],
+      ["kondisi", "=", "Rusak"],
+    ],
+    limit_page_length: 0,
+  });
+
+  const utilitasAnomaliQ = useResourceList<{ name: string }>("Utilitas Gedung", {
+    fields: ["name"],
+    filters: [["status", "=", "Nonaktif"]],
+    limit_page_length: 0,
+  });
+
   const ruangan = ruanganQ.data ?? [];
+  const fasilitasRusakCount = fasilitasRusakQ.data?.length ?? 0;
+  const utilitasAnomaliCount = utilitasAnomaliQ.data?.length ?? 0;
 
   const stats = useMemo(() => {
     const totalRuangan = ruangan.length;
-    const ruanganAktif = ruangan.filter((r) => r.status === "Aktif").length;
-    const ruanganPerbaikan = ruangan.filter((r) => r.status === "Perbaikan").length;
+    // Ruangan.status: Tersedia / Dipakai / Maintenance.
+    const ruanganAktif = ruangan.filter((r) => r.status === "Tersedia" || r.status === "Dipakai").length;
+    const ruanganDipakai = ruangan.filter((r) => r.status === "Dipakai").length;
+    const ruanganPerbaikan = ruangan.filter((r) => r.status === "Maintenance").length;
     const totalKapasitas = ruangan.reduce((s, r) => s + (r.kapasitas ?? 0), 0);
-    // Stub: tidak ada doctype Booking Ruangan. Asumsi utilisasi ~40% dari ruangan aktif.
-    // TODO(api): ganti dengan agregasi `Booking Ruangan` filter tanggal == TODAY.
-    const BOOKING_UTILIZATION_RATIO = 0.4;
-    const bookedHariIni = Math.round(ruanganAktif * BOOKING_UTILIZATION_RATIO);
+    const bookedHariIni = ruanganDipakai;
     const utilisasiPct = ruanganAktif > 0 ? Math.round((bookedHariIni / ruanganAktif) * 100) : 0;
-    // TODO(api): Fasilitas Rusak — child table aggregation. Stub: pakai ruangan perbaikan.
-    const fasilitasRusak = ruanganPerbaikan;
-    // TODO(api): Utilitas Anomali — perlu doctype tersendiri. Stub 0.
-    const utilitasAnomali = 0;
     return {
       totalRuangan,
       ruanganAktif,
@@ -71,10 +85,10 @@ function InfraDashboardPage() {
       totalKapasitas,
       bookedHariIni,
       utilisasiPct,
-      fasilitasRusak,
-      utilitasAnomali,
+      fasilitasRusak: fasilitasRusakCount,
+      utilitasAnomali: utilitasAnomaliCount,
     };
-  }, [ruangan]);
+  }, [ruangan, fasilitasRusakCount, utilitasAnomaliCount]);
 
   const FASILITAS_CRITICAL_THRESHOLD = 5;
 
@@ -122,7 +136,7 @@ function InfraDashboardPage() {
               <span className="h-4 w-4 mr-1.5"><IconHome /></span>
               Lihat Daftar Gedung
             </Link>
-            <Button>
+            <Button onClick={() => setShowCreate(true)}>
               <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
               Tambah Gedung
             </Button>
@@ -257,8 +271,7 @@ function InfraDashboardPage() {
         )}
       </SectionCard>
 
-      {/* TODO(P2): Fasilitas rusak & Utilitas anomali — perlu doctype tersendiri
-          ("Fasilitas Ruangan" adalah child table, butuh agregasi via API kustom). */}
+      <GedungFormModal open={showCreate} onClose={() => setShowCreate(false)} />
     </div>
   );
 }
