@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { SkJabatanFormModal } from "../components/staff/SkJabatanFormModal";
 
 type Row = { name: string; guru: string; jabatan?: string; nomor_sk?: string; tanggal_sk?: string; status?: string };
 
@@ -15,19 +17,23 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function StaffSkJabatanPage() {
+  const [showCreate, setShowCreate] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Staff"
-      title="SK Jabatan Staff"
-      doctype="SK Jabatan"
-      fields={["name", "guru", "tanggal_sk", "status"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "tanggal_sk", dir: "desc" }}
-      searchFields={["name", "guru"]}
-      addLabel="Terbitkan SK"
-      onAdd={() => alert("Form SK Jabatan (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Staff"
+        title="SK Jabatan Staff"
+        doctype="SK Jabatan"
+        fields={["name", "guru", "tanggal_sk", "status"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "tanggal_sk", dir: "desc" }}
+        searchFields={["name", "guru"]}
+        addLabel="Terbitkan SK"
+        onAdd={() => setShowCreate(true)}
+      />
+      <SkJabatanFormModal open={showCreate} onClose={() => setShowCreate(false)} />
+    </>
   );
 }
 

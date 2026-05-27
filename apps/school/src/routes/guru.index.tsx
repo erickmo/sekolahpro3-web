@@ -1,5 +1,7 @@
-import { useMemo, type ReactNode } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState, type ReactNode } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { GURU_DOCTYPE, GURU_FIELDS } from "../components/guru-extra/guru-fields";
 import {
   Avatar,
   AttentionList,
@@ -44,6 +46,8 @@ const AKTIVITAS_LIMIT = 5;
 const PERLU_PERHATIAN_LIMIT = 5;
 
 function GuruDashboardPage() {
+  const navigate = useNavigate();
+  const [openCreate, setOpenCreate] = useState(false);
   const q = useResourceList<GuruRow>("Guru", {
     fields: ["name", "is_aktif", "status_kepegawaian", "nama_lengkap", "jabatan_fungsional"],
     limit_page_length: 0,
@@ -115,6 +119,21 @@ function GuruDashboardPage() {
 
   const isZeroState = !q.isLoading && !q.isError && list.length === 0;
 
+  const createModal = (
+    <ResourceCreateModal
+      open={openCreate}
+      onClose={() => setOpenCreate(false)}
+      doctype={GURU_DOCTYPE}
+      title="Tambah Guru"
+      description="Daftarkan guru baru dan kaitkan dengan akun pengguna."
+      fields={GURU_FIELDS}
+      onCreated={(doc) => {
+        const nm = (doc as { name?: string }).name;
+        if (nm) navigate({ to: "/guru/$nip", params: { nip: nm } });
+      }}
+    />
+  );
+
   if (isZeroState) {
     return (
       <div className="space-y-6">
@@ -133,13 +152,20 @@ function GuruDashboardPage() {
           title="Belum ada data guru"
           description="Tambahkan guru pertama dan tugaskan ke mapel + kelas."
           steps={["Tambah guru", "Atur SK & jabatan", "Tugaskan mapel pengampu"]}
-          primaryAction={{ label: "Tambah Guru", href: "/guru/daftar" }}
-          renderLink={(href, children, className) => (
-            <Link to={href} className={className}>
-              {children}
-            </Link>
-          )}
+          primaryAction={{ label: "Tambah Guru", href: "#create-guru" }}
+          renderLink={(href, children, className) =>
+            href === "#create-guru" ? (
+              <button type="button" className={className} onClick={() => setOpenCreate(true)}>
+                {children}
+              </button>
+            ) : (
+              <Link to={href} className={className}>
+                {children}
+              </Link>
+            )
+          }
         />
+        {createModal}
       </div>
     );
   }
@@ -164,7 +190,7 @@ function GuruDashboardPage() {
               <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
               Lihat Daftar
             </Link>
-            <Button>
+            <Button onClick={() => setOpenCreate(true)}>
               <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
               Tambah Guru
             </Button>
@@ -310,6 +336,7 @@ function GuruDashboardPage() {
           )}
         </SectionCard>
       </div>
+      {createModal}
     </div>
   );
 }
