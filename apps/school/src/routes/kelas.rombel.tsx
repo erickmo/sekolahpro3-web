@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { RombelFormModal } from "../components/kelas/RombelFormModal";
 
 type Row = { name: string; nama_rombel: string; tingkat?: string; wali_kelas?: string; jumlah_siswa?: number; tahun_ajaran?: string; status?: string };
 
@@ -16,19 +18,23 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function RombelPage() {
+  const [showCreate, setShowCreate] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Kelas"
-      title="Rombongan Belajar"
-      doctype="Rombongan Belajar"
-      fields={["name", "nama_rombel", "tingkat", "wali_kelas", "jumlah_siswa", "tahun_ajaran", "status"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "nama_rombel", dir: "asc" }}
-      searchFields={["name", "nama_rombel"]}
-      addLabel="Buat Rombel"
-      onAdd={() => alert("Form rombel (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Kelas"
+        title="Rombongan Belajar"
+        doctype="Rombongan Belajar"
+        fields={["name", "nama_rombel", "tingkat", "wali_kelas", "jumlah_siswa", "tahun_ajaran", "status"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "nama_rombel", dir: "asc" }}
+        searchFields={["name", "nama_rombel"]}
+        addLabel="Buat Rombel"
+        onAdd={() => setShowCreate(true)}
+      />
+      <RombelFormModal open={showCreate} onClose={() => setShowCreate(false)} />
+    </>
   );
 }
 

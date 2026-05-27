@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { JADWAL_PELAJARAN_FIELDS } from "../data/create-schemas";
 
 // TODO(/jadwal/daftar): Jadwal Pelajaran header doctype only has
 // {name, rombel, semester, tahun_ajaran, kurikulum, is_aktif}.
@@ -32,19 +35,30 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function JadwalDaftarPage() {
+  const [open, setOpen] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Akademik"
-      title="Jadwal Pelajaran"
-      doctype="Jadwal Pelajaran"
-      fields={["name", "rombel", "tahun_ajaran", "semester", "kurikulum", "is_aktif"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "name", dir: "asc" }}
-      searchFields={["name", "rombel"]}
-      addLabel="Tambah Jadwal"
-      onAdd={() => alert("Form jadwal pelajaran (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Akademik"
+        title="Jadwal Pelajaran"
+        doctype="Jadwal Pelajaran"
+        fields={["name", "rombel", "tahun_ajaran", "semester", "kurikulum", "is_aktif"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "name", dir: "asc" }}
+        searchFields={["name", "rombel"]}
+        addLabel="Tambah Jadwal"
+        onAdd={() => setOpen(true)}
+      />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Jadwal Pelajaran"
+        title="Tambah Jadwal Pelajaran"
+        description="Buat header jadwal. Slot per-jam diisi via halaman detail/desk."
+        fields={JADWAL_PELAJARAN_FIELDS}
+      />
+    </>
   );
 }
 

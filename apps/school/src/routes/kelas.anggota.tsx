@@ -1,35 +1,40 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { AnggotaRombelFormModal } from "../components/kelas/AnggotaRombelFormModal";
 
-// TODO(/kelas/anggota): Anggota Rombel is a child table doctype.
-// Actual fields: {siswa, no_urut, tanggal_masuk_rombel, status}.
-// `rombongan_belajar` + `nomor_absen` + `tahun_ajaran` are best-guesses for
-// a future flattened/view endpoint; may need parent lookup via `parent`.
-type Row = { name: string; rombongan_belajar?: string; siswa?: string; nomor_absen?: number; tahun_ajaran?: string };
+type Row = { name: string; parent?: string; siswa?: string; no_urut?: number; tanggal_masuk_rombel?: string; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "rombongan_belajar", header: "Rombel", sortable: true, cell: (r) => r.rombongan_belajar ?? "—" },
+  { key: "parent", header: "Rombel", sortable: true, cell: (r) => r.parent ?? "—" },
   { key: "siswa", header: "Siswa", cell: (r) => r.siswa ?? "—" },
-  { key: "nomor_absen", header: "No. Absen", align: "right", cell: (r) => r.nomor_absen ?? "—" },
-  { key: "tahun_ajaran", header: "TA", cell: (r) => r.tahun_ajaran ?? "—" },
+  { key: "no_urut", header: "No. Urut", align: "right", cell: (r) => r.no_urut ?? "—" },
+  { key: "tanggal_masuk_rombel", header: "Masuk", cell: (r) => r.tanggal_masuk_rombel ?? "—" },
+  { key: "status", header: "Status",
+    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : r.status === "Keluar" ? "neutral" : "neutral"} dot>{r.status ?? "—"}</Badge> },
 ];
 
 function AnggotaRombelPage() {
+  const [showCreate, setShowCreate] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Kelas"
-      title="Anggota Rombel"
-      doctype="Anggota Rombel"
-      fields={["name", "siswa"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "name", dir: "asc" }}
-      searchFields={["name", "siswa"]}
-      addLabel="Tambah Anggota"
-      onAdd={() => alert("Form anggota rombel (P2)")}
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Kelas"
+        title="Anggota Rombel"
+        doctype="Anggota Rombel"
+        fields={["name", "parent", "siswa", "no_urut", "tanggal_masuk_rombel", "status"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "parent", dir: "asc" }}
+        searchFields={["name", "siswa", "parent"]}
+        baseFilters={[["parenttype", "=", "Rombongan Belajar"]]}
+        addLabel="Tambah Anggota"
+        onAdd={() => setShowCreate(true)}
+      />
+      <AnggotaRombelFormModal open={showCreate} onClose={() => setShowCreate(false)} />
+    </>
   );
 }
 
