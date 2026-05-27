@@ -437,21 +437,47 @@ function DokumenTab({ pendaftar, actions }: { pendaftar: Pendaftar; actions: Ppd
   );
 }
 
+type TahapanLogDoc = {
+  name: string;
+  tahap?: string;
+  status?: "Menunggu" | "Berjalan" | "Selesai" | "Dibatalkan";
+  tanggal?: string;
+  petugas?: string;
+  catatan?: string;
+};
+
 function TahapanTab({ pendaftar }: { pendaftar: Pendaftar }) {
+  // Live data dari Tahapan PPDB Log; fallback ke mock saat doctype kosong.
+  const q = useResourceList<TahapanLogDoc>("Tahapan PPDB Log", {
+    fields: ["name", "tahap", "status", "tanggal", "petugas", "catatan"],
+    filters: [["pendaftaran_ppdb", "=", pendaftar.noPendaftaran]],
+    order_by: "`tanggal` asc",
+    limit_page_length: 100,
+  });
+  const live = q.data ?? [];
+  const rows: TahapanRow[] = live.length > 0
+    ? live.map((r) => ({
+        tahap: r.tahap ?? "—",
+        status: (r.status === "Selesai" || r.status === "Berjalan" ? r.status : "Belum") as TahapanRow["status"],
+        tanggal: r.tanggal ?? "",
+        petugas: r.petugas,
+        catatan: r.catatan,
+      }))
+    : pendaftar.tahapan;
   return (
     <SectionCard
       title="Linimasa Tahapan PPDB"
-      description="Status dan catatan setiap tahap"
+      description={q.isLoading ? "Memuat..." : "Status dan catatan setiap tahap"}
       padded={false}
     >
       <ol className="relative">
-        {pendaftar.tahapan.map((t: TahapanRow, i) => (
+        {rows.map((t: TahapanRow, i) => (
           <li key={i} className="flex gap-4 px-5 py-4 border-b border-border last:border-b-0">
             <div className="flex flex-col items-center">
               <div className={`flex h-9 w-9 items-center justify-center rounded-full ${t.status === "Selesai" ? "bg-emerald-500/10 text-emerald-600" : t.status === "Berjalan" ? "bg-brand/10 text-brand" : "bg-muted text-muted-fg"}`}>
                 <span className="h-4 w-4">{t.status === "Selesai" ? <IconCheck /> : <IconClock />}</span>
               </div>
-              {i < pendaftar.tahapan.length - 1 ? (
+              {i < rows.length - 1 ? (
                 <div className="mt-1 flex-1 w-px bg-border" />
               ) : null}
             </div>
@@ -473,7 +499,46 @@ function TahapanTab({ pendaftar }: { pendaftar: Pendaftar }) {
   );
 }
 
-function AkademikTab({ pendaftar, actions }: { pendaftar: Pendaftar; actions: PpdbActions }) {
+type RaporPpdbDoc = {
+  name: string;
+  calon_siswa?: string;
+  nilai_rata_rata?: number;
+  nilai?: Array<{ semester?: string; kelas?: string; mapel?: string; nilai?: number }>;
+};
+
+type HasilTesDoc = {
+  name: string;
+  jenis_tes?: string;
+  skor?: number;
+  tanggal_tes?: string;
+};
+
+function AkademikTab({ pendaftar, actions, calonSiswaName }: { pendaftar: Pendaftar; actions: PpdbActions; calonSiswaName?: string }) {
+  // Live: Rapor PPDB by calon_siswa + Hasil Tes Akademik PPDB by pendaftaran.
+  const raporQ = useResourceList<RaporPpdbDoc>("Rapor PPDB", {
+    fields: ["name", "calon_siswa", "nilai_rata_rata"],
+    filters: calonSiswaName ? [["calon_siswa", "=", calonSiswaName]] : [["name", "=", "__none__"]],
+    limit_page_length: 1,
+  });
+  const tesQ = useResourceList<HasilTesDoc>("Hasil Tes Akademik PPDB", {
+    fields: ["name", "jenis_tes", "skor", "tanggal_tes"],
+    filters: [["pendaftaran_ppdb", "=", pendaftar.noPendaftaran]],
+    order_by: "`tanggal_tes` desc",
+    limit_page_length: 1,
+  });
+  const raporDoc = raporQ.data?.[0];
+  const tesDoc = tesQ.data?.[0];
+  const liveRapor: NilaiRaporRow[] = raporDoc?.nilai?.map((r) => ({
+    semester: r.semester ?? "—",
+    kelas: r.kelas ?? "—",
+    mapel: r.mapel ?? "—",
+    nilai: r.nilai ?? 0,
+  })) ?? [];
+  // Fallback ke mock saat live kosong (data belum diisi panitia).
+  const rapor: NilaiRaporRow[] = liveRapor.length > 0 ? liveRapor : pendaftar.raporSmp;
+  const rataRata = raporDoc?.nilai_rata_rata ?? pendaftar.nilaiRataRata;
+  const skorTes = tesDoc?.skor ?? pendaftar.skorTes;
+
   const cols: Column<NilaiRaporRow>[] = [
     { key: "semester", header: "Semester", cell: (r) => <span className="font-medium">{r.semester}</span> },
     { key: "kelas", header: "Kelas", cell: (r) => r.kelas },
@@ -483,13 +548,13 @@ function AkademikTab({ pendaftar, actions }: { pendaftar: Pendaftar; actions: Pp
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Nilai Rata-rata SMP" value={pendaftar.nilaiRataRata?.toFixed(1) ?? "—"} accent="brand" icon={<IconChart />} />
-        <StatCard label="Skor Tes Akademik" value={pendaftar.skorTes ?? "—"} hint="skala 0-100" accent="violet" icon={<IconGrad />} />
-        <StatCard label="Jumlah Mata Pelajaran" value={pendaftar.raporSmp.length} accent="emerald" icon={<IconBook />} />
+        <StatCard label="Nilai Rata-rata SMP" value={rataRata?.toFixed(1) ?? "—"} accent="brand" icon={<IconChart />} />
+        <StatCard label="Skor Tes Akademik" value={skorTes ?? "—"} hint="skala 0-100" accent="violet" icon={<IconGrad />} />
+        <StatCard label="Jumlah Mata Pelajaran" value={rapor.length} accent="emerald" icon={<IconBook />} />
       </div>
       <SectionCard
         title="Rapor SMP"
-        description={pendaftar.raporSmp.length === 0 ? "Tidak ada data rapor untuk jenjang ini" : "Riwayat nilai 5 semester terakhir"}
+        description={rapor.length === 0 ? "Tidak ada data rapor untuk jenjang ini" : "Riwayat nilai 5 semester terakhir"}
         action={
           <Button variant="outline" size="sm" onClick={actions.onUnduhRapor}>
             <span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh
@@ -497,10 +562,10 @@ function AkademikTab({ pendaftar, actions }: { pendaftar: Pendaftar; actions: Pp
         }
         padded={false}
       >
-        {pendaftar.raporSmp.length === 0 ? (
+        {rapor.length === 0 ? (
           <EmptyState title="Belum ada data rapor" description="Data rapor tersedia untuk pendaftar jenjang SMA." />
         ) : (
-          <DataTable data={pendaftar.raporSmp} columns={cols} rowKey={(r) => `${r.semester}-${r.mapel}`} />
+          <DataTable data={rapor} columns={cols} rowKey={(r) => `${r.semester}-${r.mapel}`} />
         )}
       </SectionCard>
     </div>
@@ -665,6 +730,13 @@ type CalonSiswaDoc = {
   nisn?: string;
   asal_sekolah?: string;
   alamat?: string;
+  rt?: string;
+  rw?: string;
+  desa?: string;
+  kecamatan?: string;
+  kabupaten?: string;
+  provinsi?: string;
+  kode_pos?: string;
   no_hp?: string;
   email?: string;
   foto?: string;
@@ -751,6 +823,13 @@ function PpdbDetailPage() {
           kewarganegaraan: (c.kewarganegaraan as typeof base.kewarganegaraan) ?? base.kewarganegaraan,
           asalSekolah: c.asal_sekolah ?? base.asalSekolah,
           alamat: c.alamat ?? base.alamat,
+          rt: c.rt ?? base.rt,
+          rw: c.rw ?? base.rw,
+          desa: c.desa ?? base.desa,
+          kecamatan: c.kecamatan ?? base.kecamatan,
+          kabupaten: c.kabupaten ?? base.kabupaten,
+          provinsi: c.provinsi ?? base.provinsi,
+          kodePos: c.kode_pos ?? base.kodePos,
           telepon: c.no_hp ?? base.telepon,
           email: c.email ?? base.email,
           fotoUrl: c.foto ?? base.fotoUrl,
@@ -875,7 +954,7 @@ function PpdbDetailPage() {
       case "wali": return <WaliTab pendaftar={pendaftar} actions={actions} />;
       case "dokumen": return <DokumenTab pendaftar={pendaftar} actions={actions} />;
       case "tahapan": return <TahapanTab pendaftar={pendaftar} />;
-      case "akademik": return <AkademikTab pendaftar={pendaftar} actions={actions} />;
+      case "akademik": return <AkademikTab pendaftar={pendaftar} actions={actions} calonSiswaName={calonName} />;
       case "wawancara": return <WawancaraTab pendaftar={pendaftar} actions={actions} />;
       case "pembayaran": return <PembayaranTab pendaftar={pendaftar} actions={actions} />;
       case "aktivitas": return <AktivitasTab pendaftar={pendaftar} />;
