@@ -23,6 +23,7 @@ import {
   useResourceCreate,
   useResourceUpdate,
 } from "@sekolahpro/api-client";
+import { PesanComposeModal } from "../components/pesan/PesanComposeModal";
 
 // Wired to backend DocTypes:
 //  - inbox: "Contact Inbox SekolahPro"
@@ -72,6 +73,7 @@ function PesanPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("Semua");
   const [draft, setDraft] = useState("");
+  const [showCompose, setShowCompose] = useState(false);
 
   const qc = useQueryClient();
 
@@ -159,7 +161,7 @@ function PesanPage() {
               <span className="h-4 w-4 mr-1.5"><IconCheck /></span>
               Tandai Semua Selesai
             </Button>
-            <Button onClick={() => alert("Compose pesan baru (P2)")}>
+            <Button onClick={() => setShowCompose(true)}>
               <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
               Pesan Baru
             </Button>
@@ -275,6 +277,14 @@ function PesanPage() {
           </div>
         </div>
       </SectionCard>
+
+      <PesanComposeModal
+        open={showCompose}
+        onClose={() => setShowCompose(false)}
+        onCreated={() => {
+          qc.invalidateQueries({ queryKey: ["resource:list", INBOX_DOCTYPE] });
+        }}
+      />
     </div>
   );
 }
