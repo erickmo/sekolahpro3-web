@@ -37,7 +37,7 @@ export function Step1Jalur() {
 
 export function Field({
   label, error, children,
-}: { label: string; error?: string; children: React.ReactNode }) {
+}: { label: string; error?: string | undefined; children: React.ReactNode }) {
   return (
     <label className="block">
       <span className="text-sm font-medium">{label}</span>

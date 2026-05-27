@@ -7,6 +7,8 @@ import { BeritaDetail } from "./pages/BeritaDetail";
 import { Partner } from "./pages/Partner";
 import { Kontak } from "./pages/Kontak";
 import { Login } from "./pages/Login";
+import { Ppdb } from "./pages/Ppdb";
+import { PpdbSukses } from "./pages/PpdbSukses";
 
 export function App() {
   return (
@@ -19,6 +21,8 @@ export function App() {
         <Route path="/partner" element={<Partner />} />
         <Route path="/kontak" element={<Kontak />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/ppdb" element={<Ppdb />} />
+        <Route path="/ppdb/sukses" element={<PpdbSukses />} />
       </Route>
     </Routes>
   );
