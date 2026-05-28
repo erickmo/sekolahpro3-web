@@ -1,6 +1,10 @@
 import { useMutation, useQuery, type UseQueryOptions } from "@tanstack/react-query";
 
-type Config = { baseUrl: string; csrfToken?: string };
+type Config = {
+  baseUrl: string;
+  csrfToken?: string;
+  getActiveSekolah?: () => string | null | undefined;
+};
 
 let cfg: Config = { baseUrl: "" };
 
@@ -13,6 +17,76 @@ export class FrappeResourceError extends Error {
     super(msg);
     this.name = "FrappeResourceError";
   }
+}
+
+// Thrown when a fetched doc does not belong to the active sekolah. Routes
+// catch this and render the 404 page so cross-tenant deep links never leak
+// data across schools.
+export class TenantMismatchError extends Error {
+  constructor(public doctype: string, public name: string) {
+    super(`Doc ${doctype}/${name} is not in the active sekolah`);
+    this.name = "TenantMismatchError";
+  }
+}
+
+// Doctypes that have NO `sekolah` link field — global/master data shared
+// across all schools. Auto-scope injection is skipped for these.
+const TENANT_BLOCKLIST = new Set<string>([
+  "Tahun Ajaran",
+  "Semester",
+  "Unit Jenjang",
+  "User",
+  "Role",
+  "DocType",
+  "Modul",
+  "Feature Flag",
+  "Organisasi",
+  "Sekolah",
+  "File",
+  "Communication",
+  // Vernon Accounting doctypes — tenanted by `company`, not `sekolah`.
+  // Until Sekolah↔Company mapping is wired, callers pass `company`
+  // filters explicitly; auto-injection of `sekolah` would break queries.
+  "Account",
+  "Account Party Type",
+  "Journal Entry",
+  "Journal Entry Account",
+  "Payment Entry",
+  "Payment Entry Reference",
+  "GL Entry",
+  "Opening Balance Entry",
+  "Opening Balance Entry Account",
+  "Period Closing Voucher",
+  "Budget",
+  "Budget Account",
+  "Budget Amendment",
+  "Budget Amendment Detail",
+  "Cost Center",
+  "Accounting Dimension",
+  "SPT Masa PPN",
+  "e-Faktur Export",
+  "Withholding Tax Entry",
+  "PPh 21 TER Rate",
+  "PPh 4a2 Rate",
+  "Tax Period",
+  "Tax Template",
+  "Tax Template Detail",
+  "Fiscal Year",
+  "Accounting Period",
+  "Currency Exchange",
+  "Vernon Accounting Settings",
+]);
+
+export function isTenantedDoctype(doctype: string): boolean {
+  return !TENANT_BLOCKLIST.has(doctype);
+}
+
+// Returns the active Sekolah's doc-ID (the value stored in `sekolah` link
+// fields server-side), NOT the URL slug. Filters/comparisons must use the
+// doc-ID because Frappe's link fields point to primary keys.
+function activeSekolah(): string | null {
+  const s = cfg.getActiveSekolah?.();
+  return s ?? null;
 }
 
 function buildHeaders(extra?: Record<string, string>): Record<string, string> {
@@ -68,10 +142,35 @@ export interface ListParams {
   or_filters?: FilterTuple[];
 }
 
+function hasSekolahFilter(filters: FilterTuple[] | Record<string, unknown>): boolean {
+  if (Array.isArray(filters)) {
+    return filters.some((f) => f[0] === "sekolah" || (f.length === 4 && f[1] === "sekolah"));
+  }
+  return Object.prototype.hasOwnProperty.call(filters, "sekolah");
+}
+
+function injectSekolahFilter(
+  doctype: string,
+  filters: FilterTuple[] | Record<string, unknown> | undefined,
+): FilterTuple[] | Record<string, unknown> | undefined {
+  if (!isTenantedDoctype(doctype)) return filters;
+  const slug = activeSekolah();
+  if (!slug) return filters;
+  if (filters && hasSekolahFilter(filters)) return filters;
+  if (Array.isArray(filters)) {
+    return [...filters, ["sekolah", "=", slug] as FilterTuple3];
+  }
+  if (filters && typeof filters === "object") {
+    return { ...filters, sekolah: slug };
+  }
+  return [["sekolah", "=", slug] as FilterTuple3];
+}
+
 export function listResource<T = Record<string, unknown>>(doctype: string, params: ListParams = {}): Promise<T[]> {
   const q: Record<string, unknown> = {};
   if (params.fields) q["fields"] = params.fields;
-  if (params.filters) q["filters"] = params.filters;
+  const filters = injectSekolahFilter(doctype, params.filters);
+  if (filters) q["filters"] = filters;
   if (params.or_filters) q["or_filters"] = params.or_filters;
   if (params.order_by) q["order_by"] = params.order_by;
   if (params.limit_start !== undefined) q["limit_start"] = params.limit_start;
@@ -79,8 +178,16 @@ export function listResource<T = Record<string, unknown>>(doctype: string, param
   return req<T[]>("GET", buildUrl(doctype, q));
 }
 
-export function getResource<T = Record<string, unknown>>(doctype: string, name: string): Promise<T> {
-  return req<T>("GET", buildUrl(`${doctype}/${encodeURIComponent(name)}`));
+export async function getResource<T = Record<string, unknown>>(doctype: string, name: string): Promise<T> {
+  const doc = await req<T>("GET", buildUrl(`${doctype}/${encodeURIComponent(name)}`));
+  if (isTenantedDoctype(doctype)) {
+    const slug = activeSekolah();
+    const docSekolah = (doc as { sekolah?: unknown } | null)?.sekolah;
+    if (slug && typeof docSekolah === "string" && docSekolah && docSekolah !== slug) {
+      throw new TenantMismatchError(doctype, name);
+    }
+  }
+  return doc;
 }
 
 export function createResource<T = Record<string, unknown>>(doctype: string, doc: Record<string, unknown>): Promise<T> {
@@ -95,13 +202,21 @@ export function deleteResource(doctype: string, name: string): Promise<unknown> 
   return req<unknown>("DELETE", buildUrl(`${doctype}/${encodeURIComponent(name)}`));
 }
 
+// Partition the react-query cache by active sekolah so switching schools never
+// surfaces another tenant's cached rows. The server-side filter is correct,
+// but without this, a stale cache entry from school A would be returned for
+// school B until the background refetch completes.
+function tenantKey(doctype: string): string | null {
+  return isTenantedDoctype(doctype) ? activeSekolah() : null;
+}
+
 export function useResourceList<T = Record<string, unknown>>(
   doctype: string,
   params: ListParams = {},
   options: Omit<UseQueryOptions<T[]>, "queryKey" | "queryFn"> = {},
 ) {
   return useQuery<T[]>({
-    queryKey: ["resource:list", doctype, params],
+    queryKey: ["resource:list", doctype, tenantKey(doctype), params],
     queryFn: () => listResource<T>(doctype, params),
     ...options,
   });
@@ -113,7 +228,7 @@ export function useResourceDoc<T = Record<string, unknown>>(
   options: Omit<UseQueryOptions<T>, "queryKey" | "queryFn" | "enabled"> = {},
 ) {
   return useQuery<T>({
-    queryKey: ["resource:doc", doctype, name],
+    queryKey: ["resource:doc", doctype, tenantKey(doctype), name],
     queryFn: () => getResource<T>(doctype, name!),
     enabled: !!name,
     ...options,
