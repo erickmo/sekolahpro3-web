@@ -1,6 +1,8 @@
 // Mock data fixture untuk modul Perpustakaan.
 // Replace dengan @sekolahpro/api-client hooks ketika backend siap.
 
+import { pickSchoolSlug, type MockSchoolSlug } from "./school-scope";
+
 export type StatusBuku = "Tersedia" | "Dipinjam" | "Dipesan" | "Rusak" | "Hilang" | "Arsip";
 export type Kategori =
   | "Fiksi"
@@ -56,6 +58,7 @@ export interface AktivitasRow {
 }
 
 export interface Buku {
+  sekolah: MockSchoolSlug;
   isbn: string;
   kodeBuku: string;
   judul: string;
@@ -247,6 +250,7 @@ function buildBuku(idx: number): Buku {
   ];
 
   return {
+    sekolah: pickSchoolSlug(idx),
     isbn,
     kodeBuku,
     judul: meta.judul,
@@ -281,8 +285,15 @@ function buildBuku(idx: number): Buku {
 
 export const BUKU_LIST: Buku[] = Array.from({ length: 40 }, (_, i) => buildBuku(i));
 
-export function findBuku(isbn: string): Buku | undefined {
-  return BUKU_LIST.find((b) => b.isbn === isbn);
+export function findBuku(isbn: string, sekolah?: MockSchoolSlug | string): Buku | undefined {
+  const b = BUKU_LIST.find((row) => row.isbn === isbn);
+  if (!b) return undefined;
+  if (sekolah && b.sekolah !== sekolah) return undefined;
+  return b;
+}
+
+export function listBukuForSekolah(sekolah: MockSchoolSlug | string): Buku[] {
+  return BUKU_LIST.filter((b) => b.sekolah === sekolah);
 }
 
 export const FILTER_OPTIONS = {

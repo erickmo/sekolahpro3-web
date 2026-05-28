@@ -1,6 +1,8 @@
 // Mock data fixture untuk modul Kelas (rombel).
 // Replace dengan @sekolahpro/api-client hooks ketika backend siap.
 
+import { belongsToSchool, pickSchoolSlug, type MockSchoolSlug } from "./school-scope";
+
 export type StatusKelas = "Aktif" | "Penuh" | "Arsip";
 export type Jenjang = "TK" | "SD" | "SMP" | "SMA";
 export type Tingkat = "X" | "XI" | "XII" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9";
@@ -59,6 +61,7 @@ export interface AktivitasRow {
 
 export interface Kelas {
   kodeKelas: string;
+  sekolah: MockSchoolSlug;
   nama: string;
   jenjang: Jenjang;
   tingkat: Tingkat;
@@ -335,6 +338,7 @@ function buildKelas(idx: number): Kelas {
 
   const kelas: Kelas = {
     kodeKelas: kode,
+    sekolah: pickSchoolSlug(idx),
     nama,
     jenjang: seed.jenjang,
     tingkat: seed.tingkat,
@@ -366,8 +370,14 @@ function buildKelas(idx: number): Kelas {
 
 export const KELAS_LIST: Kelas[] = Array.from({ length: 24 }, (_, i) => buildKelas(i));
 
-export function findKelas(kodeKelas: string): Kelas | undefined {
-  return KELAS_LIST.find((k) => k.kodeKelas === kodeKelas);
+export function findKelas(kodeKelas: string, sekolah?: string): Kelas | undefined {
+  return KELAS_LIST.find(
+    (k) => k.kodeKelas === kodeKelas && belongsToSchool(k.sekolah, sekolah),
+  );
+}
+
+export function listKelasForSekolah(sekolah?: string): Kelas[] {
+  return KELAS_LIST.filter((k) => belongsToSchool(k.sekolah, sekolah));
 }
 
 export const FILTER_OPTIONS = {

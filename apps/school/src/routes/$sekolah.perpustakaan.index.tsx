@@ -15,8 +15,19 @@ import {
   IconChart,
   IconClock,
   IconArrowLeft,
+  ModuleFlow,
 } from "@sekolahpro/ui";
-import type { AttentionItem } from "@sekolahpro/ui";
+import type { AttentionItem, ModuleFlowStep } from "@sekolahpro/ui";
+
+const PERPUS_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "kategori", label: "Kategori", hint: "Setup kategori koleksi", href: "/$sekolah/perpustakaan/kategori" },
+  { key: "pengadaan", label: "Pengadaan", hint: "Beli koleksi baru", href: "/$sekolah/perpustakaan/pengadaan" },
+  { key: "inventaris", label: "Inventaris", hint: "Catat & opname stok", href: "/$sekolah/perpustakaan/inventaris" },
+  { key: "anggota", label: "Anggota", hint: "Daftar peminjam", href: "/$sekolah/perpustakaan/anggota" },
+  { key: "peminjaman", label: "Peminjaman", hint: "Transaksi pinjam", href: "/$sekolah/perpustakaan/peminjaman" },
+  { key: "pengembalian", label: "Pengembalian", hint: "Terima kembali", href: "/$sekolah/perpustakaan/pengembalian" },
+  { key: "denda", label: "Denda", hint: "Tagih keterlambatan", href: "/$sekolah/perpustakaan/denda" },
+];
 import { useResourceList } from "@sekolahpro/api-client";
 
 type BukuRow = {
@@ -303,6 +314,17 @@ function PerpustakaanDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Operasi Perpustakaan"
+        description="Langkah dari pengadaan koleksi sampai sirkulasi pinjam."
+        steps={PERPUS_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/perpustakaan/kategori"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <SectionCard title="Aksi Cepat" description="Lompat ke modul yang sering digunakan.">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

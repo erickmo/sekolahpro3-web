@@ -54,7 +54,6 @@ export function PilihSekolahPage() {
       { name: only.sekolah },
       {
         onSuccess: (resp) => {
-          console.log("[chooser] auto-select ok", resp);
           setActiveSekolah({
             name: resp.sekolah,
             nama: resp.nama,
@@ -62,9 +61,6 @@ export function PilihSekolahPage() {
             slug: resp.slug,
           });
           navigate({ to: "/$sekolah", params: { sekolah: resp.slug } });
-        },
-        onError: (err) => {
-          console.error("[chooser] auto-select failed", err);
         },
       },
     );
@@ -245,12 +241,10 @@ export function PilihSekolahPage() {
                         school={school}
                         busy={select.isPending}
                         onSelect={() => {
-                          console.log("[chooser] click", school.sekolah);
                           select.mutate(
                             { name: school.sekolah },
                             {
                               onSuccess: (resp) => {
-                                console.log("[chooser] select ok", resp);
                                 setActiveSekolah({
                                   name: resp.sekolah,
                                   nama: resp.nama,
@@ -261,9 +255,6 @@ export function PilihSekolahPage() {
                                   to: "/$sekolah",
                                   params: { sekolah: resp.slug },
                                 });
-                              },
-                              onError: (err) => {
-                                console.error("[chooser] select failed", err);
                               },
                             },
                           );

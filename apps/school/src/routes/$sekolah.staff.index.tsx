@@ -14,11 +14,20 @@ import {
   IconClock,
   IconPlus,
   GlossaryTooltip,
+  ModuleFlow,
+  type ModuleFlowStep,
   type AttentionItem,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { StaffFormModal } from "../components/staff/StaffFormModal";
 import { GLOSSARY } from "../lib/glossary";
+
+const STAFF_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "jabatan", label: "Master Jabatan", hint: "Definisikan jabatan", href: "/$sekolah/staff/jabatan" },
+  { key: "daftar", label: "Tambah Staff", hint: "Registrasi staf baru", href: "/$sekolah/staff/daftar" },
+  { key: "sk", label: "SK Jabatan", hint: "Terbitkan SK", href: "/$sekolah/staff/sk-jabatan" },
+  { key: "berkas", label: "Berkas", hint: "Unggah dokumen", href: "/$sekolah/staff/berkas" },
+];
 
 const SK_WARNING_DAYS = 90;
 const RECENT_LIMIT = 5;
@@ -181,6 +190,17 @@ function StaffDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Pengelolaan Staff"
+        description="Langkah onboarding staf non-pengajar."
+        steps={STAFF_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/staff/jabatan"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <SectionCard title="Aksi Cepat" description="Pintasan ke modul terkait pengelolaan staff.">
         <div className="flex flex-wrap gap-2">

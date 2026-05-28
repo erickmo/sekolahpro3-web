@@ -793,7 +793,7 @@ function PpdbDetailPage() {
       filters: { pendaftaran_ppdb: noPendaftaran },
     },
   );
-  const mock = findPendaftar(noPendaftaran);
+  const mock = findPendaftar(noPendaftaran, sekolah);
   // Merge: top-level pendaftaran overrides mock; identity from Calon Siswa;
   // pembayaran list from Pembayaran PPDB. Each layer falls back to mock.
   const pendaftar: typeof mock = (() => {

@@ -17,10 +17,12 @@ import {
   IconGrad,
   IconPlus,
   GlossaryTooltip,
+  ModuleFlow,
+  type ModuleFlowStep,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
-import { PPDB_LIST } from "../data/ppdb";
+import { listPpdbForSekolah } from "../data/ppdb";
 import { PIPELINE_STAGES } from "../lib/ppdbApi";
 
 // Konstanta agregasi PPDB — STUB sampai backend wired.
@@ -73,6 +75,16 @@ type QuickAction = {
   icon: React.ReactNode;
 };
 
+const PPDB_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Aktifkan TA berjalan", href: "/$sekolah/master/tahun-ajaran" },
+  { key: "gelombang", label: "Gelombang", hint: "Atur kuota & periode", href: "/$sekolah/ppdb/gelombang" },
+  { key: "pengaturan", label: "Pengaturan", hint: "Biaya, formulir, alur", href: "/$sekolah/ppdb/pengaturan" },
+  { key: "calon", label: "Calon Siswa", hint: "Terima pendaftaran", href: "/$sekolah/ppdb/calon-siswa" },
+  { key: "seleksi", label: "Seleksi", hint: "Jadwal & hasil", href: "/$sekolah/ppdb/seleksi" },
+  { key: "pembayaran", label: "Pembayaran", hint: "Verifikasi tagihan", href: "/$sekolah/ppdb/pembayaran" },
+  { key: "daftar-ulang", label: "Daftar Ulang", hint: "Konfirmasi diterima", href: "/$sekolah/ppdb/daftar-ulang" },
+];
+
 const QUICK_ACTIONS: QuickAction[] = [
   { to: "/$sekolah/ppdb/calon-siswa", label: "Calon Siswa", description: "Kelola data pendaftar baru", icon: <IconUsers /> },
   { to: "/$sekolah/ppdb/seleksi", label: "Seleksi", description: "Jadwal & hasil seleksi", icon: <IconCheck /> },
@@ -105,6 +117,9 @@ function PpdbDashboard() {
 
   const rows = pendaftaranQ.data ?? [];
 
+  // Mock PPDB list, scoped ke active school slug.
+  const ppdbMockList = useMemo(() => listPpdbForSekolah(sekolah), [sekolah]);
+
   const stats = useMemo(() => {
     const total = rows.length;
     const lolos = rows.filter((p) => p.status && LOLOS_STATUSES.has(p.status)).length;
@@ -117,7 +132,7 @@ function PpdbDashboard() {
     // Pembayaran pending — derive dari mock PPDB_LIST. Sesuaikan saat
     // doctype "Pembayaran PPDB" wired ke backend.
     // TODO(api): pakai useResourceList("Pembayaran PPDB", { status: "Tertunda" })
-    const tagihanTertunda = PPDB_LIST.flatMap((p) =>
+    const tagihanTertunda = ppdbMockList.flatMap((p) =>
       p.pembayaran
         .filter((bayar) => bayar.status === "Tertunda")
         .map((bayar) => ({ tanggal: bayar.tanggal, pendaftar: p.noPendaftaran })),
@@ -141,7 +156,7 @@ function PpdbDashboard() {
       pendaftarTunggakanLama,
       hariTersisaGelombang,
     };
-  }, [rows]);
+  }, [rows, ppdbMockList]);
 
   const aktivitasTerbaru = useMemo(() => rows.slice(0, RECENT_LIMIT), [rows]);
 
@@ -153,7 +168,7 @@ function PpdbDashboard() {
     const items: AttentionItem[] = [];
     if (stats.pembayaranPendingCount > 0) {
       // Ambil pendaftar pertama dengan tunggakan untuk landing kontak.
-      const firstPending = PPDB_LIST.find((p) =>
+      const firstPending = ppdbMockList.find((p) =>
         p.pembayaran.some((b) => b.status === "Tertunda"),
       );
       items.push({
@@ -189,7 +204,7 @@ function PpdbDashboard() {
       });
     }
     return items;
-  }, [stats.pembayaranPendingCount, stats.pendaftarTunggakanLama]);
+  }, [stats.pembayaranPendingCount, stats.pendaftarTunggakanLama, ppdbMockList]);
 
   return (
     <div className="space-y-6">
@@ -268,6 +283,17 @@ function PpdbDashboard() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Buka PPDB Baru"
+        description="Langkah membuka penerimaan: dari tahun ajaran sampai daftar ulang."
+        steps={PPDB_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/ppdb/gelombang"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <PipelineFunnel rows={rows} loading={pendaftaranQ.isLoading} />
 

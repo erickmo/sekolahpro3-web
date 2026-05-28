@@ -17,7 +17,19 @@ import {
   IconId,
   IconCheck,
   IconSettings,
+  ModuleFlow,
+  type ModuleFlowStep,
 } from "@sekolahpro/ui";
+
+const KOPERASI_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "pengaturan", label: "Pengaturan", hint: "Konfigurasi awal koperasi", href: "/$sekolah/koperasi/pengaturan" },
+  { key: "rekening", label: "Rekening", hint: "Setup chart of account", href: "/$sekolah/koperasi/rekening" },
+  { key: "anggota", label: "Anggota", hint: "Daftar anggota koperasi", href: "/$sekolah/koperasi/daftar" },
+  { key: "kas-teller", label: "Kas Teller", hint: "Buka kas harian", href: "/$sekolah/koperasi/kas-teller" },
+  { key: "transaksi", label: "Transaksi", hint: "Setoran & penarikan", href: "/$sekolah/koperasi/transaksi" },
+  { key: "pembiayaan", label: "Pembiayaan", hint: "Pinjaman & angsuran", href: "/$sekolah/koperasi/pembiayaan" },
+  { key: "period-close", label: "Tutup Buku", hint: "Tutup periode & SHU", href: "/$sekolah/koperasi/period-close" },
+];
 import { useResourceList } from "@sekolahpro/api-client";
 
 /**
@@ -176,6 +188,17 @@ function KoperasiDashboardPage() {
         <strong>Saldo Kas GL</strong> sedang menunggu endpoint agregasi backend. Sementara tidak ditampilkan
         agar tidak menyesatkan keputusan supervisor.
       </Alert>
+
+      <ModuleFlow
+        title="Alur Operasi Koperasi"
+        description="Langkah membuka & menjalankan koperasi sekolah."
+        steps={KOPERASI_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/koperasi/pengaturan"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <SectionCard
         title="Aksi Cepat"

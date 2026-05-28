@@ -1,6 +1,8 @@
 // Mock data fixture untuk modul Guru.
 // Replace dengan @sekolahpro/api-client hooks ketika backend siap.
 
+import { belongsToSchool, pickSchoolSlug, type MockSchoolSlug } from "./school-scope";
+
 export type StatusGuru = "Aktif" | "Cuti" | "Non-aktif" | "Pensiun";
 export type JenisKelamin = "Laki-laki" | "Perempuan";
 export type Agama = "Islam" | "Kristen" | "Katolik" | "Hindu" | "Budha" | "Konghucu";
@@ -62,6 +64,7 @@ export interface AktivitasRow {
 }
 
 export interface Guru {
+  sekolah: MockSchoolSlug;
   nip: string;
   nuptk: string;
   nik?: string | undefined;
@@ -243,6 +246,7 @@ function buildGuru(idx: number): Guru {
   ];
 
   return {
+    sekolah: pickSchoolSlug(idx),
     nip,
     nuptk,
     nik: `3273${pad(idx * 47, 12)}`,
@@ -295,8 +299,16 @@ function buildGuru(idx: number): Guru {
 
 export const GURU_LIST: Guru[] = Array.from({ length: 25 }, (_, i) => buildGuru(i));
 
-export function findGuru(nip: string): Guru | undefined {
-  return GURU_LIST.find((g) => g.nip === nip);
+export function findGuru(nip: string, sekolah?: string): Guru | undefined {
+  const g = GURU_LIST.find((row) => row.nip === nip);
+  if (!g) return undefined;
+  if (!belongsToSchool(g.sekolah, sekolah)) return undefined;
+  return g;
+}
+
+export function listGuruForSekolah(sekolah?: string): Guru[] {
+  if (!sekolah) return GURU_LIST;
+  return GURU_LIST.filter((g) => belongsToSchool(g.sekolah, sekolah));
 }
 
 export const FILTER_OPTIONS = {

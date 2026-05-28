@@ -20,10 +20,21 @@ import {
   IconPlus,
   IconUsers,
   GlossaryTooltip,
+  ModuleFlow,
+  type ModuleFlowStep,
   type AttentionItem,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
+
+const GURU_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "jabatan", label: "Master Jabatan", hint: "Setup jabatan dulu", href: "/$sekolah/guru/jabatan" },
+  { key: "tambah", label: "Tambah Guru", hint: "Daftar guru baru", href: "/$sekolah/guru/daftar" },
+  { key: "sk-jabatan", label: "SK Jabatan", hint: "Terbitkan SK jabatan", href: "/$sekolah/guru/sk-jabatan" },
+  { key: "mapel", label: "Mapel Pengampu", hint: "Tetapkan mapel", href: "/$sekolah/guru/mapel-pengampu" },
+  { key: "sk-mengajar", label: "SK Mengajar", hint: "Terbitkan SK mengajar", href: "/$sekolah/guru/sk-mengajar" },
+  { key: "penugasan", label: "Penugasan", hint: "Beban kerja & kelas", href: "/$sekolah/guru/penugasan" },
+];
 
 const AKSI_CEPAT: { to: string; label: string; desc: string; icon: ReactNode }[] = [
   { to: "/$sekolah/guru/sk-mengajar", label: "SK Mengajar", desc: "Terbitkan & kelola SK mengajar", icon: <IconFile /> },
@@ -244,6 +255,17 @@ function GuruDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Pengelolaan Guru"
+        description="Langkah onboarding guru: dari jabatan sampai penugasan kelas."
+        steps={GURU_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/guru/jabatan"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <SectionCard
         title="Aksi Cepat"

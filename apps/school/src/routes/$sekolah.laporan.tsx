@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, type Column } from "@sekolahpro/ui";
+import { Badge, ModuleFlow, type Column, type ModuleFlowStep } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { LAPORAN_TERJADWAL_FIELDS } from "../data/create-schemas";
@@ -50,10 +50,24 @@ const COLUMNS: Column<Row>[] = [
     cell: (r) => <Badge tone={r.enabled ? "success" : "neutral"} dot>{r.enabled ? "Aktif" : "Nonaktif"}</Badge> },
 ];
 
+const LAPORAN_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "pilih", label: "Pilih Report", hint: "Tentukan jenis laporan" },
+  { key: "jadwal", label: "Atur Jadwal", hint: "Periode + format output" },
+  { key: "aktifkan", label: "Aktifkan", hint: "Toggle status aktif" },
+  { key: "monitor", label: "Pantau Eksekusi", hint: "Cek next_run & last_run" },
+];
+
 function LaporanPage() {
   const [open, setOpen] = useState(false);
   return (
     <>
+    <div className="px-6 pt-6">
+      <ModuleFlow
+        title="Alur Penjadwalan Laporan"
+        description="Langkah menjadwalkan laporan otomatis."
+        steps={LAPORAN_FLOW_STEPS}
+      />
+    </div>
     <ResourceListPage<Row>
       eyebrow="Operasional"
       title="Laporan"

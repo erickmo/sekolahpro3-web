@@ -1,6 +1,8 @@
 // Mock data fixture untuk modul Siswa.
 // Replace dengan @sekolahpro/api-client hooks ketika backend siap.
 
+import { pickSchoolSlug, type MockSchoolSlug } from "./school-scope";
+
 export type StatusSiswa = "Calon" | "Aktif" | "Alumni" | "Pindah Keluar" | "DO";
 export type JenisKelamin = "Laki-laki" | "Perempuan";
 export type Agama = "Islam" | "Kristen" | "Katolik" | "Hindu" | "Budha" | "Konghucu";
@@ -95,6 +97,7 @@ export interface AktivitasRow {
 }
 
 export interface Siswa {
+  sekolah: MockSchoolSlug;
   nis: string;
   nisn: string;
   /** Status NISN di Dapodik. "Belum Diajukan" untuk siswa baru sebelum batch submit. */
@@ -287,6 +290,7 @@ function buildSiswa(idx: number): Siswa {
   const nisnStatus = nisnStatusList[idx % nisnStatusList.length]!;
 
   return {
+    sekolah: pickSchoolSlug(idx),
     nis,
     nisn,
     nisnStatus,
@@ -344,8 +348,15 @@ function buildSiswa(idx: number): Siswa {
 
 export const SISWA_LIST: Siswa[] = Array.from({ length: 40 }, (_, i) => buildSiswa(i));
 
-export function findSiswa(nis: string): Siswa | undefined {
-  return SISWA_LIST.find((s) => s.nis === nis);
+export function findSiswa(nis: string, sekolah?: MockSchoolSlug | string): Siswa | undefined {
+  const s = SISWA_LIST.find((row) => row.nis === nis);
+  if (!s) return undefined;
+  if (sekolah && s.sekolah !== sekolah) return undefined;
+  return s;
+}
+
+export function listSiswaForSekolah(sekolah: MockSchoolSlug | string): Siswa[] {
+  return SISWA_LIST.filter((s) => s.sekolah === sekolah);
 }
 
 export const FILTER_OPTIONS = {

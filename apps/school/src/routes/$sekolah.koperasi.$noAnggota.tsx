@@ -575,7 +575,7 @@ function AnggotaDetailPage() {
     },
     { enabled: Boolean(nasabah) },
   );
-  const mock = findAnggota(noAnggota);
+  const mock = findAnggota(noAnggota, sekolah);
   const anggota: Anggota | undefined = (() => {
     if (!mock) return undefined;
     const d = docQ.data;

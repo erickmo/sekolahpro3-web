@@ -1,17 +1,17 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
 import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { configure, createQueryClient } from "@sekolahpro/api-client";
+import { parseEnv } from "@sekolahpro/config";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
-const apiBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
-configure({ baseUrl: apiBase });
+const env = parseEnv(import.meta.env);
+configure({ baseUrl: env.VITE_API_BASE });
 
-const queryClient = createQueryClient();
-const router = createRouter({ routeTree });
+const qc = createQueryClient();
+const router = createRouter({ routeTree, context: {} });
 
 declare module "@tanstack/react-router" {
   interface Register {
@@ -19,9 +19,9 @@ declare module "@tanstack/react-router" {
   }
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={qc}>
       <RouterProvider router={router} />
     </QueryClientProvider>
   </StrictMode>,

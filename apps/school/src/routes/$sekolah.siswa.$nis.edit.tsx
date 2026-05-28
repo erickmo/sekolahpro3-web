@@ -17,7 +17,7 @@ function SiswaEditPage() {
   // Primary lookup from backend; SiswaForm still consumes the camelCase mock shape.
   // TODO real backend join: map snake_case doc -> SiswaFormValues
   const docQ = useResourceDoc<Partial<Siswa> & { name: string }>("Siswa", nis);
-  const siswa = findSiswa(nis);
+  const siswa = findSiswa(nis, sekolah);
   const navigate = useNavigate();
   void docQ;
 
