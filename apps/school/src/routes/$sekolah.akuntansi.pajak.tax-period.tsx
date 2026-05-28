@@ -16,6 +16,7 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, TAX_PERIOD_TYPES, type TaxPeriod, type TaxPeriodType } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 const ALL = "Semua";
 
@@ -26,9 +27,11 @@ function TaxPeriodPage() {
   const [editing, setEditing] = useState<TaxPeriod | null>(null);
   const [form, setForm] = useState<Partial<TaxPeriod>>({ tax_type: "PPN", month: 1, year: new Date().getFullYear() });
   const [busy, setBusy] = useState(false);
+  const company = useActiveCompany();
 
   const list = useResourceList<TaxPeriod>(DOCTYPE.TAX_PERIOD, {
     fields: ["name", "period_name", "tax_type", "month", "year", "company", "is_closed"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "year desc, month desc",
     limit_page_length: 200,
   });
@@ -61,7 +64,7 @@ function TaxPeriodPage() {
         tax_type: form.tax_type,
         month: form.month,
         year: form.year,
-        company: form.company ?? null,
+        company: form.company ?? company ?? null,
         is_closed: form.is_closed ? 1 : 0,
       };
       if (editing) await update.mutateAsync({ name: editing.name, patch: doc });
@@ -111,8 +114,8 @@ function TaxPeriodPage() {
           <FormField label="Year" required>
             <Input type="number" value={form.year ?? new Date().getFullYear()} onChange={(e) => setForm({ ...form, year: Number(e.target.value) || new Date().getFullYear() })} />
           </FormField>
-          <FormField label="Company">
-            <Input value={form.company ?? ""} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={form.company ?? company} disabled />
           </FormField>
           <FormField label="Status">
             <Select value={String(form.is_closed ?? 0)} onChange={(e) => setForm({ ...form, is_closed: e.target.value === "1" ? 1 : 0 })}>

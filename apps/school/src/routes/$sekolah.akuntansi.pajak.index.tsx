@@ -16,12 +16,14 @@ import {
   type WithholdingTaxEntry,
 } from "../data/akuntansi";
 import { scopedLinkProps } from "../lib/scoped";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function PajakOverview() {
   const { sekolah } = useParams({ from: "/$sekolah" });
-  const sptQ = useResourceList<SptMasaPPN>(DOCTYPE.SPT_MASA_PPN, { fields: ["name", "status", "ppn_kurang_bayar"], limit_page_length: 0 });
+  const company = useActiveCompany();
+  const sptQ = useResourceList<SptMasaPPN>(DOCTYPE.SPT_MASA_PPN, { fields: ["name", "status", "ppn_kurang_bayar"], filters: withCompanyFilter(undefined, company), limit_page_length: 0 });
   const efQ = useResourceList<EfakturExport>(DOCTYPE.EFAKTUR_EXPORT, { fields: ["name", "status"], limit_page_length: 0 });
-  const whtQ = useResourceList<WithholdingTaxEntry>(DOCTYPE.WITHHOLDING_TAX_ENTRY, { fields: ["name", "status", "tax_amount"], limit_page_length: 0 });
+  const whtQ = useResourceList<WithholdingTaxEntry>(DOCTYPE.WITHHOLDING_TAX_ENTRY, { fields: ["name", "status", "tax_amount"], filters: withCompanyFilter(undefined, company), limit_page_length: 0 });
 
   const sptDraft = (sptQ.data ?? []).filter((s) => (s.status ?? "Draft") === "Draft").length;
   const sptKurang = (sptQ.data ?? []).reduce((a, s) => a + (s.ppn_kurang_bayar ?? 0), 0);

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { scopedLinkProps } from "../lib/scoped";
+import { useActiveCompany } from "../lib/akuntansi-scope";
 import {
   Badge,
   DashboardTemplate,
@@ -80,26 +81,30 @@ function LinkGrid({ items, sekolah }: { items: readonly QuickLink[]; sekolah: st
 
 function AkuntansiOverview() {
   const { sekolah } = useParams({ from: "/$sekolah" });
+  const company = useActiveCompany();
   const accountsQ = useResourceList<Account>(DOCTYPE.ACCOUNT, {
     fields: ["name"],
+    filters: company ? [["company", "=", company]] : [],
     limit_page_length: 0,
   });
   const journalQ = useResourceList<JournalEntry>(DOCTYPE.JOURNAL_ENTRY, {
     fields: ["name", "total_debit", "docstatus"],
-    filters: [["docstatus", "=", 1]],
+    filters: company ? [["docstatus", "=", 1], ["company", "=", company]] : [["docstatus", "=", 1]],
     limit_page_length: 0,
   });
   const paymentQ = useResourceList<PaymentEntry>(DOCTYPE.PAYMENT_ENTRY, {
     fields: ["name", "paid_amount", "docstatus"],
-    filters: [["docstatus", "=", 1]],
+    filters: company ? [["docstatus", "=", 1], ["company", "=", company]] : [["docstatus", "=", 1]],
     limit_page_length: 0,
   });
   const budgetQ = useResourceList<Budget>(DOCTYPE.BUDGET, {
     fields: ["name", "status"],
+    filters: company ? [["company", "=", company]] : [],
     limit_page_length: 0,
   });
   const sptQ = useResourceList<SptMasaPPN>(DOCTYPE.SPT_MASA_PPN, {
     fields: ["name", "status"],
+    filters: company ? [["company", "=", company]] : [],
     limit_page_length: 0,
   });
 
@@ -161,9 +166,10 @@ function AkuntansiOverview() {
             action={
               <Link
                 {...scopedLinkProps(sekolah, "/akuntansi/buku-besar/jurnal/new")}
-                className="inline-flex items-center gap-1 text-sm text-brand hover:underline"
+                className="inline-flex items-center gap-1 text-sm text-brand hover:underline whitespace-nowrap"
               >
-                <IconPlus /> Jurnal Baru
+                <span className="inline-flex h-4 w-4"><IconPlus /></span>
+                Jurnal Baru
               </Link>
             }
           >

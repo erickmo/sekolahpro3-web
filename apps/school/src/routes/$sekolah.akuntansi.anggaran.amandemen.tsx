@@ -14,11 +14,14 @@ import {
   workflowBadge,
   type BudgetAmendment,
 } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function AmandemenPage() {
   const [q, setQ] = useState("");
+  const company = useActiveCompany();
   const list = useResourceList<BudgetAmendment>(DOCTYPE.BUDGET_AMENDMENT, {
     fields: ["name", "budget", "fiscal_year", "company", "workflow_state", "docstatus"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "creation desc",
     limit_page_length: 200,
   });

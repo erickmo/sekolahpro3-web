@@ -21,6 +21,7 @@ import {
   type Month12,
   type OverspendAction,
 } from "../data/akuntansi";
+import { useActiveCompany } from "../lib/akuntansi-scope";
 
 interface RowDraft {
   account: string;
@@ -41,7 +42,7 @@ function BudgetNewPage() {
   const navigate = useNavigate();
 
   const [fiscalYear, setFiscalYear] = useState("");
-  const [company, setCompany] = useState("");
+  const company = useActiveCompany();
   const [costCenter, setCostCenter] = useState("");
   const [rows, setRows] = useState<RowDraft[]>([emptyRow()]);
   const [busy, setBusy] = useState(false);
@@ -96,8 +97,8 @@ function BudgetNewPage() {
           <FormField label="Fiscal Year" required>
             <Input value={fiscalYear} onChange={(e) => setFiscalYear(e.target.value)} placeholder="2026" />
           </FormField>
-          <FormField label="Company" required>
-            <Input value={company} onChange={(e) => setCompany(e.target.value)} />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={company} disabled />
           </FormField>
           <FormField label="Cost Center">
             <Input value={costCenter} onChange={(e) => setCostCenter(e.target.value)} />

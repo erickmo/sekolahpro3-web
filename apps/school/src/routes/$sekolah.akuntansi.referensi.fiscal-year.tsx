@@ -16,6 +16,7 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, formatTanggal, type FiscalYear } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function FiscalYearPage() {
   const [q, setQ] = useState("");
@@ -23,9 +24,11 @@ function FiscalYearPage() {
   const [editing, setEditing] = useState<FiscalYear | null>(null);
   const [form, setForm] = useState<Partial<FiscalYear>>({});
   const [busy, setBusy] = useState(false);
+  const company = useActiveCompany();
 
   const list = useResourceList<FiscalYear>(DOCTYPE.FISCAL_YEAR, {
     fields: ["name", "year_name", "year_start_date", "year_end_date", "is_closed", "company"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "year_start_date desc",
     limit_page_length: 200,
   });
@@ -56,7 +59,7 @@ function FiscalYearPage() {
         year_start_date: form.year_start_date,
         year_end_date: form.year_end_date,
         is_closed: form.is_closed ? 1 : 0,
-        company: form.company ?? null,
+        company: form.company ?? company ?? null,
       };
       if (editing) await update.mutateAsync({ name: editing.name, patch: doc });
       else await create.mutateAsync(doc);
@@ -81,8 +84,8 @@ function FiscalYearPage() {
           <FormField label="Year Name" required>
             <Input value={form.year_name ?? ""} onChange={(e) => setForm({ ...form, year_name: e.target.value })} placeholder="2026" />
           </FormField>
-          <FormField label="Company">
-            <Input value={form.company ?? ""} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={form.company ?? company} disabled />
           </FormField>
           <FormField label="Start Date" required>
             <Input type="date" value={form.year_start_date ?? ""} onChange={(e) => setForm({ ...form, year_start_date: e.target.value })} />

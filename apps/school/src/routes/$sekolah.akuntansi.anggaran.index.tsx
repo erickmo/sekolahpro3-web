@@ -15,14 +15,17 @@ import {
   budgetStatusBadge,
   type Budget,
 } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function BudgetListPage() {
   const { sekolah } = useParams({ from: "/$sekolah" });
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("Semua");
+  const company = useActiveCompany();
 
   const list = useResourceList<Budget>(DOCTYPE.BUDGET, {
     fields: ["name", "fiscal_year", "company", "cost_center", "status", "docstatus"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "creation desc",
     limit_page_length: 200,
   });

@@ -10,11 +10,14 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { DOCTYPE, type TaxTemplate } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function TaxTemplatePage() {
   const [q, setQ] = useState("");
+  const company = useActiveCompany();
   const list = useResourceList<TaxTemplate>(DOCTYPE.TAX_TEMPLATE, {
     fields: ["name", "template_name", "company", "is_default"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "name asc",
     limit_page_length: 200,
   });

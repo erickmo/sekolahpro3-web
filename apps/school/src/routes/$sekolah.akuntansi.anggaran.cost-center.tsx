@@ -16,6 +16,7 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, type CostCenter } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function CostCenterPage() {
   const [q, setQ] = useState("");
@@ -23,9 +24,11 @@ function CostCenterPage() {
   const [editing, setEditing] = useState<CostCenter | null>(null);
   const [form, setForm] = useState<Partial<CostCenter>>({});
   const [busy, setBusy] = useState(false);
+  const company = useActiveCompany();
 
   const list = useResourceList<CostCenter>(DOCTYPE.COST_CENTER, {
     fields: ["name", "cost_center_name", "parent_cost_center", "is_group", "company", "disabled"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "name asc",
     limit_page_length: 0,
   });
@@ -57,7 +60,7 @@ function CostCenterPage() {
         parent_cost_center: form.parent_cost_center ?? null,
         is_group: form.is_group ? 1 : 0,
         disabled: form.disabled ? 1 : 0,
-        company: form.company ?? null,
+        company: form.company ?? company ?? null,
       };
       if (editing) await update.mutateAsync({ name: editing.name, patch: doc });
       else await create.mutateAsync(doc);
@@ -86,8 +89,8 @@ function CostCenterPage() {
           <FormField label="Parent Cost Center">
             <Input value={form.parent_cost_center ?? ""} onChange={(e) => setForm({ ...form, parent_cost_center: e.target.value })} />
           </FormField>
-          <FormField label="Company">
-            <Input value={form.company ?? ""} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={form.company ?? company} disabled />
           </FormField>
           <FormField label="Tipe">
             <Select value={String(form.is_group ?? 0)} onChange={(e) => setForm({ ...form, is_group: e.target.value === "1" ? 1 : 0 })}>

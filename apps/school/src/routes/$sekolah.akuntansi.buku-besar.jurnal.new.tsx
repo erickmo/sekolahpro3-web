@@ -20,8 +20,8 @@ import {
   sumCredit,
   sumDebit,
   type JournalEntry,
-  type JournalEntryAccount,
 } from "../data/akuntansi";
+import { useActiveCompany } from "../lib/akuntansi-scope";
 
 interface RowDraft {
   account: string;
@@ -43,7 +43,7 @@ function JurnalNewPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   const [postingDate, setPostingDate] = useState(today);
-  const [company, setCompany] = useState("");
+  const company = useActiveCompany();
   const [remarks, setRemarks] = useState("");
   const [rows, setRows] = useState<RowDraft[]>([emptyRow(), emptyRow()]);
   const [busy, setBusy] = useState(false);
@@ -111,8 +111,8 @@ function JurnalNewPage() {
           <FormField label="Posting Date" required>
             <DatePicker value={postingDate} onChange={setPostingDate} />
           </FormField>
-          <FormField label="Company" required>
-            <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Nama perusahaan" />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={company} disabled />
           </FormField>
           <FormField label="Tax Template (opsional)">
             <Input placeholder="—" disabled />

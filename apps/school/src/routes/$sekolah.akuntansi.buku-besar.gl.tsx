@@ -15,6 +15,7 @@ import {
   formatTanggal,
   type GLEntry,
 } from "../data/akuntansi";
+import { useActiveCompany } from "../lib/akuntansi-scope";
 
 const ALL = "Semua";
 
@@ -22,10 +23,12 @@ function GLPage() {
   const [q, setQ] = useState("");
   const [account, setAccount] = useState("");
   const [includeCancelled, setIncludeCancelled] = useState(ALL);
+  const company = useActiveCompany();
 
   const list = useResourceList<GLEntry>(DOCTYPE.GL_ENTRY, {
     fields: ["name", "posting_date", "account", "debit", "credit", "voucher_type", "voucher_no", "party_type", "party", "is_cancelled", "remarks"],
     filters: [
+      ...(company ? [["company", "=", company] as [string, string, unknown]] : []),
       ...(account ? [["account", "like", `%${account}%`] as [string, string, unknown]] : []),
       ...(includeCancelled === ALL ? [] : [["is_cancelled", "=", includeCancelled === "1" ? 1 : 0] as [string, string, unknown]]),
     ],

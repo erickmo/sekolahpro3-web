@@ -22,17 +22,20 @@ import {
   submitDoc,
   type SptMasaPPN,
 } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function SptPpnPage() {
   const { sekolah } = useParams({ from: "/$sekolah" });
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<{ tax_period: string; company: string }>({ tax_period: "", company: "" });
+  const [taxPeriod, setTaxPeriod] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const company = useActiveCompany();
 
   const list = useResourceList<SptMasaPPN>(DOCTYPE.SPT_MASA_PPN, {
     fields: ["name", "tax_period", "company", "status", "ppn_keluaran", "ppn_masukan", "ppn_kurang_bayar", "docstatus"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "creation desc",
     limit_page_length: 200,
   });
@@ -60,7 +63,7 @@ function SptPpnPage() {
   const handleCreate = async (submit: boolean) => {
     setBusy(true); setErr(null);
     try {
-      const doc = await create.mutateAsync({ tax_period: form.tax_period, company: form.company } as Record<string, unknown>);
+      const doc = await create.mutateAsync({ tax_period: taxPeriod, company } as Record<string, unknown>);
       if (submit) await submitDoc(DOCTYPE.SPT_MASA_PPN, doc.name);
       await list.refetch();
       setOpen(false);
@@ -71,7 +74,7 @@ function SptPpnPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="SPT Masa PPN" description="Pelaporan PPN bulanan." actions={<Button onClick={() => { setForm({ tax_period: "", company: "" }); setErr(null); setOpen(true); }}>+ SPT Baru</Button>} />
+      <PageHeader title="SPT Masa PPN" description="Pelaporan PPN bulanan." actions={<Button onClick={() => { setTaxPeriod(""); setErr(null); setOpen(true); }}>+ SPT Baru</Button>} />
       <FilterBar search={{ value: q, placeholder: "Cari…", onChange: setQ }} />
       <SectionCard padded={false}>
         <DataTable<SptMasaPPN>
@@ -84,16 +87,16 @@ function SptPpnPage() {
         {err && <Alert tone="danger" title="Error">{err}</Alert>}
         <FormGrid cols={2}>
           <FormField label="Tax Period" required>
-            <Input value={form.tax_period} onChange={(e) => setForm({ ...form, tax_period: e.target.value })} placeholder="contoh: PPN-2026-01" />
+            <Input value={taxPeriod} onChange={(e) => setTaxPeriod(e.target.value)} placeholder="contoh: PPN-2026-01" />
           </FormField>
-          <FormField label="Company" required>
-            <Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={company} disabled />
           </FormField>
         </FormGrid>
         <div className="flex justify-end gap-2 pt-3">
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
-          <Button variant="outline" onClick={() => handleCreate(false)} disabled={busy || !form.tax_period || !form.company}>Simpan Draft</Button>
-          <Button onClick={() => handleCreate(true)} disabled={busy || !form.tax_period || !form.company}>{busy ? "Memproses…" : "Simpan & Submit"}</Button>
+          <Button variant="outline" onClick={() => handleCreate(false)} disabled={busy || !taxPeriod || !company}>Simpan Draft</Button>
+          <Button onClick={() => handleCreate(true)} disabled={busy || !taxPeriod || !company}>{busy ? "Memproses…" : "Simpan & Submit"}</Button>
         </div>
       </Modal>
     </div>

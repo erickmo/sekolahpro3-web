@@ -21,6 +21,7 @@ import {
   type Account,
   type RootType,
 } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 const ALL = "Semua";
 
@@ -29,9 +30,11 @@ function AkunPage() {
   const [root, setRoot] = useState<string>(ALL);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
+  const company = useActiveCompany();
 
   const list = useResourceList<Account>(DOCTYPE.ACCOUNT, {
     fields: ["name", "account_name", "parent_account", "root_type", "account_type", "is_group", "disabled", "company"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "name asc",
     limit_page_length: 0,
   });
@@ -96,6 +99,7 @@ function AkunPage() {
         open={open}
         onClose={() => setOpen(false)}
         editing={editing}
+        company={company}
         onSubmit={async (doc) => {
           if (editing) await update.mutateAsync({ name: editing.name, patch: doc });
           else await create.mutateAsync(doc);
@@ -111,10 +115,11 @@ interface ModalProps {
   open: boolean;
   onClose: () => void;
   editing: Account | null;
+  company: string;
   onSubmit: (doc: Record<string, unknown>) => Promise<void>;
 }
 
-function AccountModal({ open, onClose, editing, onSubmit }: ModalProps) {
+function AccountModal({ open, onClose, editing, company, onSubmit }: ModalProps) {
   const [form, setForm] = useState<Partial<Account>>({});
   const [busy, setBusy] = useState(false);
 
@@ -132,7 +137,7 @@ function AccountModal({ open, onClose, editing, onSubmit }: ModalProps) {
         account_type: form.account_type ?? null,
         is_group: form.is_group ? 1 : 0,
         disabled: form.disabled ? 1 : 0,
-        company: form.company ?? null,
+        company: form.company ?? company ?? null,
       };
       await onSubmit(doc);
     } finally {
@@ -164,8 +169,8 @@ function AccountModal({ open, onClose, editing, onSubmit }: ModalProps) {
               {ROOT_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
             </Select>
           </FormField>
-          <FormField label="Company">
-            <Input value={form.company ?? ""} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={form.company ?? company} disabled />
           </FormField>
           <FormField label="Is Group">
             <Select value={String(form.is_group ?? 0)} onChange={(e) => setForm({ ...form, is_group: e.target.value === "1" ? 1 : 0 })}>

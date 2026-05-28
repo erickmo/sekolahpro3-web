@@ -20,6 +20,7 @@ import {
   type PaymentEntry,
   type PaymentType,
 } from "../data/akuntansi";
+import { useActiveCompany } from "../lib/akuntansi-scope";
 
 function PembayaranNewPage() {
   const { sekolah } = useParams({ from: "/$sekolah" });
@@ -28,7 +29,7 @@ function PembayaranNewPage() {
 
   const [postingDate, setPostingDate] = useState(today);
   const [paymentType, setPaymentType] = useState<PaymentType>("Receive");
-  const [company, setCompany] = useState("");
+  const company = useActiveCompany();
   const [partyType, setPartyType] = useState("");
   const [party, setParty] = useState("");
   const [partyName, setPartyName] = useState("");
@@ -84,8 +85,8 @@ function PembayaranNewPage() {
               {PAYMENT_TYPES.map((v) => <option key={v} value={v}>{v}</option>)}
             </Select>
           </FormField>
-          <FormField label="Company" required>
-            <Input value={company} onChange={(e) => setCompany(e.target.value)} />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={company} disabled />
           </FormField>
           <FormField label="Party Type">
             <Input value={partyType} onChange={(e) => setPartyType(e.target.value)} placeholder="Customer / Supplier / Employee" />

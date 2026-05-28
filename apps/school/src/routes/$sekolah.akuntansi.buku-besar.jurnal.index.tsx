@@ -17,6 +17,7 @@ import {
   formatTanggal,
   type JournalEntry,
 } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 const STATUS_OPTIONS = [
   { value: "Semua", label: "Semua" },
@@ -29,9 +30,11 @@ function JurnalListPage() {
   const { sekolah } = useParams({ from: "/$sekolah" });
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("Semua");
+  const company = useActiveCompany();
 
   const list = useResourceList<JournalEntry>(DOCTYPE.JOURNAL_ENTRY, {
     fields: ["name", "posting_date", "company", "total_debit", "total_credit", "docstatus", "remarks"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "posting_date desc, creation desc",
     limit_page_length: 200,
   });

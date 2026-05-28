@@ -8,21 +8,26 @@ import {
   type JournalEntry,
   type PaymentEntry,
 } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function BukuBesarRingkasan() {
   const { sekolah } = useParams({ from: "/$sekolah" });
+  const company = useActiveCompany();
   const journalQ = useResourceList<JournalEntry>(DOCTYPE.JOURNAL_ENTRY, {
     fields: ["name", "posting_date", "total_debit", "docstatus"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "posting_date desc, creation desc",
     limit_page_length: 10,
   });
   const paymentQ = useResourceList<PaymentEntry>(DOCTYPE.PAYMENT_ENTRY, {
     fields: ["name", "posting_date", "payment_type", "paid_amount", "docstatus"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "posting_date desc, creation desc",
     limit_page_length: 10,
   });
   const glQ = useResourceList<GLEntry>(DOCTYPE.GL_ENTRY, {
     fields: ["name", "debit", "credit"],
+    filters: withCompanyFilter(undefined, company),
     limit_page_length: 0,
   });
 

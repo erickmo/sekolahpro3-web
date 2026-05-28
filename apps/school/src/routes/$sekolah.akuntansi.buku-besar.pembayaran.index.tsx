@@ -18,6 +18,7 @@ import {
   PAYMENT_TYPES,
   type PaymentEntry,
 } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 const ALL = "Semua";
 
@@ -26,9 +27,11 @@ function PembayaranListPage() {
   const [q, setQ] = useState("");
   const [type, setType] = useState(ALL);
   const [status, setStatus] = useState(ALL);
+  const company = useActiveCompany();
 
   const list = useResourceList<PaymentEntry>(DOCTYPE.PAYMENT_ENTRY, {
     fields: ["name", "posting_date", "payment_type", "party_type", "party", "party_name", "paid_amount", "received_amount", "company", "docstatus"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "posting_date desc, creation desc",
     limit_page_length: 200,
   });

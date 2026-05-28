@@ -16,6 +16,7 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, formatTanggal, type AccountingPeriod } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function PeriodPage() {
   const [q, setQ] = useState("");
@@ -23,9 +24,11 @@ function PeriodPage() {
   const [editing, setEditing] = useState<AccountingPeriod | null>(null);
   const [form, setForm] = useState<Partial<AccountingPeriod>>({});
   const [busy, setBusy] = useState(false);
+  const company = useActiveCompany();
 
   const list = useResourceList<AccountingPeriod>(DOCTYPE.ACCOUNTING_PERIOD, {
     fields: ["name", "period_name", "fiscal_year", "start_date", "end_date", "is_closed", "company"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "start_date desc",
     limit_page_length: 200,
   });
@@ -58,7 +61,7 @@ function PeriodPage() {
         start_date: form.start_date,
         end_date: form.end_date,
         is_closed: form.is_closed ? 1 : 0,
-        company: form.company ?? null,
+        company: form.company ?? company ?? null,
       };
       if (editing) await update.mutateAsync({ name: editing.name, patch: doc });
       else await create.mutateAsync(doc);
@@ -92,8 +95,8 @@ function PeriodPage() {
           <FormField label="End Date" required>
             <Input type="date" value={form.end_date ?? ""} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
           </FormField>
-          <FormField label="Company">
-            <Input value={form.company ?? ""} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={form.company ?? company} disabled />
           </FormField>
           <FormField label="Status">
             <Select value={String(form.is_closed ?? 0)} onChange={(e) => setForm({ ...form, is_closed: e.target.value === "1" ? 1 : 0 })}>

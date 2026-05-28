@@ -26,6 +26,7 @@ import {
   type WhtTaxType,
   type WithholdingTaxEntry,
 } from "../data/akuntansi";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 const ALL = "Semua";
 
@@ -35,6 +36,7 @@ function WithholdingPage() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const company = useActiveCompany();
   const [form, setForm] = useState<Partial<WithholdingTaxEntry>>({
     tax_type: "PPh23",
     posting_date: new Date().toISOString().slice(0, 10),
@@ -45,6 +47,7 @@ function WithholdingPage() {
 
   const list = useResourceList<WithholdingTaxEntry>(DOCTYPE.WITHHOLDING_TAX_ENTRY, {
     fields: ["name", "tax_type", "party_type", "party", "npwp", "posting_date", "base_amount", "tax_rate", "tax_amount", "status", "docstatus"],
+    filters: withCompanyFilter(undefined, company),
     order_by: "posting_date desc, creation desc",
     limit_page_length: 200,
   });
@@ -81,6 +84,7 @@ function WithholdingPage() {
     try {
       const doc = await create.mutateAsync({
         ...form,
+        company,
         tax_amount: computedTax,
       } as Record<string, unknown>);
       if (submit) await submitDoc(DOCTYPE.WITHHOLDING_TAX_ENTRY, doc.name);
@@ -122,8 +126,8 @@ function WithholdingPage() {
           <FormField label="Posting Date" required>
             <Input type="date" value={form.posting_date ?? ""} onChange={(e) => setForm({ ...form, posting_date: e.target.value })} />
           </FormField>
-          <FormField label="Company" required>
-            <Input value={form.company ?? ""} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={company} disabled />
           </FormField>
           <FormField label="Party Type">
             <Select value={form.party_type ?? ""} onChange={(e) => {
