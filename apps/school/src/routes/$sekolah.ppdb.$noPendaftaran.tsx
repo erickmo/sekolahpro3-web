@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useParams} from "@tanstack/react-router";
 import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
   Avatar,
@@ -779,6 +779,8 @@ function mapWaliFromCalonSiswa(c: CalonSiswaDoc): WaliPpdbRow[] {
 }
 
 function PpdbDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { noPendaftaran } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<PpdbDoc>("Pendaftaran PPDB", noPendaftaran);
@@ -840,7 +842,7 @@ function PpdbDetailPage() {
   const navigate = useNavigate();
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
-    navigate({ to: "/ppdb/$noPendaftaran", params: { noPendaftaran }, search: { tab: next === "ringkasan" ? undefined : next } });
+    navigate({ to: "/$sekolah/ppdb/$noPendaftaran", params: { sekolah, noPendaftaran }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
   if (!pendaftar) {
@@ -916,7 +918,7 @@ function PpdbDetailPage() {
           status: pendaftar.statusPendaftaran,
         },
       ]),
-    onEditProfil: () => navigate({ to: "/ppdb/calon-siswa" }),
+    onEditProfil: () => navigate({ to: "/$sekolah/ppdb/calon-siswa", params: { sekolah } }),
     onTambahWali: () => {
       if (!calonName) {
         window.alert("Data Calon Siswa belum dimuat.");
@@ -925,7 +927,7 @@ function PpdbDetailPage() {
       setShowEditWali(true);
     },
     onUnggahDokumen: () => setShowUploadDok(true),
-    onCatatPembayaran: () => navigate({ to: "/ppdb/pembayaran" }),
+    onCatatPembayaran: () => navigate({ to: "/$sekolah/ppdb/pembayaran", params: { sekolah } }),
     onUnduhBuktiBayar: () =>
       downloadCsv(`pembayaran-${pendaftar.noPendaftaran}.csv`, pendaftar.pembayaran.map((p) => ({
         id: p.id,
@@ -969,8 +971,8 @@ function PpdbDetailPage() {
           <div className="space-y-3">
             <Breadcrumb
               items={[
-                { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-                { label: "PPDB", render: ({ className, children }) => <Link to="/ppdb" className={className}>{children}</Link> },
+                { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+                { label: "PPDB", render: ({ className, children }) => <Link to="/$sekolah/ppdb" params={{ sekolah }} className={className}>{children}</Link> },
                 { label: pendaftar.namaLengkap },
               ]}
             />
@@ -979,7 +981,7 @@ function PpdbDetailPage() {
               title={pendaftar.namaLengkap}
               description={`${pendaftar.noPendaftaran} · ${pendaftar.jenjangTujuan} · ${pendaftar.statusPendaftaran}`}
               actions={
-                <Button variant="outline" onClick={() => navigate({ to: "/ppdb" })}>
+                <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/ppdb", params: { sekolah } })}>
                   <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                   Kembali ke daftar
                 </Button>
@@ -1024,23 +1026,25 @@ function PpdbDetailPage() {
 
 type SearchParams = { tab?: TabKey | undefined };
 
-export const Route = createFileRoute("/ppdb/$noPendaftaran")({
+export const Route = createFileRoute("/$sekolah/ppdb/$noPendaftaran")({
   component: PpdbDetailPage,
   validateSearch: (raw: Record<string, unknown>): SearchParams => {
     const t = typeof raw.tab === "string" ? raw.tab : undefined;
     return { tab: t && VALID_TABS.has(t as TabKey) ? (t as TabKey) : undefined };
   },
-  notFoundComponent: () => (
+  notFoundComponent: () => {
+    const { sekolah } = useParams({ from: "/$sekolah" });
+    return (
     <div className="py-16">
       <EmptyState
         title="Pendaftar tidak ditemukan"
         description="Nomor Pendaftaran yang diminta tidak ada di sistem. Periksa kembali atau kembali ke daftar PPDB."
         action={
-          <Link to="/ppdb" className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+          <Link to="/$sekolah/ppdb" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
             <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
           </Link>
         }
       />
     </div>
-  ),
+  ); },
 });

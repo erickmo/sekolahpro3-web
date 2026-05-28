@@ -37,7 +37,9 @@ const STATUS_TONE: Record<ConsentStatus, "success" | "danger" | "warning" | "neu
 };
 
 function ConsentDetailPage() {
-  const { id } = useParams({ from: "/siswa/persetujuan/$id" });
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
+  const { id } = useParams({ from: "/$sekolah/siswa/persetujuan/$id" });
   const qc = useQueryClient();
   const docQuery = useResourceDoc<ConsentDoc>("Persetujuan Wali", id);
 
@@ -57,7 +59,7 @@ function ConsentDetailPage() {
           Gagal memuat: {(docQuery.error as Error)?.message ?? "tidak ditemukan"}
         </Badge>
         <div className="mt-4">
-          <Link to="/siswa/persetujuan" className="text-brand hover:underline">
+          <Link to="/$sekolah/siswa/persetujuan" params={{ sekolah }} className="text-brand hover:underline">
             ← Kembali ke daftar
           </Link>
         </div>
@@ -84,7 +86,7 @@ function ConsentDetailPage() {
   return (
     <div className="space-y-6 pb-12">
       <div className="flex items-center gap-2 text-xs text-muted-fg">
-        <Link to="/siswa/persetujuan" className="text-brand hover:underline">
+        <Link to="/$sekolah/siswa/persetujuan" params={{ sekolah }} className="text-brand hover:underline">
           ← Siswa › Persetujuan Wali
         </Link>
         <span>›</span>
@@ -178,4 +180,4 @@ function ConsentDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/persetujuan/$id")({ component: ConsentDetailPage });
+export const Route = createFileRoute("/$sekolah/siswa/persetujuan/$id")({ component: ConsentDetailPage });

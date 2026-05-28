@@ -82,7 +82,9 @@ async function searchRombel(q: string): Promise<SearchableOption[]> {
 }
 
 function KolektifDetailPage() {
-  const { name } = useParams({ from: "/perpustakaan/kolektif/$name" });
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
+  const { name } = useParams({ from: "/$sekolah/perpustakaan/kolektif/$name" });
   const navigate = useNavigate();
   const isNew = name === "new";
 
@@ -186,7 +188,7 @@ function KolektifDetailPage() {
       } else {
         await updateResource("Pinjam Kolektif Kelas", name, payload);
       }
-      navigate({ to: "/perpustakaan/kolektif/$name", params: { name: savedName } });
+      navigate({ to: "/$sekolah/perpustakaan/kolektif/$name", params: { sekolah, name: savedName } });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Gagal menyimpan.");
     } finally {
@@ -323,7 +325,7 @@ function KolektifDetailPage() {
       </SectionCard>
 
       <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" onClick={() => navigate({ to: "/perpustakaan/kolektif" })}>Kembali</Button>
+        <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/kolektif", params: { sekolah } })}>Kembali</Button>
         {!isReadonly ? (
           <Button onClick={save} disabled={saving}>
             <span className="mr-1 inline-flex h-4 w-4"><IconCheck /></span>
@@ -343,7 +345,7 @@ function KolektifDetailPage() {
           onClose={() => setPengembalianOpen(false)}
           onDone={() => {
             setPengembalianOpen(false);
-            navigate({ to: "/perpustakaan/kolektif" });
+            navigate({ to: "/$sekolah/perpustakaan/kolektif", params: { sekolah } });
           }}
         />
       ) : null}
@@ -420,4 +422,4 @@ function PengembalianKolektifModal({
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/kolektif/$name")({ component: KolektifDetailPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/kolektif/$name")({ component: KolektifDetailPage });

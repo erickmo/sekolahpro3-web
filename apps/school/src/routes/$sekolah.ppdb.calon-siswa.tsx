@@ -311,4 +311,4 @@ function Select({
   );
 }
 
-export const Route = createFileRoute("/ppdb/calon-siswa")({ component: CalonSiswaPage });
+export const Route = createFileRoute("/$sekolah/ppdb/calon-siswa")({ component: CalonSiswaPage });

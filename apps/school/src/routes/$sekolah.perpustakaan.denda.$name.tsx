@@ -5,10 +5,10 @@
  * `frappe.client.get_value` lalu redirect ke detail peminjaman terkait. Jika
  * gagal, fallback ke list peminjaman dengan filter `denda=ada`.
  */
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useParams} from "@tanstack/react-router";
 import { frappeFetch } from "@sekolahpro/api-client";
 
-export const Route = createFileRoute("/perpustakaan/denda/$name")({
+export const Route = createFileRoute("/$sekolah/perpustakaan/denda/$name")({
   beforeLoad: async ({ params }) => {
     try {
       const doc = await frappeFetch<{ peminjaman?: string }>(
@@ -21,8 +21,8 @@ export const Route = createFileRoute("/perpustakaan/denda/$name")({
       );
       if (doc?.peminjaman) {
         throw redirect({
-          to: "/perpustakaan/peminjaman/$name",
-          params: { name: doc.peminjaman },
+          to: "/$sekolah/perpustakaan/peminjaman/$name",
+          params: { sekolah, name: doc.peminjaman },
         });
       }
     } catch (e) {
@@ -30,6 +30,6 @@ export const Route = createFileRoute("/perpustakaan/denda/$name")({
         throw e;
       }
     }
-    throw redirect({ to: "/perpustakaan/peminjaman", search: { denda: "ada" } });
+    throw redirect({ to: "/$sekolah/perpustakaan/peminjaman", params: { sekolah: params.sekolah }, search: { denda: "ada" } });
   },
 });

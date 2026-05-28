@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   AttentionList,
   type AttentionItem,
@@ -31,18 +31,20 @@ const MODUL_FIELDS = ["name", "nama_modul", "aktif"];
 const PAGE_LIMIT = 0;
 
 const AKSI_CEPAT: { to: string; label: string; desc: string; icon: React.ReactNode }[] = [
-  { to: "/master/tahun-ajaran", label: "Tahun Ajaran", desc: "Kelola periode akademik", icon: <IconCalendar /> },
-  { to: "/master/semester", label: "Semester", desc: "Atur semester ganjil & genap", icon: <IconCalendar /> },
-  { to: "/master/pengguna", label: "Pengguna", desc: "Undang & kelola akses pengguna", icon: <IconUsers /> },
-  { to: "/master/organisasi", label: "Organisasi", desc: "Struktur yayasan & sekolah", icon: <IconHome /> },
-  { to: "/master/unit-jenjang", label: "Unit Jenjang", desc: "Atur jenjang TK/SD/SMP/SMA", icon: <IconGrad /> },
-  { to: "/master/modul", label: "Modul Aktif", desc: "Aktifkan modul per tenant", icon: <IconBook /> },
-  { to: "/master/feature-flag", label: "Feature Flag", desc: "Toggle eksperimen fitur", icon: <IconSettings /> },
+  { to: "/$sekolah/master/tahun-ajaran", label: "Tahun Ajaran", desc: "Kelola periode akademik", icon: <IconCalendar /> },
+  { to: "/$sekolah/master/semester", label: "Semester", desc: "Atur semester ganjil & genap", icon: <IconCalendar /> },
+  { to: "/$sekolah/master/pengguna", label: "Pengguna", desc: "Undang & kelola akses pengguna", icon: <IconUsers /> },
+  { to: "/$sekolah/master/organisasi", label: "Organisasi", desc: "Struktur yayasan & sekolah", icon: <IconHome /> },
+  { to: "/$sekolah/master/unit-jenjang", label: "Unit Jenjang", desc: "Atur jenjang TK/SD/SMP/SMA", icon: <IconGrad /> },
+  { to: "/$sekolah/master/modul", label: "Modul Aktif", desc: "Aktifkan modul per tenant", icon: <IconBook /> },
+  { to: "/$sekolah/master/feature-flag", label: "Feature Flag", desc: "Toggle eksperimen fitur", icon: <IconSettings /> },
 ];
 
 const PERLU_PERHATIAN_LIMIT = 5;
 
 function MasterDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const penggunaQ = useResourceList<Pengguna>("Pengguna Sekolah", { fields: PENGGUNA_FIELDS, limit_page_length: PAGE_LIMIT });
   const tahunQ = useResourceList<TahunAjaran>("Tahun Ajaran", { fields: TAHUN_AJARAN_FIELDS, limit_page_length: PAGE_LIMIT });
   const modulQ = useResourceList<Modul>("Modul Aktif", { fields: MODUL_FIELDS, limit_page_length: PAGE_LIMIT });
@@ -73,7 +75,7 @@ function MasterDashboardPage() {
           description: "Belum memiliki peran",
           tone: "danger",
           actionLabel: "Tetapkan Peran",
-          actionHref: "/master/pengguna",
+          actionHref: "/$sekolah/master/pengguna",
         });
       }
     }
@@ -84,7 +86,7 @@ function MasterDashboardPage() {
         description: "Belum ada tahun ajaran aktif",
         tone: "danger",
         actionLabel: "Aktifkan TA",
-        actionHref: "/master/tahun-ajaran",
+        actionHref: "/$sekolah/master/tahun-ajaran",
       });
     }
     if (stats.akunDorman > 0) {
@@ -94,7 +96,7 @@ function MasterDashboardPage() {
         description: "Tidak login lebih dari 90 hari (estimasi)",
         tone: "warning",
         actionLabel: "Tinjau Akun",
-        actionHref: "/master/pengguna",
+        actionHref: "/$sekolah/master/pengguna",
       });
     }
     return items.slice(0, PERLU_PERHATIAN_LIMIT);
@@ -112,14 +114,14 @@ function MasterDashboardPage() {
         actions={
           <>
             <Link
-              to="/master/daftar"
+              to="/$sekolah/master/daftar" params={{ sekolah }}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 border border-border bg-transparent hover:bg-muted"
             >
               <span className="h-4 w-4 mr-1.5"><IconHome /></span>
               Daftar Sekolah
             </Link>
             <Link
-              to="/master/pengguna"
+              to="/$sekolah/master/pengguna" params={{ sekolah }}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 bg-brand text-white hover:bg-brand/90"
             >
               <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
@@ -147,7 +149,7 @@ function MasterDashboardPage() {
           urgency={stats.tahunAjaranAktif === 0 ? "critical" : "normal"}
           {...(stats.tahunAjaranAktif === 0
             ? {
-                actionHref: "/master/tahun-ajaran",
+                actionHref: "/$sekolah/master/tahun-ajaran",
                 renderLink: (href: string, children: React.ReactNode) => <Link to={href}>{children}</Link>,
               }
             : {})}
@@ -159,7 +161,7 @@ function MasterDashboardPage() {
           icon={<IconAlert />}
           accent="rose"
           urgency="critical"
-          actionHref="/master/pengguna"
+          actionHref="/$sekolah/master/pengguna"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -169,7 +171,7 @@ function MasterDashboardPage() {
           icon={<IconCheck />}
           accent="amber"
           urgency="warn"
-          actionHref="/master/pengguna"
+          actionHref="/$sekolah/master/pengguna"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -202,7 +204,7 @@ function MasterDashboardPage() {
         description="Pengguna tanpa peran atau periode akademik yang belum diatur."
         action={
           <Link
-            to="/master/pengguna"
+            to="/$sekolah/master/pengguna" params={{ sekolah }}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-8 px-3 hover:bg-muted"
           >
             Lihat semua
@@ -216,7 +218,7 @@ function MasterDashboardPage() {
         ) : (
           <AttentionList
             items={perluPerhatian}
-            renderLink={(href, children) => <Link to={href as "/master/pengguna"}>{children}</Link>}
+            renderLink={(href, children) => <Link to={href as "/$sekolah/master/pengguna"}>{children}</Link>}
           />
         )}
       </SectionCard>
@@ -224,4 +226,4 @@ function MasterDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/master/")({ component: MasterDashboardPage });
+export const Route = createFileRoute("/$sekolah/master/")({ component: MasterDashboardPage });

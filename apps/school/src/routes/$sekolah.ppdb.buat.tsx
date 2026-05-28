@@ -15,7 +15,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Alert,
   Badge,
@@ -73,6 +73,8 @@ const STEP_LABELS: Record<StepKey, string> = {
 };
 
 function PpdbBuatPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [step, setStep] = useState<StepKey>("gelombang");
 
@@ -303,7 +305,7 @@ function PpdbBuatPage() {
         title="Buat Pendaftaran PPDB"
         description="Alur lengkap: Gelombang → Calon Siswa → Approval → Seleksi → Pembayaran."
         actions={
-          <Button variant="outline" onClick={() => navigate({ to: "/ppdb" })}>
+          <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/ppdb", params: { sekolah } })}>
             Batal
           </Button>
         }
@@ -738,8 +740,8 @@ function ResultPanel({
         <Alert tone="success" title="Pendaftaran terbuat">
           No. Pendaftaran:{" "}
           <Link
-            to="/ppdb/$noPendaftaran"
-            params={{ noPendaftaran: result.pendaftaranName }}
+            to="/$sekolah/ppdb/$noPendaftaran"
+            params={{ sekolah, noPendaftaran: result.pendaftaranName }}
             className="font-mono text-brand underline"
           >
             {result.pendaftaranName}
@@ -803,7 +805,7 @@ function ResultPanel({
           <ActionCard
             title="Buat Pendaftaran Lain"
             description="Mulai wizard baru."
-            href="/ppdb/buat"
+            href="/$sekolah/ppdb/buat"
           />
         </div>
       </div>
@@ -1069,4 +1071,4 @@ function TahunAjaranCreateModal({
   );
 }
 
-export const Route = createFileRoute("/ppdb/buat")({ component: PpdbBuatPage });
+export const Route = createFileRoute("/$sekolah/ppdb/buat")({ component: PpdbBuatPage });

@@ -46,4 +46,4 @@ function WakafPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/wakaf")({ component: WakafPage });
+export const Route = createFileRoute("/$sekolah/koperasi/wakaf")({ component: WakafPage });

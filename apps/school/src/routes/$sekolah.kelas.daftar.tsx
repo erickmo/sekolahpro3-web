@@ -47,4 +47,4 @@ function KelasListPage() {
   );
 }
 
-export const Route = createFileRoute("/kelas/daftar")({ component: KelasListPage });
+export const Route = createFileRoute("/$sekolah/kelas/daftar")({ component: KelasListPage });

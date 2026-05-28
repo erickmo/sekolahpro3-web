@@ -130,4 +130,4 @@ function PpatkPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/ppatk")({ component: PpatkPage });
+export const Route = createFileRoute("/$sekolah/koperasi/ppatk")({ component: PpatkPage });

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -25,8 +25,8 @@ const COLUMNS: Column<Row>[] = [
     cell: (r) =>
       r.parent ? (
         <Link
-          to="/siswa/$nis"
-          params={{ nis: r.parent }}
+          to="/$sekolah/siswa/$nis"
+          params={{ sekolah, nis: r.parent }}
           className="font-mono text-xs text-brand hover:underline"
         >
           {r.parent}
@@ -45,6 +45,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function WaliPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   return (
     <>
       <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800">
@@ -84,4 +86,4 @@ function WaliPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/wali")({ component: WaliPage });
+export const Route = createFileRoute("/$sekolah/siswa/wali")({ component: WaliPage });

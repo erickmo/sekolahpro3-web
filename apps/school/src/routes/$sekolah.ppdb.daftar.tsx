@@ -10,7 +10,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Badge,
   Button,
@@ -53,8 +53,8 @@ const COLUMNS_BASE: Column<Row>[] = [
     sortable: true,
     cell: (r) => (
       <Link
-        to="/ppdb/$noPendaftaran"
-        params={{ noPendaftaran: r.name }}
+        to="/$sekolah/ppdb/$noPendaftaran"
+        params={{ sekolah, noPendaftaran: r.name }}
         className="font-mono text-xs text-brand hover:underline"
       >
         {r.name}
@@ -97,6 +97,8 @@ const VERIFIKASI_OPTIONS: VerifikasiStatus[] = [
 ];
 
 function PpdbDaftarPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Semua");
@@ -266,7 +268,7 @@ function PpdbDaftarPage() {
           sort={sort}
           onSortChange={setSort}
           onRowClick={(r) =>
-            navigate({ to: "/ppdb/$noPendaftaran", params: { noPendaftaran: r.name } })
+            navigate({ to: "/$sekolah/ppdb/$noPendaftaran", params: { sekolah, noPendaftaran: r.name } })
           }
           empty={
             q.isLoading
@@ -425,7 +427,7 @@ function PendaftaranWizard({ open, onClose, onCreated }: WizardProps) {
             />
             <p className="mt-2 text-xs text-muted-fg">
               Calon belum terdaftar?{" "}
-              <Link to="/ppdb/calon-siswa" className="text-brand hover:underline">
+              <Link to="/$sekolah/ppdb/calon-siswa" params={{ sekolah }} className="text-brand hover:underline">
                 Tambah Calon Siswa
               </Link>
               .
@@ -444,7 +446,7 @@ function PendaftaranWizard({ open, onClose, onCreated }: WizardProps) {
             {gelombangQ.data?.length === 0 && (
               <p className="mt-2 text-xs text-amber-700">
                 Belum ada gelombang aktif.{" "}
-                <Link to="/ppdb/gelombang" className="underline">
+                <Link to="/$sekolah/ppdb/gelombang" params={{ sekolah }} className="underline">
                   Buka pengaturan gelombang
                 </Link>
                 .
@@ -462,4 +464,4 @@ function PendaftaranWizard({ open, onClose, onCreated }: WizardProps) {
   );
 }
 
-export const Route = createFileRoute("/ppdb/daftar")({ component: PpdbDaftarPage });
+export const Route = createFileRoute("/$sekolah/ppdb/daftar")({ component: PpdbDaftarPage });

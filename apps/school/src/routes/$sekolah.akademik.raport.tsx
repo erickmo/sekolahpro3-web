@@ -140,4 +140,4 @@ function RaportPage() {
   );
 }
 
-export const Route = createFileRoute("/akademik/raport")({ component: RaportPage });
+export const Route = createFileRoute("/$sekolah/akademik/raport")({ component: RaportPage });

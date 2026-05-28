@@ -19,23 +19,23 @@ interface AkademikSearch {
 const NAV_GROUPS: { label: string; items: { to: string; label: string; exact?: boolean }[] }[] = [
   {
     label: "Ringkasan",
-    items: [{ to: "/akademik", label: "Dashboard", exact: true }],
+    items: [{ to: "/$sekolah/akademik", label: "Dashboard", exact: true }],
   },
   {
     label: "Master",
     items: [
-      { to: "/akademik/kurikulum", label: "Kurikulum" },
-      { to: "/akademik/daftar", label: "Mata Pelajaran" },
-      { to: "/akademik/komponen-nilai", label: "Komponen Nilai" },
-      { to: "/akademik/kkm", label: "KKM" },
-      { to: "/akademik/konfigurasi", label: "Konfigurasi" },
+      { to: "/$sekolah/akademik/kurikulum", label: "Kurikulum" },
+      { to: "/$sekolah/akademik/daftar", label: "Mata Pelajaran" },
+      { to: "/$sekolah/akademik/komponen-nilai", label: "Komponen Nilai" },
+      { to: "/$sekolah/akademik/kkm", label: "KKM" },
+      { to: "/$sekolah/akademik/konfigurasi", label: "Konfigurasi" },
     ],
   },
   {
     label: "Penilaian",
     items: [
-      { to: "/akademik/entri-nilai", label: "Entri Nilai" },
-      { to: "/akademik/raport", label: "Raport" },
+      { to: "/$sekolah/akademik/entri-nilai", label: "Entri Nilai" },
+      { to: "/$sekolah/akademik/raport", label: "Raport" },
     ],
   },
 ];
@@ -71,8 +71,8 @@ function NavGroup({
 
 function AkademikLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const search = useSearch({ from: "/akademik" });
-  const navigate = useNavigate({ from: "/akademik" });
+  const search = useSearch({ from: "/$sekolah/akademik" });
+  const navigate = useNavigate({ from: "/$sekolah/akademik" });
 
   const setTahunAjaran = useCallback(
     (v: string) => {
@@ -117,7 +117,7 @@ function AkademikLayout() {
   );
 }
 
-export const Route = createFileRoute("/akademik")({
+export const Route = createFileRoute("/$sekolah/akademik")({
   component: AkademikLayout,
   validateSearch: (search: Record<string, unknown>): AkademikSearch => {
     const out: AkademikSearch = {};

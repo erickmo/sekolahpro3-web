@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
@@ -49,6 +49,8 @@ const CREATE_FIELDS: PerpFieldDef[] = [
 ];
 
 function ReservasiPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -70,7 +72,7 @@ function ReservasiPage() {
         ]}
         addLabel="Reservasi Baru"
         onAdd={() => setOpen(true)}
-        onRowClick={(r) => navigate({ to: "/perpustakaan/reservasi/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/perpustakaan/reservasi/$name", params: { sekolah, name: r.name } })}
       />
       <PerpCreateModal
         open={open}
@@ -81,11 +83,11 @@ function ReservasiPage() {
         submitLabel="Simpan"
         onCreated={(doc) => {
           const name = (doc as { name?: string }).name;
-          if (name) navigate({ to: "/perpustakaan/reservasi/$name", params: { name } });
+          if (name) navigate({ to: "/$sekolah/perpustakaan/reservasi/$name", params: { sekolah, name } });
         }}
       />
     </>
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/reservasi")({ component: ReservasiPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/reservasi")({ component: ReservasiPage });

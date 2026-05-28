@@ -20,56 +20,56 @@ interface NavGroup {
 
 const GROUPS: NavGroup[] = [
   {
-    to: "/koperasi",
+    to: "/$sekolah/koperasi",
     label: "Dashboard",
     exact: true,
-    members: [{ to: "/koperasi", label: "Dashboard" }],
+    members: [{ to: "/$sekolah/koperasi", label: "Dashboard" }],
   },
   {
-    to: "/koperasi/daftar",
+    to: "/$sekolah/koperasi/daftar",
     label: "Anggota & Rekening",
     members: [
-      { to: "/koperasi/daftar", label: "Anggota" },
-      { to: "/koperasi/rekening", label: "Rekening" },
+      { to: "/$sekolah/koperasi/daftar", label: "Anggota" },
+      { to: "/$sekolah/koperasi/rekening", label: "Rekening" },
     ],
   },
   {
-    to: "/koperasi/workspace",
+    to: "/$sekolah/koperasi/workspace",
     label: "Operasional",
     members: [
-      { to: "/koperasi/workspace", label: "Workspace" },
-      { to: "/koperasi/transaksi", label: "Transaksi" },
-      { to: "/koperasi/kas-teller", label: "Kas Teller" },
-      { to: "/koperasi/kartu", label: "Kartu RFID" },
-      { to: "/koperasi/emoney", label: "E-Money" },
+      { to: "/$sekolah/koperasi/workspace", label: "Workspace" },
+      { to: "/$sekolah/koperasi/transaksi", label: "Transaksi" },
+      { to: "/$sekolah/koperasi/kas-teller", label: "Kas Teller" },
+      { to: "/$sekolah/koperasi/kartu", label: "Kartu RFID" },
+      { to: "/$sekolah/koperasi/emoney", label: "E-Money" },
     ],
   },
   {
-    to: "/koperasi/pembiayaan",
+    to: "/$sekolah/koperasi/pembiayaan",
     label: "Pembiayaan",
     members: [
-      { to: "/koperasi/pembiayaan", label: "Akad" },
-      { to: "/koperasi/angsuran", label: "Angsuran" },
+      { to: "/$sekolah/koperasi/pembiayaan", label: "Akad" },
+      { to: "/$sekolah/koperasi/angsuran", label: "Angsuran" },
     ],
   },
   {
-    to: "/koperasi/zis",
+    to: "/$sekolah/koperasi/zis",
     label: "Sosial",
     members: [
-      { to: "/koperasi/zis", label: "ZIS" },
-      { to: "/koperasi/wakaf", label: "Wakaf" },
-      { to: "/koperasi/shu", label: "SHU" },
+      { to: "/$sekolah/koperasi/zis", label: "ZIS" },
+      { to: "/$sekolah/koperasi/wakaf", label: "Wakaf" },
+      { to: "/$sekolah/koperasi/shu", label: "SHU" },
     ],
   },
   {
-    to: "/koperasi/persetujuan",
+    to: "/$sekolah/koperasi/persetujuan",
     label: "Admin",
     members: [
-      { to: "/koperasi/persetujuan", label: "Persetujuan" },
-      { to: "/koperasi/period-close", label: "Period Close" },
-      { to: "/koperasi/ppatk", label: "PPATK" },
-      { to: "/koperasi/laporan", label: "Laporan" },
-      { to: "/koperasi/pengaturan", label: "Pengaturan" },
+      { to: "/$sekolah/koperasi/persetujuan", label: "Persetujuan" },
+      { to: "/$sekolah/koperasi/period-close", label: "Period Close" },
+      { to: "/$sekolah/koperasi/ppatk", label: "PPATK" },
+      { to: "/$sekolah/koperasi/laporan", label: "Laporan" },
+      { to: "/$sekolah/koperasi/pengaturan", label: "Pengaturan" },
     ],
   },
 ];
@@ -136,4 +136,4 @@ function KoperasiLayout() {
   );
 }
 
-export const Route = createFileRoute("/koperasi")({ component: KoperasiLayout });
+export const Route = createFileRoute("/$sekolah/koperasi")({ component: KoperasiLayout });

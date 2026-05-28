@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@sekolahpro/ui";
 import { useResourceDoc, updateResource } from "@sekolahpro/api-client";
@@ -26,6 +26,8 @@ const STATUS_TONE: Record<string, "success" | "brand" | "warning" | "danger" | "
 };
 
 function ReservasiDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { name } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -54,8 +56,8 @@ function ReservasiDetailPage() {
     <PerpDetailScaffold
       eyebrow="Reservasi Buku"
       title={name}
-      backTo="/perpustakaan/reservasi"
-      crumbParent={{ label: "Reservasi", to: "/perpustakaan/reservasi" }}
+      backTo="/$sekolah/perpustakaan/reservasi"
+      crumbParent={{ label: "Reservasi", to: "/$sekolah/perpustakaan/reservasi" }}
       crumbSelf={name}
       description={doc?.buku ? `Buku: ${doc.buku}` : undefined}
       status={status ? { label: status, tone: STATUS_TONE[status] ?? "neutral" } : undefined}
@@ -78,11 +80,11 @@ function ReservasiDetailPage() {
               <Button size="sm" variant="destructive" onClick={handleBatal} disabled={workflowMut.isPending}>Batal</Button>
             </>
           ) : null}
-          <Button size="sm" variant="outline" onClick={() => navigate({ to: "/perpustakaan/reservasi" })}>Tutup</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/reservasi", params: { sekolah } })}>Tutup</Button>
         </>
       }
     />
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/reservasi/$name")({ component: ReservasiDetailPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/reservasi/$name")({ component: ReservasiDetailPage });

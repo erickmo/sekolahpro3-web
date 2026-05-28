@@ -13,8 +13,8 @@ interface EditSearch {
 
 function EntriNilaiEditPage() {
   const ctx = useAkademikContextOptional();
-  const search = useSearch({ from: "/akademik/entri-nilai/edit" });
-  const navigate = useNavigate({ from: "/akademik/entri-nilai/edit" });
+  const search = useSearch({ from: "/$sekolah/akademik/entri-nilai/edit" });
+  const navigate = useNavigate({ from: "/$sekolah/akademik/entri-nilai/edit" });
 
   const onStart = useCallback(
     (sel: EntriNilaiSelection) => {
@@ -67,7 +67,7 @@ function EntriNilaiEditPage() {
   return <EntriNilaiSelector initial={initial} onStart={onStart} />;
 }
 
-export const Route = createFileRoute("/akademik/entri-nilai/edit")({
+export const Route = createFileRoute("/$sekolah/akademik/entri-nilai/edit")({
   component: EntriNilaiEditPage,
   validateSearch: (s: Record<string, unknown>): EditSearch => {
     const out: EditSearch = {};

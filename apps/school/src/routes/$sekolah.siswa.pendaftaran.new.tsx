@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 import {
   Badge,
@@ -77,6 +77,8 @@ async function loadRombel(query: string): Promise<SearchableOption[]> {
 }
 
 function PendaftaranNewPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const create = useResourceCreate<{ name: string }>("Pendaftaran Siswa");
   const [v, setV] = useState<FormState>(INITIAL);
@@ -122,7 +124,7 @@ function PendaftaranNewPage() {
         catatan: v.catatan || undefined,
         status: "Draft",
       });
-      void navigate({ to: "/siswa/pendaftaran/$id", params: { id: doc.name } });
+      void navigate({ to: "/$sekolah/siswa/pendaftaran/$id", params: { sekolah, id: doc.name } });
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Gagal menyimpan pendaftaran.");
     }
@@ -211,7 +213,7 @@ function PendaftaranNewPage() {
         {v.jenis_pendaftaran === "Mutasi" ? (
           <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800">
             Untuk pindahan dari sekolah lain, gunakan flow{" "}
-            <a href="/siswa/mutasi-masuk/new" className="underline">
+            <a href="/$sekolah/siswa/mutasi-masuk/new" className="underline">
               Mutasi Masuk
             </a>{" "}
             yang punya verifikasi Dapodik. Form ini hanya untuk kasus khusus.
@@ -275,7 +277,7 @@ function PendaftaranNewPage() {
           Detail wali lengkap dapat ditambah setelah pendaftaran disubmit
         </Badge>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate({ to: "/siswa/pendaftaran" })}>
+          <Button type="button" variant="outline" onClick={() => navigate({ to: "/$sekolah/siswa/pendaftaran", params: { sekolah } })}>
             Batal
           </Button>
           <Button type="submit" disabled={create.isPending}>
@@ -287,4 +289,4 @@ function PendaftaranNewPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/pendaftaran/new")({ component: PendaftaranNewPage });
+export const Route = createFileRoute("/$sekolah/siswa/pendaftaran/new")({ component: PendaftaranNewPage });

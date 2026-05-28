@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { CreateResourceModal, type FieldSpec } from "../components/akademik/CreateResourceModal";
@@ -79,6 +79,8 @@ const FIELDS: FieldSpec[] = [
 ];
 
 function KurikulumPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [openCreate, setOpenCreate] = useState(false);
   return (
@@ -102,7 +104,7 @@ function KurikulumPage() {
         ]}
         addLabel="Tambah Kurikulum"
         onAdd={() => setOpenCreate(true)}
-        onRowClick={(r) => navigate({ to: "/akademik/kurikulum/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/akademik/kurikulum/$name", params: { sekolah, name: r.name } })}
       />
       <CreateResourceModal
         open={openCreate}
@@ -116,4 +118,4 @@ function KurikulumPage() {
   );
 }
 
-export const Route = createFileRoute("/akademik/kurikulum")({ component: KurikulumPage });
+export const Route = createFileRoute("/$sekolah/akademik/kurikulum")({ component: KurikulumPage });

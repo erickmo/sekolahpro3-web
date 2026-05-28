@@ -37,4 +37,4 @@ function StaffBerkasPage() {
   );
 }
 
-export const Route = createFileRoute("/staff/berkas")({ component: StaffBerkasPage });
+export const Route = createFileRoute("/$sekolah/staff/berkas")({ component: StaffBerkasPage });

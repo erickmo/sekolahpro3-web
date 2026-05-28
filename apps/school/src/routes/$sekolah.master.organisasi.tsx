@@ -25,7 +25,7 @@ function OrganisasiPage() {
       defaultSort={{ key: "nama", dir: "asc" }}
       searchFields={["name", "nama"]}
       addLabel="Tambah Organisasi"
-      detailRoute="/master/organisasi/$name"
+      detailRoute="/$sekolah/master/organisasi/$name"
       detailParams={(r) => ({ name: r.name })}
       formTitle="Tambah Organisasi"
       formFields={ORGANISASI_FIELDS}
@@ -33,4 +33,4 @@ function OrganisasiPage() {
   );
 }
 
-export const Route = createFileRoute("/master/organisasi")({ component: OrganisasiPage });
+export const Route = createFileRoute("/$sekolah/master/organisasi")({ component: OrganisasiPage });

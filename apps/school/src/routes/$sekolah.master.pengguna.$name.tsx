@@ -13,7 +13,7 @@ function PenggunaDetailPage() {
       name={name}
       eyebrow="Pengguna Sekolah"
       parentLabel="Pengguna"
-      parentPath="/master/pengguna"
+      parentPath="/$sekolah/master/pengguna"
       title={(d) => d.user || d.name}
       subtitle={(d) => d.role_sekolah ?? ""}
       fields={[
@@ -28,4 +28,4 @@ function PenggunaDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/master/pengguna/$name")({ component: PenggunaDetailPage });
+export const Route = createFileRoute("/$sekolah/master/pengguna/$name")({ component: PenggunaDetailPage });

@@ -2,7 +2,7 @@
  * Berita Acara Kerusakan Buku — daftar insiden kerusakan / hilang per eksemplar.
  * 1 BA = 1 eksemplar. Lihat PERP-ADR-0006.
  */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -52,6 +52,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function BAListPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   return (
     <ResourceListPage<Row>
@@ -71,10 +73,10 @@ function BAListPage() {
           options: ["Semua", "Diperbaiki", "Hapus", "Ganti Rugi"].map((v) => ({ value: v, label: v })) },
       ]}
       addLabel="BA Baru"
-      onAdd={() => navigate({ to: "/perpustakaan/inventaris/berita-acara/$name", params: { name: "new" } })}
-      onRowClick={(r) => navigate({ to: "/perpustakaan/inventaris/berita-acara/$name", params: { name: r.name } })}
+      onAdd={() => navigate({ to: "/$sekolah/perpustakaan/inventaris/berita-acara/$name", params: { sekolah, name: "new" } })}
+      onRowClick={(r) => navigate({ to: "/$sekolah/perpustakaan/inventaris/berita-acara/$name", params: { sekolah, name: r.name } })}
     />
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/inventaris/berita-acara")({ component: BAListPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/inventaris/berita-acara")({ component: BAListPage });

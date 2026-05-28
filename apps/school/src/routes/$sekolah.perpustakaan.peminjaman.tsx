@@ -8,7 +8,7 @@
  *
  * See: PERP-ADR-0001, docs/superpowers/specs/2026-05-25-perpustakaan-sirkulasi-merge-design.md.
  */
-import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch, useParams} from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import type { FilterTuple } from "@sekolahpro/api-client";
@@ -94,8 +94,10 @@ function statusLabel(v: string): string {
 }
 
 function PeminjamanPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
-  const search = useSearch({ from: "/perpustakaan/peminjaman" }) as Search;
+  const search = useSearch({ from: "/$sekolah/perpustakaan/peminjaman" }) as Search;
   const [createOpen, setCreateOpen] = useState(false);
   const [returnFor, setReturnFor] = useState<string | null>(null);
   const [dendaFor, setDendaFor] = useState<string | null>(null);
@@ -178,7 +180,7 @@ function PeminjamanPage() {
     <>
       <div className="mb-3 inline-flex rounded-md border border-border bg-card p-1">
         <span className="rounded bg-brand px-3 py-1.5 text-sm text-white">Individu</span>
-        <Link to="/perpustakaan/kolektif" className="rounded px-3 py-1.5 text-sm text-muted-fg hover:text-fg">
+        <Link to="/$sekolah/perpustakaan/kolektif" params={{ sekolah }} className="rounded px-3 py-1.5 text-sm text-muted-fg hover:text-fg">
           Kolektif Kelas
         </Link>
       </div>
@@ -204,13 +206,13 @@ function PeminjamanPage() {
               const next: Search = { ...search };
               if (v === DEFAULT_STATUS) delete next.status;
               else next.status = v;
-              navigate({ to: "/perpustakaan/peminjaman", search: next });
+              navigate({ to: "/$sekolah/perpustakaan/peminjaman", params: { sekolah }, search: next });
             },
           },
         ]}
         addLabel="Pinjam Baru"
         onAdd={() => setCreateOpen(true)}
-        onRowClick={(r) => navigate({ to: "/perpustakaan/peminjaman/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/perpustakaan/peminjaman/$name", params: { sekolah, name: r.name } })}
         decorateRows={async (rows) => {
           const names = rows.map((r) => r.name);
           let summary: DendaSummary = {};
@@ -248,7 +250,7 @@ function PeminjamanPage() {
         submitLabel="Pinjamkan"
         onCreated={(doc) => {
           const name = (doc as { name?: string }).name;
-          if (name) navigate({ to: "/perpustakaan/peminjaman/$name", params: { name } });
+          if (name) navigate({ to: "/$sekolah/perpustakaan/peminjaman/$name", params: { sekolah, name } });
         }}
       />
 
@@ -266,7 +268,7 @@ function PeminjamanPage() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/peminjaman")({
+export const Route = createFileRoute("/$sekolah/perpustakaan/peminjaman")({
   component: PeminjamanPage,
   validateSearch: (s: Record<string, unknown>): Search => {
     const out: Search = {};

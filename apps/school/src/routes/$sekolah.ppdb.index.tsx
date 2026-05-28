@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   AttentionList,
   type AttentionItem,
@@ -67,19 +67,19 @@ const LOLOS_STATUSES = new Set(["Lulus", "Daftar Ulang", "Diterima"]);
 const RECENT_LIMIT = 5;
 
 type QuickAction = {
-  to: "/ppdb/calon-siswa" | "/ppdb/seleksi" | "/ppdb/pembayaran" | "/ppdb/daftar-ulang" | "/ppdb/gelombang" | "/ppdb/pengaturan";
+  to: "/$sekolah/ppdb/calon-siswa" | "/$sekolah/ppdb/seleksi" | "/$sekolah/ppdb/pembayaran" | "/$sekolah/ppdb/daftar-ulang" | "/$sekolah/ppdb/gelombang" | "/$sekolah/ppdb/pengaturan";
   label: string;
   description: string;
   icon: React.ReactNode;
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { to: "/ppdb/calon-siswa", label: "Calon Siswa", description: "Kelola data pendaftar baru", icon: <IconUsers /> },
-  { to: "/ppdb/seleksi", label: "Seleksi", description: "Jadwal & hasil seleksi", icon: <IconCheck /> },
-  { to: "/ppdb/pembayaran", label: "Pembayaran", description: "Verifikasi pembayaran PPDB", icon: <IconWallet /> },
-  { to: "/ppdb/daftar-ulang", label: "Daftar Ulang", description: "Konfirmasi peserta diterima", icon: <IconGrad /> },
-  { to: "/ppdb/gelombang", label: "Gelombang", description: "Atur gelombang & kuota", icon: <IconCalendar /> },
-  { to: "/ppdb/pengaturan", label: "Pengaturan", description: "Konfigurasi modul PPDB", icon: <IconSettings /> },
+  { to: "/$sekolah/ppdb/calon-siswa", label: "Calon Siswa", description: "Kelola data pendaftar baru", icon: <IconUsers /> },
+  { to: "/$sekolah/ppdb/seleksi", label: "Seleksi", description: "Jadwal & hasil seleksi", icon: <IconCheck /> },
+  { to: "/$sekolah/ppdb/pembayaran", label: "Pembayaran", description: "Verifikasi pembayaran PPDB", icon: <IconWallet /> },
+  { to: "/$sekolah/ppdb/daftar-ulang", label: "Daftar Ulang", description: "Konfirmasi peserta diterima", icon: <IconGrad /> },
+  { to: "/$sekolah/ppdb/gelombang", label: "Gelombang", description: "Atur gelombang & kuota", icon: <IconCalendar /> },
+  { to: "/$sekolah/ppdb/pengaturan", label: "Pengaturan", description: "Konfigurasi modul PPDB", icon: <IconSettings /> },
 ];
 
 const TONE_BY_STATUS: Record<string, "success" | "brand" | "neutral" | "warning" | "danger"> = {
@@ -95,6 +95,8 @@ const TONE_BY_STATUS: Record<string, "success" | "brand" | "neutral" | "warning"
 };
 
 function PpdbDashboard() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const pendaftaranQ = useResourceList<PendaftaranRow>("Pendaftaran PPDB", {
     fields: PENDAFTARAN_FIELDS,
     order_by: "`tanggal_daftar` desc",
@@ -161,7 +163,7 @@ function PpdbDashboard() {
         tone: stats.pendaftarTunggakanLama > 0 ? "danger" : "warning",
         badge: "Bayar",
         actionLabel: "Hubungi Calon",
-        actionHref: firstPending ? `/ppdb/${firstPending.noPendaftaran}` : "/ppdb/pembayaran",
+        actionHref: firstPending ? `/ppdb/${firstPending.noPendaftaran}` : "/$sekolah/ppdb/pembayaran",
       });
     }
     if (PPDB_DOKUMEN_KURANG_STUB > 0) {
@@ -172,7 +174,7 @@ function PpdbDashboard() {
         tone: "warning",
         badge: "Dokumen",
         actionLabel: "Minta Lengkap",
-        actionHref: "/ppdb/calon-siswa",
+        actionHref: "/$sekolah/ppdb/calon-siswa",
       });
     }
     if (RIWAYAT_TUNGGAKAN_STUB > 0) {
@@ -183,7 +185,7 @@ function PpdbDashboard() {
         tone: "warning",
         badge: "Riwayat",
         actionLabel: "Tinjau",
-        actionHref: "/keuangan",
+        actionHref: "/$sekolah/keuangan",
       });
     }
     return items;
@@ -201,7 +203,7 @@ function PpdbDashboard() {
           </>
         }
         actions={
-          <Link to="/ppdb/buat">
+          <Link to="/$sekolah/ppdb/buat" params={{ sekolah }}>
             <Button>
               <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
               Buat Pendaftaran
@@ -228,7 +230,7 @@ function PpdbDashboard() {
                 ? "warn"
                 : "normal"
           }
-          actionHref="/ppdb/gelombang"
+          actionHref="/$sekolah/ppdb/gelombang"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -238,7 +240,7 @@ function PpdbDashboard() {
           icon={<IconCheck />}
           accent="emerald"
           urgency="normal"
-          actionHref="/ppdb/seleksi"
+          actionHref="/$sekolah/ppdb/seleksi"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -252,7 +254,7 @@ function PpdbDashboard() {
           icon={<IconWallet />}
           accent="rose"
           urgency={stats.pendaftarTunggakanLama > 0 ? "critical" : "normal"}
-          actionHref="/ppdb/pembayaran"
+          actionHref="/$sekolah/ppdb/pembayaran"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -262,7 +264,7 @@ function PpdbDashboard() {
           icon={<IconCalendar />}
           accent="violet"
           urgency={stats.hariTersisaGelombang <= 14 ? "warn" : "normal"}
-          actionHref="/ppdb/gelombang"
+          actionHref="/$sekolah/ppdb/gelombang"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -295,7 +297,7 @@ function PpdbDashboard() {
       >
         <AttentionList
           items={perluPerhatian}
-          renderLink={(href, children) => <Link to={href as "/ppdb/calon-siswa"}>{children}</Link>}
+          renderLink={(href, children) => <Link to={href as "/$sekolah/ppdb/calon-siswa"}>{children}</Link>}
         />
       </SectionCard>
 
@@ -304,7 +306,7 @@ function PpdbDashboard() {
         description="Pendaftaran terakhir."
         padded={false}
         action={
-          <Link to="/ppdb/daftar" className="text-xs text-brand hover:underline">
+          <Link to="/$sekolah/ppdb/daftar" params={{ sekolah }} className="text-xs text-brand hover:underline">
             Lihat semua
           </Link>
         }
@@ -322,8 +324,8 @@ function PpdbDashboard() {
                 <Avatar name={p.calon_siswa ?? p.name} size="sm" />
                 <div className="min-w-0 flex-1">
                   <Link
-                    to="/ppdb/$noPendaftaran"
-                    params={{ noPendaftaran: p.name }}
+                    to="/$sekolah/ppdb/$noPendaftaran"
+                    params={{ sekolah, noPendaftaran: p.name }}
                     className="text-sm font-medium text-fg hover:text-brand truncate block"
                   >
                     {p.calon_siswa ?? p.name}
@@ -349,7 +351,7 @@ function PpdbDashboard() {
 
       <p className="text-xs text-muted-fg">
         Tip: buka{" "}
-        <Link to="/ppdb/daftar" className="text-brand hover:underline">
+        <Link to="/$sekolah/ppdb/daftar" params={{ sekolah }} className="text-brand hover:underline">
           Pendaftaran
         </Link>{" "}
         untuk daftar lengkap.
@@ -416,4 +418,4 @@ function PipelineFunnel({ rows, loading }: { rows: PendaftaranRow[]; loading: bo
   );
 }
 
-export const Route = createFileRoute("/ppdb/")({ component: PpdbDashboard });
+export const Route = createFileRoute("/$sekolah/ppdb/")({ component: PpdbDashboard });

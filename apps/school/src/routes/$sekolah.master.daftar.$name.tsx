@@ -13,7 +13,7 @@ function SekolahDetailPage() {
       name={name}
       eyebrow="Sekolah"
       parentLabel="Sekolah"
-      parentPath="/master/daftar"
+      parentPath="/$sekolah/master/daftar"
       title={(d) => d.nama || d.name}
       subtitle={(d) => d.npsn ? `NPSN ${d.npsn}` : ""}
       fields={[
@@ -29,4 +29,4 @@ function SekolahDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/master/daftar/$name")({ component: SekolahDetailPage });
+export const Route = createFileRoute("/$sekolah/master/daftar/$name")({ component: SekolahDetailPage });

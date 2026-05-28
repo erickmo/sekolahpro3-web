@@ -19,7 +19,7 @@ function MapelDetailPage() {
       name={name}
       eyebrow="Detail Mata Pelajaran"
       parentLabel="Mata Pelajaran"
-      parentTo="/akademik/daftar"
+      parentTo="/$sekolah/akademik/daftar"
       titleField="nama_mapel"
       fields={[
         {
@@ -64,4 +64,4 @@ function MapelDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/akademik/mapel/$name")({ component: MapelDetailPage });
+export const Route = createFileRoute("/$sekolah/akademik/mapel/$name")({ component: MapelDetailPage });

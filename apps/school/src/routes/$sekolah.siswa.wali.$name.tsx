@@ -14,14 +14,16 @@ interface WaliChildDoc {
 }
 
 function WaliDetailPage() {
-  const { name } = useParams({ from: "/siswa/wali/$name" });
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
+  const { name } = useParams({ from: "/$sekolah/siswa/wali/$name" });
   const navigate = useNavigate();
   const q = useResourceDoc<WaliChildDoc>("Wali Siswa", name);
   const doc = q.data;
 
   useEffect(() => {
     if (doc?.parent && doc.parenttype === "Siswa") {
-      void navigate({ to: "/siswa/$nis", params: { nis: doc.parent } });
+      void navigate({ to: "/$sekolah/siswa/$nis", params: { sekolah, nis: doc.parent } });
     }
   }, [doc?.parent, doc?.parenttype, navigate]);
 
@@ -42,8 +44,8 @@ function WaliDetailPage() {
         {doc?.parent ? (
           <div className="mt-4">
             <Link
-              to="/siswa/$nis"
-              params={{ nis: doc.parent }}
+              to="/$sekolah/siswa/$nis"
+              params={{ sekolah, nis: doc.parent }}
               className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90"
             >
               → Buka {doc.parent}
@@ -53,7 +55,7 @@ function WaliDetailPage() {
           <div className="mt-4 text-sm text-muted-fg">Memuat data parent…</div>
         ) : (
           <div className="mt-4">
-            <Link to="/siswa/wali" className="text-brand hover:underline">
+            <Link to="/$sekolah/siswa/wali" params={{ sekolah }} className="text-brand hover:underline">
               ← Kembali ke direktori wali
             </Link>
           </div>
@@ -63,4 +65,4 @@ function WaliDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/wali/$name")({ component: WaliDetailPage });
+export const Route = createFileRoute("/$sekolah/siswa/wali/$name")({ component: WaliDetailPage });

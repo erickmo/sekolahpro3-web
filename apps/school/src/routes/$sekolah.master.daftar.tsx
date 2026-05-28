@@ -27,7 +27,7 @@ function SekolahPage() {
       defaultSort={{ key: "nama", dir: "asc" }}
       searchFields={["name", "nama", "npsn"]}
       addLabel="Tambah Sekolah"
-      detailRoute="/master/daftar/$name"
+      detailRoute="/$sekolah/master/daftar/$name"
       detailParams={(r) => ({ name: r.name })}
       formTitle="Tambah Sekolah"
       formFields={SEKOLAH_FIELDS}
@@ -35,4 +35,4 @@ function SekolahPage() {
   );
 }
 
-export const Route = createFileRoute("/master/daftar")({ component: SekolahPage });
+export const Route = createFileRoute("/$sekolah/master/daftar")({ component: SekolahPage });

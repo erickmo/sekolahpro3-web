@@ -2,14 +2,14 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/guru", label: "Dashboard", exact: true },
-  { to: "/guru/daftar", label: "Daftar Guru" },
-  { to: "/guru/penugasan", label: "Penugasan" },
-  { to: "/guru/sk-mengajar", label: "SK Mengajar" },
-  { to: "/guru/sk-jabatan", label: "SK Jabatan" },
-  { to: "/guru/jabatan", label: "Jabatan" },
-  { to: "/guru/mapel-pengampu", label: "Mapel Pengampu" },
-  { to: "/guru/berkas", label: "Berkas" },
+  { to: "/$sekolah/guru", label: "Dashboard", exact: true },
+  { to: "/$sekolah/guru/daftar", label: "Daftar Guru" },
+  { to: "/$sekolah/guru/penugasan", label: "Penugasan" },
+  { to: "/$sekolah/guru/sk-mengajar", label: "SK Mengajar" },
+  { to: "/$sekolah/guru/sk-jabatan", label: "SK Jabatan" },
+  { to: "/$sekolah/guru/jabatan", label: "Jabatan" },
+  { to: "/$sekolah/guru/mapel-pengampu", label: "Mapel Pengampu" },
+  { to: "/$sekolah/guru/berkas", label: "Berkas" },
 ];
 
 function GuruLayout() {
@@ -28,4 +28,4 @@ function GuruLayout() {
   );
 }
 
-export const Route = createFileRoute("/guru")({ component: GuruLayout });
+export const Route = createFileRoute("/$sekolah/guru")({ component: GuruLayout });

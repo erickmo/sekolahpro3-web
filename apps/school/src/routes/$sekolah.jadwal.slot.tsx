@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useState } from "react";
 import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
@@ -27,6 +27,8 @@ const FIELDS: ResourceFieldDef[] = [
 ];
 
 function SlotJadwalPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   return (
@@ -43,7 +45,7 @@ function SlotJadwalPage() {
         searchFields={["name", "hari"]}
         addLabel="Tambah Slot"
         onAdd={() => setOpen(true)}
-        onRowClick={(r) => navigate({ to: "/jadwal/slot/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/jadwal/slot/$name", params: { sekolah, name: r.name } })}
       />
       <ResourceCreateModal
         open={open}
@@ -57,4 +59,4 @@ function SlotJadwalPage() {
   );
 }
 
-export const Route = createFileRoute("/jadwal/slot")({ component: SlotJadwalPage });
+export const Route = createFileRoute("/$sekolah/jadwal/slot")({ component: SlotJadwalPage });

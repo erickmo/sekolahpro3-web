@@ -7,7 +7,7 @@
  * docs/superpowers/specs/2026-05-25-perpustakaan-sirkulasi-merge-design.md.
  */
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceList, updateResource } from "@sekolahpro/api-client";
@@ -75,6 +75,8 @@ const STATUS_TONE: Record<string, "success" | "warning" | "neutral" | "brand" | 
 };
 
 function AnggotaDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { name } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -110,8 +112,8 @@ function AnggotaDetailPage() {
     <PerpDetailScaffold
       eyebrow="Anggota Perpustakaan"
       title={doc?.nama_lengkap ?? name}
-      backTo="/perpustakaan/anggota"
-      crumbParent={{ label: "Anggota", to: "/perpustakaan/anggota" }}
+      backTo="/$sekolah/perpustakaan/anggota"
+      crumbParent={{ label: "Anggota", to: "/$sekolah/perpustakaan/anggota" }}
       crumbSelf={doc?.nama_lengkap ?? name}
       description={doc?.tipe_anggota ? `${doc.tipe_anggota}${doc.kelas ? ` · ${doc.kelas}` : ""}` : undefined}
       status={status ? { label: status, tone: STATUS_TONE[status] ?? "neutral" } : undefined}
@@ -137,7 +139,7 @@ function AnggotaDetailPage() {
           {status === "Dibekukan" ? (
             <Button size="sm" onClick={handleAktifkan} disabled={workflowMut.isPending}>Aktifkan</Button>
           ) : null}
-          <Button size="sm" variant="outline" onClick={() => navigate({ to: "/perpustakaan/anggota" })}>Tutup</Button>
+          <Button size="sm" variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/anggota", params: { sekolah } })}>Tutup</Button>
         </>
       }
       extraSections={<PeminjamanAktifSection items={aktif} onReturn={setReturnFor} />}
@@ -154,4 +156,4 @@ function AnggotaDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/anggota/$name")({ component: AnggotaDetailPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/anggota/$name")({ component: AnggotaDetailPage });

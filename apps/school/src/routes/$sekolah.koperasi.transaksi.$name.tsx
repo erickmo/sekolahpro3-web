@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Badge,
   Breadcrumb,
@@ -43,6 +43,8 @@ const formatRupiah = (n: number | undefined) =>
   n === undefined ? "—" : `Rp ${n.toLocaleString("id-ID")}`;
 
 function TransaksiDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { name } = Route.useParams();
   const navigate = useNavigate();
   const q = useResourceDoc<TransaksiDoc>("Transaksi Simpanan", name);
@@ -54,9 +56,9 @@ function TransaksiDetailPage() {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Koperasi", render: ({ className, children }) => <Link to="/koperasi" className={className}>{children}</Link> },
-              { label: "Transaksi", render: ({ className, children }) => <Link to="/koperasi/transaksi" className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Koperasi", render: ({ className, children }) => <Link to="/$sekolah/koperasi" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Transaksi", render: ({ className, children }) => <Link to="/$sekolah/koperasi/transaksi" params={{ sekolah }} className={className}>{children}</Link> },
               { label: name },
             ]}
           />
@@ -65,7 +67,7 @@ function TransaksiDetailPage() {
             title={name}
             description={t ? `${t.jenis ?? "—"} · ${t.tanggal ?? "—"}` : "Memuat..."}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/koperasi/transaksi" })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/koperasi/transaksi", params: { sekolah } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali
               </Button>
@@ -105,8 +107,8 @@ function TransaksiDetailPage() {
                 value={
                   t?.rekening ? (
                     <Link
-                      to="/koperasi/rekening/$name"
-                      params={{ name: t.rekening }}
+                      to="/$sekolah/koperasi/rekening/$name"
+                      params={{ sekolah, name: t.rekening }}
                       className="font-mono text-brand hover:underline"
                     >
                       {t.rekening}
@@ -121,8 +123,8 @@ function TransaksiDetailPage() {
                   label="Rekening Tujuan"
                   value={
                     <Link
-                      to="/koperasi/rekening/$name"
-                      params={{ name: t.rekening_tujuan }}
+                      to="/$sekolah/koperasi/rekening/$name"
+                      params={{ sekolah, name: t.rekening_tujuan }}
                       className="font-mono text-brand hover:underline"
                     >
                       {t.rekening_tujuan}
@@ -152,6 +154,6 @@ function TransaksiDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/transaksi/$name")({
+export const Route = createFileRoute("/$sekolah/koperasi/transaksi/$name")({
   component: TransaksiDetailPage,
 });

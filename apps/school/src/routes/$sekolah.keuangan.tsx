@@ -619,4 +619,4 @@ function KeuanganPage() {
   );
 }
 
-export const Route = createFileRoute("/keuangan")({ component: KeuanganPage });
+export const Route = createFileRoute("/$sekolah/keuangan")({ component: KeuanganPage });

@@ -13,7 +13,7 @@ function FeatureFlagDetailPage() {
       name={name}
       eyebrow="Feature Flag"
       parentLabel="Feature Flag"
-      parentPath="/master/feature-flag"
+      parentPath="/$sekolah/master/feature-flag"
       title={(d) => d.key || d.name}
       fields={[
         { label: "ID", render: (d) => <span className="font-mono text-xs">{d.name}</span> },
@@ -26,4 +26,4 @@ function FeatureFlagDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/master/feature-flag/$name")({ component: FeatureFlagDetailPage });
+export const Route = createFileRoute("/$sekolah/master/feature-flag/$name")({ component: FeatureFlagDetailPage });

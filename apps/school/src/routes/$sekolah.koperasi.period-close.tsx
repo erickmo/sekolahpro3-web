@@ -131,4 +131,4 @@ function PeriodClosePage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/period-close")({ component: PeriodClosePage });
+export const Route = createFileRoute("/$sekolah/koperasi/period-close")({ component: PeriodClosePage });

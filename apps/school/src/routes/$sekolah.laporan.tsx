@@ -83,4 +83,4 @@ function LaporanPage() {
   );
 }
 
-export const Route = createFileRoute("/laporan")({ component: LaporanPage });
+export const Route = createFileRoute("/$sekolah/laporan")({ component: LaporanPage });

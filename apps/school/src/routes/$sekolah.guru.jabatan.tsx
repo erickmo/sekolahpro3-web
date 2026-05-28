@@ -42,4 +42,4 @@ function JabatanPage() {
   );
 }
 
-export const Route = createFileRoute("/guru/jabatan")({ component: JabatanPage });
+export const Route = createFileRoute("/$sekolah/guru/jabatan")({ component: JabatanPage });

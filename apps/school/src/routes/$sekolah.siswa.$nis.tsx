@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useParams} from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
 import { useSessionStore } from "@sekolahpro/auth";
@@ -998,6 +998,8 @@ function mapWaliRows(wali: WaliSiswaRow[]): WaliRow[] {
 }
 
 function SiswaDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { nis } = Route.useParams();
   const search = Route.useSearch();
   // Primary lookup from backend; nested arrays (nilai, absensi, tagihan, wali,
@@ -1053,7 +1055,7 @@ function SiswaDetailPage() {
   const [openPesan, setOpenPesan] = useState(false);
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
-    navigate({ to: "/siswa/$nis", params: { nis }, search: { tab: next === "ringkasan" ? undefined : next } });
+    navigate({ to: "/$sekolah/siswa/$nis", params: { sekolah, nis }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
   if (!siswa) {
@@ -1103,8 +1105,8 @@ function SiswaDetailPage() {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Siswa", render: ({ className, children }) => <Link to="/siswa" className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Siswa", render: ({ className, children }) => <Link to="/$sekolah/siswa" params={{ sekolah }} className={className}>{children}</Link> },
               { label: siswa.namaLengkap },
             ]}
           />
@@ -1113,7 +1115,7 @@ function SiswaDetailPage() {
             title={siswa.namaLengkap}
             description={`NIS ${siswa.nis} · ${siswa.kelas} · ${siswa.status}`}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/siswa" })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/siswa", params: { sekolah } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali ke daftar
               </Button>
@@ -1125,7 +1127,7 @@ function SiswaDetailPage() {
         <>
           <Hero
             siswa={siswa}
-            onEdit={() => navigate({ to: "/siswa/$nis/edit", params: { nis } })}
+            onEdit={() => navigate({ to: "/$sekolah/siswa/$nis/edit", params: { sekolah, nis } })}
             onMessage={() => setOpenPesan(true)}
             onPrintCard={() => printDocument({
               title: `Kartu Pelajar - ${siswa.namaLengkap}`,
@@ -1180,23 +1182,25 @@ function SiswaDetailPage() {
 
 type SearchParams = { tab?: TabKey | undefined };
 
-export const Route = createFileRoute("/siswa/$nis")({
+export const Route = createFileRoute("/$sekolah/siswa/$nis")({
   component: SiswaDetailPage,
   validateSearch: (raw: Record<string, unknown>): SearchParams => {
     const t = typeof raw.tab === "string" ? raw.tab : undefined;
     return { tab: t && VALID_TABS.has(t as TabKey) ? (t as TabKey) : undefined };
   },
-  notFoundComponent: () => (
+  notFoundComponent: () => {
+    const { sekolah } = useParams({ from: "/$sekolah" });
+    return (
     <div className="py-16">
       <EmptyState
         title="Siswa tidak ditemukan"
         description="NIS yang diminta tidak ada di sistem. Periksa kembali atau kembali ke daftar siswa."
         action={
-          <Link to="/siswa" className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+          <Link to="/$sekolah/siswa" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
             <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
           </Link>
         }
       />
     </div>
-  ),
+  ); },
 });

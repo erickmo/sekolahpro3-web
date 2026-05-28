@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Avatar,
   Badge,
@@ -77,6 +77,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function SiswaListPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   return (
     <ResourceListPage<Row>
@@ -90,10 +92,10 @@ function SiswaListPage() {
       defaultSort={{ key: "nama_lengkap", dir: "asc" }}
       searchFields={["name", "nama_lengkap", "nis", "nisn"]}
       addLabel="Tambah Siswa"
-      onAdd={() => navigate({ to: "/siswa/new" })}
-      onRowClick={(s) => navigate({ to: "/siswa/$nis", params: { nis: s.name } })}
+      onAdd={() => navigate({ to: "/$sekolah/siswa/new", params: { sekolah } })}
+      onRowClick={(s) => navigate({ to: "/$sekolah/siswa/$nis", params: { sekolah, nis: s.name } })}
     />
   );
 }
 
-export const Route = createFileRoute("/siswa/daftar")({ component: SiswaListPage });
+export const Route = createFileRoute("/$sekolah/siswa/daftar")({ component: SiswaListPage });

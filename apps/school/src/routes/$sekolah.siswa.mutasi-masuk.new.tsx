@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 import {
   Badge,
@@ -90,6 +90,8 @@ function buildSteps(current: 1 | 2 | 3): WorkflowStep[] {
 }
 
 function MutasiMasukNewPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const create = useResourceCreate<{ name: string }>("Mutasi Masuk");
 
@@ -160,7 +162,7 @@ function MutasiMasukNewPage() {
         alasan_pindah: alasanPindah,
         status: "Diverifikasi Dapodik",
       });
-      void navigate({ to: "/siswa/mutasi-masuk/$id", params: { id: doc.name } });
+      void navigate({ to: "/$sekolah/siswa/mutasi-masuk/$id", params: { sekolah, id: doc.name } });
     } catch (e) {
       setSubmitErr(e instanceof Error ? e.message : "Gagal menyimpan mutasi masuk.");
     }
@@ -213,7 +215,7 @@ function MutasiMasukNewPage() {
             </div>
           ) : null}
           <div className="mt-4 flex items-center justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => navigate({ to: "/siswa/mutasi-masuk" })}>
+            <Button type="button" variant="outline" onClick={() => navigate({ to: "/$sekolah/siswa/mutasi-masuk", params: { sekolah } })}>
               Batal
             </Button>
             <Button onClick={handleVerify} disabled={verifying}>
@@ -335,4 +337,4 @@ function MutasiMasukNewPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/mutasi-masuk/new")({ component: MutasiMasukNewPage });
+export const Route = createFileRoute("/$sekolah/siswa/mutasi-masuk/new")({ component: MutasiMasukNewPage });

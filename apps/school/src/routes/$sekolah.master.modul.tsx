@@ -26,7 +26,7 @@ function ModulPage() {
       defaultSort={{ key: "nama", dir: "asc" }}
       searchFields={["name", "nama"]}
       addLabel="Tambah Modul"
-      detailRoute="/master/modul/$name"
+      detailRoute="/$sekolah/master/modul/$name"
       detailParams={(r) => ({ name: r.name })}
       formTitle="Tambah Modul"
       formFields={MODUL_FIELDS}
@@ -34,4 +34,4 @@ function ModulPage() {
   );
 }
 
-export const Route = createFileRoute("/master/modul")({ component: ModulPage });
+export const Route = createFileRoute("/$sekolah/master/modul")({ component: ModulPage });

@@ -51,4 +51,4 @@ function ZisPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/zis")({ component: ZisPage });
+export const Route = createFileRoute("/$sekolah/koperasi/zis")({ component: ZisPage });

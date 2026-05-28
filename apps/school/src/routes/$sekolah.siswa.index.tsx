@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   Avatar,
   AttentionList,
@@ -25,11 +25,11 @@ const QUICK_ACTIONS: {
   description: string;
   icon: ReactNode;
 }[] = [
-  { to: "/siswa/new", label: "Tambah Siswa", description: "Daftarkan siswa baru ke sistem.", icon: <IconPlus /> },
-  { to: "/siswa/mutasi", label: "Catat Mutasi", description: "Pindah masuk, keluar, atau naik kelas.", icon: <IconFile /> },
-  { to: "/siswa/kelulusan", label: "Proses Kelulusan", description: "Kelola data calon lulusan.", icon: <IconGrad /> },
-  { to: "/siswa/rombel", label: "Atur Rombel", description: "Susun anggota rombongan belajar.", icon: <IconBook /> },
-  { to: "/siswa/wali", label: "Data Wali", description: "Lihat dan perbarui data wali siswa.", icon: <IconUsers /> },
+  { to: "/$sekolah/siswa/new", label: "Tambah Siswa", description: "Daftarkan siswa baru ke sistem.", icon: <IconPlus /> },
+  { to: "/$sekolah/siswa/mutasi", label: "Catat Mutasi", description: "Pindah masuk, keluar, atau naik kelas.", icon: <IconFile /> },
+  { to: "/$sekolah/siswa/kelulusan", label: "Proses Kelulusan", description: "Kelola data calon lulusan.", icon: <IconGrad /> },
+  { to: "/$sekolah/siswa/rombel", label: "Atur Rombel", description: "Susun anggota rombongan belajar.", icon: <IconBook /> },
+  { to: "/$sekolah/siswa/wali", label: "Data Wali", description: "Lihat dan perbarui data wali siswa.", icon: <IconUsers /> },
 ];
 
 type SiswaRow = {
@@ -45,6 +45,8 @@ const PERHATIAN_LIMIT = 5;
 const AKTIVITAS_LIMIT = 5;
 
 function SiswaDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const q = useResourceList<SiswaRow>("Siswa", {
     fields: ["name", "status", "jenis_kelamin", "nama_lengkap"],
     limit_page_length: 0,
@@ -81,7 +83,7 @@ function SiswaDashboardPage() {
         tone: "danger",
         badge: "SPP",
         actionLabel: "Tinjau",
-        actionHref: "/keuangan",
+        actionHref: "/$sekolah/keuangan",
       });
     }
 
@@ -93,7 +95,7 @@ function SiswaDashboardPage() {
         tone: "warning",
         badge: "Berkas",
         actionLabel: "Lihat Daftar",
-        actionHref: "/siswa/daftar",
+        actionHref: "/$sekolah/siswa/daftar",
       });
     }
 
@@ -104,7 +106,7 @@ function SiswaDashboardPage() {
         description: "Perlu komunikasi dengan wali.",
         tone: "danger",
         actionLabel: "Hubungi Wali",
-        actionHref: "/siswa/wali",
+        actionHref: "/$sekolah/siswa/wali",
       });
     }
 
@@ -144,8 +146,8 @@ function SiswaDashboardPage() {
             "Tambah siswa satuan atau import CSV",
             "Tetapkan wali siswa",
           ]}
-          primaryAction={{ label: "Tambah Siswa", href: "/siswa/new" }}
-          secondaryAction={{ label: "Import Massal (CSV)", href: "/siswa/daftar" }}
+          primaryAction={{ label: "Tambah Siswa", href: "/$sekolah/siswa/new" }}
+          secondaryAction={{ label: "Import Massal (CSV)", href: "/$sekolah/siswa/daftar" }}
           renderLink={(href, children, className) => (
             <Link to={href} className={className}>
               {children}
@@ -184,7 +186,7 @@ function SiswaDashboardPage() {
           icon={<IconAlert />}
           accent="rose"
           urgency="critical"
-          actionHref="/keuangan"
+          actionHref="/$sekolah/keuangan"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -194,7 +196,7 @@ function SiswaDashboardPage() {
           icon={<IconGrad />}
           accent="amber"
           urgency="warn"
-          actionHref="/siswa/mutasi"
+          actionHref="/$sekolah/siswa/mutasi"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -204,7 +206,7 @@ function SiswaDashboardPage() {
           icon={<IconFile />}
           accent="violet"
           urgency="warn"
-          actionHref="/siswa/daftar"
+          actionHref="/$sekolah/siswa/daftar"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -253,7 +255,7 @@ function SiswaDashboardPage() {
           title="Aktivitas Terbaru"
           description="Siswa terakhir yang ditambahkan atau diperbarui."
           action={
-            <Link to="/siswa/daftar" className="text-xs text-brand hover:underline">
+            <Link to="/$sekolah/siswa/daftar" params={{ sekolah }} className="text-xs text-brand hover:underline">
               Lihat semua
             </Link>
           }
@@ -265,8 +267,8 @@ function SiswaDashboardPage() {
               {aktivitasTerbaru.map((s) => (
                 <li key={s.name} className="py-2.5">
                   <Link
-                    to="/siswa/$nis"
-                    params={{ nis: s.name }}
+                    to="/$sekolah/siswa/$nis"
+                    params={{ sekolah, nis: s.name }}
                     className="flex items-center gap-3 group"
                   >
                     <Avatar name={s.nama_lengkap ?? s.name} size="sm" />
@@ -289,4 +291,4 @@ function SiswaDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/")({ component: SiswaDashboardPage });
+export const Route = createFileRoute("/$sekolah/siswa/")({ component: SiswaDashboardPage });

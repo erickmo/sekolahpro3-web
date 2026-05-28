@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { TransaksiModal } from "../components/koperasi-simpanan/transaksiForm";
@@ -23,6 +23,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function TransaksiPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   return (
@@ -43,11 +45,11 @@ function TransaksiPage() {
         ]}
         addLabel="Transaksi Baru"
         onAdd={() => setOpen(true)}
-        onRowClick={(r) => navigate({ to: "/koperasi/transaksi/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/koperasi/transaksi/$name", params: { sekolah, name: r.name } })}
       />
       <TransaksiModal open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
 
-export const Route = createFileRoute("/koperasi/transaksi")({ component: TransaksiPage });
+export const Route = createFileRoute("/$sekolah/koperasi/transaksi")({ component: TransaksiPage });

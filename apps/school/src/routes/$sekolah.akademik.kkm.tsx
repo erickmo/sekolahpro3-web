@@ -216,4 +216,4 @@ function KkmPage() {
   );
 }
 
-export const Route = createFileRoute("/akademik/kkm")({ component: KkmPage });
+export const Route = createFileRoute("/$sekolah/akademik/kkm")({ component: KkmPage });

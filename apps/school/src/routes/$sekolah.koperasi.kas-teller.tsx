@@ -137,4 +137,4 @@ function KasTellerPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/kas-teller")({ component: KasTellerPage });
+export const Route = createFileRoute("/$sekolah/koperasi/kas-teller")({ component: KasTellerPage });

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
@@ -77,6 +77,8 @@ function formatRupiah(n: number | undefined): string {
 }
 
 function AkadDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { name } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -126,7 +128,7 @@ function AkadDetailPage() {
           title="Akad tidak ditemukan"
           description={(docQuery.error as Error | undefined)?.message ?? "Periksa nomor akad atau kembali ke daftar."}
           action={
-            <Link to="/koperasi/pembiayaan" className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link to="/$sekolah/koperasi/pembiayaan" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
             </Link>
           }
@@ -145,7 +147,7 @@ function AkadDetailPage() {
     { key: "angsuran_ke", header: "#", align: "right", sortable: true,
       cell: (r) => <span className="tabular-nums">{r.angsuran_ke}</span> },
     { key: "name", header: "ID Jadwal", cell: (r) => (
-      <Link to="/koperasi/angsuran/$name" params={{ name: r.name }} className="font-mono text-xs text-brand hover:underline">
+      <Link to="/$sekolah/koperasi/angsuran/$name" params={{ sekolah, name: r.name }} className="font-mono text-xs text-brand hover:underline">
         {r.name}
       </Link>
     ) },
@@ -170,9 +172,9 @@ function AkadDetailPage() {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Koperasi", render: ({ className, children }) => <Link to="/koperasi" className={className}>{children}</Link> },
-              { label: "Pembiayaan", render: ({ className, children }) => <Link to="/koperasi/pembiayaan" className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Koperasi", render: ({ className, children }) => <Link to="/$sekolah/koperasi" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Pembiayaan", render: ({ className, children }) => <Link to="/$sekolah/koperasi/pembiayaan" params={{ sekolah }} className={className}>{children}</Link> },
               { label: doc.name },
             ]}
           />
@@ -181,7 +183,7 @@ function AkadDetailPage() {
             title={doc.name}
             description={`${doc.akad ?? "—"} · ${doc.anggota ?? "—"} · ${status}`}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/koperasi/pembiayaan" })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/koperasi/pembiayaan", params: { sekolah } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali
               </Button>
@@ -296,6 +298,6 @@ function AkadDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/pembiayaan/$name")({
+export const Route = createFileRoute("/$sekolah/koperasi/pembiayaan/$name")({
   component: AkadDetailPage,
 });

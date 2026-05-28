@@ -37,4 +37,4 @@ function GedungPage() {
   );
 }
 
-export const Route = createFileRoute("/infrastruktur/daftar")({ component: GedungPage });
+export const Route = createFileRoute("/$sekolah/infrastruktur/daftar")({ component: GedungPage });

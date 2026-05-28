@@ -2,7 +2,7 @@
  * Pengadaan Buku — daftar pengadaan koleksi (Pembelian / Hibah / Sumbangan).
  * Submit pengadaan auto-generate N Eksemplar Buku per item; lihat PERP-ADR-0005.
  */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -56,6 +56,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function PengadaanPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   return (
     <ResourceListPage<Row>
@@ -73,10 +75,10 @@ function PengadaanPage() {
           options: ["Semua", "Pembelian", "Hibah", "Sumbangan"].map((v) => ({ value: v, label: v })) },
       ]}
       addLabel="Pengadaan Baru"
-      onAdd={() => navigate({ to: "/perpustakaan/pengadaan/$name", params: { name: "new" } })}
-      onRowClick={(r) => navigate({ to: "/perpustakaan/pengadaan/$name", params: { name: r.name } })}
+      onAdd={() => navigate({ to: "/$sekolah/perpustakaan/pengadaan/$name", params: { sekolah, name: "new" } })}
+      onRowClick={(r) => navigate({ to: "/$sekolah/perpustakaan/pengadaan/$name", params: { sekolah, name: r.name } })}
     />
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/pengadaan")({ component: PengadaanPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/pengadaan")({ component: PengadaanPage });

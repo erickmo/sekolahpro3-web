@@ -34,4 +34,4 @@ function LantaiPage() {
   );
 }
 
-export const Route = createFileRoute("/infrastruktur/lantai")({ component: LantaiPage });
+export const Route = createFileRoute("/$sekolah/infrastruktur/lantai")({ component: LantaiPage });

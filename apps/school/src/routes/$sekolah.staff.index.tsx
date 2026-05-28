@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Avatar,
   AttentionList,
@@ -61,6 +61,8 @@ function daysUntil(iso?: string): number | null {
 }
 
 function StaffDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const [showCreate, setShowCreate] = useState(false);
   const navigate = useNavigate();
 
@@ -105,9 +107,9 @@ function StaffDashboardPage() {
           description: `${s.jenis_jabatan ?? "SK"} — habis dalam ${d} hari (${formatTanggal(s.tanggal_berakhir)})`,
           tone: d <= 30 ? ("danger" as const) : ("warning" as const),
           badge: "SK",
-          href: "/staff/sk-jabatan",
+          href: "/$sekolah/staff/sk-jabatan",
           actionLabel: "Perpanjang",
-          actionHref: "/staff/sk-jabatan",
+          actionHref: "/$sekolah/staff/sk-jabatan",
         } satisfies AttentionItem;
       })
       .filter((x): x is AttentionItem => !!x)
@@ -129,7 +131,7 @@ function StaffDashboardPage() {
         description="Ringkasan tenaga kependidikan dan staf non-pengajar."
         actions={
           <>
-            <Link to="/staff/daftar">
+            <Link to="/$sekolah/staff/daftar" params={{ sekolah }}>
               <Button variant="outline">
                 <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
                 Lihat Daftar
@@ -166,7 +168,7 @@ function StaffDashboardPage() {
           icon={<IconAlert />}
           accent="amber"
           urgency="warn"
-          actionHref="/staff/sk-jabatan"
+          actionHref="/$sekolah/staff/sk-jabatan"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -175,32 +177,32 @@ function StaffDashboardPage() {
           hint="berkas terdaftar"
           icon={<IconFile />}
           accent="violet"
-          actionHref="/staff/berkas"
+          actionHref="/$sekolah/staff/berkas"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
 
       <SectionCard title="Aksi Cepat" description="Pintasan ke modul terkait pengelolaan staff.">
         <div className="flex flex-wrap gap-2">
-          <Link to="/staff/jabatan">
+          <Link to="/$sekolah/staff/jabatan" params={{ sekolah }}>
             <Button variant="outline">
               <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
               Kelola Jabatan
             </Button>
           </Link>
-          <Link to="/staff/sk-jabatan">
+          <Link to="/$sekolah/staff/sk-jabatan" params={{ sekolah }}>
             <Button variant="outline">
               <span className="h-4 w-4 mr-1.5"><IconFile /></span>
               Terbitkan SK
             </Button>
           </Link>
-          <Link to="/staff/berkas">
+          <Link to="/$sekolah/staff/berkas" params={{ sekolah }}>
             <Button variant="outline">
               <span className="h-4 w-4 mr-1.5"><IconFile /></span>
               Unggah Berkas
             </Button>
           </Link>
-          <Link to="/staff/daftar">
+          <Link to="/$sekolah/staff/daftar" params={{ sekolah }}>
             <Button>
               <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
               Buka Daftar Staff
@@ -242,7 +244,7 @@ function StaffDashboardPage() {
                 <li key={s.name}>
                   <button
                     type="button"
-                    onClick={() => navigate({ to: "/staff/$nip", params: { nip: s.name } })}
+                    onClick={() => navigate({ to: "/$sekolah/staff/$nip", params: { sekolah, nip: s.name } })}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
                   >
                     <Avatar name={s.nama_lengkap ?? s.name} size="sm" />
@@ -267,4 +269,4 @@ function StaffDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/staff/")({ component: StaffDashboardPage });
+export const Route = createFileRoute("/$sekolah/staff/")({ component: StaffDashboardPage });

@@ -10,7 +10,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   Badge,
   Button,
@@ -36,6 +36,8 @@ const STATUS_OPTIONS = ["Semua", "Belum Bayar", "Partial", "Lunas", "Gagal", "Re
 const PAGE_SIZE = 25;
 
 function PembayaranPpdbPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("Semua");
   const [page, setPage] = useState(1);
@@ -102,8 +104,8 @@ function PembayaranPpdbPage() {
       cell: (r) =>
         r.pendaftaran_ppdb ? (
           <Link
-            to="/ppdb/$noPendaftaran"
-            params={{ noPendaftaran: r.pendaftaran_ppdb }}
+            to="/$sekolah/ppdb/$noPendaftaran"
+            params={{ sekolah, noPendaftaran: r.pendaftaran_ppdb }}
             className="font-mono text-xs text-brand hover:underline"
           >
             {r.pendaftaran_ppdb}
@@ -237,4 +239,4 @@ function PembayaranPpdbPage() {
   );
 }
 
-export const Route = createFileRoute("/ppdb/pembayaran")({ component: PembayaranPpdbPage });
+export const Route = createFileRoute("/$sekolah/ppdb/pembayaran")({ component: PembayaranPpdbPage });

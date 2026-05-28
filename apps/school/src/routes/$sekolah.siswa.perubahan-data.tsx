@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -27,8 +27,8 @@ const COLUMNS: Column<Row>[] = [
     sortable: true,
     cell: (r) => (
       <Link
-        to="/siswa/perubahan-data/$id"
-        params={{ id: r.name }}
+        to="/$sekolah/siswa/perubahan-data/$id"
+        params={{ sekolah, id: r.name }}
         className="font-mono text-xs text-brand hover:underline"
       >
         {r.name}
@@ -60,6 +60,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function PerubahanDataPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   return (
     <ResourceListPage<Row>
@@ -92,9 +94,9 @@ function PerubahanDataPage() {
         },
       ]}
       addLabel="Ajukan Perubahan"
-      onAdd={() => navigate({ to: "/siswa/perubahan-data/new" })}
+      onAdd={() => navigate({ to: "/$sekolah/siswa/perubahan-data/new", params: { sekolah } })}
     />
   );
 }
 
-export const Route = createFileRoute("/siswa/perubahan-data")({ component: PerubahanDataPage });
+export const Route = createFileRoute("/$sekolah/siswa/perubahan-data")({ component: PerubahanDataPage });

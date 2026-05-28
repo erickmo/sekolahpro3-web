@@ -27,7 +27,7 @@ function SemesterPage() {
       defaultSort={{ key: "tanggal_mulai", dir: "desc" }}
       searchFields={["name", "nama"]}
       addLabel="Tambah Semester"
-      detailRoute="/master/semester/$name"
+      detailRoute="/$sekolah/master/semester/$name"
       detailParams={(r) => ({ name: r.name })}
       formTitle="Tambah Semester"
       formFields={SEMESTER_FIELDS}
@@ -35,4 +35,4 @@ function SemesterPage() {
   );
 }
 
-export const Route = createFileRoute("/master/semester")({ component: SemesterPage });
+export const Route = createFileRoute("/$sekolah/master/semester")({ component: SemesterPage });

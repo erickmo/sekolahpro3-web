@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { PermohonanModal } from "../components/koperasi-simpanan/permohonanForms";
@@ -29,6 +29,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function RekeningPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [openBuka, setOpenBuka] = useState(false);
   return (
@@ -49,11 +51,11 @@ function RekeningPage() {
         ]}
         addLabel="Buka Rekening"
         onAdd={() => setOpenBuka(true)}
-        onRowClick={(r) => navigate({ to: "/koperasi/rekening/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/koperasi/rekening/$name", params: { sekolah, name: r.name } })}
       />
       <PermohonanModal kind="buka" open={openBuka} onClose={() => setOpenBuka(false)} />
     </>
   );
 }
 
-export const Route = createFileRoute("/koperasi/rekening")({ component: RekeningPage });
+export const Route = createFileRoute("/$sekolah/koperasi/rekening")({ component: RekeningPage });

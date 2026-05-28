@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Avatar,
   Badge,
@@ -590,6 +590,8 @@ function mapToKelasAmpu(
 }
 
 function GuruDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { nip } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<GuruDoc>("Guru", nip);
@@ -630,7 +632,7 @@ function GuruDetailPage() {
   const navigate = useNavigate();
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
-    navigate({ to: "/guru/$nip", params: { nip }, search: { tab: next === "ringkasan" ? undefined : next } });
+    navigate({ to: "/$sekolah/guru/$nip", params: { sekolah, nip }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
   if (!guru) {
@@ -681,8 +683,8 @@ function GuruDetailPage() {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Guru", render: ({ className, children }) => <Link to="/guru" className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Guru", render: ({ className, children }) => <Link to="/$sekolah/guru" params={{ sekolah }} className={className}>{children}</Link> },
               { label: guru.namaLengkap },
             ]}
           />
@@ -691,7 +693,7 @@ function GuruDetailPage() {
             title={namaWithGelar(guru)}
             description={`NIP ${guru.nip} · ${guru.jabatan} · ${guru.status}`}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/guru" })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/guru", params: { sekolah } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali ke daftar
               </Button>
@@ -708,23 +710,25 @@ function GuruDetailPage() {
 
 type SearchParams = { tab?: TabKey | undefined };
 
-export const Route = createFileRoute("/guru/$nip")({
+export const Route = createFileRoute("/$sekolah/guru/$nip")({
   component: GuruDetailPage,
   validateSearch: (raw: Record<string, unknown>): SearchParams => {
     const t = typeof raw.tab === "string" ? raw.tab : undefined;
     return { tab: t && VALID_TABS.has(t as TabKey) ? (t as TabKey) : undefined };
   },
-  notFoundComponent: () => (
+  notFoundComponent: () => {
+    const { sekolah } = useParams({ from: "/$sekolah" });
+    return (
     <div className="py-16">
       <EmptyState
         title="Guru tidak ditemukan"
         description="NIP yang diminta tidak ada di sistem. Periksa kembali atau kembali ke daftar guru."
         action={
-          <Link to="/guru" className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+          <Link to="/$sekolah/guru" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
             <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
           </Link>
         }
       />
     </div>
-  ),
+  ); },
 });

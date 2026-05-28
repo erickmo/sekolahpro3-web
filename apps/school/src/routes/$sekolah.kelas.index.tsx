@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   AttentionList,
   PageHeader,
@@ -27,6 +27,8 @@ type RombelRow = {
 };
 
 function KelasDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const q = useResourceList<RombelRow>("Rombongan Belajar", {
     fields: ["name", "nama_rombel", "tingkat", "jumlah_siswa", "wali_kelas", "kapasitas", "status"],
     limit_page_length: 0,
@@ -89,7 +91,7 @@ function KelasDashboardPage() {
         badge: "Wali",
         href: `/kelas/${k.name}`,
         actionLabel: "Tunjuk Wali",
-        actionHref: "/kelas/rombel",
+        actionHref: "/$sekolah/kelas/rombel",
       });
     }
 
@@ -105,7 +107,7 @@ function KelasDashboardPage() {
         badge: "Penuh",
         href: `/kelas/${k.name}`,
         actionLabel: "Atur Kapasitas",
-        actionHref: "/kelas/rombel",
+        actionHref: "/$sekolah/kelas/rombel",
       });
     }
 
@@ -135,7 +137,7 @@ function KelasDashboardPage() {
           icon={<IconUsers />}
           accent="rose"
           urgency="critical"
-          actionHref="/kelas/rombel"
+          actionHref="/$sekolah/kelas/rombel"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -145,7 +147,7 @@ function KelasDashboardPage() {
           icon={<IconChart />}
           accent="rose"
           urgency="critical"
-          actionHref="/kelas/daftar"
+          actionHref="/$sekolah/kelas/daftar"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -155,7 +157,7 @@ function KelasDashboardPage() {
           icon={<IconAlert />}
           accent="amber"
           urgency="warn"
-          actionHref="/kelas/daftar"
+          actionHref="/$sekolah/kelas/daftar"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -165,7 +167,7 @@ function KelasDashboardPage() {
           icon={<IconBook />}
           accent="amber"
           urgency="warn"
-          actionHref="/jadwal/daftar"
+          actionHref="/$sekolah/jadwal/daftar"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -173,21 +175,21 @@ function KelasDashboardPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard title="Aksi Cepat" description="Navigasi pintas ke modul kelas.">
           <div className="space-y-2">
-            <Link to="/kelas/daftar" className="flex items-center gap-3 rounded-md border border-border bg-bg px-3 py-2.5 text-sm hover:border-brand/40 hover:bg-brand/5 transition-colors">
+            <Link to="/$sekolah/kelas/daftar" params={{ sekolah }} className="flex items-center gap-3 rounded-md border border-border bg-bg px-3 py-2.5 text-sm hover:border-brand/40 hover:bg-brand/5 transition-colors">
               <span className="flex h-8 w-8 items-center justify-center rounded-md bg-brand/10 text-brand"><IconBook /></span>
               <div className="min-w-0">
                 <div className="font-medium text-fg">Daftar Kelas</div>
                 <div className="text-xs text-muted-fg truncate">Lihat & kelola semua rombel</div>
               </div>
             </Link>
-            <Link to="/kelas/rombel" className="flex items-center gap-3 rounded-md border border-border bg-bg px-3 py-2.5 text-sm hover:border-brand/40 hover:bg-brand/5 transition-colors">
+            <Link to="/$sekolah/kelas/rombel" params={{ sekolah }} className="flex items-center gap-3 rounded-md border border-border bg-bg px-3 py-2.5 text-sm hover:border-brand/40 hover:bg-brand/5 transition-colors">
               <span className="flex h-8 w-8 items-center justify-center rounded-md bg-violet-500/10 text-violet-500"><IconUsers /></span>
               <div className="min-w-0">
                 <div className="font-medium text-fg">Rombongan Belajar</div>
                 <div className="text-xs text-muted-fg truncate">Atur struktur rombel</div>
               </div>
             </Link>
-            <Link to="/kelas/anggota" className="flex items-center gap-3 rounded-md border border-border bg-bg px-3 py-2.5 text-sm hover:border-brand/40 hover:bg-brand/5 transition-colors">
+            <Link to="/$sekolah/kelas/anggota" params={{ sekolah }} className="flex items-center gap-3 rounded-md border border-border bg-bg px-3 py-2.5 text-sm hover:border-brand/40 hover:bg-brand/5 transition-colors">
               <span className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-500"><IconCheck /></span>
               <div className="min-w-0">
                 <div className="font-medium text-fg">Anggota Rombel</div>
@@ -221,7 +223,7 @@ function KelasDashboardPage() {
       <SectionCard title="Aktivitas Terbaru" description="5 rombel terakhir.">
         <div className="divide-y divide-border">
           {aktivitas.map((k) => (
-            <Link key={k.name} to="/kelas/$kodeKelas" params={{ kodeKelas: k.name }}
+            <Link key={k.name} to="/$sekolah/kelas/$kodeKelas" params={{ sekolah, kodeKelas: k.name }}
               className="flex items-center justify-between gap-3 py-2.5 text-sm hover:bg-brand/5 -mx-2 px-2 rounded transition-colors">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex h-9 w-12 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-brand/15 to-violet-500/10 text-[11px] font-semibold tabular-nums text-brand">
@@ -247,6 +249,6 @@ function KelasDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/kelas/")({
+export const Route = createFileRoute("/$sekolah/kelas/")({
   component: KelasDashboardPage,
 });

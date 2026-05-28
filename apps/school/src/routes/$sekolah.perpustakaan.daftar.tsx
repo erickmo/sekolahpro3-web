@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
@@ -76,6 +76,8 @@ const CREATE_FIELDS: PerpFieldDef[] = [
 ];
 
 function PerpustakaanListPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   return (
@@ -92,7 +94,7 @@ function PerpustakaanListPage() {
         searchFields={["name", "judul", "isbn", "pengarang"]}
         addLabel="Tambah Buku"
         onAdd={() => setOpen(true)}
-        onRowClick={(r) => navigate({ to: "/perpustakaan/$isbn", params: { isbn: r.isbn ?? r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/perpustakaan/$isbn", params: { sekolah, isbn: r.isbn ?? r.name } })}
       />
       <PerpCreateModal
         open={open}
@@ -106,11 +108,11 @@ function PerpustakaanListPage() {
           const isbn = (doc as { isbn?: string; name?: string }).isbn;
           const name = (doc as { name?: string }).name;
           const target = isbn ?? name;
-          if (target) navigate({ to: "/perpustakaan/$isbn", params: { isbn: target } });
+          if (target) navigate({ to: "/$sekolah/perpustakaan/$isbn", params: { sekolah, isbn: target } });
         }}
       />
     </>
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/daftar")({ component: PerpustakaanListPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/daftar")({ component: PerpustakaanListPage });

@@ -1152,4 +1152,4 @@ function PengaturanPage() {
   );
 }
 
-export const Route = createFileRoute("/pengaturan")({ component: PengaturanPage });
+export const Route = createFileRoute("/$sekolah/pengaturan")({ component: PengaturanPage });

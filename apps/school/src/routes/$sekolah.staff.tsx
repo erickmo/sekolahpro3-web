@@ -2,11 +2,11 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/staff", label: "Dashboard", exact: true },
-  { to: "/staff/daftar", label: "Daftar Staff" },
-  { to: "/staff/sk-jabatan", label: "SK Jabatan" },
-  { to: "/staff/jabatan", label: "Jabatan" },
-  { to: "/staff/berkas", label: "Berkas" },
+  { to: "/$sekolah/staff", label: "Dashboard", exact: true },
+  { to: "/$sekolah/staff/daftar", label: "Daftar Staff" },
+  { to: "/$sekolah/staff/sk-jabatan", label: "SK Jabatan" },
+  { to: "/$sekolah/staff/jabatan", label: "Jabatan" },
+  { to: "/$sekolah/staff/berkas", label: "Berkas" },
 ];
 
 function StaffLayout() {
@@ -25,4 +25,4 @@ function StaffLayout() {
   );
 }
 
-export const Route = createFileRoute("/staff")({ component: StaffLayout });
+export const Route = createFileRoute("/$sekolah/staff")({ component: StaffLayout });

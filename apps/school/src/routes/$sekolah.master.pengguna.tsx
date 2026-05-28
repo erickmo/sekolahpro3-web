@@ -26,7 +26,7 @@ function PenggunaPage() {
       defaultSort={{ key: "name", dir: "asc" }}
       searchFields={["name", "user"]}
       addLabel="Undang Pengguna"
-      detailRoute="/master/pengguna/$name"
+      detailRoute="/$sekolah/master/pengguna/$name"
       detailParams={(r) => ({ name: r.name })}
       formTitle="Tambah Pengguna Sekolah"
       formFields={PENGGUNA_FIELDS}
@@ -34,4 +34,4 @@ function PenggunaPage() {
   );
 }
 
-export const Route = createFileRoute("/master/pengguna")({ component: PenggunaPage });
+export const Route = createFileRoute("/$sekolah/master/pengguna")({ component: PenggunaPage });

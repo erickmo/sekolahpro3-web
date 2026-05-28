@@ -3,14 +3,16 @@
  * Sub-section: Stock Opname (audit terjadwal) + Berita Acara Kerusakan (ad-hoc).
  * Internal segmented control supaya hemat tab utama Perpustakaan.
  */
-import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouterState, useParams} from "@tanstack/react-router";
 
 const SEGMENTS: { to: string; label: string }[] = [
-  { to: "/perpustakaan/inventaris/opname", label: "Stock Opname" },
-  { to: "/perpustakaan/inventaris/berita-acara", label: "Berita Acara Kerusakan" },
+  { to: "/$sekolah/perpustakaan/inventaris/opname", label: "Stock Opname" },
+  { to: "/$sekolah/perpustakaan/inventaris/berita-acara", label: "Berita Acara Kerusakan" },
 ];
 
 function InventarisLayout() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <div className="space-y-4">
@@ -36,11 +38,11 @@ function InventarisLayout() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/inventaris")({
+export const Route = createFileRoute("/$sekolah/perpustakaan/inventaris")({
   component: InventarisLayout,
-  beforeLoad: ({ location }) => {
-    if (location.pathname === "/perpustakaan/inventaris" || location.pathname === "/perpustakaan/inventaris/") {
-      throw redirect({ to: "/perpustakaan/inventaris/opname" });
+  beforeLoad: ({ location, params }) => {
+    if (location.pathname === "/$sekolah/perpustakaan/inventaris" || location.pathname === "/$sekolah/perpustakaan/inventaris/") {
+      throw redirect({ to: "/$sekolah/perpustakaan/inventaris/opname", params: { sekolah: params.sekolah } });
     }
   },
 });

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   AttentionList,
   Badge,
@@ -34,6 +34,8 @@ type AbsensiHarianRow = {
 };
 
 function AbsensiDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const q = useResourceList<AbsensiHarianRow>("Absensi Harian", {
     fields: [
       "name",
@@ -106,7 +108,7 @@ function AbsensiDashboardPage() {
         tone: persen < 80 ? "danger" : "warning",
         badge: `${persen}%`,
         actionLabel: "Tinjau Kelas",
-        actionHref: "/absensi/pelajaran",
+        actionHref: "/$sekolah/absensi/pelajaran",
       });
     }
 
@@ -122,7 +124,7 @@ function AbsensiDashboardPage() {
         tone: "warning",
         badge: "Guru",
         actionLabel: "Ingatkan",
-        actionHref: "/absensi/guru",
+        actionHref: "/$sekolah/absensi/guru",
       });
     }
 
@@ -135,7 +137,7 @@ function AbsensiDashboardPage() {
         tone: "danger",
         badge: "Alpa",
         actionLabel: "Hubungi Wali",
-        actionHref: "/siswa/wali",
+        actionHref: "/$sekolah/siswa/wali",
       });
     }
 
@@ -168,7 +170,7 @@ function AbsensiDashboardPage() {
           icon={<IconUsers />}
           accent="brand"
           urgency={persenUrgency(ringkasan.kehadiranGuru)}
-          actionHref="/absensi/guru"
+          actionHref="/$sekolah/absensi/guru"
           renderLink={renderStatLink}
         />
         <StatCard
@@ -178,7 +180,7 @@ function AbsensiDashboardPage() {
           icon={<IconAlert />}
           accent="rose"
           urgency="critical"
-          actionHref="/absensi/daftar"
+          actionHref="/$sekolah/absensi/daftar"
           renderLink={renderStatLink}
         />
         <StatCard
@@ -188,14 +190,14 @@ function AbsensiDashboardPage() {
           icon={<IconClock />}
           accent="amber"
           urgency="warn"
-          actionHref="/absensi/pelajaran"
+          actionHref="/$sekolah/absensi/pelajaran"
           renderLink={renderStatLink}
         />
       </div>
 
       <SectionCard title="Aksi Cepat" description="Buka modul absensi yang sering digunakan.">
         <div className="grid gap-3 sm:grid-cols-3">
-          <Link to="/absensi/pelajaran"
+          <Link to="/$sekolah/absensi/pelajaran" params={{ sekolah }}
             className="group rounded-lg border border-border bg-card p-4 hover:border-brand hover:bg-brand/5 transition-colors">
             <div className="flex items-center gap-3">
               <span className="h-9 w-9 flex items-center justify-center rounded-md bg-brand/10 text-brand"><IconBook /></span>
@@ -205,7 +207,7 @@ function AbsensiDashboardPage() {
               </div>
             </div>
           </Link>
-          <Link to="/absensi/guru"
+          <Link to="/$sekolah/absensi/guru" params={{ sekolah }}
             className="group rounded-lg border border-border bg-card p-4 hover:border-brand hover:bg-brand/5 transition-colors">
             <div className="flex items-center gap-3">
               <span className="h-9 w-9 flex items-center justify-center rounded-md bg-violet-500/10 text-violet-600"><IconUsers /></span>
@@ -215,7 +217,7 @@ function AbsensiDashboardPage() {
               </div>
             </div>
           </Link>
-          <Link to="/absensi/daftar"
+          <Link to="/$sekolah/absensi/daftar" params={{ sekolah }}
             className="group rounded-lg border border-border bg-card p-4 hover:border-brand hover:bg-brand/5 transition-colors">
             <div className="flex items-center gap-3">
               <span className="h-9 w-9 flex items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600"><IconFile /></span>
@@ -286,4 +288,4 @@ function AbsensiDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/absensi/")({ component: AbsensiDashboardPage });
+export const Route = createFileRoute("/$sekolah/absensi/")({ component: AbsensiDashboardPage });

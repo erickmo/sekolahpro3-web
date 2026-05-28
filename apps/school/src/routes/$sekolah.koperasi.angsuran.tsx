@@ -63,4 +63,4 @@ function AngsuranPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/angsuran")({ component: AngsuranPage });
+export const Route = createFileRoute("/$sekolah/koperasi/angsuran")({ component: AngsuranPage });

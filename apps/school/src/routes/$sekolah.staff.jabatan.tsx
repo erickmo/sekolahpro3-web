@@ -35,4 +35,4 @@ function StaffJabatanPage() {
   );
 }
 
-export const Route = createFileRoute("/staff/jabatan")({ component: StaffJabatanPage });
+export const Route = createFileRoute("/$sekolah/staff/jabatan")({ component: StaffJabatanPage });

@@ -26,7 +26,7 @@ function UnitJenjangPage() {
       defaultSort={{ key: "nama", dir: "asc" }}
       searchFields={["name", "nama"]}
       addLabel="Tambah Unit"
-      detailRoute="/master/unit-jenjang/$name"
+      detailRoute="/$sekolah/master/unit-jenjang/$name"
       detailParams={(r) => ({ name: r.name })}
       formTitle="Tambah Unit Jenjang"
       formFields={UNIT_JENJANG_FIELDS}
@@ -34,4 +34,4 @@ function UnitJenjangPage() {
   );
 }
 
-export const Route = createFileRoute("/master/unit-jenjang")({ component: UnitJenjangPage });
+export const Route = createFileRoute("/$sekolah/master/unit-jenjang")({ component: UnitJenjangPage });

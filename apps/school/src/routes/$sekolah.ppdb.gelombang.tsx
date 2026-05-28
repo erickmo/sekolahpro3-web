@@ -404,4 +404,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export const Route = createFileRoute("/ppdb/gelombang")({ component: GelombangPage });
+export const Route = createFileRoute("/$sekolah/ppdb/gelombang")({ component: GelombangPage });

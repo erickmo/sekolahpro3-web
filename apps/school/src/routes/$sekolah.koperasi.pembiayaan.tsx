@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { AkadCreateModal } from "../components/koperasi-pembiayaan/akadForm";
@@ -32,6 +32,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function PembiayaanPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [createOpen, setCreateOpen] = useState(false);
   return (
@@ -52,15 +54,15 @@ function PembiayaanPage() {
         ]}
         addLabel="Ajukan Pembiayaan"
         onAdd={() => setCreateOpen(true)}
-        onRowClick={(r) => navigate({ to: "/koperasi/pembiayaan/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/koperasi/pembiayaan/$name", params: { sekolah, name: r.name } })}
       />
       <AkadCreateModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onSuccess={(name) => navigate({ to: "/koperasi/pembiayaan/$name", params: { name } })}
+        onSuccess={(name) => navigate({ to: "/$sekolah/koperasi/pembiayaan/$name", params: { sekolah, name } })}
       />
     </>
   );
 }
 
-export const Route = createFileRoute("/koperasi/pembiayaan")({ component: PembiayaanPage });
+export const Route = createFileRoute("/$sekolah/koperasi/pembiayaan")({ component: PembiayaanPage });

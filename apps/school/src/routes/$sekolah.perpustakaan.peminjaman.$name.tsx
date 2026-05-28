@@ -7,7 +7,7 @@
  *   status peminjaman. Patch langsung `status=Selesai` (perilaku lama) dilarang.
  * - Denda dilihat & dilunasi inline lewat DendaDrawer.
  */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button, FormField, Input, Modal } from "@sekolahpro/ui";
@@ -48,6 +48,8 @@ const STATUS_TONE: Record<string, "success" | "brand" | "warning" | "danger" | "
 };
 
 function PeminjamanDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { name } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -103,8 +105,8 @@ function PeminjamanDetailPage() {
       <PerpDetailScaffold
         eyebrow="Peminjaman Buku"
         title={name}
-        backTo="/perpustakaan/peminjaman"
-        crumbParent={{ label: "Peminjaman", to: "/perpustakaan/peminjaman" }}
+        backTo="/$sekolah/perpustakaan/peminjaman"
+        crumbParent={{ label: "Peminjaman", to: "/$sekolah/perpustakaan/peminjaman" }}
         crumbSelf={name}
         description={doc?.anggota ? `Peminjam: ${doc.anggota}` : undefined}
         status={status ? { label: status, tone: STATUS_TONE[status] ?? "neutral" } : undefined}
@@ -132,7 +134,7 @@ function PeminjamanDetailPage() {
               </>
             ) : null}
             <Button size="sm" variant="outline" onClick={() => setDendaOpen(true)}>Lihat Denda</Button>
-            <Button size="sm" variant="outline" onClick={() => navigate({ to: "/perpustakaan/peminjaman" })}>Tutup</Button>
+            <Button size="sm" variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/peminjaman", params: { sekolah } })}>Tutup</Button>
           </>
         }
       />
@@ -171,4 +173,4 @@ function PeminjamanDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/peminjaman/$name")({ component: PeminjamanDetailPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/peminjaman/$name")({ component: PeminjamanDetailPage });

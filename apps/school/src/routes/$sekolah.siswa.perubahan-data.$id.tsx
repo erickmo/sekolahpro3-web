@@ -69,7 +69,9 @@ function stateBadgeTone(state: WorkflowState): "neutral" | "warning" | "success"
 }
 
 function PerubahanDetailPage() {
-  const { id } = useParams({ from: "/siswa/perubahan-data/$id" });
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
+  const { id } = useParams({ from: "/$sekolah/siswa/perubahan-data/$id" });
   const qc = useQueryClient();
   const docQuery = useResourceDoc<PerubahanDoc>("Perubahan Data Siswa", id);
 
@@ -132,7 +134,7 @@ function PerubahanDetailPage() {
           Gagal memuat: {(docQuery.error as Error)?.message ?? "tidak ditemukan"}
         </Badge>
         <div className="mt-4">
-          <Link to="/siswa/perubahan-data" className="text-brand hover:underline">
+          <Link to="/$sekolah/siswa/perubahan-data" params={{ sekolah }} className="text-brand hover:underline">
             ← Kembali ke daftar
           </Link>
         </div>
@@ -159,7 +161,7 @@ function PerubahanDetailPage() {
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center gap-2 text-xs text-muted-fg">
-        <Link to="/siswa/perubahan-data" className="text-brand hover:underline">
+        <Link to="/$sekolah/siswa/perubahan-data" params={{ sekolah }} className="text-brand hover:underline">
           ← Siswa › Perubahan Data
         </Link>
         <span>›</span>
@@ -265,4 +267,4 @@ function PerubahanDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/perubahan-data/$id")({ component: PerubahanDetailPage });
+export const Route = createFileRoute("/$sekolah/siswa/perubahan-data/$id")({ component: PerubahanDetailPage });

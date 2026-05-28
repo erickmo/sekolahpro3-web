@@ -38,4 +38,4 @@ function RombelPage() {
   );
 }
 
-export const Route = createFileRoute("/kelas/rombel")({ component: RombelPage });
+export const Route = createFileRoute("/$sekolah/kelas/rombel")({ component: RombelPage });

@@ -2,15 +2,15 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/master", label: "Dashboard", exact: true },
-  { to: "/master/daftar", label: "Sekolah" },
-  { to: "/master/tahun-ajaran", label: "Tahun Ajaran" },
-  { to: "/master/semester", label: "Semester" },
-  { to: "/master/unit-jenjang", label: "Unit Jenjang" },
-  { to: "/master/organisasi", label: "Organisasi" },
-  { to: "/master/modul", label: "Modul Aktif" },
-  { to: "/master/feature-flag", label: "Feature Flag" },
-  { to: "/master/pengguna", label: "Pengguna" },
+  { to: "/$sekolah/master", label: "Dashboard", exact: true },
+  { to: "/$sekolah/master/daftar", label: "Sekolah" },
+  { to: "/$sekolah/master/tahun-ajaran", label: "Tahun Ajaran" },
+  { to: "/$sekolah/master/semester", label: "Semester" },
+  { to: "/$sekolah/master/unit-jenjang", label: "Unit Jenjang" },
+  { to: "/$sekolah/master/organisasi", label: "Organisasi" },
+  { to: "/$sekolah/master/modul", label: "Modul Aktif" },
+  { to: "/$sekolah/master/feature-flag", label: "Feature Flag" },
+  { to: "/$sekolah/master/pengguna", label: "Pengguna" },
 ];
 
 function MasterLayout() {
@@ -29,4 +29,4 @@ function MasterLayout() {
   );
 }
 
-export const Route = createFileRoute("/master")({ component: MasterLayout });
+export const Route = createFileRoute("/$sekolah/master")({ component: MasterLayout });

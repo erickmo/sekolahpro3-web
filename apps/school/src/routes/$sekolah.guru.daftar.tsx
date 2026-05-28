@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Avatar,
   Badge,
@@ -60,6 +60,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function GuruListPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [openCreate, setOpenCreate] = useState(false);
   return (
@@ -76,7 +78,7 @@ function GuruListPage() {
         searchFields={["name", "nama_lengkap", "nip", "nuptk"]}
         addLabel="Tambah Guru"
         onAdd={() => setOpenCreate(true)}
-        onRowClick={(g) => navigate({ to: "/guru/$nip", params: { nip: g.name } })}
+        onRowClick={(g) => navigate({ to: "/$sekolah/guru/$nip", params: { sekolah, nip: g.name } })}
       />
       <ResourceCreateModal
         open={openCreate}
@@ -87,11 +89,11 @@ function GuruListPage() {
         fields={GURU_FIELDS}
         onCreated={(doc) => {
           const nm = (doc as { name?: string }).name;
-          if (nm) navigate({ to: "/guru/$nip", params: { nip: nm } });
+          if (nm) navigate({ to: "/$sekolah/guru/$nip", params: { sekolah, nip: nm } });
         }}
       />
     </>
   );
 }
 
-export const Route = createFileRoute("/guru/daftar")({ component: GuruListPage });
+export const Route = createFileRoute("/$sekolah/guru/daftar")({ component: GuruListPage });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
@@ -31,6 +31,8 @@ const STATUS_TONE: Record<string, "success" | "brand" | "neutral" | "warning" | 
 };
 
 function KartuDetail() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { name } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -70,7 +72,7 @@ function KartuDetail() {
               void qc.invalidateQueries({ queryKey: ["resource:list", "Kartu"] });
               setReplaceOpen(false);
               setNewUid("");
-              navigate({ to: "/koperasi/kartu/$name", params: { name: doc.name } });
+              navigate({ to: "/$sekolah/koperasi/kartu/$name", params: { sekolah, name: doc.name } });
             },
           });
         },
@@ -87,10 +89,10 @@ function KartuDetail() {
       eyebrow="Detail Kartu"
       title={k.name}
       description={`UID ${k.uid_rfid} · Anggota ${k.anggota}`}
-      backTo="/koperasi/kartu"
+      backTo="/$sekolah/koperasi/kartu"
       backLabel="Kembali ke daftar"
       crumbParentLabel="Kartu RFID"
-      crumbParentTo="/koperasi/kartu"
+      crumbParentTo="/$sekolah/koperasi/kartu"
       hero={
         <div className="rounded-2xl border border-border bg-gradient-to-br from-brand/5 via-bg to-violet-500/5 p-6 shadow-sm">
           <div className="flex flex-wrap items-start gap-5">
@@ -148,4 +150,4 @@ function KartuDetail() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/kartu/$name")({ component: KartuDetail });
+export const Route = createFileRoute("/$sekolah/koperasi/kartu/$name")({ component: KartuDetail });

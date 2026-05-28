@@ -37,4 +37,4 @@ function FasilitasPage() {
   );
 }
 
-export const Route = createFileRoute("/infrastruktur/fasilitas")({ component: FasilitasPage });
+export const Route = createFileRoute("/$sekolah/infrastruktur/fasilitas")({ component: FasilitasPage });

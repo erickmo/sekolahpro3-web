@@ -105,4 +105,4 @@ function PengaturanKoperasiPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/pengaturan")({ component: PengaturanKoperasiPage });
+export const Route = createFileRoute("/$sekolah/koperasi/pengaturan")({ component: PengaturanKoperasiPage });

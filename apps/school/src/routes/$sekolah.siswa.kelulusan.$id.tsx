@@ -79,7 +79,9 @@ function stateBadgeTone(state: WorkflowState): "neutral" | "warning" | "success"
 }
 
 function KelulusanDetailPage() {
-  const { id } = useParams({ from: "/siswa/kelulusan/$id" });
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
+  const { id } = useParams({ from: "/$sekolah/siswa/kelulusan/$id" });
   const qc = useQueryClient();
   const docQuery = useResourceDoc<KelulusanDoc>("Kelulusan Siswa", id);
 
@@ -136,7 +138,7 @@ function KelulusanDetailPage() {
           Gagal memuat kelulusan: {(docQuery.error as Error)?.message ?? "tidak ditemukan"}
         </Badge>
         <div className="mt-4">
-          <Link to="/siswa/kelulusan" className="text-brand hover:underline">
+          <Link to="/$sekolah/siswa/kelulusan" params={{ sekolah }} className="text-brand hover:underline">
             ← Kembali ke daftar
           </Link>
         </div>
@@ -164,7 +166,7 @@ function KelulusanDetailPage() {
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center gap-2 text-xs text-muted-fg">
-        <Link to="/siswa/kelulusan" className="text-brand hover:underline">
+        <Link to="/$sekolah/siswa/kelulusan" params={{ sekolah }} className="text-brand hover:underline">
           ← Siswa › Kelulusan
         </Link>
         <span>›</span>
@@ -244,8 +246,8 @@ function KelulusanDetailPage() {
               </Badge>
               <span className="font-mono text-sm">{doc.arsip_ijazah}</span>
               <Link
-                to="/siswa/ijazah/$id"
-                params={{ id: doc.arsip_ijazah }}
+                to="/$sekolah/siswa/ijazah/$id"
+                params={{ sekolah, id: doc.arsip_ijazah }}
                 className="text-brand hover:underline text-sm"
               >
                 Lihat Arsip →
@@ -290,4 +292,4 @@ function KelulusanDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/kelulusan/$id")({ component: KelulusanDetailPage });
+export const Route = createFileRoute("/$sekolah/siswa/kelulusan/$id")({ component: KelulusanDetailPage });

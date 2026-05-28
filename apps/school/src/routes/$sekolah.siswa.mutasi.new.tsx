@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 import {
   Badge,
@@ -60,6 +60,8 @@ const loadSiswa = makeLoader("Siswa", "nama_lengkap");
 const loadRombel = makeLoader("Rombongan Belajar", "nama_rombel");
 
 function MutasiNewPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const create = useResourceCreate<{ name: string }>("Mutasi Siswa");
   const [v, setV] = useState<FormState>(INITIAL);
@@ -104,7 +106,7 @@ function MutasiNewPage() {
         alasan: v.alasan || undefined,
         workflow_state: "Draft",
       });
-      void navigate({ to: "/siswa/mutasi/$id", params: { id: doc.name } });
+      void navigate({ to: "/$sekolah/siswa/mutasi/$id", params: { sekolah, id: doc.name } });
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Gagal menyimpan mutasi.");
     }
@@ -225,7 +227,7 @@ function MutasiNewPage() {
       ) : null}
 
       <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => navigate({ to: "/siswa/mutasi" })}>
+        <Button type="button" variant="outline" onClick={() => navigate({ to: "/$sekolah/siswa/mutasi", params: { sekolah } })}>
           Batal
         </Button>
         <Button type="submit" disabled={create.isPending}>
@@ -236,4 +238,4 @@ function MutasiNewPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/mutasi/new")({ component: MutasiNewPage });
+export const Route = createFileRoute("/$sekolah/siswa/mutasi/new")({ component: MutasiNewPage });

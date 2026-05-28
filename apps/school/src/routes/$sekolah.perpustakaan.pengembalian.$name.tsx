@@ -6,10 +6,10 @@
  * gagal (404, network, dst.), fallback ke list peminjaman dengan status
  * "Selesai".
  */
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useParams} from "@tanstack/react-router";
 import { frappeFetch } from "@sekolahpro/api-client";
 
-export const Route = createFileRoute("/perpustakaan/pengembalian/$name")({
+export const Route = createFileRoute("/$sekolah/perpustakaan/pengembalian/$name")({
   beforeLoad: async ({ params }) => {
     try {
       const doc = await frappeFetch<{ peminjaman?: string }>(
@@ -22,8 +22,8 @@ export const Route = createFileRoute("/perpustakaan/pengembalian/$name")({
       );
       if (doc?.peminjaman) {
         throw redirect({
-          to: "/perpustakaan/peminjaman/$name",
-          params: { name: doc.peminjaman },
+          to: "/$sekolah/perpustakaan/peminjaman/$name",
+          params: { sekolah, name: doc.peminjaman },
         });
       }
     } catch (e) {
@@ -33,6 +33,6 @@ export const Route = createFileRoute("/perpustakaan/pengembalian/$name")({
       }
       // Any other failure falls through to list redirect below.
     }
-    throw redirect({ to: "/perpustakaan/peminjaman", search: { status: "Selesai" } });
+    throw redirect({ to: "/$sekolah/perpustakaan/peminjaman", params: { sekolah: params.sekolah }, search: { status: "Selesai" } });
   },
 });

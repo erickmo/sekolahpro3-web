@@ -2,7 +2,7 @@
  * Stock Opname Perpustakaan — daftar sesi audit inventaris.
  * Buka sesi baru → langsung masuk scan mode. Lihat PERP-ADR-0004.
  */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -47,6 +47,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function OpnameListPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   return (
     <ResourceListPage<Row>
@@ -60,10 +62,10 @@ function OpnameListPage() {
       defaultSort={{ key: "tanggal", dir: "desc" }}
       searchFields={["name", "lokasi_rak_filter", "auditor"]}
       addLabel="Mulai Opname"
-      onAdd={() => navigate({ to: "/perpustakaan/inventaris/opname/$name", params: { name: "new" } })}
-      onRowClick={(r) => navigate({ to: "/perpustakaan/inventaris/opname/$name", params: { name: r.name } })}
+      onAdd={() => navigate({ to: "/$sekolah/perpustakaan/inventaris/opname/$name", params: { sekolah, name: "new" } })}
+      onRowClick={(r) => navigate({ to: "/$sekolah/perpustakaan/inventaris/opname/$name", params: { sekolah, name: r.name } })}
     />
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/inventaris/opname")({ component: OpnameListPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/inventaris/opname")({ component: OpnameListPage });

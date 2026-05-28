@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch, useParams} from "@tanstack/react-router";
 import { getResource, listResource, useResourceCreate } from "@sekolahpro/api-client";
 import {
   Badge,
@@ -73,8 +73,10 @@ async function loadSiswa(query: string): Promise<SearchableOption[]> {
 }
 
 function PerubahanNewPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
-  const search = useSearch({ from: "/siswa/perubahan-data/new" }) as { siswa?: string };
+  const search = useSearch({ from: "/$sekolah/siswa/perubahan-data/new" }) as { siswa?: string };
   const create = useResourceCreate<{ name: string }>("Perubahan Data Siswa");
   const [v, setV] = useState<FormState>({ ...INITIAL, siswa: search.siswa ?? "" });
   const [fetchingOld, setFetchingOld] = useState(false);
@@ -148,7 +150,7 @@ function PerubahanNewPage() {
         lampiran_url: v.lampiran_url,
         workflow_state: "Draft",
       });
-      void navigate({ to: "/siswa/perubahan-data/$id", params: { id: doc.name } });
+      void navigate({ to: "/$sekolah/siswa/perubahan-data/$id", params: { sekolah, id: doc.name } });
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Gagal menyimpan permintaan.");
     }
@@ -253,7 +255,7 @@ function PerubahanNewPage() {
       ) : null}
 
       <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => navigate({ to: "/siswa/perubahan-data" })}>
+        <Button type="button" variant="outline" onClick={() => navigate({ to: "/$sekolah/siswa/perubahan-data", params: { sekolah } })}>
           Batal
         </Button>
         <Button type="submit" disabled={create.isPending}>
@@ -264,4 +266,4 @@ function PerubahanNewPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/perubahan-data/new")({ component: PerubahanNewPage });
+export const Route = createFileRoute("/$sekolah/siswa/perubahan-data/new")({ component: PerubahanNewPage });

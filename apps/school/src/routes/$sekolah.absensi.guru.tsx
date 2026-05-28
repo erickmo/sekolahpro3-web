@@ -37,4 +37,4 @@ function AbsensiGuruPage() {
   );
 }
 
-export const Route = createFileRoute("/absensi/guru")({ component: AbsensiGuruPage });
+export const Route = createFileRoute("/$sekolah/absensi/guru")({ component: AbsensiGuruPage });

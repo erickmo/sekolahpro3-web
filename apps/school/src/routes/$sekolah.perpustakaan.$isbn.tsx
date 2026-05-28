@@ -5,7 +5,7 @@
 // `Pengembalian Buku` and invalidates the peminjaman cache so this view
 // refetches automatically.
 import { useState } from "react";
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useParams} from "@tanstack/react-router";
 import { stubAction } from "../lib/stub";
 import { ReturnModal } from "../components/perpustakaan/ReturnModal";
 import {
@@ -582,6 +582,8 @@ function SedangDipinjamSection({
 }
 
 function BukuDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { isbn } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<BukuDoc>("Buku", isbn);
@@ -634,7 +636,7 @@ function BukuDetailPage() {
   const [returnFor, setReturnFor] = useState<string | null>(null);
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
-    navigate({ to: "/perpustakaan/$isbn", params: { isbn }, search: { tab: next === "ringkasan" ? undefined : next } });
+    navigate({ to: "/$sekolah/perpustakaan/$isbn", params: { sekolah, isbn }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
   if (!buku) {
@@ -685,8 +687,8 @@ function BukuDetailPage() {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Perpustakaan", render: ({ className, children }) => <Link to="/perpustakaan" className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Perpustakaan", render: ({ className, children }) => <Link to="/$sekolah/perpustakaan" params={{ sekolah }} className={className}>{children}</Link> },
               { label: buku.judul },
             ]}
           />
@@ -695,7 +697,7 @@ function BukuDetailPage() {
             title={buku.judul}
             description={`ISBN ${buku.isbn} · ${buku.kategori} · ${buku.status}`}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/perpustakaan" })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan", params: { sekolah } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali ke daftar
               </Button>
@@ -725,23 +727,25 @@ function BukuDetailPage() {
 
 type SearchParams = { tab?: TabKey | undefined };
 
-export const Route = createFileRoute("/perpustakaan/$isbn")({
+export const Route = createFileRoute("/$sekolah/perpustakaan/$isbn")({
   component: BukuDetailPage,
   validateSearch: (raw: Record<string, unknown>): SearchParams => {
     const t = typeof raw.tab === "string" ? raw.tab : undefined;
     return { tab: t && VALID_TABS.has(t as TabKey) ? (t as TabKey) : undefined };
   },
-  notFoundComponent: () => (
+  notFoundComponent: () => {
+    const { sekolah } = useParams({ from: "/$sekolah" });
+    return (
     <div className="py-16">
       <EmptyState
         title="Buku tidak ditemukan"
         description="ISBN yang diminta tidak ada di sistem. Periksa kembali atau kembali ke daftar buku."
         action={
-          <Link to="/perpustakaan" className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+          <Link to="/$sekolah/perpustakaan" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
             <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
           </Link>
         }
       />
     </div>
-  ),
+  ); },
 });

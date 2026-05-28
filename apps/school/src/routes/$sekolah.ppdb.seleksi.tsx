@@ -331,4 +331,4 @@ function Mini({ label, value, tone = "neutral" }: { label: string; value: number
   );
 }
 
-export const Route = createFileRoute("/ppdb/seleksi")({ component: SeleksiPpdbPage });
+export const Route = createFileRoute("/$sekolah/ppdb/seleksi")({ component: SeleksiPpdbPage });

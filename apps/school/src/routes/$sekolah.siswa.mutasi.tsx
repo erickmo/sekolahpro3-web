@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -24,7 +24,7 @@ const COLUMNS: Column<Row>[] = [
     header: "ID",
     sortable: true,
     cell: (r) => (
-      <Link to="/siswa/mutasi/$id" params={{ id: r.name }} className="font-mono text-xs text-brand hover:underline">
+      <Link to="/$sekolah/siswa/mutasi/$id" params={{ sekolah, id: r.name }} className="font-mono text-xs text-brand hover:underline">
         {r.name}
       </Link>
     ),
@@ -52,6 +52,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function MutasiPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   return (
     <ResourceListPage<Row>
@@ -84,9 +86,9 @@ function MutasiPage() {
         },
       ]}
       addLabel="Ajukan Mutasi"
-      onAdd={() => navigate({ to: "/siswa/mutasi/new" })}
+      onAdd={() => navigate({ to: "/$sekolah/siswa/mutasi/new", params: { sekolah } })}
     />
   );
 }
 
-export const Route = createFileRoute("/siswa/mutasi")({ component: MutasiPage });
+export const Route = createFileRoute("/$sekolah/siswa/mutasi")({ component: MutasiPage });

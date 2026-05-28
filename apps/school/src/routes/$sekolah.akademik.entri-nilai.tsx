@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { useAkademikContextOptional } from "../lib/akademikContext";
@@ -44,6 +44,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function EntriNilaiPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const ctx = useAkademikContextOptional();
 
@@ -58,7 +60,7 @@ function EntriNilaiPage() {
     const search: Record<string, string> = {};
     if (ctx?.semester) search.semester = ctx.semester;
     if (ctx?.tahunAjaran) search.ta = ctx.tahunAjaran;
-    navigate({ to: "/akademik/entri-nilai/edit", search });
+    navigate({ to: "/$sekolah/akademik/entri-nilai/edit", params: { sekolah }, search });
   };
 
   return (
@@ -93,4 +95,4 @@ function EntriNilaiPage() {
   );
 }
 
-export const Route = createFileRoute("/akademik/entri-nilai")({ component: EntriNilaiPage });
+export const Route = createFileRoute("/$sekolah/akademik/entri-nilai")({ component: EntriNilaiPage });

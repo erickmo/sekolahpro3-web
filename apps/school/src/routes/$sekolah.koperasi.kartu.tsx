@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { KartuCreateModal } from "../components/koperasi-kartu/KartuCreateModal";
@@ -24,6 +24,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function KartuPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   return (
@@ -44,11 +46,11 @@ function KartuPage() {
         ]}
         addLabel="Terbitkan Kartu"
         onAdd={() => setOpen(true)}
-        onRowClick={(r) => navigate({ to: "/koperasi/kartu/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/koperasi/kartu/$name", params: { sekolah, name: r.name } })}
       />
       <KartuCreateModal open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
 
-export const Route = createFileRoute("/koperasi/kartu")({ component: KartuPage });
+export const Route = createFileRoute("/$sekolah/koperasi/kartu")({ component: KartuPage });

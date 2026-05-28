@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
@@ -42,6 +42,8 @@ const CREATE_FIELDS: PerpFieldDef[] = [
 ];
 
 function AnggotaPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -64,7 +66,7 @@ function AnggotaPage() {
         ]}
         addLabel="Daftar Anggota"
         onAdd={() => setOpen(true)}
-        onRowClick={(r) => navigate({ to: "/perpustakaan/anggota/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/perpustakaan/anggota/$name", params: { sekolah, name: r.name } })}
       />
       <PerpCreateModal
         open={open}
@@ -75,11 +77,11 @@ function AnggotaPage() {
         submitLabel="Daftarkan"
         onCreated={(doc) => {
           const name = (doc as { name?: string }).name;
-          if (name) navigate({ to: "/perpustakaan/anggota/$name", params: { name } });
+          if (name) navigate({ to: "/$sekolah/perpustakaan/anggota/$name", params: { sekolah, name } });
         }}
       />
     </>
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/anggota")({ component: AnggotaPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/anggota")({ component: AnggotaPage });

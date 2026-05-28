@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Avatar,
   Badge,
@@ -551,6 +551,8 @@ function mapAkadToPinjamanRows(rows: AkadPembiayaanRow[]): PinjamanRow[] {
 }
 
 function AnggotaDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { noAnggota } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<AnggotaDoc>("Anggota Koperasi", noAnggota);
@@ -595,7 +597,7 @@ function AnggotaDetailPage() {
   const navigate = useNavigate();
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
-    navigate({ to: "/koperasi/$noAnggota", params: { noAnggota }, search: { tab: next === "ringkasan" ? undefined : next } });
+    navigate({ to: "/$sekolah/koperasi/$noAnggota", params: { sekolah, noAnggota }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
   if (!anggota) {
@@ -643,8 +645,8 @@ function AnggotaDetailPage() {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Koperasi", render: ({ className, children }) => <Link to="/koperasi" className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Koperasi", render: ({ className, children }) => <Link to="/$sekolah/koperasi" params={{ sekolah }} className={className}>{children}</Link> },
               { label: anggota.nama },
             ]}
           />
@@ -653,7 +655,7 @@ function AnggotaDetailPage() {
             title={anggota.nama}
             description={`${anggota.noAnggota} · ${anggota.tipeAnggota} · ${anggota.status}`}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/koperasi" })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/koperasi", params: { sekolah } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali ke daftar
               </Button>
@@ -670,23 +672,25 @@ function AnggotaDetailPage() {
 
 type SearchParams = { tab?: TabKey | undefined };
 
-export const Route = createFileRoute("/koperasi/$noAnggota")({
+export const Route = createFileRoute("/$sekolah/koperasi/$noAnggota")({
   component: AnggotaDetailPage,
   validateSearch: (raw: Record<string, unknown>): SearchParams => {
     const t = typeof raw.tab === "string" ? raw.tab : undefined;
     return { tab: t && VALID_TABS.has(t as TabKey) ? (t as TabKey) : undefined };
   },
-  notFoundComponent: () => (
+  notFoundComponent: () => {
+    const { sekolah } = useParams({ from: "/$sekolah" });
+    return (
     <div className="py-16">
       <EmptyState
         title="Anggota tidak ditemukan"
         description="No Anggota yang diminta tidak ada di sistem. Periksa kembali atau kembali ke daftar anggota."
         action={
-          <Link to="/koperasi" className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+          <Link to="/$sekolah/koperasi" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
             <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
           </Link>
         }
       />
     </div>
-  ),
+  ); },
 });

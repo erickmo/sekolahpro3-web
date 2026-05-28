@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -25,7 +25,7 @@ const COLUMNS: Column<Row>[] = [
     header: "ID",
     sortable: true,
     cell: (r) => (
-      <Link to="/siswa/kelulusan/$id" params={{ id: r.name }} className="font-mono text-xs text-brand hover:underline">
+      <Link to="/$sekolah/siswa/kelulusan/$id" params={{ sekolah, id: r.name }} className="font-mono text-xs text-brand hover:underline">
         {r.name}
       </Link>
     ),
@@ -54,6 +54,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function KelulusanPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   return (
     <ResourceListPage<Row>
@@ -83,9 +85,9 @@ function KelulusanPage() {
         },
       ]}
       addLabel="Proses Kelulusan"
-      onAdd={() => navigate({ to: "/siswa/kelulusan/new" })}
+      onAdd={() => navigate({ to: "/$sekolah/siswa/kelulusan/new", params: { sekolah } })}
     />
   );
 }
 
-export const Route = createFileRoute("/siswa/kelulusan")({ component: KelulusanPage });
+export const Route = createFileRoute("/$sekolah/siswa/kelulusan")({ component: KelulusanPage });

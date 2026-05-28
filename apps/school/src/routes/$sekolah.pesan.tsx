@@ -348,4 +348,4 @@ function ConversationView({ pesan, draft, onDraftChange, onSend, sending }: Conv
   );
 }
 
-export const Route = createFileRoute("/pesan")({ component: PesanPage });
+export const Route = createFileRoute("/$sekolah/pesan")({ component: PesanPage });

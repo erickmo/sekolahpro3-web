@@ -79,7 +79,9 @@ function stateBadgeTone(state: WorkflowState): "neutral" | "warning" | "success"
 }
 
 function MutasiDetailPage() {
-  const { id } = useParams({ from: "/siswa/mutasi/$id" });
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
+  const { id } = useParams({ from: "/$sekolah/siswa/mutasi/$id" });
   const _navigate = useNavigate();
   const qc = useQueryClient();
   const docQuery = useResourceDoc<MutasiDoc>("Mutasi Siswa", id);
@@ -147,7 +149,7 @@ function MutasiDetailPage() {
       <div className="p-6">
         <Badge tone="danger">Gagal memuat mutasi: {(docQuery.error as Error)?.message ?? "tidak ditemukan"}</Badge>
         <div className="mt-4">
-          <Link to="/siswa/mutasi" className="text-brand hover:underline">
+          <Link to="/$sekolah/siswa/mutasi" params={{ sekolah }} className="text-brand hover:underline">
             ← Kembali ke daftar
           </Link>
         </div>
@@ -175,7 +177,7 @@ function MutasiDetailPage() {
   return (
     <div className="space-y-6 pb-24">
       <div className="flex items-center gap-2 text-xs text-muted-fg">
-        <Link to="/siswa/mutasi" className="text-brand hover:underline">
+        <Link to="/$sekolah/siswa/mutasi" params={{ sekolah }} className="text-brand hover:underline">
           ← Siswa › Mutasi
         </Link>
         <span>›</span>
@@ -259,4 +261,4 @@ function MutasiDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/mutasi/$id")({ component: MutasiDetailPage });
+export const Route = createFileRoute("/$sekolah/siswa/mutasi/$id")({ component: MutasiDetailPage });

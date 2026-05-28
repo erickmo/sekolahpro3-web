@@ -46,4 +46,4 @@ function BerkasPage() {
   );
 }
 
-export const Route = createFileRoute("/guru/berkas")({ component: BerkasPage });
+export const Route = createFileRoute("/$sekolah/guru/berkas")({ component: BerkasPage });

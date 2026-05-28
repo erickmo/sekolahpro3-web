@@ -3,7 +3,7 @@
  * Route param `nip` carries the Guru `name` (e.g. GURU-0001), not the actual NIP field.
  */
 
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Avatar,
   Badge,
@@ -93,6 +93,8 @@ function formatDate(iso?: string): string {
 }
 
 function StaffDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { nip } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -113,7 +115,7 @@ function StaffDetailPage() {
 
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
-    navigate({ to: "/staff/$nip", params: { nip }, search: { tab: next === "ringkasan" ? undefined : next } });
+    navigate({ to: "/$sekolah/staff/$nip", params: { sekolah, nip }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
   if (guruQ.isLoading) {
@@ -129,7 +131,7 @@ function StaffDetailPage() {
           title="Staff tidak ditemukan"
           description={guruQ.error ? (guruQ.error as Error).message : `Guru ${nip} tidak ada di sistem.`}
           action={
-            <Link to="/staff/daftar" className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link to="/$sekolah/staff/daftar" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
             </Link>
           }
@@ -161,8 +163,8 @@ function StaffDetailPage() {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Staff", render: ({ className, children }) => <Link to="/staff" className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Staff", render: ({ className, children }) => <Link to="/$sekolah/staff" params={{ sekolah }} className={className}>{children}</Link> },
               { label: g.nama_lengkap ?? g.name },
             ]}
           />
@@ -171,7 +173,7 @@ function StaffDetailPage() {
             title={g.nama_lengkap ?? g.name}
             description={`${g.name}${g.nip ? ` · NIP ${g.nip}` : ""}${g.jabatan_fungsional ? ` · ${g.jabatan_fungsional}` : ""}`}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/staff/daftar" })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/staff/daftar", params: { sekolah } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali ke daftar
               </Button>
@@ -294,7 +296,7 @@ function SkTab({ rows, loading }: { rows: SkJabatanRow[]; loading: boolean }) {
       title="SK Jabatan"
       description={loading ? "Memuat..." : `${rows.length} SK`}
       action={
-        <Link to="/staff/sk-jabatan">
+        <Link to="/$sekolah/staff/sk-jabatan" params={{ sekolah }}>
           <Button variant="outline" size="sm">Kelola SK</Button>
         </Link>
       }
@@ -329,7 +331,7 @@ function BerkasTab({ rows, loading }: { rows: BerkasRow[]; loading: boolean }) {
       title="Berkas"
       description={loading ? "Memuat..." : `${rows.length} berkas`}
       action={
-        <Link to="/staff/berkas">
+        <Link to="/$sekolah/staff/berkas" params={{ sekolah }}>
           <Button variant="outline" size="sm">Kelola Berkas</Button>
         </Link>
       }
@@ -359,7 +361,7 @@ function BerkasTab({ rows, loading }: { rows: BerkasRow[]; loading: boolean }) {
 
 type SearchParams = { tab?: TabKey | undefined };
 
-export const Route = createFileRoute("/staff/$nip")({
+export const Route = createFileRoute("/$sekolah/staff/$nip")({
   component: StaffDetailPage,
   validateSearch: (raw: Record<string, unknown>): SearchParams => {
     const t = typeof raw.tab === "string" ? raw.tab : undefined;

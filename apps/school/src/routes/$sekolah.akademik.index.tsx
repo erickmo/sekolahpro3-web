@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   AttentionList,
   Badge,
@@ -70,15 +70,17 @@ type QuickAction = {
 };
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { to: "/akademik/entri-nilai", label: "Entri Nilai", description: "Input nilai harian, UTS, dan UAS.", icon: <IconEdit />, accent: "brand" },
-  { to: "/akademik/raport", label: "Raport", description: "Susun & cetak raport siswa.", icon: <IconFile />, accent: "emerald" },
-  { to: "/akademik/kkm", label: "KKM", description: "Atur Kriteria Ketuntasan Minimal.", icon: <IconCheck />, accent: "amber" },
-  { to: "/akademik/komponen-nilai", label: "Komponen Nilai", description: "Definisikan bobot komponen penilaian.", icon: <IconChart />, accent: "violet" },
-  { to: "/akademik/kurikulum", label: "Kurikulum", description: "Kelola kurikulum & struktur mapel.", icon: <IconGrad />, accent: "sky" },
-  { to: "/akademik/konfigurasi", label: "Konfigurasi", description: "Pengaturan modul akademik.", icon: <IconSettings />, accent: "rose" },
+  { to: "/$sekolah/akademik/entri-nilai", label: "Entri Nilai", description: "Input nilai harian, UTS, dan UAS.", icon: <IconEdit />, accent: "brand" },
+  { to: "/$sekolah/akademik/raport", label: "Raport", description: "Susun & cetak raport siswa.", icon: <IconFile />, accent: "emerald" },
+  { to: "/$sekolah/akademik/kkm", label: "KKM", description: "Atur Kriteria Ketuntasan Minimal.", icon: <IconCheck />, accent: "amber" },
+  { to: "/$sekolah/akademik/komponen-nilai", label: "Komponen Nilai", description: "Definisikan bobot komponen penilaian.", icon: <IconChart />, accent: "violet" },
+  { to: "/$sekolah/akademik/kurikulum", label: "Kurikulum", description: "Kelola kurikulum & struktur mapel.", icon: <IconGrad />, accent: "sky" },
+  { to: "/$sekolah/akademik/konfigurasi", label: "Konfigurasi", description: "Pengaturan modul akademik.", icon: <IconSettings />, accent: "rose" },
 ];
 
 function AkademikDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const ctx = useAkademikContextOptional();
   const now = useMemo(() => new Date(), []);
 
@@ -161,7 +163,7 @@ function AkademikDashboardPage() {
         tone: cutOffDays <= 7 ? "danger" : "warning",
         badge: "Cut-off",
         actionLabel: "Buka Entri Nilai",
-        actionHref: "/akademik/entri-nilai",
+        actionHref: "/$sekolah/akademik/entri-nilai",
       });
     }
 
@@ -175,7 +177,7 @@ function AkademikDashboardPage() {
           tone: "danger",
           badge: "KKM",
           actionLabel: "Atur KKM",
-          actionHref: "/akademik/kkm",
+          actionHref: "/$sekolah/akademik/kkm",
         });
       }
       if (items.length >= ATTENTION_CAP) break;
@@ -187,7 +189,7 @@ function AkademikDashboardPage() {
           tone: "warning",
           badge: "Komponen",
           actionLabel: "Atur Komponen",
-          actionHref: "/akademik/komponen-nilai",
+          actionHref: "/$sekolah/akademik/komponen-nilai",
         });
       }
     }
@@ -245,7 +247,7 @@ function AkademikDashboardPage() {
           icon={<IconAlert />}
           accent="amber"
           urgency="warn"
-          actionHref="/akademik/kkm"
+          actionHref="/$sekolah/akademik/kkm"
           renderLink={renderStatLink}
         />
         <StatCard
@@ -263,7 +265,7 @@ function AkademikDashboardPage() {
           icon={<IconEdit />}
           accent="violet"
           urgency="normal"
-          actionHref="/akademik/entri-nilai"
+          actionHref="/$sekolah/akademik/entri-nilai"
           renderLink={renderStatLink}
         />
       </div>
@@ -319,7 +321,7 @@ function AkademikDashboardPage() {
           title="Aktivitas Terbaru"
           description="Mata pelajaran terakhir diperbarui."
           action={
-            <Link to="/akademik/daftar" className="text-xs text-brand hover:underline">
+            <Link to="/$sekolah/akademik/daftar" params={{ sekolah }} className="text-xs text-brand hover:underline">
               Lihat semua
             </Link>
           }
@@ -372,4 +374,4 @@ function ErrorRetry({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-export const Route = createFileRoute("/akademik/")({ component: AkademikDashboardPage });
+export const Route = createFileRoute("/$sekolah/akademik/")({ component: AkademikDashboardPage });

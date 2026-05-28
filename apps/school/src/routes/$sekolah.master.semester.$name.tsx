@@ -12,7 +12,7 @@ function SemesterDetailPage() {
       name={name}
       eyebrow="Semester"
       parentLabel="Semester"
-      parentPath="/master/semester"
+      parentPath="/$sekolah/master/semester"
       title={(d) => d.nama || d.name}
       subtitle={(d) => d.tahun_ajaran ?? ""}
       fields={[
@@ -28,4 +28,4 @@ function SemesterDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/master/semester/$name")({ component: SemesterDetailPage });
+export const Route = createFileRoute("/$sekolah/master/semester/$name")({ component: SemesterDetailPage });

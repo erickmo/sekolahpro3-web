@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 import {
   Badge,
@@ -66,6 +66,8 @@ async function loadWali(query: string): Promise<SearchableOption[]> {
 }
 
 function PersetujuanNewPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const create = useResourceCreate<{ name: string }>("Persetujuan Wali");
   const [v, setV] = useState<FormState>(INITIAL);
@@ -103,7 +105,7 @@ function PersetujuanNewPage() {
         catatan: v.catatan || undefined,
         status: "Granted",
       });
-      void navigate({ to: "/siswa/persetujuan/$id", params: { id: doc.name } });
+      void navigate({ to: "/$sekolah/siswa/persetujuan/$id", params: { sekolah, id: doc.name } });
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Gagal menyimpan persetujuan.");
     }
@@ -218,7 +220,7 @@ function PersetujuanNewPage() {
       ) : null}
 
       <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => navigate({ to: "/siswa/persetujuan" })}>
+        <Button type="button" variant="outline" onClick={() => navigate({ to: "/$sekolah/siswa/persetujuan", params: { sekolah } })}>
           Batal
         </Button>
         <Button type="submit" disabled={create.isPending}>
@@ -229,4 +231,4 @@ function PersetujuanNewPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/persetujuan/new")({ component: PersetujuanNewPage });
+export const Route = createFileRoute("/$sekolah/siswa/persetujuan/new")({ component: PersetujuanNewPage });

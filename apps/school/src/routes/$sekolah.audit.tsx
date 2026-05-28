@@ -71,4 +71,4 @@ function AuditPage() {
   );
 }
 
-export const Route = createFileRoute("/audit")({ component: AuditPage });
+export const Route = createFileRoute("/$sekolah/audit")({ component: AuditPage });

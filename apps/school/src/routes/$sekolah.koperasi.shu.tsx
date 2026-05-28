@@ -47,4 +47,4 @@ function ShuPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/shu")({ component: ShuPage });
+export const Route = createFileRoute("/$sekolah/koperasi/shu")({ component: ShuPage });

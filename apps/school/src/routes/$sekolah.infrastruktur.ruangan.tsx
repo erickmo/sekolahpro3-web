@@ -43,4 +43,4 @@ function RuanganPage() {
   );
 }
 
-export const Route = createFileRoute("/infrastruktur/ruangan")({ component: RuanganPage });
+export const Route = createFileRoute("/$sekolah/infrastruktur/ruangan")({ component: RuanganPage });

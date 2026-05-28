@@ -2,10 +2,10 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/kelas", label: "Dashboard", exact: true },
-  { to: "/kelas/daftar", label: "Daftar Kelas" },
-  { to: "/kelas/rombel", label: "Rombongan Belajar" },
-  { to: "/kelas/anggota", label: "Anggota Rombel" },
+  { to: "/$sekolah/kelas", label: "Dashboard", exact: true },
+  { to: "/$sekolah/kelas/daftar", label: "Daftar Kelas" },
+  { to: "/$sekolah/kelas/rombel", label: "Rombongan Belajar" },
+  { to: "/$sekolah/kelas/anggota", label: "Anggota Rombel" },
 ];
 
 function KelasLayout() {
@@ -24,4 +24,4 @@ function KelasLayout() {
   );
 }
 
-export const Route = createFileRoute("/kelas")({ component: KelasLayout });
+export const Route = createFileRoute("/$sekolah/kelas")({ component: KelasLayout });

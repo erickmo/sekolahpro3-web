@@ -13,7 +13,7 @@ function OrganisasiDetailPage() {
       name={name}
       eyebrow="Organisasi"
       parentLabel="Organisasi"
-      parentPath="/master/organisasi"
+      parentPath="/$sekolah/master/organisasi"
       title={(d) => d.nama || d.name}
       fields={[
         { label: "ID", render: (d) => <span className="font-mono text-xs">{d.name}</span> },
@@ -26,4 +26,4 @@ function OrganisasiDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/master/organisasi/$name")({ component: OrganisasiDetailPage });
+export const Route = createFileRoute("/$sekolah/master/organisasi/$name")({ component: OrganisasiDetailPage });

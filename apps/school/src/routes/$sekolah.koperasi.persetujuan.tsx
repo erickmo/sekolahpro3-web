@@ -255,6 +255,6 @@ function PermohonanList({ type }: { type: PermohonanType }) {
   );
 }
 
-export const Route = createFileRoute("/koperasi/persetujuan")({
+export const Route = createFileRoute("/$sekolah/koperasi/persetujuan")({
   component: PersetujuanPage,
 });

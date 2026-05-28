@@ -2,11 +2,11 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/jadwal", label: "Dashboard", exact: true },
-  { to: "/jadwal/daftar", label: "Jadwal Pelajaran" },
-  { to: "/jadwal/slot", label: "Slot Jadwal" },
-  { to: "/jadwal/override", label: "Jadwal Override" },
-  { to: "/jadwal/slot-override", label: "Slot Override" },
+  { to: "/$sekolah/jadwal", label: "Dashboard", exact: true },
+  { to: "/$sekolah/jadwal/daftar", label: "Jadwal Pelajaran" },
+  { to: "/$sekolah/jadwal/slot", label: "Slot Jadwal" },
+  { to: "/$sekolah/jadwal/override", label: "Jadwal Override" },
+  { to: "/$sekolah/jadwal/slot-override", label: "Slot Override" },
 ];
 
 function JadwalLayout() {
@@ -25,4 +25,4 @@ function JadwalLayout() {
   );
 }
 
-export const Route = createFileRoute("/jadwal")({ component: JadwalLayout });
+export const Route = createFileRoute("/$sekolah/jadwal")({ component: JadwalLayout });

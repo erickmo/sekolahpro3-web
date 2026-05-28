@@ -62,7 +62,9 @@ function lsKey(name: string): string {
 }
 
 function OpnameScanPage() {
-  const { name } = useParams({ from: "/perpustakaan/inventaris/opname/$name" });
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
+  const { name } = useParams({ from: "/$sekolah/perpustakaan/inventaris/opname/$name" });
   const navigate = useNavigate();
   const isNew = name === "new";
 
@@ -241,7 +243,7 @@ function OpnameScanPage() {
       if (dirty) await saveDraft();
       await updateResource("Stock Opname Perpustakaan", currentName, { docstatus: 1 });
       if (typeof window !== "undefined") window.localStorage.removeItem(lsKey(currentName));
-      navigate({ to: "/perpustakaan/inventaris/opname/$name", params: { name: currentName } });
+      navigate({ to: "/$sekolah/perpustakaan/inventaris/opname/$name", params: { sekolah, name: currentName } });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Gagal submit.");
     } finally {
@@ -471,7 +473,7 @@ function OpnameScanPage() {
 
       {!isReadonly ? (
         <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={() => navigate({ to: "/perpustakaan/inventaris/opname" })}>
+          <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/inventaris/opname", params: { sekolah } })}>
             Tutup (Draft Tersimpan)
           </Button>
           <Button variant="outline" onClick={() => void saveDraft()} disabled={saving}>
@@ -484,7 +486,7 @@ function OpnameScanPage() {
         </div>
       ) : (
         <div className="flex items-center justify-end">
-          <Button variant="outline" onClick={() => navigate({ to: "/perpustakaan/inventaris/opname" })}>
+          <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/inventaris/opname", params: { sekolah } })}>
             Kembali
           </Button>
         </div>
@@ -532,4 +534,4 @@ function StatBox({ label, value, tone }: { label: string; value: number; tone: "
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/inventaris/opname/$name")({ component: OpnameScanPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/inventaris/opname/$name")({ component: OpnameScanPage });

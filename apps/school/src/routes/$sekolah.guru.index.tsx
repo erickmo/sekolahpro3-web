@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { GURU_DOCTYPE, GURU_FIELDS } from "../components/guru-extra/guru-fields";
 import {
@@ -26,12 +26,12 @@ import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
 
 const AKSI_CEPAT: { to: string; label: string; desc: string; icon: ReactNode }[] = [
-  { to: "/guru/sk-mengajar", label: "SK Mengajar", desc: "Terbitkan & kelola SK mengajar", icon: <IconFile /> },
-  { to: "/guru/sk-jabatan", label: "SK Jabatan", desc: "Atur SK jabatan struktural", icon: <IconFile /> },
-  { to: "/guru/penugasan", label: "Penugasan", desc: "Kelola penugasan guru", icon: <IconUsers /> },
-  { to: "/guru/mapel-pengampu", label: "Mapel Pengampu", desc: "Tetapkan mapel pengampu", icon: <IconBook /> },
-  { to: "/guru/jabatan", label: "Jabatan", desc: "Master data jabatan", icon: <IconGrad /> },
-  { to: "/guru/berkas", label: "Berkas", desc: "Arsip dokumen guru", icon: <IconFile /> },
+  { to: "/$sekolah/guru/sk-mengajar", label: "SK Mengajar", desc: "Terbitkan & kelola SK mengajar", icon: <IconFile /> },
+  { to: "/$sekolah/guru/sk-jabatan", label: "SK Jabatan", desc: "Atur SK jabatan struktural", icon: <IconFile /> },
+  { to: "/$sekolah/guru/penugasan", label: "Penugasan", desc: "Kelola penugasan guru", icon: <IconUsers /> },
+  { to: "/$sekolah/guru/mapel-pengampu", label: "Mapel Pengampu", desc: "Tetapkan mapel pengampu", icon: <IconBook /> },
+  { to: "/$sekolah/guru/jabatan", label: "Jabatan", desc: "Master data jabatan", icon: <IconGrad /> },
+  { to: "/$sekolah/guru/berkas", label: "Berkas", desc: "Arsip dokumen guru", icon: <IconFile /> },
 ];
 
 type GuruRow = {
@@ -46,6 +46,8 @@ const AKTIVITAS_LIMIT = 5;
 const PERLU_PERHATIAN_LIMIT = 5;
 
 function GuruDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [openCreate, setOpenCreate] = useState(false);
   const q = useResourceList<GuruRow>("Guru", {
@@ -82,7 +84,7 @@ function GuruDashboardPage() {
         tone: "danger",
         badge: "SK",
         actionLabel: "Perpanjang",
-        actionHref: "/guru/sk-mengajar",
+        actionHref: "/$sekolah/guru/sk-mengajar",
       });
     }
 
@@ -94,7 +96,7 @@ function GuruDashboardPage() {
         tone: "warning",
         badge: "Beban",
         actionLabel: "Tambah Penugasan",
-        actionHref: "/guru/penugasan",
+        actionHref: "/$sekolah/guru/penugasan",
       });
     }
 
@@ -107,7 +109,7 @@ function GuruDashboardPage() {
         tone: "neutral",
         href: `/guru/${guru.name}`,
         ...(noMapel
-          ? { badge: "Mapel", actionLabel: "Tugaskan Mapel", actionHref: "/guru/mapel-pengampu" }
+          ? { badge: "Mapel", actionLabel: "Tugaskan Mapel", actionHref: "/$sekolah/guru/mapel-pengampu" }
           : {}),
       });
     }
@@ -129,7 +131,7 @@ function GuruDashboardPage() {
       fields={GURU_FIELDS}
       onCreated={(doc) => {
         const nm = (doc as { name?: string }).name;
-        if (nm) navigate({ to: "/guru/$nip", params: { nip: nm } });
+        if (nm) navigate({ to: "/$sekolah/guru/$nip", params: { sekolah, nip: nm } });
       }}
     />
   );
@@ -184,7 +186,7 @@ function GuruDashboardPage() {
         actions={
           <>
             <Link
-              to="/guru/daftar"
+              to="/$sekolah/guru/daftar" params={{ sekolah }}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 border border-border bg-transparent hover:bg-muted"
             >
               <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
@@ -210,7 +212,7 @@ function GuruDashboardPage() {
           icon={<IconClock />}
           accent="amber"
           urgency="warn"
-          actionHref="/absensi/guru"
+          actionHref="/$sekolah/absensi/guru"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -228,7 +230,7 @@ function GuruDashboardPage() {
           icon={<IconAlert />}
           accent="brand"
           urgency="warn"
-          actionHref="/guru/sk-mengajar"
+          actionHref="/$sekolah/guru/sk-mengajar"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -238,7 +240,7 @@ function GuruDashboardPage() {
           icon={<IconBook />}
           accent="violet"
           urgency="critical"
-          actionHref="/guru/mapel-pengampu"
+          actionHref="/$sekolah/guru/mapel-pengampu"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -272,7 +274,7 @@ function GuruDashboardPage() {
           description="Guru dengan SK akan habis atau data belum lengkap."
           action={
             <Link
-              to="/guru/daftar"
+              to="/$sekolah/guru/daftar" params={{ sekolah }}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-8 px-3 hover:bg-muted"
             >
               Lihat semua
@@ -299,7 +301,7 @@ function GuruDashboardPage() {
           description="Guru yang baru-baru ini diperbarui datanya."
           action={
             <Link
-              to="/guru/daftar"
+              to="/$sekolah/guru/daftar" params={{ sekolah }}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-8 px-3 hover:bg-muted"
             >
               Lihat semua
@@ -315,8 +317,8 @@ function GuruDashboardPage() {
                   <Avatar name={g.nama_lengkap ?? g.name} size="sm" />
                   <div className="min-w-0 flex-1">
                     <Link
-                      to="/guru/$nip"
-                      params={{ nip: g.name }}
+                      to="/$sekolah/guru/$nip"
+                      params={{ sekolah, nip: g.name }}
                       className="font-medium text-fg hover:text-brand truncate block"
                     >
                       {g.nama_lengkap ?? g.name}
@@ -341,4 +343,4 @@ function GuruDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/guru/")({ component: GuruDashboardPage });
+export const Route = createFileRoute("/$sekolah/guru/")({ component: GuruDashboardPage });

@@ -26,7 +26,7 @@ function TahunAjaranPage() {
       defaultSort={{ key: "nama", dir: "desc" }}
       searchFields={["name", "nama"]}
       addLabel="Tambah TA"
-      detailRoute="/master/tahun-ajaran/$name"
+      detailRoute="/$sekolah/master/tahun-ajaran/$name"
       detailParams={(r) => ({ name: r.name })}
       formTitle="Tambah Tahun Ajaran"
       formFields={TAHUN_AJARAN_FIELDS}
@@ -34,4 +34,4 @@ function TahunAjaranPage() {
   );
 }
 
-export const Route = createFileRoute("/master/tahun-ajaran")({ component: TahunAjaranPage });
+export const Route = createFileRoute("/$sekolah/master/tahun-ajaran")({ component: TahunAjaranPage });

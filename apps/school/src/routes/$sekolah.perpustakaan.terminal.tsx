@@ -334,4 +334,4 @@ function TerminalPage() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/terminal")({ component: TerminalPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/terminal")({ component: TerminalPage });

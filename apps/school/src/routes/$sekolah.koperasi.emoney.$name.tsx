@@ -26,10 +26,10 @@ function EmoneyDetail() {
       eyebrow="Transaksi Kartu"
       title={t.name}
       description={`${t.jenis} · Kartu ${t.kartu}`}
-      backTo="/koperasi/emoney"
+      backTo="/$sekolah/koperasi/emoney"
       backLabel="Kembali ke daftar"
       crumbParentLabel="E-Money"
-      crumbParentTo="/koperasi/emoney"
+      crumbParentTo="/$sekolah/koperasi/emoney"
     >
       <SectionCard title="Detail Transaksi">
         <InfoGrid cols={2}>
@@ -47,4 +47,4 @@ function EmoneyDetail() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/emoney/$name")({ component: EmoneyDetail });
+export const Route = createFileRoute("/$sekolah/koperasi/emoney/$name")({ component: EmoneyDetail });

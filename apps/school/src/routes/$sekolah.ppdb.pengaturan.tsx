@@ -172,7 +172,7 @@ function PengaturanPpdbPage() {
 
       <p className="text-xs text-muted-fg">
         Item Pembayaran PPDB adalah <em>child table</em> di Pembayaran PPDB —
-        kelola dari halaman <a href="/ppdb/pembayaran" className="text-brand hover:underline">Pembayaran</a>.
+        kelola dari halaman <a href="/$sekolah/ppdb/pembayaran" className="text-brand hover:underline">Pembayaran</a>.
       </p>
     </div>
   );
@@ -200,4 +200,4 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   );
 }
 
-export const Route = createFileRoute("/ppdb/pengaturan")({ component: PengaturanPpdbPage });
+export const Route = createFileRoute("/$sekolah/ppdb/pengaturan")({ component: PengaturanPpdbPage });

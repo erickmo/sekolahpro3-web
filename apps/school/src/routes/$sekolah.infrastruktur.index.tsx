@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import { GedungFormModal } from "../components/infrastruktur/GedungFormModal";
 import {
   AttentionList,
@@ -37,13 +37,15 @@ const PAGE_LIMIT = 0;
 const RECENT_LIMIT = 5;
 
 const AKSI_CEPAT: { to: string; label: string; desc: string; icon: React.ReactNode }[] = [
-  { to: "/infrastruktur/ruangan", label: "Ruangan", desc: "Kelola ruangan & kapasitas", icon: <IconHome /> },
-  { to: "/infrastruktur/lantai", label: "Lantai", desc: "Struktur lantai per gedung", icon: <IconGrad /> },
-  { to: "/infrastruktur/fasilitas", label: "Fasilitas", desc: "Inventaris fasilitas ruangan", icon: <IconSettings /> },
-  { to: "/infrastruktur/utilitas", label: "Utilitas", desc: "PLN, PDAM, internet, gas", icon: <IconBell /> },
+  { to: "/$sekolah/infrastruktur/ruangan", label: "Ruangan", desc: "Kelola ruangan & kapasitas", icon: <IconHome /> },
+  { to: "/$sekolah/infrastruktur/lantai", label: "Lantai", desc: "Struktur lantai per gedung", icon: <IconGrad /> },
+  { to: "/$sekolah/infrastruktur/fasilitas", label: "Fasilitas", desc: "Inventaris fasilitas ruangan", icon: <IconSettings /> },
+  { to: "/$sekolah/infrastruktur/utilitas", label: "Utilitas", desc: "PLN, PDAM, internet, gas", icon: <IconBell /> },
 ];
 
 function InfraDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const [showCreate, setShowCreate] = useState(false);
   const ruanganQ = useResourceList<Ruangan>("Ruangan", {
     fields: RUANGAN_FIELDS,
@@ -104,7 +106,7 @@ function InfraDashboardPage() {
         tone: stats.fasilitasRusak > FASILITAS_CRITICAL_THRESHOLD ? "danger" : "warning",
         badge: "Fasilitas",
         actionLabel: "Buat Perbaikan",
-        actionHref: "/infrastruktur/fasilitas",
+        actionHref: "/$sekolah/infrastruktur/fasilitas",
       });
     }
     if (stats.utilitasAnomali > 0) {
@@ -115,7 +117,7 @@ function InfraDashboardPage() {
         tone: "danger",
         badge: "Utilitas",
         actionLabel: "Investigasi",
-        actionHref: "/infrastruktur/utilitas",
+        actionHref: "/$sekolah/infrastruktur/utilitas",
       });
     }
     return items;
@@ -130,7 +132,7 @@ function InfraDashboardPage() {
         actions={
           <>
             <Link
-              to="/infrastruktur/daftar"
+              to="/$sekolah/infrastruktur/daftar" params={{ sekolah }}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 border border-border bg-transparent hover:bg-muted"
             >
               <span className="h-4 w-4 mr-1.5"><IconHome /></span>
@@ -152,7 +154,7 @@ function InfraDashboardPage() {
           icon={<IconHome />}
           accent="brand"
           urgency="normal"
-          actionHref="/infrastruktur/ruangan"
+          actionHref="/$sekolah/infrastruktur/ruangan"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -170,7 +172,7 @@ function InfraDashboardPage() {
           icon={<IconSettings />}
           accent={stats.fasilitasRusak > FASILITAS_CRITICAL_THRESHOLD ? "rose" : "amber"}
           urgency={stats.fasilitasRusak > FASILITAS_CRITICAL_THRESHOLD ? "critical" : "warn"}
-          actionHref="/infrastruktur/fasilitas"
+          actionHref="/$sekolah/infrastruktur/fasilitas"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -180,7 +182,7 @@ function InfraDashboardPage() {
           icon={<IconBell />}
           accent="rose"
           urgency="critical"
-          actionHref="/infrastruktur/utilitas"
+          actionHref="/$sekolah/infrastruktur/utilitas"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -215,7 +217,7 @@ function InfraDashboardPage() {
         <AttentionList
           items={perluPerhatian}
           renderLink={(href, children) => (
-            <Link to={href as "/infrastruktur/fasilitas"}>{children}</Link>
+            <Link to={href as "/$sekolah/infrastruktur/fasilitas"}>{children}</Link>
           )}
         />
       </SectionCard>
@@ -224,7 +226,7 @@ function InfraDashboardPage() {
         title="Ruangan Terbaru"
         description="Ruangan yang baru-baru ini tercatat."
         action={
-          <Link to="/infrastruktur/ruangan" className="text-xs text-brand hover:underline">
+          <Link to="/$sekolah/infrastruktur/ruangan" params={{ sekolah }} className="text-xs text-brand hover:underline">
             Lihat semua
           </Link>
         }
@@ -244,7 +246,7 @@ function InfraDashboardPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <Link
-                    to="/infrastruktur/ruangan"
+                    to="/$sekolah/infrastruktur/ruangan" params={{ sekolah }}
                     className="font-medium text-fg hover:text-brand truncate block"
                   >
                     {r.nama ?? r.name}
@@ -276,4 +278,4 @@ function InfraDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/infrastruktur/")({ component: InfraDashboardPage });
+export const Route = createFileRoute("/$sekolah/infrastruktur/")({ component: InfraDashboardPage });

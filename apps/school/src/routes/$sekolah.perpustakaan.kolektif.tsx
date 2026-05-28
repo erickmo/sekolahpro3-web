@@ -3,7 +3,7 @@
  * Doctype paralel Peminjaman Buku — beda aturan (tanpa kuota, tanpa denda harian).
  * Lihat PERP-ADR-0007.
  */
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -38,11 +38,13 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function KolektifListPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   return (
     <div className="space-y-3">
       <div className="inline-flex rounded-md border border-border bg-card p-1">
-        <Link to="/perpustakaan/peminjaman"
+        <Link to="/$sekolah/perpustakaan/peminjaman" params={{ sekolah }}
           className="rounded px-3 py-1.5 text-sm text-muted-fg hover:text-fg">
           Individu
         </Link>
@@ -63,11 +65,11 @@ function KolektifListPage() {
             options: ["Semua", "Aktif", "Selesai", "Terlambat", "Batal"].map((v) => ({ value: v, label: v })) },
         ]}
         addLabel="Pinjam Kolektif Baru"
-        onAdd={() => navigate({ to: "/perpustakaan/kolektif/$name", params: { name: "new" } })}
-        onRowClick={(r) => navigate({ to: "/perpustakaan/kolektif/$name", params: { name: r.name } })}
+        onAdd={() => navigate({ to: "/$sekolah/perpustakaan/kolektif/$name", params: { sekolah, name: "new" } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/perpustakaan/kolektif/$name", params: { sekolah, name: r.name } })}
       />
     </div>
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/kolektif")({ component: KolektifListPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/kolektif")({ component: KolektifListPage });

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   AttentionList,
   Badge,
@@ -46,14 +46,14 @@ type OpnameRow = { name: string; docstatus?: number; tanggal?: string };
 type PengadaanRow = { name: string; tanggal_pengadaan?: string; total_eksemplar?: number };
 
 const QUICK_ACTIONS: { to: string; label: string; description: string; icon: React.ReactNode }[] = [
-  { to: "/perpustakaan/terminal", label: "Terminal RFID", description: "Mode kios scan kartu + eksemplar.", icon: <IconBook /> },
-  { to: "/perpustakaan/peminjaman", label: "Peminjaman", description: "Catat peminjaman individu / kolektif.", icon: <IconCheck /> },
-  { to: "/perpustakaan/reservasi", label: "Reservasi", description: "Kelola antrian reservasi buku.", icon: <IconClock /> },
-  { to: "/perpustakaan/pengadaan", label: "Pengadaan", description: "Pembelian / hibah / sumbangan koleksi.", icon: <IconWallet /> },
-  { to: "/perpustakaan/inventaris/opname", label: "Stock Opname", description: "Audit inventaris via scan.", icon: <IconChart /> },
-  { to: "/perpustakaan/inventaris/berita-acara", label: "BA Kerusakan", description: "Insiden rusak / hilang per eksemplar.", icon: <IconAlert /> },
-  { to: "/perpustakaan/anggota", label: "Anggota", description: "Kelola data anggota perpustakaan.", icon: <IconUsers /> },
-  { to: "/perpustakaan/laporan", label: "Laporan", description: "Ringkasan sirkulasi & koleksi.", icon: <IconChart /> },
+  { to: "/$sekolah/perpustakaan/terminal", label: "Terminal RFID", description: "Mode kios scan kartu + eksemplar.", icon: <IconBook /> },
+  { to: "/$sekolah/perpustakaan/peminjaman", label: "Peminjaman", description: "Catat peminjaman individu / kolektif.", icon: <IconCheck /> },
+  { to: "/$sekolah/perpustakaan/reservasi", label: "Reservasi", description: "Kelola antrian reservasi buku.", icon: <IconClock /> },
+  { to: "/$sekolah/perpustakaan/pengadaan", label: "Pengadaan", description: "Pembelian / hibah / sumbangan koleksi.", icon: <IconWallet /> },
+  { to: "/$sekolah/perpustakaan/inventaris/opname", label: "Stock Opname", description: "Audit inventaris via scan.", icon: <IconChart /> },
+  { to: "/$sekolah/perpustakaan/inventaris/berita-acara", label: "BA Kerusakan", description: "Insiden rusak / hilang per eksemplar.", icon: <IconAlert /> },
+  { to: "/$sekolah/perpustakaan/anggota", label: "Anggota", description: "Kelola data anggota perpustakaan.", icon: <IconUsers /> },
+  { to: "/$sekolah/perpustakaan/laporan", label: "Laporan", description: "Ringkasan sirkulasi & koleksi.", icon: <IconChart /> },
 ];
 
 const PINJAM_TONE: Record<string, "brand" | "success" | "warning" | "danger" | "neutral"> = {
@@ -65,6 +65,8 @@ const PINJAM_TONE: Record<string, "brand" | "success" | "warning" | "danger" | "
 };
 
 function PerpustakaanDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const bukuQ = useResourceList<BukuRow>("Buku", {
     fields: ["name", "judul", "pengarang", "kategori", "tahun_terbit"],
     limit_page_length: 0,
@@ -167,7 +169,7 @@ function PerpustakaanDashboardPage() {
           tone: "warning",
           badge: "Terlambat",
           actionLabel: "Kirim Pengingat",
-          actionHref: "/perpustakaan/peminjaman",
+          actionHref: "/$sekolah/perpustakaan/peminjaman",
         });
       } else if (p.status === "Hilang") {
         items.push({
@@ -177,7 +179,7 @@ function PerpustakaanDashboardPage() {
           tone: "danger",
           badge: "Hilang",
           actionLabel: "Buat Denda",
-          actionHref: "/perpustakaan/denda",
+          actionHref: "/$sekolah/perpustakaan/denda",
         });
       } else if (p.status === "Aktif" && p.tanggal_kembali_rencana === TODAY) {
         items.push({
@@ -186,7 +188,7 @@ function PerpustakaanDashboardPage() {
           description: `${p.anggota ?? "—"} · jatuh tempo hari ini`,
           tone: "neutral",
           actionLabel: "Cek Peminjaman",
-          actionHref: "/perpustakaan/peminjaman",
+          actionHref: "/$sekolah/perpustakaan/peminjaman",
         });
       }
     }
@@ -209,7 +211,7 @@ function PerpustakaanDashboardPage() {
           icon={<IconBook />}
           title="Perpustakaan belum punya koleksi"
           description="Input buku pertama atau import katalog untuk mulai layanan peminjaman."
-          primaryAction={{ label: "Tambah Buku", href: "/perpustakaan/daftar" }}
+          primaryAction={{ label: "Tambah Buku", href: "/$sekolah/perpustakaan/daftar" }}
           renderLink={(href, children, className) => (
             <Link to={href} className={className}>
               {children}
@@ -236,7 +238,7 @@ function PerpustakaanDashboardPage() {
           icon={<IconBook />}
           accent="amber"
           urgency="warn"
-          actionHref="/perpustakaan/peminjaman"
+          actionHref="/$sekolah/perpustakaan/peminjaman"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -254,7 +256,7 @@ function PerpustakaanDashboardPage() {
           icon={<IconAlert />}
           accent="rose"
           urgency="critical"
-          actionHref="/perpustakaan/peminjaman"
+          actionHref="/$sekolah/perpustakaan/peminjaman"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -264,7 +266,7 @@ function PerpustakaanDashboardPage() {
           icon={<IconCheck />}
           accent="amber"
           urgency={stats.dendaOutstanding > 0 ? "warn" : "normal"}
-          actionHref="/perpustakaan/peminjaman"
+          actionHref="/$sekolah/perpustakaan/peminjaman"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -277,7 +279,7 @@ function PerpustakaanDashboardPage() {
           icon={<IconAlert />}
           accent="rose"
           urgency={stats.baPendingCount > 0 ? "warn" : "normal"}
-          actionHref="/perpustakaan/inventaris/berita-acara"
+          actionHref="/$sekolah/perpustakaan/inventaris/berita-acara"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -287,7 +289,7 @@ function PerpustakaanDashboardPage() {
           icon={<IconChart />}
           accent="violet"
           urgency={stats.opnameDraftCount > 0 ? "warn" : "normal"}
-          actionHref="/perpustakaan/inventaris/opname"
+          actionHref="/$sekolah/perpustakaan/inventaris/opname"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -297,7 +299,7 @@ function PerpustakaanDashboardPage() {
           icon={<IconBook />}
           accent="emerald"
           urgency="normal"
-          actionHref="/perpustakaan/pengadaan"
+          actionHref="/$sekolah/perpustakaan/pengadaan"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -327,7 +329,7 @@ function PerpustakaanDashboardPage() {
           title="Perlu Perhatian"
           description="Peminjaman terlambat, hilang, atau jatuh tempo hari ini."
           action={
-            <Link to="/perpustakaan/denda" className="text-xs text-brand hover:underline">
+            <Link to="/$sekolah/perpustakaan/denda" params={{ sekolah }} className="text-xs text-brand hover:underline">
               Lihat semua
             </Link>
           }
@@ -351,7 +353,7 @@ function PerpustakaanDashboardPage() {
           title="Aktivitas Terbaru"
           description="5 peminjaman terakhir tercatat."
           action={
-            <Link to="/perpustakaan/peminjaman" className="text-xs text-brand hover:underline">
+            <Link to="/$sekolah/perpustakaan/peminjaman" params={{ sekolah }} className="text-xs text-brand hover:underline">
               Lihat semua
             </Link>
           }
@@ -385,7 +387,7 @@ function PerpustakaanDashboardPage() {
 
       <p className="text-xs text-muted-fg">
         Tip: buka{" "}
-        <Link to="/perpustakaan/daftar" className="text-brand hover:underline inline-flex items-center gap-1">
+        <Link to="/$sekolah/perpustakaan/daftar" params={{ sekolah }} className="text-brand hover:underline inline-flex items-center gap-1">
           <span className="h-3 w-3"><IconArrowLeft /></span>
           katalog buku lengkap
         </Link>
@@ -395,4 +397,4 @@ function PerpustakaanDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/")({ component: PerpustakaanDashboardPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/")({ component: PerpustakaanDashboardPage });

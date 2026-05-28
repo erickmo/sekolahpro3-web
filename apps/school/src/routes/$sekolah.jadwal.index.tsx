@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   AttentionList,
   Badge,
@@ -42,10 +42,10 @@ const STUB_OVERRIDE_AKTIF = 1;
 const STUB_GURU_IZIN_DAMPAK = 2;
 
 const QUICK_LINKS: { to: string; label: string; description: string }[] = [
-  { to: "/jadwal/daftar", label: "Jadwal Pelajaran", description: "Lihat grid & daftar mingguan" },
-  { to: "/jadwal/slot", label: "Slot Jadwal", description: "Definisi jam pelajaran" },
-  { to: "/jadwal/override", label: "Jadwal Override", description: "Libur & hari khusus" },
-  { to: "/jadwal/slot-override", label: "Slot Override", description: "Penyesuaian slot per hari" },
+  { to: "/$sekolah/jadwal/daftar", label: "Jadwal Pelajaran", description: "Lihat grid & daftar mingguan" },
+  { to: "/$sekolah/jadwal/slot", label: "Slot Jadwal", description: "Definisi jam pelajaran" },
+  { to: "/$sekolah/jadwal/override", label: "Jadwal Override", description: "Libur & hari khusus" },
+  { to: "/$sekolah/jadwal/slot-override", label: "Slot Override", description: "Penyesuaian slot per hari" },
 ];
 
 function toMinutes(hhmm: string): number {
@@ -54,6 +54,8 @@ function toMinutes(hhmm: string): number {
 }
 
 function JadwalDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const q = useResourceList<JadwalRow>("Jadwal Pelajaran", {
     fields: ["name", "jam_selesai", "rombel", "is_aktif"],
     limit_page_length: 0,
@@ -81,7 +83,7 @@ function JadwalDashboardPage() {
         tone: "danger",
         badge: "Konflik",
         actionLabel: "Selesaikan",
-        actionHref: "/jadwal/daftar",
+        actionHref: "/$sekolah/jadwal/daftar",
       });
     }
     if (STUB_OVERRIDE_AKTIF > 0) {
@@ -92,7 +94,7 @@ function JadwalDashboardPage() {
         tone: "warning",
         badge: "Override",
         actionLabel: "Lihat Override",
-        actionHref: "/jadwal/override",
+        actionHref: "/$sekolah/jadwal/override",
       });
     }
     if (STUB_GURU_IZIN_DAMPAK > 0) {
@@ -103,7 +105,7 @@ function JadwalDashboardPage() {
         tone: "warning",
         badge: "Absensi",
         actionLabel: "Cari Pengganti",
-        actionHref: "/jadwal/slot",
+        actionHref: "/$sekolah/jadwal/slot",
       });
     }
     return items;
@@ -123,7 +125,7 @@ function JadwalDashboardPage() {
         title="Dashboard Jadwal"
         description={`Ringkasan jadwal pelajaran — ${TANGGAL_HARI_INI}.`}
         actions={
-          <Link to="/jadwal/daftar">
+          <Link to="/$sekolah/jadwal/daftar" params={{ sekolah }}>
             <Button variant="outline">
               <span className="h-4 w-4 mr-1.5"><IconCalendar /></span>
               Buka Jadwal Pelajaran
@@ -148,7 +150,7 @@ function JadwalDashboardPage() {
           icon={<IconAlert />}
           accent="rose"
           urgency="critical"
-          actionHref="/jadwal/daftar"
+          actionHref="/$sekolah/jadwal/daftar"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -158,7 +160,7 @@ function JadwalDashboardPage() {
           icon={<IconClock />}
           accent="amber"
           urgency="warn"
-          actionHref="/jadwal/override"
+          actionHref="/$sekolah/jadwal/override"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -168,7 +170,7 @@ function JadwalDashboardPage() {
           icon={<IconBook />}
           accent="rose"
           urgency="critical"
-          actionHref="/jadwal/slot"
+          actionHref="/$sekolah/jadwal/slot"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -178,7 +180,7 @@ function JadwalDashboardPage() {
           icon={<IconUsers />}
           accent="violet"
           urgency="warn"
-          actionHref="/absensi/guru"
+          actionHref="/$sekolah/absensi/guru"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -217,7 +219,7 @@ function JadwalDashboardPage() {
           description={`5 slot terdekat — ${HARI_INI}`}
           padded={false}
           action={
-            <Link to="/jadwal/daftar" className="text-xs font-medium text-brand hover:underline">
+            <Link to="/$sekolah/jadwal/daftar" params={{ sekolah }} className="text-xs font-medium text-brand hover:underline">
               Lihat semua
             </Link>
           }
@@ -264,4 +266,4 @@ function JadwalDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/jadwal/")({ component: JadwalDashboardPage });
+export const Route = createFileRoute("/$sekolah/jadwal/")({ component: JadwalDashboardPage });

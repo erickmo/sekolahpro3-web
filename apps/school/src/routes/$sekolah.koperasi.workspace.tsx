@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import { useSession } from "@sekolahpro/auth";
 import { useResourceList } from "@sekolahpro/api-client";
 import { Alert, PageHeader } from "@sekolahpro/ui";
@@ -7,6 +7,8 @@ import { TellerWorkspace } from "../components/koperasi/TellerWorkspace";
 type SesiRow = { name: string; status: string };
 
 function WorkspaceGate() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const session = useSession();
   const user = session.user;
   const q = useResourceList<SesiRow>(
@@ -33,7 +35,7 @@ function WorkspaceGate() {
         <div className="space-y-2">
           <p className="text-sm">Buka sesi kas di halaman Kas Teller untuk mulai bekerja di Workspace.</p>
           <Link
-            to="/koperasi/kas-teller"
+            to="/$sekolah/koperasi/kas-teller" params={{ sekolah }}
             className="inline-flex items-center rounded-md border border-border bg-bg px-3 py-1.5 text-sm font-medium hover:bg-bg-subtle"
           >
             Buka di Kas Teller
@@ -55,4 +57,4 @@ function WorkspaceGate() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/workspace")({ component: WorkspaceGate });
+export const Route = createFileRoute("/$sekolah/koperasi/workspace")({ component: WorkspaceGate });

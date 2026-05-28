@@ -45,4 +45,4 @@ function SkJabatanPage() {
   );
 }
 
-export const Route = createFileRoute("/guru/sk-jabatan")({ component: SkJabatanPage });
+export const Route = createFileRoute("/$sekolah/guru/sk-jabatan")({ component: SkJabatanPage });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { CreateResourceModal, type FieldSpec } from "../components/akademik/CreateResourceModal";
@@ -79,6 +79,8 @@ const FIELDS: FieldSpec[] = [
 ];
 
 function MapelPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [openCreate, setOpenCreate] = useState(false);
   return (
@@ -102,7 +104,7 @@ function MapelPage() {
         ]}
         addLabel="Tambah Mapel"
         onAdd={() => setOpenCreate(true)}
-        onRowClick={(r) => navigate({ to: "/akademik/mapel/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/akademik/mapel/$name", params: { sekolah, name: r.name } })}
       />
       <CreateResourceModal
         open={openCreate}
@@ -116,4 +118,4 @@ function MapelPage() {
   );
 }
 
-export const Route = createFileRoute("/akademik/daftar")({ component: MapelPage });
+export const Route = createFileRoute("/$sekolah/akademik/daftar")({ component: MapelPage });

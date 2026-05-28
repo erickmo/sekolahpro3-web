@@ -93,7 +93,9 @@ async function searchBuku(q: string): Promise<SearchableOption[]> {
 }
 
 function PengadaanDetailPage() {
-  const { name } = useParams({ from: "/perpustakaan/pengadaan/$name" });
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
+  const { name } = useParams({ from: "/$sekolah/perpustakaan/pengadaan/$name" });
   const navigate = useNavigate();
   const isNew = name === "new";
 
@@ -213,7 +215,7 @@ function PengadaanDetailPage() {
       } else {
         await updateResource("Pengadaan Buku", name, payload);
       }
-      navigate({ to: "/perpustakaan/pengadaan/$name", params: { name: savedName } });
+      navigate({ to: "/$sekolah/perpustakaan/pengadaan/$name", params: { sekolah, name: savedName } });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Gagal menyimpan.");
     } finally {
@@ -435,7 +437,7 @@ function PengadaanDetailPage() {
 
       {!isReadonly ? (
         <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={() => navigate({ to: "/perpustakaan/pengadaan" })} disabled={saving}>
+          <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/pengadaan", params: { sekolah } })} disabled={saving}>
             Kembali
           </Button>
           <Button variant="outline" onClick={() => save(false)} disabled={saving}>
@@ -452,7 +454,7 @@ function PengadaanDetailPage() {
             <span className="h-4 w-4"><IconCheck /></span>
             Pengadaan disubmit — <Badge tone="success" dot>{totals.totalEksemplar} eksemplar</Badge> sudah dibuat.
           </div>
-          <Button variant="outline" onClick={() => navigate({ to: "/perpustakaan/pengadaan" })}>
+          <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/pengadaan", params: { sekolah } })}>
             Kembali
           </Button>
         </div>
@@ -487,4 +489,4 @@ function PengadaanDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/pengadaan/$name")({ component: PengadaanDetailPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/pengadaan/$name")({ component: PengadaanDetailPage });

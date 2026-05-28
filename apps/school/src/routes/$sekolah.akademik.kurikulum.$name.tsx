@@ -9,7 +9,7 @@ function KurikulumDetailPage() {
       name={name}
       eyebrow="Detail Kurikulum"
       parentLabel="Kurikulum"
-      parentTo="/akademik/kurikulum"
+      parentTo="/$sekolah/akademik/kurikulum"
       titleField="nama"
       fields={[
         { label: "Nama", field: "nama" },
@@ -19,4 +19,4 @@ function KurikulumDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/akademik/kurikulum/$name")({ component: KurikulumDetailPage });
+export const Route = createFileRoute("/$sekolah/akademik/kurikulum/$name")({ component: KurikulumDetailPage });

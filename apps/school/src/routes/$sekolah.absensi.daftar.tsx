@@ -40,4 +40,4 @@ function HarianPage() {
   );
 }
 
-export const Route = createFileRoute("/absensi/daftar")({ component: HarianPage });
+export const Route = createFileRoute("/$sekolah/absensi/daftar")({ component: HarianPage });

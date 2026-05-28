@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   Alert,
   Badge,
@@ -51,18 +51,18 @@ const QUICK_ACTIONS: {
   description: string;
   icon: ReactNode;
 }[] = [
-  { to: "/koperasi/transaksi", label: "Transaksi", description: "Setor, tarik, dan transaksi simpanan.", icon: <IconWallet /> },
-  { to: "/koperasi/pembiayaan", label: "Pembiayaan", description: "Pengajuan dan pencairan pinjaman.", icon: <IconFile /> },
-  { to: "/koperasi/angsuran", label: "Angsuran", description: "Pembayaran cicilan pinjaman anggota.", icon: <IconChart /> },
-  { to: "/koperasi/rekening", label: "Rekening", description: "Kelola rekening simpanan anggota.", icon: <IconId /> },
-  { to: "/koperasi/kartu", label: "Kartu RFID", description: "Pengelolaan kartu anggota.", icon: <IconId /> },
-  { to: "/koperasi/emoney", label: "E-Money", description: "Saldo dan top up e-money.", icon: <IconWallet /> },
-  { to: "/koperasi/kas-teller", label: "Kas Teller", description: "Pembukaan dan tutup kas harian.", icon: <IconWallet /> },
-  { to: "/koperasi/persetujuan", label: "Persetujuan", description: "Approval permohonan supervisor.", icon: <IconCheck /> },
-  { to: "/koperasi/zis", label: "ZIS", description: "Zakat, Infak, dan Sedekah.", icon: <IconCheck /> },
-  { to: "/koperasi/wakaf", label: "Wakaf", description: "Catatan program wakaf.", icon: <IconCheck /> },
-  { to: "/koperasi/shu", label: "SHU", description: "Sisa Hasil Usaha tahunan.", icon: <IconChart /> },
-  { to: "/koperasi/pengaturan", label: "Pengaturan", description: "Konfigurasi modul koperasi.", icon: <IconSettings /> },
+  { to: "/$sekolah/koperasi/transaksi", label: "Transaksi", description: "Setor, tarik, dan transaksi simpanan.", icon: <IconWallet /> },
+  { to: "/$sekolah/koperasi/pembiayaan", label: "Pembiayaan", description: "Pengajuan dan pencairan pinjaman.", icon: <IconFile /> },
+  { to: "/$sekolah/koperasi/angsuran", label: "Angsuran", description: "Pembayaran cicilan pinjaman anggota.", icon: <IconChart /> },
+  { to: "/$sekolah/koperasi/rekening", label: "Rekening", description: "Kelola rekening simpanan anggota.", icon: <IconId /> },
+  { to: "/$sekolah/koperasi/kartu", label: "Kartu RFID", description: "Pengelolaan kartu anggota.", icon: <IconId /> },
+  { to: "/$sekolah/koperasi/emoney", label: "E-Money", description: "Saldo dan top up e-money.", icon: <IconWallet /> },
+  { to: "/$sekolah/koperasi/kas-teller", label: "Kas Teller", description: "Pembukaan dan tutup kas harian.", icon: <IconWallet /> },
+  { to: "/$sekolah/koperasi/persetujuan", label: "Persetujuan", description: "Approval permohonan supervisor.", icon: <IconCheck /> },
+  { to: "/$sekolah/koperasi/zis", label: "ZIS", description: "Zakat, Infak, dan Sedekah.", icon: <IconCheck /> },
+  { to: "/$sekolah/koperasi/wakaf", label: "Wakaf", description: "Catatan program wakaf.", icon: <IconCheck /> },
+  { to: "/$sekolah/koperasi/shu", label: "SHU", description: "Sisa Hasil Usaha tahunan.", icon: <IconChart /> },
+  { to: "/$sekolah/koperasi/pengaturan", label: "Pengaturan", description: "Konfigurasi modul koperasi.", icon: <IconSettings /> },
 ];
 
 const STATUS_TONE: Record<string, "success" | "neutral" | "danger" | "warning"> = {
@@ -73,6 +73,8 @@ const STATUS_TONE: Record<string, "success" | "neutral" | "danger" | "warning"> 
 };
 
 function KoperasiDashboardPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const anggotaQ = useResourceList<AnggotaRow>("Anggota Koperasi", {
     fields: ["name", "nomor_anggota", "nasabah", "status", "jenis_anggota", "tanggal_masuk"],
     limit_page_length: 0,
@@ -114,10 +116,10 @@ function KoperasiDashboardPage() {
           icon={<IconUsers />}
           title="Koperasi belum dikonfigurasi"
           description="Tambah anggota koperasi pertama dan buka kas teller untuk mulai mencatat transaksi."
-          primaryAction={{ label: "Tambah Anggota", href: "/koperasi/daftar" }}
-          secondaryAction={{ label: "Buka Kas Teller", href: "/koperasi/kas-teller" }}
+          primaryAction={{ label: "Tambah Anggota", href: "/$sekolah/koperasi/daftar" }}
+          secondaryAction={{ label: "Buka Kas Teller", href: "/$sekolah/koperasi/kas-teller" }}
           renderLink={(href, children, className) => (
-            <Link to={href as "/koperasi/daftar"} className={className}>
+            <Link to={href as "/$sekolah/koperasi/daftar"} className={className}>
               {children}
             </Link>
           )}
@@ -142,7 +144,7 @@ function KoperasiDashboardPage() {
           icon={<IconUsers />}
           accent="brand"
           urgency="normal"
-          actionHref="/koperasi/daftar"
+          actionHref="/$sekolah/koperasi/daftar"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -156,7 +158,7 @@ function KoperasiDashboardPage() {
           icon={<IconAlert />}
           accent="amber"
           urgency={stats.kasTellerBelumClosing > 0 ? "critical" : "normal"}
-          actionHref="/koperasi/kas-teller"
+          actionHref="/$sekolah/koperasi/kas-teller"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
@@ -202,7 +204,7 @@ function KoperasiDashboardPage() {
         title="Anggota Terbaru"
         description="5 keanggotaan terakhir tercatat."
         action={
-          <Link to="/koperasi/daftar" className="text-xs text-brand hover:underline">
+          <Link to="/$sekolah/koperasi/daftar" params={{ sekolah }} className="text-xs text-brand hover:underline">
             Lihat semua
           </Link>
         }
@@ -244,4 +246,4 @@ function KoperasiDashboardPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/")({ component: KoperasiDashboardPage });
+export const Route = createFileRoute("/$sekolah/koperasi/")({ component: KoperasiDashboardPage });

@@ -2,16 +2,16 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/perpustakaan", label: "Dashboard", exact: true },
-  { to: "/perpustakaan/daftar", label: "Katalog Buku" },
-  { to: "/perpustakaan/kategori", label: "Kategori" },
-  { to: "/perpustakaan/peminjaman", label: "Peminjaman" },
-  { to: "/perpustakaan/reservasi", label: "Reservasi" },
-  { to: "/perpustakaan/pengadaan", label: "Pengadaan" },
-  { to: "/perpustakaan/inventaris", label: "Inventaris" },
-  { to: "/perpustakaan/anggota", label: "Anggota" },
-  { to: "/perpustakaan/terminal", label: "Terminal" },
-  { to: "/perpustakaan/laporan", label: "Laporan" },
+  { to: "/$sekolah/perpustakaan", label: "Dashboard", exact: true },
+  { to: "/$sekolah/perpustakaan/daftar", label: "Katalog Buku" },
+  { to: "/$sekolah/perpustakaan/kategori", label: "Kategori" },
+  { to: "/$sekolah/perpustakaan/peminjaman", label: "Peminjaman" },
+  { to: "/$sekolah/perpustakaan/reservasi", label: "Reservasi" },
+  { to: "/$sekolah/perpustakaan/pengadaan", label: "Pengadaan" },
+  { to: "/$sekolah/perpustakaan/inventaris", label: "Inventaris" },
+  { to: "/$sekolah/perpustakaan/anggota", label: "Anggota" },
+  { to: "/$sekolah/perpustakaan/terminal", label: "Terminal" },
+  { to: "/$sekolah/perpustakaan/laporan", label: "Laporan" },
 ];
 
 function PerpustakaanLayout() {
@@ -32,4 +32,4 @@ function PerpustakaanLayout() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan")({ component: PerpustakaanLayout });
+export const Route = createFileRoute("/$sekolah/perpustakaan")({ component: PerpustakaanLayout });

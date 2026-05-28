@@ -44,4 +44,4 @@ function JadwalOverridePage() {
   );
 }
 
-export const Route = createFileRoute("/jadwal/override")({ component: JadwalOverridePage });
+export const Route = createFileRoute("/$sekolah/jadwal/override")({ component: JadwalOverridePage });

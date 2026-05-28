@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
@@ -64,6 +64,8 @@ const formatRupiah = (n: number | undefined) =>
   n === undefined ? "—" : `Rp ${n.toLocaleString("id-ID")}`;
 
 function RekeningDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { name } = Route.useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -99,9 +101,9 @@ function RekeningDetailPage() {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Koperasi", render: ({ className, children }) => <Link to="/koperasi" className={className}>{children}</Link> },
-              { label: "Rekening Simpanan", render: ({ className, children }) => <Link to="/koperasi/rekening" className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Koperasi", render: ({ className, children }) => <Link to="/$sekolah/koperasi" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Rekening Simpanan", render: ({ className, children }) => <Link to="/$sekolah/koperasi/rekening" params={{ sekolah }} className={className}>{children}</Link> },
               { label: name },
             ]}
           />
@@ -110,7 +112,7 @@ function RekeningDetailPage() {
             title={name}
             description={r ? `${r.anggota ?? "—"} · ${r.produk ?? "—"} · ${r.akad ?? "—"}` : "Memuat..."}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/koperasi/rekening" })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/koperasi/rekening", params: { sekolah } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali
               </Button>
@@ -258,6 +260,6 @@ function RekeningDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/rekening/$name")({
+export const Route = createFileRoute("/$sekolah/koperasi/rekening/$name")({
   component: RekeningDetailPage,
 });

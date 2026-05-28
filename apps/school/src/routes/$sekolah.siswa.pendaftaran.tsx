@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -33,8 +33,8 @@ const COLUMNS: Column<Row>[] = [
     sortable: true,
     cell: (r) => (
       <Link
-        to="/siswa/pendaftaran/$id"
-        params={{ id: r.name }}
+        to="/$sekolah/siswa/pendaftaran/$id"
+        params={{ sekolah, id: r.name }}
         className="font-mono text-xs text-brand hover:underline"
       >
         {r.name}
@@ -62,6 +62,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function PendaftaranPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   return (
     <ResourceListPage<Row>
@@ -102,9 +104,9 @@ function PendaftaranPage() {
         },
       ]}
       addLabel="Daftar Siswa Baru"
-      onAdd={() => navigate({ to: "/siswa/pendaftaran/new" })}
+      onAdd={() => navigate({ to: "/$sekolah/siswa/pendaftaran/new", params: { sekolah } })}
     />
   );
 }
 
-export const Route = createFileRoute("/siswa/pendaftaran")({ component: PendaftaranPage });
+export const Route = createFileRoute("/$sekolah/siswa/pendaftaran")({ component: PendaftaranPage });

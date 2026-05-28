@@ -42,4 +42,4 @@ function UtilitasPage() {
   );
 }
 
-export const Route = createFileRoute("/infrastruktur/utilitas")({ component: UtilitasPage });
+export const Route = createFileRoute("/$sekolah/infrastruktur/utilitas")({ component: UtilitasPage });

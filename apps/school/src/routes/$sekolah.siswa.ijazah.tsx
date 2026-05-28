@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -155,12 +155,14 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function IjazahPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   return (
     <>
       <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800">
         UU PDP & Permendikbud — retensi 25 tahun. Setiap unduh wajib pilih alasan akses dan akan
         tercatat di audit log. Bulk download tidak diizinkan.{" "}
-        <Link to="/siswa/kelulusan" className="underline">
+        <Link to="/$sekolah/siswa/kelulusan" params={{ sekolah }} className="underline">
           Lihat Kelulusan
         </Link>{" "}
         sebagai sumber penerbitan.
@@ -208,4 +210,4 @@ function IjazahPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/ijazah")({ component: IjazahPage });
+export const Route = createFileRoute("/$sekolah/siswa/ijazah")({ component: IjazahPage });

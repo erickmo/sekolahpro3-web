@@ -46,4 +46,4 @@ function SlotOverridePage() {
   );
 }
 
-export const Route = createFileRoute("/jadwal/slot-override")({ component: SlotOverridePage });
+export const Route = createFileRoute("/$sekolah/jadwal/slot-override")({ component: SlotOverridePage });

@@ -177,4 +177,4 @@ function KomponenNilaiPage() {
   );
 }
 
-export const Route = createFileRoute("/akademik/komponen-nilai")({ component: KomponenNilaiPage });
+export const Route = createFileRoute("/$sekolah/akademik/komponen-nilai")({ component: KomponenNilaiPage });

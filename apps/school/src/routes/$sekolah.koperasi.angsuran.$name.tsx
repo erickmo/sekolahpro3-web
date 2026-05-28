@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Badge,
   Breadcrumb,
@@ -59,6 +59,8 @@ function formatRupiah(n: number | undefined): string {
 }
 
 function JadwalDetailPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const { name } = Route.useParams();
   const navigate = useNavigate();
   const docQuery = useResourceDoc<JadwalDoc>(JADWAL_DOCTYPE, name);
@@ -87,7 +89,7 @@ function JadwalDetailPage() {
           title="Jadwal angsuran tidak ditemukan"
           description={(docQuery.error as Error | undefined)?.message ?? "Periksa ID jadwal atau kembali ke daftar."}
           action={
-            <Link to="/koperasi/angsuran" className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link to="/$sekolah/koperasi/angsuran" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
             </Link>
           }
@@ -115,9 +117,9 @@ function JadwalDetailPage() {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Koperasi", render: ({ className, children }) => <Link to="/koperasi" className={className}>{children}</Link> },
-              { label: "Angsuran", render: ({ className, children }) => <Link to="/koperasi/angsuran" className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to="/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Koperasi", render: ({ className, children }) => <Link to="/$sekolah/koperasi" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Angsuran", render: ({ className, children }) => <Link to="/$sekolah/koperasi/angsuran" params={{ sekolah }} className={className}>{children}</Link> },
               { label: doc.name },
             ]}
           />
@@ -127,7 +129,7 @@ function JadwalDetailPage() {
             description={`Akad ${doc.akad ?? "—"} · angsuran ke ${doc.angsuran_ke ?? "—"} · ${status}`}
             actions={
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => navigate({ to: "/koperasi/angsuran" })}>
+                <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/koperasi/angsuran", params: { sekolah } })}>
                   <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                   Kembali
                 </Button>
@@ -146,7 +148,7 @@ function JadwalDetailPage() {
               <InfoField label="ID Jadwal" value={<span className="font-mono">{doc.name}</span>} />
               <InfoField label="Akad" value={
                 doc.akad ? (
-                  <Link to="/koperasi/pembiayaan/$name" params={{ name: doc.akad }} className="font-mono text-brand hover:underline">
+                  <Link to="/$sekolah/koperasi/pembiayaan/$name" params={{ sekolah, name: doc.akad }} className="font-mono text-brand hover:underline">
                     {doc.akad}
                   </Link>
                 ) : "—"
@@ -192,6 +194,6 @@ function JadwalDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/angsuran/$name")({
+export const Route = createFileRoute("/$sekolah/koperasi/angsuran/$name")({
   component: JadwalDetailPage,
 });

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 import {
   Badge,
@@ -52,6 +52,8 @@ async function loadSiswa(query: string): Promise<SearchableOption[]> {
 }
 
 function KelulusanNewPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const create = useResourceCreate<{ name: string }>("Kelulusan Siswa");
   const [v, setV] = useState<FormState>(INITIAL);
@@ -95,7 +97,7 @@ function KelulusanNewPage() {
         catatan: v.catatan || undefined,
         workflow_state: "Draft",
       });
-      void navigate({ to: "/siswa/kelulusan/$id", params: { id: doc.name } });
+      void navigate({ to: "/$sekolah/siswa/kelulusan/$id", params: { sekolah, id: doc.name } });
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Gagal menyimpan kelulusan.");
     }
@@ -253,7 +255,7 @@ function KelulusanNewPage() {
       ) : null}
 
       <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => navigate({ to: "/siswa/kelulusan" })}>
+        <Button type="button" variant="outline" onClick={() => navigate({ to: "/$sekolah/siswa/kelulusan", params: { sekolah } })}>
           Batal
         </Button>
         <Button type="submit" disabled={create.isPending}>
@@ -264,4 +266,4 @@ function KelulusanNewPage() {
   );
 }
 
-export const Route = createFileRoute("/siswa/kelulusan/new")({ component: KelulusanNewPage });
+export const Route = createFileRoute("/$sekolah/siswa/kelulusan/new")({ component: KelulusanNewPage });

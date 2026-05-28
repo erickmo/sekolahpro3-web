@@ -53,32 +53,32 @@ const MODE_BADGE_TONE: Record<DayMode, "brand" | "warning" | "success" | "neutra
 
 type FocusItem = {
   label: string;
-  href: "/absensi/guru" | "/absensi/pelajaran" | "/jadwal/daftar" | "/jadwal/slot" | "/keuangan" | "/pesan" | "/siswa/daftar" | "/ppdb/pembayaran" | "/koperasi/kas-teller" | "/laporan";
+  href: "/$sekolah/absensi/guru" | "/$sekolah/absensi/pelajaran" | "/$sekolah/jadwal/daftar" | "/$sekolah/jadwal/slot" | "/$sekolah/keuangan" | "/$sekolah/pesan" | "/$sekolah/siswa/daftar" | "/$sekolah/ppdb/pembayaran" | "/$sekolah/koperasi/kas-teller" | "/$sekolah/laporan";
   meta: string;
 };
 
 const FOCUS_BY_MODE: Record<DayMode, readonly FocusItem[]> = {
   pagi: [
-    { label: "Cek guru belum input absensi", href: "/absensi/guru", meta: "2 guru" },
-    { label: "Tinjau izin siswa masuk", href: "/absensi/pelajaran", meta: "5 izin" },
-    { label: "Konfirmasi agenda hari ini", href: "/jadwal/daftar", meta: "12 sesi" },
-    { label: "Cari guru pengganti (izin)", href: "/jadwal/slot", meta: "2 kelas" },
+    { label: "Cek guru belum input absensi", href: "/$sekolah/absensi/guru", meta: "2 guru" },
+    { label: "Tinjau izin siswa masuk", href: "/$sekolah/absensi/pelajaran", meta: "5 izin" },
+    { label: "Konfirmasi agenda hari ini", href: "/$sekolah/jadwal/daftar", meta: "12 sesi" },
+    { label: "Cari guru pengganti (izin)", href: "/$sekolah/jadwal/slot", meta: "2 kelas" },
   ],
   siang: [
-    { label: "Proses pembayaran SPP", href: "/keuangan", meta: "8 transaksi" },
-    { label: "Layani permintaan wali", href: "/pesan", meta: "3 pesan baru" },
-    { label: "Follow-up berkas siswa", href: "/siswa/daftar", meta: "12 belum lengkap" },
-    { label: "Verifikasi pembayaran PPDB", href: "/ppdb/pembayaran", meta: "4 pending" },
+    { label: "Proses pembayaran SPP", href: "/$sekolah/keuangan", meta: "8 transaksi" },
+    { label: "Layani permintaan wali", href: "/$sekolah/pesan", meta: "3 pesan baru" },
+    { label: "Follow-up berkas siswa", href: "/$sekolah/siswa/daftar", meta: "12 belum lengkap" },
+    { label: "Verifikasi pembayaran PPDB", href: "/$sekolah/ppdb/pembayaran", meta: "4 pending" },
   ],
   sore: [
-    { label: "Tutup kas teller", href: "/koperasi/kas-teller", meta: "1 belum closing" },
-    { label: "Finalisasi absensi harian", href: "/absensi/pelajaran", meta: "3 kelas" },
-    { label: "Rekap pengeluaran", href: "/keuangan", meta: "" },
-    { label: "Generate laporan harian", href: "/laporan", meta: "" },
+    { label: "Tutup kas teller", href: "/$sekolah/koperasi/kas-teller", meta: "1 belum closing" },
+    { label: "Finalisasi absensi harian", href: "/$sekolah/absensi/pelajaran", meta: "3 kelas" },
+    { label: "Rekap pengeluaran", href: "/$sekolah/keuangan", meta: "" },
+    { label: "Generate laporan harian", href: "/$sekolah/laporan", meta: "" },
   ],
   "luar-jam": [
-    { label: "Lihat ringkasan kemarin", href: "/laporan", meta: "" },
-    { label: "Persiapan agenda besok", href: "/jadwal/daftar", meta: "" },
+    { label: "Lihat ringkasan kemarin", href: "/$sekolah/laporan", meta: "" },
+    { label: "Persiapan agenda besok", href: "/$sekolah/jadwal/daftar", meta: "" },
   ],
 };
 
@@ -122,7 +122,7 @@ const activities = [
 
 // cross-menu signal — wire to backend aggregate when ready
 const riskRollup: (AttentionItem & {
-  actionHref: "/guru/sk-mengajar" | "/jadwal/slot" | "/keuangan" | "/kelas/rombel";
+  actionHref: "/$sekolah/guru/sk-mengajar" | "/$sekolah/jadwal/slot" | "/$sekolah/keuangan" | "/$sekolah/kelas/rombel";
   metaText: string;
 })[] = [
   {
@@ -131,7 +131,7 @@ const riskRollup: (AttentionItem & {
     tone: "warning",
     badge: "SK",
     actionLabel: "Lihat Daftar SK",
-    actionHref: "/guru/sk-mengajar",
+    actionHref: "/$sekolah/guru/sk-mengajar",
     metaText: "6 SK",
   },
   {
@@ -140,7 +140,7 @@ const riskRollup: (AttentionItem & {
     tone: "warning",
     badge: "Absensi",
     actionLabel: "Cari Pengganti",
-    actionHref: "/jadwal/slot",
+    actionHref: "/$sekolah/jadwal/slot",
     metaText: "2 guru",
   },
   {
@@ -149,7 +149,7 @@ const riskRollup: (AttentionItem & {
     tone: "danger",
     badge: "SPP",
     actionLabel: "Tinjau Tagihan",
-    actionHref: "/keuangan",
+    actionHref: "/$sekolah/keuangan",
     metaText: "18 siswa · Rp 24,5 jt",
   },
   {
@@ -158,7 +158,7 @@ const riskRollup: (AttentionItem & {
     tone: "danger",
     badge: "Wali",
     actionLabel: "Tunjuk Wali",
-    actionHref: "/kelas/rombel",
+    actionHref: "/$sekolah/kelas/rombel",
     metaText: "3 rombel",
   },
 ];
@@ -270,7 +270,7 @@ function Home() {
               }))}
               renderLink={(href, children) => (
                 // riskRollup.actionHref is typed to known routes — safe to cast.
-                <Link to={href as "/guru/sk-mengajar"}>{children}</Link>
+                <Link to={href as "/$sekolah/guru/sk-mengajar"}>{children}</Link>
               )}
             />
           </SectionCard>
@@ -327,10 +327,10 @@ function Home() {
           <SectionCard title="Aksi Cepat">
             <div className="grid grid-cols-2 gap-2">
               {([
-                { label: "Tambah Siswa", to: "/siswa/new" },
-                { label: "Catat Pembayaran", to: "/keuangan" },
-                { label: "Buat Pengumuman", to: "/pesan" },
-                { label: "Cetak Rapor", to: "/akademik/raport" },
+                { label: "Tambah Siswa", to: "/$sekolah/siswa/new" },
+                { label: "Catat Pembayaran", to: "/$sekolah/keuangan" },
+                { label: "Buat Pengumuman", to: "/$sekolah/pesan" },
+                { label: "Cetak Rapor", to: "/$sekolah/akademik/raport" },
               ] as const).map((q) => (
                 <Link
                   key={q.label}
@@ -348,4 +348,4 @@ function Home() {
   );
 }
 
-export const Route = createFileRoute("/")({ component: Home });
+export const Route = createFileRoute("/$sekolah/")({ component: Home });

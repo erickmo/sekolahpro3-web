@@ -2,15 +2,15 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/ppdb", label: "Dashboard", exact: true },
-  { to: "/ppdb/buat", label: "Buat PPDB" },
-  { to: "/ppdb/daftar", label: "Pendaftaran" },
-  { to: "/ppdb/calon-siswa", label: "Calon Siswa" },
-  { to: "/ppdb/gelombang", label: "Gelombang" },
-  { to: "/ppdb/seleksi", label: "Seleksi" },
-  { to: "/ppdb/pembayaran", label: "Pembayaran" },
-  { to: "/ppdb/daftar-ulang", label: "Daftar Ulang" },
-  { to: "/ppdb/pengaturan", label: "Pengaturan" },
+  { to: "/$sekolah/ppdb", label: "Dashboard", exact: true },
+  { to: "/$sekolah/ppdb/buat", label: "Buat PPDB" },
+  { to: "/$sekolah/ppdb/daftar", label: "Pendaftaran" },
+  { to: "/$sekolah/ppdb/calon-siswa", label: "Calon Siswa" },
+  { to: "/$sekolah/ppdb/gelombang", label: "Gelombang" },
+  { to: "/$sekolah/ppdb/seleksi", label: "Seleksi" },
+  { to: "/$sekolah/ppdb/pembayaran", label: "Pembayaran" },
+  { to: "/$sekolah/ppdb/daftar-ulang", label: "Daftar Ulang" },
+  { to: "/$sekolah/ppdb/pengaturan", label: "Pengaturan" },
 ];
 
 function PpdbLayout() {
@@ -29,4 +29,4 @@ function PpdbLayout() {
   );
 }
 
-export const Route = createFileRoute("/ppdb")({ component: PpdbLayout });
+export const Route = createFileRoute("/$sekolah/ppdb")({ component: PpdbLayout });

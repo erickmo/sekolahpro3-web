@@ -2,12 +2,12 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/infrastruktur", label: "Dashboard", exact: true },
-  { to: "/infrastruktur/daftar", label: "Gedung" },
-  { to: "/infrastruktur/lantai", label: "Lantai" },
-  { to: "/infrastruktur/ruangan", label: "Ruangan" },
-  { to: "/infrastruktur/fasilitas", label: "Fasilitas" },
-  { to: "/infrastruktur/utilitas", label: "Utilitas" },
+  { to: "/$sekolah/infrastruktur", label: "Dashboard", exact: true },
+  { to: "/$sekolah/infrastruktur/daftar", label: "Gedung" },
+  { to: "/$sekolah/infrastruktur/lantai", label: "Lantai" },
+  { to: "/$sekolah/infrastruktur/ruangan", label: "Ruangan" },
+  { to: "/$sekolah/infrastruktur/fasilitas", label: "Fasilitas" },
+  { to: "/$sekolah/infrastruktur/utilitas", label: "Utilitas" },
 ];
 
 function InfraLayout() {
@@ -26,4 +26,4 @@ function InfraLayout() {
   );
 }
 
-export const Route = createFileRoute("/infrastruktur")({ component: InfraLayout });
+export const Route = createFileRoute("/$sekolah/infrastruktur")({ component: InfraLayout });

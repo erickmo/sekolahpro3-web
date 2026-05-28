@@ -12,7 +12,7 @@ function TahunAjaranDetailPage() {
       name={name}
       eyebrow="Tahun Ajaran"
       parentLabel="Tahun Ajaran"
-      parentPath="/master/tahun-ajaran"
+      parentPath="/$sekolah/master/tahun-ajaran"
       title={(d) => d.nama || d.name}
       fields={[
         { label: "ID", render: (d) => <span className="font-mono text-xs">{d.name}</span> },
@@ -26,4 +26,4 @@ function TahunAjaranDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/master/tahun-ajaran/$name")({ component: TahunAjaranDetailPage });
+export const Route = createFileRoute("/$sekolah/master/tahun-ajaran/$name")({ component: TahunAjaranDetailPage });

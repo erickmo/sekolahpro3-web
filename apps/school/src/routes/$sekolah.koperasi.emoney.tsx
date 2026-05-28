@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { TopUpModal, TransaksiKartuModal } from "../components/koperasi-kartu/EmoneyModals";
@@ -27,6 +27,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function EmoneyPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const navigate = useNavigate();
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [bayarOpen, setBayarOpen] = useState(false);
@@ -50,7 +52,7 @@ function EmoneyPage() {
         ]}
         addLabel="Top-up"
         onAdd={() => setTopUpOpen(true)}
-        onRowClick={(r) => navigate({ to: "/koperasi/emoney/$name", params: { name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/koperasi/emoney/$name", params: { sekolah, name: r.name } })}
         extraActions={
           <>
             <Button variant="outline" size="sm" onClick={() => setBayarOpen(true)}>Catat Bayar</Button>
@@ -65,4 +67,4 @@ function EmoneyPage() {
   );
 }
 
-export const Route = createFileRoute("/koperasi/emoney")({ component: EmoneyPage });
+export const Route = createFileRoute("/$sekolah/koperasi/emoney")({ component: EmoneyPage });

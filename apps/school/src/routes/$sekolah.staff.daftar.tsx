@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Avatar, Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { StaffFormModal } from "../components/staff/StaffFormModal";
@@ -95,6 +95,8 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function StaffListPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
   const [showCreate, setShowCreate] = useState(false);
   const navigate = useNavigate();
   return (
@@ -126,11 +128,11 @@ function StaffListPage() {
         ]}
         addLabel="Tambah Staff"
         onAdd={() => setShowCreate(true)}
-        onRowClick={(r) => navigate({ to: "/staff/$nip", params: { nip: r.name } })}
+        onRowClick={(r) => navigate({ to: "/$sekolah/staff/$nip", params: { sekolah, nip: r.name } })}
       />
       <StaffFormModal open={showCreate} onClose={() => setShowCreate(false)} />
     </>
   );
 }
 
-export const Route = createFileRoute("/staff/daftar")({ component: StaffListPage });
+export const Route = createFileRoute("/$sekolah/staff/daftar")({ component: StaffListPage });

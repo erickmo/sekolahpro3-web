@@ -66,4 +66,4 @@ function KategoriPage() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/kategori")({ component: KategoriPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/kategori")({ component: KategoriPage });

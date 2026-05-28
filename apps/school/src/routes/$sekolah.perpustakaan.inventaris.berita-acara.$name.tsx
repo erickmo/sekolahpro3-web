@@ -106,7 +106,9 @@ async function compressImage(file: File): Promise<File> {
 }
 
 function BADetailPage() {
-  const { name } = useParams({ from: "/perpustakaan/inventaris/berita-acara/$name" });
+  const { sekolah } = useParams({ from: "/$sekolah" });
+
+  const { name } = useParams({ from: "/$sekolah/perpustakaan/inventaris/berita-acara/$name" });
   const navigate = useNavigate();
   const isNew = name === "new";
 
@@ -209,7 +211,7 @@ function BADetailPage() {
       } else {
         await updateResource("Berita Acara Kerusakan Buku", name, payload);
       }
-      navigate({ to: "/perpustakaan/inventaris/berita-acara/$name", params: { name: savedName } });
+      navigate({ to: "/$sekolah/perpustakaan/inventaris/berita-acara/$name", params: { sekolah, name: savedName } });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Gagal menyimpan.");
     } finally {
@@ -347,13 +349,13 @@ function BADetailPage() {
             <span className="h-4 w-4"><IconCheck /></span>
             BA approved — keputusan <Badge tone="success" dot>{doc.keputusan}</Badge> sudah diterapkan ke eksemplar.
           </div>
-          <Button variant="outline" onClick={() => navigate({ to: "/perpustakaan/inventaris/berita-acara" })}>
+          <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/inventaris/berita-acara", params: { sekolah } })}>
             Kembali
           </Button>
         </div>
       ) : (
         <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={() => navigate({ to: "/perpustakaan/inventaris/berita-acara" })}>
+          <Button variant="outline" onClick={() => navigate({ to: "/$sekolah/perpustakaan/inventaris/berita-acara", params: { sekolah } })}>
             Kembali
           </Button>
           <Button variant="outline" onClick={() => save(false)} disabled={saving}>
@@ -368,4 +370,4 @@ function BADetailPage() {
   );
 }
 
-export const Route = createFileRoute("/perpustakaan/inventaris/berita-acara/$name")({ component: BADetailPage });
+export const Route = createFileRoute("/$sekolah/perpustakaan/inventaris/berita-acara/$name")({ component: BADetailPage });

@@ -13,7 +13,7 @@ function UnitJenjangDetailPage() {
       name={name}
       eyebrow="Unit Jenjang"
       parentLabel="Unit Jenjang"
-      parentPath="/master/unit-jenjang"
+      parentPath="/$sekolah/master/unit-jenjang"
       title={(d) => d.nama || d.name}
       fields={[
         { label: "ID", render: (d) => <span className="font-mono text-xs">{d.name}</span> },
@@ -27,4 +27,4 @@ function UnitJenjangDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/master/unit-jenjang/$name")({ component: UnitJenjangDetailPage });
+export const Route = createFileRoute("/$sekolah/master/unit-jenjang/$name")({ component: UnitJenjangDetailPage });
