@@ -23,7 +23,7 @@ function wrap(ui: React.ReactNode) {
 describe("ActiveChildProvider", () => {
   beforeEach(() => {
     sessionStorage.clear();
-    (import.meta.env as any).VITE_USE_MOCKS = "true";
+    (import.meta.env as Record<string, string>).VITE_USE_MOCKS = "true";
   });
 
   it("defaults activeNis to first child once loaded", async () => {

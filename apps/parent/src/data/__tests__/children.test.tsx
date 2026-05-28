@@ -10,7 +10,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 describe("useChildren (mock mode)", () => {
   beforeEach(() => {
-    (import.meta.env as any).VITE_USE_MOCKS = "true";
+    (import.meta.env as Record<string, string>).VITE_USE_MOCKS = "true";
   });
 
   it("returns mocked child list", async () => {
