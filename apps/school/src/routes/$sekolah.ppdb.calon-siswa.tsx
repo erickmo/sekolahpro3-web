@@ -10,10 +10,12 @@ import {
   Badge,
   Button,
   DataTable,
+  DatePicker,
   FilterBar,
   Modal,
   PageHeader,
   Pagination,
+  SearchableSelect,
   SectionCard,
   IconPlus,
   type Column,
@@ -211,7 +213,7 @@ function CalonCreateModal({
               <Select value={form.jenis_kelamin} onChange={(v) => set("jenis_kelamin", v)} options={["", "Laki-laki", "Perempuan"]} />
             </Field>
             <Field label="Tempat Lahir"><Input value={form.tempat_lahir} onChange={(v) => set("tempat_lahir", v)} /></Field>
-            <Field label="Tanggal Lahir"><Input type="date" value={form.tanggal_lahir} onChange={(v) => set("tanggal_lahir", v)} /></Field>
+            <Field label="Tanggal Lahir"><DatePicker value={form.tanggal_lahir ?? ""} onChange={(v) => set("tanggal_lahir", v)} /></Field>
             <Field label="Agama">
               <Select value={form.agama} onChange={(v) => set("agama", v)} options={["", "Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Konghucu"]} />
             </Field>
@@ -301,13 +303,12 @@ function Select({
   options: string[];
 }) {
   return (
-    <select value={value ?? ""} onChange={(e) => onChange(e.target.value)} className={inputCls}>
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {o || "— pilih —"}
-        </option>
-      ))}
-    </select>
+    <SearchableSelect
+      value={value ?? ""}
+      onChange={onChange}
+      options={options.filter((o) => o !== "").map((o) => ({ value: o, label: o }))}
+      placeholder="— pilih —"
+    />
   );
 }
 

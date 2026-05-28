@@ -10,6 +10,7 @@ import {
   Textarea,
   FormField,
   SearchableSelect,
+  DatePicker,
   InfoField,
   InfoGrid,
   type SearchableOption,
@@ -257,10 +258,9 @@ function MutasiMasukNewPage() {
           <SectionCard title="Langkah 2: Data Tambahan">
             <div className="grid gap-4 md:grid-cols-2">
               <FormField label="Tanggal Masuk" required>
-                <Input
-                  type="date"
+                <DatePicker
                   value={tanggalMasuk}
-                  onChange={(e) => setTanggalMasuk(e.target.value)}
+                  onChange={(val) => setTanggalMasuk(val)}
                 />
               </FormField>
               <FormField label="Rombel Tujuan" required hint="Pilih rombel yang masih punya kapasitas">

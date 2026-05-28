@@ -10,6 +10,7 @@ import {
   Textarea,
   FormField,
   SearchableSelect,
+  DatePicker,
   type SearchableOption,
 } from "@sekolahpro/ui";
 
@@ -180,10 +181,9 @@ function KelulusanNewPage() {
               />
             </FormField>
             <FormField label="Tanggal Pengesahan" required>
-              <Input
-                type="date"
+              <DatePicker
                 value={v.tanggal_pengesahan}
-                onChange={(e) => update("tanggal_pengesahan", e.target.value)}
+                onChange={(val) => update("tanggal_pengesahan", val)}
               />
             </FormField>
           </div>

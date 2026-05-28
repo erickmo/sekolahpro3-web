@@ -10,6 +10,7 @@ import {
   Textarea,
   FormField,
   SearchableSelect,
+  DatePicker,
   type SearchableOption,
 } from "@sekolahpro/ui";
 
@@ -144,24 +145,23 @@ function PendaftaranNewPage() {
             <Input value={v.nama_lengkap} onChange={(e) => update("nama_lengkap", e.target.value)} />
           </FormField>
           <FormField label="Jenis Kelamin" required>
-            <select
+            <SearchableSelect
               value={v.jenis_kelamin}
-              onChange={(e) => update("jenis_kelamin", e.target.value as JenisKelamin)}
-              className="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-            >
-              <option value="">Pilih…</option>
-              <option value="Laki-laki">Laki-laki</option>
-              <option value="Perempuan">Perempuan</option>
-            </select>
+              onChange={(val) => update("jenis_kelamin", val as JenisKelamin)}
+              options={[
+                { value: "Laki-laki", label: "Laki-laki" },
+                { value: "Perempuan", label: "Perempuan" },
+              ]}
+              placeholder="Pilih…"
+            />
           </FormField>
           <FormField label="Tempat Lahir">
             <Input value={v.tempat_lahir} onChange={(e) => update("tempat_lahir", e.target.value)} />
           </FormField>
           <FormField label="Tanggal Lahir" required>
-            <Input
-              type="date"
+            <DatePicker
               value={v.tanggal_lahir}
-              onChange={(e) => update("tanggal_lahir", e.target.value)}
+              onChange={(val) => update("tanggal_lahir", val)}
             />
           </FormField>
           <FormField label="NISN" hint="10 digit (jika sudah ada)">
@@ -221,10 +221,9 @@ function PendaftaranNewPage() {
         ) : null}
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <FormField label="Tanggal Daftar" required>
-            <Input
-              type="date"
+            <DatePicker
               value={v.tanggal_daftar}
-              onChange={(e) => update("tanggal_daftar", e.target.value)}
+              onChange={(val) => update("tanggal_daftar", val)}
             />
           </FormField>
           <FormField label="Asal Sekolah" hint="SMP/SD asal — opsional untuk Reguler">

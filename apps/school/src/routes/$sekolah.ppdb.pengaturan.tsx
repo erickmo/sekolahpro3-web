@@ -11,6 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   Button,
   PageHeader,
+  SearchableSelect,
   SectionCard,
 } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceUpdate } from "@sekolahpro/api-client";
@@ -135,15 +136,16 @@ function PengaturanPpdbPage() {
       <SectionCard title="Payment Gateway" description="Midtrans atau Xendit. Sandbox aktifkan untuk testing.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Provider">
-            <select
+            <SearchableSelect
               value={draft.payment_gateway_provider ?? ""}
-              onChange={(e) => set("payment_gateway_provider", e.target.value)}
+              onChange={(v) => set("payment_gateway_provider", v)}
+              options={[
+                { value: "Midtrans", label: "Midtrans" },
+                { value: "Xendit", label: "Xendit" },
+              ]}
+              placeholder="— pilih —"
               className={inputCls}
-            >
-              <option value="">— pilih —</option>
-              <option value="Midtrans">Midtrans</option>
-              <option value="Xendit">Xendit</option>
-            </select>
+            />
           </Field>
           <Toggle
             label="Mode Sandbox"

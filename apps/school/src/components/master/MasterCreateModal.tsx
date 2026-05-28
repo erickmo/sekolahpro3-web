@@ -3,11 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   Checkbox,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
   Textarea,
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
@@ -181,18 +182,23 @@ export function MasterCreateModal(props: MasterCreateModalProps) {
     }
     if (f.type === "select" && f.options) {
       return (
-        <Select id={id} value={val} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
-          <option value="">— Pilih —</option>
-          {f.options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </Select>
+        <SearchableSelect
+          id={id}
+          value={val}
+          disabled={disabled}
+          onChange={(v) => onChange(v)}
+          options={f.options}
+          placeholder="— Pilih —"
+        />
       );
     }
     if (f.type === "textarea") {
       return <Textarea id={id} value={val} disabled={disabled} onChange={(e) => onChange(e.target.value)} />;
     }
-    const inputType = f.type === "number" ? "number" : f.type === "date" ? "date" : "text";
+    if (f.type === "date") {
+      return <DatePicker id={id} value={val} disabled={disabled} onChange={(v) => onChange(v)} />;
+    }
+    const inputType = f.type === "number" ? "number" : "text";
     return <Input id={id} type={inputType} value={val} disabled={disabled} onChange={(e) => onChange(e.target.value)} />;
   };
 

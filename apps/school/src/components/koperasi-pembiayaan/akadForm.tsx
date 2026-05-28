@@ -2,11 +2,12 @@ import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
   Textarea,
 } from "@sekolahpro/ui";
 import { useResourceCreate } from "@sekolahpro/api-client";
@@ -32,6 +33,8 @@ export function AkadCreateModal(props: AkadCreateModalProps) {
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>(AKAD_DOCTYPE);
   const [error, setError] = useState<string | null>(null);
+  const [akad, setAkad] = useState<string>("Murabahah");
+  const [tanggalAkad, setTanggalAkad] = useState<string>("");
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -74,12 +77,20 @@ export function AkadCreateModal(props: AkadCreateModalProps) {
             <Input name="produk" required placeholder="Misal: Pembiayaan Modal Usaha" />
           </FormField>
           <FormField label="Akad" required>
-            <Select name="akad" required defaultValue="Murabahah">
-              {AKAD_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </Select>
+            <SearchableSelect
+              value={akad}
+              onChange={(v) => setAkad(v)}
+              options={AKAD_TYPES.map((t) => ({ value: t, label: t }))}
+            />
+            <input type="hidden" name="akad" value={akad} />
           </FormField>
           <FormField label="Tanggal Akad" required>
-            <Input name="tanggal_akad" type="date" required />
+            <DatePicker
+              name="tanggal_akad"
+              value={tanggalAkad}
+              onChange={(v) => setTanggalAkad(v)}
+              required
+            />
           </FormField>
           <FormField label="Pokok Pembiayaan (Rp)" required>
             <Input name="pokok_pembiayaan" type="number" min={0} step="1" required placeholder="0" />

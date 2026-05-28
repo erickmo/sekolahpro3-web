@@ -2,11 +2,12 @@ import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
   Textarea,
 } from "@sekolahpro/ui";
 import { useResourceCreate } from "@sekolahpro/api-client";
@@ -102,20 +103,22 @@ export function AbsensiCreateModal(props: AbsensiCreateModalProps) {
     const onChange = (v: string) => setValues((prev) => ({ ...prev, [f.name]: v }));
     if (f.type === "select" && f.options) {
       return (
-        <Select id={id} value={val} onChange={(e) => onChange(e.target.value)}>
-          <option value="">— Pilih —</option>
-          {f.options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </Select>
+        <SearchableSelect
+          value={val}
+          onChange={(v) => onChange(v)}
+          options={f.options}
+          placeholder="— Pilih —"
+        />
       );
     }
     if (f.type === "textarea") {
       return <Textarea id={id} value={val} onChange={(e) => onChange(e.target.value)} />;
     }
+    if (f.type === "date") {
+      return <DatePicker value={val} onChange={(v) => onChange(v)} />;
+    }
     const inputType =
       f.type === "number" ? "number"
-      : f.type === "date" ? "date"
       : f.type === "time" ? "time"
       : "text";
     return <Input id={id} type={inputType} value={val} onChange={(e) => onChange(e.target.value)} />;

@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Button, FormField, FormGrid, Input, Modal, Select } from "@sekolahpro/ui";
+import { Button, DatePicker, FormField, FormGrid, Modal, SearchableSelect } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -92,26 +92,18 @@ export function AbsensiHarianFormModal({ open, onClose, onCreated }: Props) {
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Rombongan Belajar" required>
-            <Select
+            <SearchableSelect
               value={form.rombel}
-              onChange={(e) => set("rombel", e.target.value)}
+              onChange={(v) => set("rombel", v)}
               disabled={rombelQ.isLoading}
-            >
-              <option value="">
-                {rombelQ.isLoading ? "Memuat..." : "— Pilih Rombel —"}
-              </option>
-              {rombelOpts.map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.nama_rombel ?? r.name}
-                </option>
-              ))}
-            </Select>
+              options={rombelOpts.map((r) => ({ value: r.name, label: r.nama_rombel ?? r.name }))}
+              placeholder={rombelQ.isLoading ? "Memuat..." : "— Pilih Rombel —"}
+            />
           </FormField>
           <FormField label="Tanggal" required>
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal}
-              onChange={(e) => set("tanggal", e.target.value)}
+              onChange={(v) => set("tanggal", v)}
             />
           </FormField>
         </FormGrid>

@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
-import { Button, FormField, FormGrid, Input, Modal, Select, Textarea } from "@sekolahpro/ui";
+import { Button, DatePicker, FormField, FormGrid, Input, Modal, SearchableSelect, Textarea } from "@sekolahpro/ui";
 
 interface BerkasGuruFormModalProps {
   open: boolean;
@@ -115,20 +115,16 @@ export function BerkasGuruFormModal({ open, onClose, onCreated }: BerkasGuruForm
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Staff" required className="sm:col-span-2">
-            <Select
+            <SearchableSelect
               value={form.guru}
-              onChange={(e) => set("guru", e.target.value)}
+              onChange={(v) => set("guru", v)}
               disabled={guruQ.isLoading}
-            >
-              <option value="">
-                {guruQ.isLoading ? "Memuat..." : "— Pilih Staff —"}
-              </option>
-              {(guruQ.data ?? []).map((g) => (
-                <option key={g.name} value={g.name}>
-                  {g.nama_lengkap ?? g.name}{g.nip ? ` — NIP ${g.nip}` : ""}
-                </option>
-              ))}
-            </Select>
+              options={(guruQ.data ?? []).map((g) => ({
+                value: g.name,
+                label: `${g.nama_lengkap ?? g.name}${g.nip ? ` — NIP ${g.nip}` : ""}`,
+              }))}
+              placeholder={guruQ.isLoading ? "Memuat..." : "— Pilih Staff —"}
+            />
           </FormField>
           <FormField label="Nama Berkas" required>
             <Input
@@ -138,10 +134,12 @@ export function BerkasGuruFormModal({ open, onClose, onCreated }: BerkasGuruForm
             />
           </FormField>
           <FormField label="Jenis Berkas">
-            <Select value={form.jenis_berkas} onChange={(e) => set("jenis_berkas", e.target.value)}>
-              <option value="">—</option>
-              {JENIS_BERKAS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </Select>
+            <SearchableSelect
+              value={form.jenis_berkas}
+              onChange={(v) => set("jenis_berkas", v)}
+              options={JENIS_BERKAS.map((o) => ({ value: o, label: o }))}
+              placeholder="—"
+            />
           </FormField>
           <FormField label="URL File" required hint="Unggah dulu via Frappe Desk lalu salin URL-nya (/files/...)" className="sm:col-span-2">
             <Input
@@ -157,24 +155,21 @@ export function BerkasGuruFormModal({ open, onClose, onCreated }: BerkasGuruForm
             />
           </FormField>
           <FormField label="Tanggal Upload">
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal_upload}
-              onChange={(e) => set("tanggal_upload", e.target.value)}
+              onChange={(v) => set("tanggal_upload", v)}
             />
           </FormField>
           <FormField label="Tanggal Berlaku">
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal_berlaku}
-              onChange={(e) => set("tanggal_berlaku", e.target.value)}
+              onChange={(v) => set("tanggal_berlaku", v)}
             />
           </FormField>
           <FormField label="Tanggal Kadaluarsa">
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal_kadaluarsa}
-              onChange={(e) => set("tanggal_kadaluarsa", e.target.value)}
+              onChange={(v) => set("tanggal_kadaluarsa", v)}
             />
           </FormField>
           <FormField label="Keterangan" className="sm:col-span-2">

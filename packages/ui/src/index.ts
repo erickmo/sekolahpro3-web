@@ -27,6 +27,7 @@ export * from "./components/Breadcrumb";
 export * from "./components/FormField";
 export * from "./components/Modal";
 export * from "./components/SearchableSelect";
+export * from "./components/DatePicker";
 export * from "./components/OnboardingChecklist";
 export * from "./components/SetupBanner";
 export * from "./components/GlossaryTooltip";

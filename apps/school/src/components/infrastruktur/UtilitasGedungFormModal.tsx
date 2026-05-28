@@ -12,7 +12,7 @@ import {
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 
@@ -125,40 +125,41 @@ export function UtilitasGedungFormModal({ open, onClose, onCreated }: Props) {
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Gedung" required>
-            <Select value={form.gedung} onChange={(e) => set("gedung", e.target.value)}>
-              <option value="">— Pilih gedung —</option>
-              {(gedungQ.data ?? []).map((g) => (
-                <option key={g.name} value={g.name}>
-                  {g.nama ? `${g.name} — ${g.nama}` : g.name}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.gedung}
+              onChange={(v) => set("gedung", v)}
+              options={(gedungQ.data ?? []).map((g) => ({
+                value: g.name,
+                label: g.nama ? `${g.name} — ${g.nama}` : g.name,
+              }))}
+              placeholder="— Pilih gedung —"
+            />
           </FormField>
 
           <FormField label="Sekolah">
-            <Select value={form.sekolah} onChange={(e) => set("sekolah", e.target.value)}>
-              <option value="">— Pilih sekolah —</option>
-              {(sekolahQ.data ?? []).map((s) => (
-                <option key={s.name} value={s.name}>{s.name}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.sekolah}
+              onChange={(v) => set("sekolah", v)}
+              options={(sekolahQ.data ?? []).map((s) => ({ value: s.name, label: s.name }))}
+              placeholder="— Pilih sekolah —"
+            />
           </FormField>
 
           <FormField label="Jenis" required>
-            <Select value={form.jenis} onChange={(e) => set("jenis", e.target.value)}>
-              <option value="">— Pilih jenis —</option>
-              {JENIS_OPTIONS.map((j) => (
-                <option key={j} value={j}>{j}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.jenis}
+              onChange={(v) => set("jenis", v)}
+              options={JENIS_OPTIONS.map((j) => ({ value: j, label: j }))}
+              placeholder="— Pilih jenis —"
+            />
           </FormField>
 
           <FormField label="Status" required>
-            <Select value={form.status} onChange={(e) => set("status", e.target.value)}>
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.status}
+              onChange={(v) => set("status", v)}
+              options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+            />
           </FormField>
 
           <FormField label="Provider">

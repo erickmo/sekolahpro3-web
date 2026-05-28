@@ -12,7 +12,7 @@ import {
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 
@@ -151,47 +151,38 @@ export function RuanganFormModal({ open, onClose, onCreated }: Props) {
             <Input value={kode} onChange={(e) => setKode(e.target.value)} />
           </FormField>
           <FormField label="Lantai" required>
-            <Select value={lantai} onChange={(e) => setLantai(e.target.value)}>
-              <option value="">— pilih —</option>
-              {lantaiRows.map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.name}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={lantai}
+              onChange={(v) => setLantai(v)}
+              options={lantaiRows.map((r) => ({ value: r.name, label: r.name }))}
+              placeholder="— pilih —"
+            />
           </FormField>
           <FormField label="Gedung">
-            <Select value={gedung} onChange={(e) => setGedung(e.target.value)}>
-              <option value="">— pilih —</option>
-              {gedungRows.map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.name}
-                  {r.nama ? ` — ${r.nama}` : ""}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={gedung}
+              onChange={(v) => setGedung(v)}
+              options={gedungRows.map((r) => ({
+                value: r.name,
+                label: `${r.name}${r.nama ? ` — ${r.nama}` : ""}`,
+              }))}
+              placeholder="— pilih —"
+            />
           </FormField>
           <FormField label="Sekolah">
-            <Select value={sekolah} onChange={(e) => setSekolah(e.target.value)}>
-              <option value="">— pilih —</option>
-              {sekolahRows.map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.name}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={sekolah}
+              onChange={(v) => setSekolah(v)}
+              options={sekolahRows.map((r) => ({ value: r.name, label: r.name }))}
+              placeholder="— pilih —"
+            />
           </FormField>
           <FormField label="Jenis Ruangan" required>
-            <Select
+            <SearchableSelect
               value={jenisRuangan}
-              onChange={(e) => setJenisRuangan(e.target.value)}
-            >
-              {JENIS_OPTIONS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </Select>
+              onChange={(v) => setJenisRuangan(v)}
+              options={JENIS_OPTIONS.map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
           <FormField label="Kapasitas">
             <Input
@@ -209,13 +200,11 @@ export function RuanganFormModal({ open, onClose, onCreated }: Props) {
             />
           </FormField>
           <FormField label="Status" required>
-            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={status}
+              onChange={(v) => setStatus(v)}
+              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
         </FormGrid>
 

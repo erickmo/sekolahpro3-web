@@ -2,7 +2,7 @@
 // `Pengembalian Buku`. Flow dua-langkah (insert → submit) supaya backend
 // bisa auto-generate Denda Perpustakaan ketika telat.
 import { useState } from "react";
-import { Button, FormField, Input, Modal, Textarea } from "@sekolahpro/ui";
+import { Button, DatePicker, FormField, Modal, Textarea } from "@sekolahpro/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { frappeFetch } from "@sekolahpro/api-client";
 import { perpToday } from "./perpFormatters";
@@ -103,11 +103,10 @@ export function ReturnModal({ open, peminjaman, onClose, onSuccess }: Props) {
       )}
       <div className="flex flex-col gap-3">
         <FormField label="Tanggal Kembali" required htmlFor="ret-date">
-          <Input
+          <DatePicker
             id="ret-date"
-            type="date"
             value={tanggal}
-            onChange={(e) => setTanggal(e.target.value)}
+            onChange={(v) => setTanggal(v)}
           />
         </FormField>
         <FormField label="Catatan" htmlFor="ret-note">

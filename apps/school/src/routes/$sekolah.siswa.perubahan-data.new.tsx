@@ -10,6 +10,7 @@ import {
   Textarea,
   FormField,
   SearchableSelect,
+  DatePicker,
   type SearchableOption,
 } from "@sekolahpro/ui";
 
@@ -177,18 +178,12 @@ function PerubahanNewPage() {
             />
           </FormField>
           <FormField label="Field yang Diubah" required>
-            <select
+            <SearchableSelect
               value={v.field_diubah}
-              onChange={(e) => update("field_diubah", e.target.value as CriticalField)}
-              className="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-            >
-              <option value="">Pilih field…</option>
-              {CRITICAL_FIELDS.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => update("field_diubah", val as CriticalField)}
+              options={CRITICAL_FIELDS.map((f) => ({ value: f.value, label: f.label }))}
+              placeholder="Pilih field…"
+            />
           </FormField>
         </div>
         {selectedField ? (
@@ -210,12 +205,20 @@ function PerubahanNewPage() {
               </div>
             </FormField>
             <FormField label={selectedField?.label ?? "Data Baru"} required>
-              <Input
-                type={selectedField?.type === "date" ? "date" : "text"}
-                value={v.nilai_baru}
-                onChange={(e) => update("nilai_baru", e.target.value)}
-                className="border-brand/60 focus:ring-brand"
-              />
+              {selectedField?.type === "date" ? (
+                <DatePicker
+                  value={v.nilai_baru}
+                  onChange={(val) => update("nilai_baru", val)}
+                  className="border-brand/60 focus:ring-brand"
+                />
+              ) : (
+                <Input
+                  type="text"
+                  value={v.nilai_baru}
+                  onChange={(e) => update("nilai_baru", e.target.value)}
+                  className="border-brand/60 focus:ring-brand"
+                />
+              )}
             </FormField>
           </div>
           <div className="mt-4">

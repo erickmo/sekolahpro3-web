@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
-import { Button, FormField, FormGrid, Input, Modal, Select } from "@sekolahpro/ui";
+import { Button, DatePicker, FormField, FormGrid, Input, Modal, SearchableSelect } from "@sekolahpro/ui";
 
 type SekolahRow = { name: string; nama_sekolah?: string };
 
@@ -170,23 +170,26 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
             />
           </FormField>
           <FormField label="Tanggal Lahir" required>
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal_lahir}
-              onChange={(e) => set("tanggal_lahir", e.target.value)}
+              onChange={(v) => set("tanggal_lahir", v)}
             />
           </FormField>
           <FormField label="Jenis Kelamin" required>
-            <Select value={form.jenis_kelamin} onChange={(e) => set("jenis_kelamin", e.target.value)}>
-              <option value="">— Pilih —</option>
-              {JK_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </Select>
+            <SearchableSelect
+              value={form.jenis_kelamin}
+              onChange={(v) => set("jenis_kelamin", v)}
+              options={JK_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— Pilih —"
+            />
           </FormField>
           <FormField label="Agama">
-            <Select value={form.agama} onChange={(e) => set("agama", e.target.value)}>
-              <option value="">—</option>
-              {AGAMA_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </Select>
+            <SearchableSelect
+              value={form.agama}
+              onChange={(v) => set("agama", v)}
+              options={AGAMA_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="—"
+            />
           </FormField>
           <FormField label="No HP">
             <Input
@@ -203,26 +206,21 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
             />
           </FormField>
           <FormField label="Status Kepegawaian" required>
-            <Select value={form.status_kepegawaian} onChange={(e) => set("status_kepegawaian", e.target.value)}>
-              <option value="">— Pilih —</option>
-              {STATUS_KEP_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </Select>
+            <SearchableSelect
+              value={form.status_kepegawaian}
+              onChange={(v) => set("status_kepegawaian", v)}
+              options={STATUS_KEP_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— Pilih —"
+            />
           </FormField>
           <FormField label="Sekolah" required>
-            <Select
+            <SearchableSelect
               value={form.sekolah}
-              onChange={(e) => set("sekolah", e.target.value)}
+              onChange={(v) => set("sekolah", v)}
               disabled={sekolahQ.isLoading}
-            >
-              <option value="">
-                {sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
-              </option>
-              {sekolahOpts.map((s) => (
-                <option key={s.name} value={s.name}>
-                  {s.nama_sekolah ?? s.name}
-                </option>
-              ))}
-            </Select>
+              options={sekolahOpts.map((s) => ({ value: s.name, label: s.nama_sekolah ?? s.name }))}
+              placeholder={sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
+            />
           </FormField>
           <FormField label="NIP" hint="Untuk PNS/PPPK">
             <Input value={form.nip} onChange={(e) => set("nip", e.target.value)} />
@@ -231,10 +229,12 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
             <Input value={form.nuptk} onChange={(e) => set("nuptk", e.target.value)} />
           </FormField>
           <FormField label="Pendidikan Terakhir">
-            <Select value={form.pendidikan_terakhir} onChange={(e) => set("pendidikan_terakhir", e.target.value)}>
-              <option value="">—</option>
-              {PENDIDIKAN_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </Select>
+            <SearchableSelect
+              value={form.pendidikan_terakhir}
+              onChange={(v) => set("pendidikan_terakhir", v)}
+              options={PENDIDIKAN_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="—"
+            />
           </FormField>
           <FormField label="Jabatan Fungsional">
             <Input
@@ -244,10 +244,9 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
             />
           </FormField>
           <FormField label="TMT Pertama Kerja">
-            <Input
-              type="date"
+            <DatePicker
               value={form.tmt_pertama_kerja}
-              onChange={(e) => set("tmt_pertama_kerja", e.target.value)}
+              onChange={(v) => set("tmt_pertama_kerja", v)}
             />
           </FormField>
         </FormGrid>

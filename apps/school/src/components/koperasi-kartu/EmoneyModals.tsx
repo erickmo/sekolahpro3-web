@@ -2,11 +2,12 @@ import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
 } from "@sekolahpro/ui";
 import { useResourceCreate } from "@sekolahpro/api-client";
 
@@ -71,12 +72,14 @@ export function TopUpModal({ open, onClose, defaultKartu = "", onCreated }: Base
             <Input inputMode="numeric" value={nominal} onChange={(e) => setNominal(e.target.value.replace(/\D/g, ""))} />
           </FormField>
           <FormField label="Tanggal" required>
-            <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
+            <DatePicker value={tanggal} onChange={(v) => setTanggal(v)} required />
           </FormField>
           <FormField label="Metode" required>
-            <Select value={metode} onChange={(e) => setMetode(e.target.value)}>
-              {["Tunai", "Transfer", "QRIS", "Voucher"].map((m) => <option key={m} value={m}>{m}</option>)}
-            </Select>
+            <SearchableSelect
+              value={metode}
+              onChange={(v) => setMetode(v)}
+              options={["Tunai", "Transfer", "QRIS", "Voucher"].map((m) => ({ value: m, label: m }))}
+            />
           </FormField>
         </FormGrid>
         {create.isError ? <p className="text-xs text-rose-600">{(create.error as Error).message}</p> : null}
@@ -151,7 +154,7 @@ export function TransaksiKartuModal({ open, onClose, defaultKartu = "", jenis, t
             <Input value={terminal} onChange={(e) => setTerminal(e.target.value)} />
           </FormField>
           <FormField label="Tanggal" required>
-            <Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
+            <DatePicker value={tanggal} onChange={(v) => setTanggal(v)} required />
           </FormField>
         </FormGrid>
         {create.isError ? <p className="text-xs text-rose-600">{(create.error as Error).message}</p> : null}

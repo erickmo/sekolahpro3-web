@@ -21,8 +21,9 @@ import {
   Input,
   PageHeader,
   SectionCard,
-  Select,
   Textarea,
+  DatePicker,
+  SearchableSelect,
 } from "@sekolahpro/ui";
 import { createResource, getResource, listResource, updateResource } from "@sekolahpro/api-client";
 import { perpToday } from "../components/perpustakaan/perpFormatters";
@@ -289,13 +290,12 @@ function OpnameScanPage() {
       <SectionCard title="Setup Sesi">
         <FormGrid cols={3}>
           <FormField label="Tanggal" htmlFor="tgl">
-            <Input
+            <DatePicker
               id="tgl"
-              type="date"
               value={doc.tanggal}
               disabled={isReadonly}
-              onChange={(e) => {
-                setDoc((p) => ({ ...p, tanggal: e.target.value }));
+              onChange={(v) => {
+                setDoc((p) => ({ ...p, tanggal: v }));
                 setDirty(true);
               }}
             />
@@ -313,20 +313,17 @@ function OpnameScanPage() {
             />
           </FormField>
           <FormField label="Auditor" htmlFor="auditor">
-            <Select
+            <SearchableSelect
               id="auditor"
               value={doc.auditor}
               disabled={isReadonly}
-              onChange={(e) => {
-                setDoc((p) => ({ ...p, auditor: e.target.value }));
+              onChange={(v) => {
+                setDoc((p) => ({ ...p, auditor: v }));
                 setDirty(true);
               }}
-            >
-              <option value="">— Pilih —</option>
-              {auditorOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </Select>
+              options={auditorOptions}
+              placeholder="— Pilih —"
+            />
           </FormField>
         </FormGrid>
       </SectionCard>
@@ -357,16 +354,17 @@ function OpnameScanPage() {
             </div>
             <div>
               <label htmlFor="scan-status" className="mb-1 block text-xs text-muted-fg">Status Default</label>
-              <Select
+              <SearchableSelect
                 id="scan-status"
                 value={scanStatus}
-                onChange={(e) => setScanStatus(e.target.value as ScanRow["status_temuan"])}
+                onChange={(v) => setScanStatus(v as ScanRow["status_temuan"])}
                 className="min-w-[140px]"
-              >
-                <option value="Hadir">Hadir</option>
-                <option value="Hilang">Hilang</option>
-                <option value="Rusak">Rusak</option>
-              </Select>
+                options={[
+                  { value: "Hadir", label: "Hadir" },
+                  { value: "Hilang", label: "Hilang" },
+                  { value: "Rusak", label: "Rusak" },
+                ]}
+              />
             </div>
           </div>
         </SectionCard>
@@ -418,14 +416,15 @@ function OpnameScanPage() {
                             {it.status_temuan}
                           </Badge>
                         ) : (
-                          <Select
+                          <SearchableSelect
                             value={it.status_temuan}
-                            onChange={(e) => updateRow(idx, { status_temuan: e.target.value as ScanRow["status_temuan"] })}
-                          >
-                            <option value="Hadir">Hadir</option>
-                            <option value="Hilang">Hilang</option>
-                            <option value="Rusak">Rusak</option>
-                          </Select>
+                            onChange={(v) => updateRow(idx, { status_temuan: v as ScanRow["status_temuan"] })}
+                            options={[
+                              { value: "Hadir", label: "Hadir" },
+                              { value: "Hilang", label: "Hilang" },
+                              { value: "Rusak", label: "Rusak" },
+                            ]}
+                          />
                         )}
                       </td>
                       <td className="px-2 py-1.5">

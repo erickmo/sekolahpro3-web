@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
-import { Modal, Button, FormField, FormGrid, Input, Select } from "@sekolahpro/ui";
+import { Modal, Button, FormField, FormGrid, Input, SearchableSelect } from "@sekolahpro/ui";
 
 interface LantaiFormModalProps {
   open: boolean;
@@ -80,16 +80,16 @@ export function LantaiFormModal({ open, onClose, onCreated }: LantaiFormModalPro
     >
       <FormGrid cols={2}>
         <FormField label="Gedung" required>
-          <Select value={gedung} onChange={(e) => setGedung(e.target.value)}>
-            <option value="">
-              {gedungQ.isLoading ? "Memuat..." : "— Pilih gedung —"}
-            </option>
-            {gedungOptions.map((g) => (
-              <option key={g.name} value={g.name}>
-                {g.nama ? `${g.name} — ${g.nama}` : g.name}
-              </option>
-            ))}
-          </Select>
+          <SearchableSelect
+            value={gedung}
+            onChange={(v) => setGedung(v)}
+            disabled={gedungQ.isLoading}
+            options={gedungOptions.map((g) => ({
+              value: g.name,
+              label: g.nama ? `${g.name} — ${g.nama}` : g.name,
+            }))}
+            placeholder={gedungQ.isLoading ? "Memuat..." : "— Pilih gedung —"}
+          />
         </FormField>
         <FormField label="Nomor Lantai" required>
           <Input

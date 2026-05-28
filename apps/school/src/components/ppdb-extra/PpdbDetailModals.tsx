@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Button, Modal } from "@sekolahpro/ui";
+import { Button, Modal, SearchableSelect } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
 
 const inputCls =
@@ -95,11 +95,11 @@ export function UploadDokumenModal({ open, onClose, pendaftaranName, onSaved }: 
     >
       <div className="space-y-3">
         <Field label="Jenis Dokumen">
-          <select value={jenis} onChange={(e) => setJenis(e.target.value)} className={inputCls}>
-            {JENIS_DOKUMEN.map((j) => (
-              <option key={j} value={j}>{j}</option>
-            ))}
-          </select>
+          <SearchableSelect
+            value={jenis}
+            onChange={(v) => setJenis(v)}
+            options={JENIS_DOKUMEN.map((j) => ({ value: j, label: j }))}
+          />
         </Field>
         <Field label="Path Berkas (URL atau /files/...)">
           <input
@@ -274,12 +274,16 @@ export function EditWaliModal({ open, onClose, calonName, initial, onSaved }: Wa
           <input value={form.nama_wali ?? ""} onChange={(e) => set("nama_wali", e.target.value)} className={inputCls} />
         </Field>
         <Field label="Hubungan">
-          <select value={form.hubungan_wali ?? ""} onChange={(e) => set("hubungan_wali", e.target.value)} className={inputCls}>
-            <option value="">— pilih —</option>
-            <option value="Ayah">Ayah</option>
-            <option value="Ibu">Ibu</option>
-            <option value="Wali">Wali</option>
-          </select>
+          <SearchableSelect
+            value={form.hubungan_wali ?? ""}
+            onChange={(v) => set("hubungan_wali", v)}
+            options={[
+              { value: "Ayah", label: "Ayah" },
+              { value: "Ibu", label: "Ibu" },
+              { value: "Wali", label: "Wali" },
+            ]}
+            placeholder="— pilih —"
+          />
         </Field>
         <Field label="No HP Wali">
           <input value={form.no_hp_wali ?? ""} onChange={(e) => set("no_hp_wali", e.target.value)} className={inputCls} />

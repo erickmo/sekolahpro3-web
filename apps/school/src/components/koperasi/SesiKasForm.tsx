@@ -5,7 +5,7 @@ import {
   FormField,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
   Textarea,
 } from "@sekolahpro/ui";
 import {
@@ -158,13 +158,11 @@ function BukaSesiForm({ onClose, onSuccess }: BukaProps) {
     <Modal open onClose={onClose} title="Buka Sesi Kas">
       <div className="space-y-4">
         <FormField label="Shift" required>
-          <Select value={shift} onChange={(e) => setShift(e.target.value as Shift)}>
-            {SHIFTS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </Select>
+          <SearchableSelect
+            value={shift}
+            onChange={(v) => setShift(v as Shift)}
+            options={SHIFTS.map((s) => ({ value: s, label: s }))}
+          />
         </FormField>
 
         <FormField
@@ -323,14 +321,15 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
         </FormField>
 
         <FormField label="Supervisor untuk Approval" required>
-          <Select value={supervisor} onChange={(e) => setSupervisor(e.target.value)}>
-            <option value="">Pilih supervisor...</option>
-            {(supervisorQ.data ?? []).map((u) => (
-              <option key={u.name} value={u.name}>
-                {u.full_name ? `${u.full_name} (${u.name})` : u.name}
-              </option>
-            ))}
-          </Select>
+          <SearchableSelect
+            value={supervisor}
+            onChange={(v) => setSupervisor(v)}
+            placeholder="Pilih supervisor..."
+            options={(supervisorQ.data ?? []).map((u) => ({
+              value: u.name,
+              label: u.full_name ? `${u.full_name} (${u.name})` : u.name,
+            }))}
+          />
         </FormField>
 
         {error ? <Alert tone="danger">{error}</Alert> : null}

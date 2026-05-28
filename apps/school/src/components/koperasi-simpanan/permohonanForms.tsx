@@ -6,7 +6,7 @@ import {
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
   Textarea,
 } from "@sekolahpro/ui";
 import { useResourceCreate } from "@sekolahpro/api-client";
@@ -160,6 +160,7 @@ interface FieldsProps {
 }
 
 function PermohonanFields({ kind, rekening, anggota }: FieldsProps) {
+  const [akad, setAkad] = useState("Wadiah");
   if (kind === "buka") {
     return (
       <FormGrid cols={2}>
@@ -170,11 +171,16 @@ function PermohonanFields({ kind, rekening, anggota }: FieldsProps) {
           <Input name="produk" required placeholder="Misal: Simpanan Wajib" />
         </FormField>
         <FormField label="Akad" required>
-          <Select name="akad" required defaultValue="Wadiah">
-            <option value="Wadiah">Wadiah</option>
-            <option value="Mudharabah">Mudharabah</option>
-            <option value="Wadiah Yad Dhamanah">Wadiah Yad Dhamanah</option>
-          </Select>
+          <SearchableSelect
+            value={akad}
+            onChange={(v) => setAkad(v)}
+            options={[
+              { value: "Wadiah", label: "Wadiah" },
+              { value: "Mudharabah", label: "Mudharabah" },
+              { value: "Wadiah Yad Dhamanah", label: "Wadiah Yad Dhamanah" },
+            ]}
+          />
+          <input type="hidden" name="akad" value={akad} />
         </FormField>
         <FormField label="Setoran Awal (Rp)">
           <Input name="setoran_awal" type="number" min={0} placeholder="0" />

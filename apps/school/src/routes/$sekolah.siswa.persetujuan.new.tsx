@@ -10,6 +10,7 @@ import {
   Textarea,
   FormField,
   SearchableSelect,
+  DatePicker,
   type SearchableOption,
 } from "@sekolahpro/ui";
 
@@ -174,18 +175,12 @@ function PersetujuanNewPage() {
       <SectionCard title="Bukti Persetujuan">
         <div className="grid gap-4 md:grid-cols-2">
           <FormField label="Cara Persetujuan Diberikan" required>
-            <select
+            <SearchableSelect
               value={v.granted_method}
-              onChange={(e) => update("granted_method", e.target.value as Method)}
-              className="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-            >
-              <option value="">Pilih cara…</option>
-              {METHODS.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => update("granted_method", val as Method)}
+              options={METHODS.map((m) => ({ value: m, label: m }))}
+              placeholder="Pilih cara…"
+            />
           </FormField>
           <FormField label="Tanggal Pemberian" required>
             <Input
@@ -195,10 +190,9 @@ function PersetujuanNewPage() {
             />
           </FormField>
           <FormField label="Berlaku Sampai" hint="Kosongkan = tidak ada expiry (wali harus cabut manual)">
-            <Input
-              type="date"
+            <DatePicker
               value={v.expires_at}
-              onChange={(e) => update("expires_at", e.target.value)}
+              onChange={(val) => update("expires_at", val)}
             />
           </FormField>
         </div>
