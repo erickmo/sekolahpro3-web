@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { scopedLinkProps } from "../../lib/scoped";
 import {
   Badge,
   Breadcrumb,
@@ -22,6 +23,8 @@ export function formatTanggal(v: string | undefined | null): string {
 
 export interface DetailShellProps {
   eyebrow: string;
+  // Active sekolah slug; scopes back/breadcrumb links to `/$sekolah/...`.
+  sekolah?: string | undefined;
   title: string;
   description?: string;
   backTo: string;
@@ -34,16 +37,16 @@ export interface DetailShellProps {
 
 export function DetailShell(props: DetailShellProps) {
   const navigate = useNavigate();
-  const { eyebrow, title, description, backTo, backLabel, crumbParentLabel, crumbParentTo, hero, children } = props;
+  const { eyebrow, sekolah, title, description, backTo, backLabel, crumbParentLabel, crumbParentTo, hero, children } = props;
   return (
     <DetailPageTemplate
       header={
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Koperasi", render: ({ className, children }) => <Link to="/koperasi" className={className}>{children}</Link> },
-              { label: crumbParentLabel, render: ({ className, children }) => <Link to={crumbParentTo} className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, "/")} className={className}>{children}</Link> },
+              { label: "Koperasi", render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, "/koperasi")} className={className}>{children}</Link> },
+              { label: crumbParentLabel, render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, crumbParentTo)} className={className}>{children}</Link> },
               { label: title },
             ]}
           />
@@ -52,7 +55,7 @@ export function DetailShell(props: DetailShellProps) {
             title={title}
             {...(description ? { description } : {})}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: backTo })}>
+              <Button variant="outline" onClick={() => navigate(scopedLinkProps(sekolah, backTo) as never)}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 {backLabel}
               </Button>

@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { scopedLinkProps } from "../../lib/scoped";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
@@ -27,6 +28,8 @@ export interface MasterDetailPageProps<T extends Record<string, unknown>> {
   doctype: string;
   name: string;
   eyebrow: string;
+  // Active sekolah slug; scopes parent/delete-redirect to `/$sekolah/...`.
+  sekolah?: string | undefined;
   parentLabel: string;
   parentPath: string;
   title: (doc: T) => string;
@@ -43,6 +46,7 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
     doctype,
     name,
     eyebrow,
+    sekolah,
     parentLabel,
     parentPath,
     title,
@@ -74,7 +78,7 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
           title="Data tidak ditemukan"
           description={(q.error as Error | null)?.message ?? "Tidak ada data."}
           action={
-            <Link to={parentPath} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link {...scopedLinkProps(sekolah, parentPath)} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
             </Link>
           }
@@ -89,7 +93,7 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
     try {
       await del.mutateAsync(name);
       qc.invalidateQueries({ queryKey: ["resource:list", doctype] });
-      navigate({ to: parentPath });
+      navigate(scopedLinkProps(sekolah, parentPath) as never);
     } catch (err) {
       window.alert(err instanceof Error ? err.message : "Gagal menghapus.");
     }
@@ -117,8 +121,8 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: parentLabel, render: ({ className, children }) => <Link to={parentPath} className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, "/")} className={className}>{children}</Link> },
+              { label: parentLabel, render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, parentPath)} className={className}>{children}</Link> },
               { label: title(doc) },
             ]}
           />
@@ -127,7 +131,7 @@ export function MasterDetailPage<T extends Record<string, unknown>>(props: Maste
             title={title(doc)}
             {...(subtitle ? { description: subtitle(doc) } : {})}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: parentPath })}>
+              <Button variant="outline" onClick={() => navigate(scopedLinkProps(sekolah, parentPath) as never)}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali
               </Button>

@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { scopedLinkProps } from "../../lib/scoped";
 import {
   Badge,
   Breadcrumb,
@@ -29,6 +30,8 @@ export interface ExtraCrumb {
 
 export interface ExtraDetailScaffoldProps {
   eyebrow: string;
+  // Active sekolah slug; scopes links to `/$sekolah/...` when set.
+  sekolah?: string | undefined;
   title: string;
   backTo: string;
   backLabel?: string;
@@ -48,6 +51,7 @@ export function ExtraDetailScaffold(props: ExtraDetailScaffoldProps) {
   const navigate = useNavigate();
   const {
     eyebrow,
+    sekolah,
     title,
     backTo,
     backLabel = "Kembali",
@@ -70,7 +74,7 @@ export function ExtraDetailScaffold(props: ExtraDetailScaffoldProps) {
           title="Gagal memuat data"
           description={errorMessage}
           action={
-            <Link to={backTo} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link {...scopedLinkProps(sekolah, backTo)} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span>
               {backLabel}
             </Link>
@@ -81,10 +85,10 @@ export function ExtraDetailScaffold(props: ExtraDetailScaffoldProps) {
   }
 
   const breadcrumbItems = [
-    { label: "Dashboard", render: ({ className, children }: { className: string; children: ReactNode }) => <Link to="/" className={className}>{children}</Link> },
+    { label: "Dashboard", render: ({ className, children }: { className: string; children: ReactNode }) => <Link {...scopedLinkProps(sekolah, "/")} className={className}>{children}</Link> },
     ...crumbs.map((c) => ({
       label: c.label,
-      render: ({ className, children }: { className: string; children: ReactNode }) => <Link to={c.to} className={className}>{children}</Link>,
+      render: ({ className, children }: { className: string; children: ReactNode }) => <Link {...scopedLinkProps(sekolah, c.to)} className={className}>{children}</Link>,
     })),
     { label: crumbSelf },
   ];
@@ -102,7 +106,7 @@ export function ExtraDetailScaffold(props: ExtraDetailScaffoldProps) {
               <div className="flex flex-wrap items-center gap-2">
                 {status ? <Badge tone={status.tone} dot>{status.label}</Badge> : null}
                 {actions}
-                <Button variant="outline" onClick={() => navigate({ to: backTo })}>
+                <Button variant="outline" onClick={() => navigate(scopedLinkProps(sekolah, backTo) as never)}>
                   <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                   {backLabel}
                 </Button>

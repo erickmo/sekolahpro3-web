@@ -60,7 +60,7 @@ export function PilihSekolahPage() {
             subdomain: resp.subdomain,
             slug: resp.slug,
           });
-          navigate({ to: "/" });
+          navigate({ to: "/$sekolah", params: { sekolah: resp.slug } });
         },
       },
     );
@@ -241,7 +241,10 @@ export function PilihSekolahPage() {
                                   subdomain: resp.subdomain,
                                   slug: resp.slug,
                                 });
-                                navigate({ to: "/" });
+                                navigate({
+                                  to: "/$sekolah",
+                                  params: { sekolah: resp.slug },
+                                });
                               },
                             },
                           )
