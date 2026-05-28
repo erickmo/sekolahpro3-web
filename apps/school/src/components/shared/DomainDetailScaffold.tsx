@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { scopedLinkProps } from "../../lib/scoped";
 import {
   Badge,
   Breadcrumb,
@@ -22,6 +23,9 @@ export interface DomainInfoItem {
 
 export interface DomainDetailScaffoldProps {
   eyebrow: string;
+  // Slug of the active sekolah; when set, scaffold scopes all links to
+  // `/$sekolah/...`. Pull from `useParams({ from: "/$sekolah" })`.
+  sekolah?: string | undefined;
   domain: { label: string; to: string };
   title: string;
   backTo: string;
@@ -42,6 +46,7 @@ export function DomainDetailScaffold(props: DomainDetailScaffoldProps) {
   const navigate = useNavigate();
   const {
     eyebrow,
+    sekolah,
     domain,
     title,
     backTo,
@@ -65,7 +70,7 @@ export function DomainDetailScaffold(props: DomainDetailScaffoldProps) {
           title="Gagal memuat data"
           description={errorMessage}
           action={
-            <Link to={backTo} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link {...scopedLinkProps(sekolah, backTo)} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span>
               {backLabel}
             </Link>
@@ -81,9 +86,9 @@ export function DomainDetailScaffold(props: DomainDetailScaffoldProps) {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: domain.label, render: ({ className, children }) => <Link to={domain.to} className={className}>{children}</Link> },
-              { label: crumbParent.label, render: ({ className, children }) => <Link to={crumbParent.to} className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, "/")} className={className}>{children}</Link> },
+              { label: domain.label, render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, domain.to)} className={className}>{children}</Link> },
+              { label: crumbParent.label, render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, crumbParent.to)} className={className}>{children}</Link> },
               { label: crumbSelf },
             ]}
           />
@@ -95,7 +100,7 @@ export function DomainDetailScaffold(props: DomainDetailScaffoldProps) {
               <div className="flex flex-wrap items-center gap-2">
                 {status ? <Badge tone={status.tone} dot>{status.label}</Badge> : null}
                 {actions}
-                <Button variant="outline" onClick={() => navigate({ to: backTo })}>
+                <Button variant="outline" onClick={() => navigate(scopedLinkProps(sekolah, backTo) as never)}>
                   <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                   {backLabel}
                 </Button>

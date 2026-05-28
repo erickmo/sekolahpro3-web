@@ -31,16 +31,17 @@ import {
   IconLogout,
   SetupBanner,
 } from "@sekolahpro/ui";
-import { logout, useSession } from "@sekolahpro/auth";
+import { logout, useSession, useSessionStore } from "@sekolahpro/auth";
 import { useTenant } from "@sekolahpro/tenant";
 import { useResourceList } from "@sekolahpro/api-client";
 import { globalSearch, groupHitsByCategory } from "../lib/global-search";
+import { scopedTo, scopedParams, scopedActivePath } from "../lib/scoped";
 
 const SEARCH_MIN_QUERY = 2;
 const SEARCH_MAX_HITS = 8;
 const SEARCH_BLUR_DELAY_MS = 150;
 
-function GlobalSearch() {
+function GlobalSearch({ sekolah }: { sekolah: string | undefined }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,20 +117,39 @@ function GlobalSearch() {
                   <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-fg">
                     {g.category}
                   </div>
-                  {g.items.map((hit) => (
-                    <Link
-                      key={hit.id}
-                      to={hit.href}
-                      onClick={handleSelect}
-                      onMouseDown={(e) => e.preventDefault()}
-                      className="flex items-center gap-3 px-3 py-2 text-sm hover:bg-muted"
-                    >
-                      <span className="flex-1 truncate text-fg">{hit.label}</span>
-                      {hit.meta ? (
-                        <span className="truncate text-xs text-muted-fg">{hit.meta}</span>
-                      ) : null}
-                    </Link>
-                  ))}
+                  {g.items.map((hit) => {
+                    const body = (
+                      <>
+                        <span className="flex-1 truncate text-fg">{hit.label}</span>
+                        {hit.meta ? (
+                          <span className="truncate text-xs text-muted-fg">{hit.meta}</span>
+                        ) : null}
+                      </>
+                    );
+                    const cls = "flex items-center gap-3 px-3 py-2 text-sm hover:bg-muted";
+                    return sekolah ? (
+                      <Link
+                        key={hit.id}
+                        to={scopedTo(sekolah, hit.href)}
+                        params={scopedParams(sekolah)}
+                        onClick={handleSelect}
+                        onMouseDown={(e) => e.preventDefault()}
+                        className={cls}
+                      >
+                        {body}
+                      </Link>
+                    ) : (
+                      <Link
+                        key={hit.id}
+                        to="/pilih-sekolah"
+                        onClick={handleSelect}
+                        onMouseDown={(e) => e.preventDefault()}
+                        className={cls}
+                      >
+                        {body}
+                      </Link>
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -193,9 +213,11 @@ function NotificationDropdown() {
 function AvatarMenu({
   name,
   onLogout,
+  sekolah,
 }: {
   name: string;
   onLogout: () => void;
+  sekolah: string | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
@@ -216,20 +238,42 @@ function AvatarMenu({
       </button>
       {open ? (
         <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-md border border-border bg-bg shadow-lg py-1">
-          <Link
-            to="/pengaturan"
-            onClick={() => setOpen(false)}
-            className="block px-3 py-2 text-sm text-fg hover:bg-muted"
-          >
-            Pengaturan akun
-          </Link>
-          <Link
-            to="/pengaturan"
-            onClick={() => setOpen(false)}
-            className="block px-3 py-2 text-sm text-fg hover:bg-muted"
-          >
-            Profil
-          </Link>
+          {sekolah ? (
+            <Link
+              to={scopedTo(sekolah, "/pengaturan")}
+              params={scopedParams(sekolah)}
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-sm text-fg hover:bg-muted"
+            >
+              Pengaturan akun
+            </Link>
+          ) : (
+            <Link
+              to="/pilih-sekolah"
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-sm text-fg hover:bg-muted"
+            >
+              Pengaturan akun
+            </Link>
+          )}
+          {sekolah ? (
+            <Link
+              to={scopedTo(sekolah, "/pengaturan")}
+              params={scopedParams(sekolah)}
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-sm text-fg hover:bg-muted"
+            >
+              Profil
+            </Link>
+          ) : (
+            <Link
+              to="/pilih-sekolah"
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-sm text-fg hover:bg-muted"
+            >
+              Profil
+            </Link>
+          )}
           <div className="my-1 border-t border-border" />
           <button
             type="button"
@@ -310,6 +354,10 @@ function Layout() {
   const tenant = useTenant();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // `__root` lives outside the `/$sekolah` segment, so `useParams` can't read
+  // the slug. Pull it from the persisted session store instead — set by the
+  // chooser route after `select_school` succeeds.
+  const slug = useSessionStore((s) => s.activeSekolah?.slug);
 
   // Setup-banner gate: probe Tahun Ajaran with aktif=1; show banner only on
   // a definitive empty result so banner does not flash during initial fetch.
@@ -356,16 +404,26 @@ function Layout() {
     );
   }
 
-  const mk = (to: string, label: string, icon: React.ReactNode, badge?: string | number): SidebarItem => ({
-    to,
-    label,
-    icon,
-    badge,
-    active: pathname === to,
-    render: ({ className, children }: { className: string; children: React.ReactNode }) => (
-      <Link to={to} className={className}>{children}</Link>
-    ),
-  });
+  const mk = (to: string, label: string, icon: React.ReactNode, badge?: string | number): SidebarItem => {
+    const livePath = scopedActivePath(slug, to);
+    return {
+      to,
+      label,
+      icon,
+      badge,
+      active: slug ? pathname === livePath : false,
+      render: ({ className, children }: { className: string; children: React.ReactNode }) =>
+        slug ? (
+          <Link to={scopedTo(slug, to)} params={scopedParams(slug)} className={className}>
+            {children}
+          </Link>
+        ) : (
+          <Link to="/pilih-sekolah" className={className}>
+            {children}
+          </Link>
+        ),
+    };
+  };
 
   const roles = session.roles && session.roles.length > 0 ? session.roles : ["admin_sekolah"];
 
@@ -456,7 +514,7 @@ function Layout() {
       topbar={
         <div className="flex w-full items-center gap-4">
           <div className="hidden md:flex items-center gap-2 flex-1 max-w-md">
-            <GlobalSearch />
+            <GlobalSearch sekolah={slug} />
           </div>
           <div className="ml-auto flex items-center gap-3">
             {session.activeSekolah ? (
@@ -482,6 +540,7 @@ function Layout() {
             <NotificationDropdown />
             <AvatarMenu
               name={session.user}
+              sekolah={slug}
               onLogout={() => {
                 void logout().then(() => navigate({ to: "/login" }));
               }}
@@ -498,7 +557,15 @@ function Layout() {
             description="Modul absensi, akademik, dan jadwal membutuhkan Tahun Ajaran aktif untuk berfungsi normal."
             actionLabel="Atur Tahun Ajaran"
             actionHref="/master/tahun-ajaran"
-            renderLink={(href, children) => <Link to={href}>{children}</Link>}
+            renderLink={(href, children) =>
+              slug ? (
+                <Link to={scopedTo(slug, href)} params={scopedParams(slug)}>
+                  {children}
+                </Link>
+              ) : (
+                <Link to="/pilih-sekolah">{children}</Link>
+              )
+            }
           />
         ) : null}
         <Outlet />

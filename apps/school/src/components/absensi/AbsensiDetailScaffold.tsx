@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { scopedLinkProps } from "../../lib/scoped";
 import {
   Badge,
   Breadcrumb,
@@ -24,6 +25,10 @@ export interface AbsInfoItem {
 export interface AbsensiDetailScaffoldProps {
   eyebrow: string;
   title: string;
+  // Slug of the active sekolah; when set, the scaffold scopes back/breadcrumb
+  // links to `/$sekolah/...` paths. Callers (route files under `/$sekolah/...`)
+  // pull this from `useParams({ from: "/$sekolah" })`.
+  sekolah?: string | undefined;
   backTo: string;
   backLabel?: string;
   crumbParent: { label: string; to: string };
@@ -43,6 +48,7 @@ export function AbsensiDetailScaffold(props: AbsensiDetailScaffoldProps) {
   const {
     eyebrow,
     title,
+    sekolah,
     backTo,
     backLabel = "Kembali ke daftar",
     crumbParent,
@@ -57,6 +63,8 @@ export function AbsensiDetailScaffold(props: AbsensiDetailScaffoldProps) {
     extraSections,
   } = props;
 
+  const backProps = scopedLinkProps(sekolah, backTo);
+
   if (errorMessage) {
     return (
       <div className="py-12">
@@ -64,7 +72,7 @@ export function AbsensiDetailScaffold(props: AbsensiDetailScaffoldProps) {
           title="Gagal memuat data"
           description={errorMessage}
           action={
-            <Link to={backTo} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link {...backProps} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span>
               {backLabel}
             </Link>
@@ -80,9 +88,15 @@ export function AbsensiDetailScaffold(props: AbsensiDetailScaffoldProps) {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Absensi", render: ({ className, children }) => <Link to="/absensi" className={className}>{children}</Link> },
-              { label: crumbParent.label, render: ({ className, children }) => <Link to={crumbParent.to} className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) =>
+                <Link {...scopedLinkProps(sekolah, "/")} className={className}>{children}</Link>
+              },
+              { label: "Absensi", render: ({ className, children }) =>
+                <Link {...scopedLinkProps(sekolah, "/absensi")} className={className}>{children}</Link>
+              },
+              { label: crumbParent.label, render: ({ className, children }) =>
+                <Link {...scopedLinkProps(sekolah, crumbParent.to)} className={className}>{children}</Link>
+              },
               { label: crumbSelf },
             ]}
           />
@@ -94,7 +108,7 @@ export function AbsensiDetailScaffold(props: AbsensiDetailScaffoldProps) {
               <div className="flex flex-wrap items-center gap-2">
                 {status ? <Badge tone={status.tone} dot>{status.label}</Badge> : null}
                 {actions}
-                <Button variant="outline" onClick={() => navigate({ to: backTo })}>
+                <Button variant="outline" onClick={() => navigate(backProps as never)}>
                   <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                   {backLabel}
                 </Button>

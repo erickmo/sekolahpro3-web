@@ -1,0 +1,111 @@
+import { useMemo } from "react";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
+import { Badge, type Column } from "@sekolahpro/ui";
+import { ResourceListPage } from "../components/ResourceListPage";
+
+type ConsentStatus = "Granted" | "Withdrawn" | "Expired" | "Pending";
+type Purpose = "Publikasi Foto" | "Data Dapodik" | "Sharing Mitra" | "Medis Darurat";
+
+type Row = {
+  name: string;
+  siswa: string;
+  purpose: Purpose;
+  status: ConsentStatus;
+  granted_at?: string;
+  withdrawn_at?: string;
+  granted_method?: string;
+};
+
+const STATUS_TONE: Record<ConsentStatus, "success" | "danger" | "warning" | "neutral"> = {
+  Granted: "success",
+  Withdrawn: "danger",
+  Expired: "warning",
+  Pending: "neutral",
+};
+
+function makeColumns(sekolah: string): Column<Row>[] {
+  return [
+  {
+    key: "name",
+    header: "ID",
+    sortable: true,
+    cell: (r) => (
+      <Link
+        to="/$sekolah/siswa/persetujuan/$id"
+        params={{ sekolah, id: r.name }}
+        className="font-mono text-xs text-brand hover:underline"
+      >
+        {r.name}
+      </Link>
+    ),
+  },
+  { key: "siswa", header: "Siswa", sortable: true, cell: (r) => r.siswa },
+  {
+    key: "purpose",
+    header: "Tujuan",
+    cell: (r) => <Badge tone="neutral">{r.purpose}</Badge>,
+  },
+  {
+    key: "status",
+    header: "Status",
+    cell: (r) => (
+      <Badge tone={STATUS_TONE[r.status]} dot>
+        {r.status}
+      </Badge>
+    ),
+  },
+  {
+    key: "granted_at",
+    header: "Diberikan",
+    cell: (r) => (r.granted_at ? <span className="text-xs">{r.granted_at}</span> : "—"),
+  },
+  {
+    key: "granted_method",
+    header: "Via",
+    cell: (r) => r.granted_method ?? "—",
+  },
+  ];
+}
+
+function PersetujuanPage() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
+  const columns = useMemo(() => makeColumns(sekolah), [sekolah]);
+
+  const navigate = useNavigate();
+  return (
+    <ResourceListPage<Row>
+      eyebrow="Siswa"
+      title="Persetujuan Wali (UU PDP)"
+      doctype="Persetujuan Wali"
+      fields={["name", "siswa", "purpose", "status", "granted_at", "withdrawn_at", "granted_method"]}
+      rowKey={(r) => r.name}
+      columns={columns}
+      defaultSort={{ key: "name", dir: "desc" }}
+      searchFields={["name", "siswa"]}
+      selectFilters={[
+        {
+          key: "purpose",
+          label: "Tujuan",
+          field: "purpose",
+          options: ["Semua", "Publikasi Foto", "Data Dapodik", "Sharing Mitra", "Medis Darurat"].map((v) => ({
+            value: v,
+            label: v,
+          })),
+        },
+        {
+          key: "status",
+          label: "Status",
+          field: "status",
+          options: ["Semua", "Granted", "Pending", "Withdrawn", "Expired"].map((v) => ({
+            value: v,
+            label: v,
+          })),
+        },
+      ]}
+      addLabel="Minta Persetujuan"
+      onAdd={() => navigate({ to: "/$sekolah/siswa/persetujuan/new", params: { sekolah } })}
+    />
+  );
+}
+
+export const Route = createFileRoute("/$sekolah/siswa/persetujuan")({ component: PersetujuanPage });

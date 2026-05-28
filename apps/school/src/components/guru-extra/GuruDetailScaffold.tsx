@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { scopedLinkProps } from "../../lib/scoped";
 import {
   Badge,
   Breadcrumb,
@@ -23,6 +24,7 @@ export interface GuruInfoItem {
 
 export interface GuruDetailScaffoldProps {
   eyebrow: string;
+  sekolah?: string | undefined;
   title: string;
   backTo: string;
   backLabel?: string;
@@ -42,6 +44,7 @@ export function GuruDetailScaffold(props: GuruDetailScaffoldProps) {
   const navigate = useNavigate();
   const {
     eyebrow,
+    sekolah,
     title,
     backTo,
     backLabel = "Kembali ke daftar",
@@ -64,7 +67,7 @@ export function GuruDetailScaffold(props: GuruDetailScaffoldProps) {
           title="Gagal memuat data"
           description={errorMessage}
           action={
-            <Link to={backTo} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link {...scopedLinkProps(sekolah, backTo)} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span>
               {backLabel}
             </Link>
@@ -80,9 +83,9 @@ export function GuruDetailScaffold(props: GuruDetailScaffoldProps) {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: "Guru", render: ({ className, children }) => <Link to="/guru" className={className}>{children}</Link> },
-              { label: crumbParent.label, render: ({ className, children }) => <Link to={crumbParent.to} className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, "/")} className={className}>{children}</Link> },
+              { label: "Guru", render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, "/guru")} className={className}>{children}</Link> },
+              { label: crumbParent.label, render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, crumbParent.to)} className={className}>{children}</Link> },
               { label: crumbSelf },
             ]}
           />
@@ -94,7 +97,7 @@ export function GuruDetailScaffold(props: GuruDetailScaffoldProps) {
               <div className="flex flex-wrap items-center gap-2">
                 {status ? <Badge tone={status.tone} dot>{status.label}</Badge> : null}
                 {actions}
-                <Button variant="outline" onClick={() => navigate({ to: backTo })}>
+                <Button variant="outline" onClick={() => navigate(scopedLinkProps(sekolah, backTo) as never)}>
                   <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                   {backLabel}
                 </Button>
