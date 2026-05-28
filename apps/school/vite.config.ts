@@ -26,4 +26,13 @@ export default defineConfig({
     },
   },
   build: { outDir: "dist", sourcemap: true },
+  define: process.env.NODE_ENV === "test"
+    ? { "import.meta.env.VITE_USE_MOCKS": JSON.stringify("true") }
+    : undefined,
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: ["./src/test-setup.ts"],
+    env: { VITE_USE_MOCKS: "true" },
+  },
 });

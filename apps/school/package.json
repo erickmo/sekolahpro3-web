@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "lint": "ESLINT_USE_FLAT_CONFIG=true eslint 'src/**/*.{ts,tsx}'",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "VITE_USE_MOCKS=true vitest run --passWithNoTests"
   },
   "dependencies": {
     "@sekolahpro/api-client": "workspace:*",
@@ -25,8 +25,9 @@
   "devDependencies": {
     "@sekolahpro/tsconfig": "workspace:*",
     "@tanstack/router-vite-plugin": "^1.45.0",
-    "@testing-library/jest-dom": "^6.4.0",
-    "@testing-library/react": "^15.0.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
