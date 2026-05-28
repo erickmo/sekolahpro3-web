@@ -44,6 +44,18 @@ function GlobalSearch() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const hits = useMemo(() => globalSearch(query, SEARCH_MAX_HITS), [query]);
   const groups = useMemo(() => groupHitsByCategory(hits), [hits]);
@@ -70,6 +82,7 @@ function GlobalSearch() {
         <IconSearch />
       </span>
       <input
+        ref={inputRef}
         type="search"
         value={query}
         onChange={(e) => {
@@ -87,7 +100,7 @@ function GlobalSearch() {
         </kbd>
       </span>
       {showDropdown ? (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-96 overflow-auto rounded-md border border-border bg-card shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-96 overflow-auto rounded-md border border-border bg-bg shadow-lg">
           {trimmed.length < SEARCH_MIN_QUERY ? (
             <div className="px-3 py-3 text-xs text-muted-fg">
               Ketik minimal {SEARCH_MIN_QUERY} karakter untuk mencari siswa, guru, atau kelas.
@@ -121,6 +134,113 @@ function GlobalSearch() {
               ))}
             </div>
           )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function useClickOutside<T extends HTMLElement>(
+  onOutside: () => void,
+): React.RefObject<T> {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target as Node)) onOutside();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onOutside]);
+  return ref;
+}
+
+function NotificationDropdown() {
+  const [open, setOpen] = useState(false);
+  const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-label="Notifikasi"
+        onClick={() => setOpen((v) => !v)}
+        className="relative h-9 w-9 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-fg"
+      >
+        <span className="h-4 w-4"><IconBell /></span>
+        <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-danger ring-2 ring-bg" />
+      </button>
+      {open ? (
+        <div className="absolute right-0 top-full z-50 mt-1 w-80 rounded-md border border-border bg-bg shadow-lg">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+            <div className="text-sm font-medium text-fg">Notifikasi</div>
+            <button
+              type="button"
+              className="text-[11px] text-brand hover:underline"
+              onClick={() => setOpen(false)}
+            >
+              Tandai dibaca
+            </button>
+          </div>
+          <div className="px-3 py-6 text-center text-xs text-muted-fg">
+            Belum ada notifikasi baru.
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function AvatarMenu({
+  name,
+  onLogout,
+}: {
+  name: string;
+  onLogout: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 pl-3 border-l border-border rounded-r-md hover:bg-muted/60 pr-2 py-1"
+      >
+        <Avatar name={name} size="sm" />
+        <div className="hidden sm:block leading-tight text-left">
+          <div className="text-sm font-medium text-fg truncate max-w-[140px]">
+            {name}
+          </div>
+          <div className="text-[11px] text-muted-fg">Admin Sekolah</div>
+        </div>
+      </button>
+      {open ? (
+        <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-md border border-border bg-bg shadow-lg py-1">
+          <Link
+            to="/pengaturan"
+            onClick={() => setOpen(false)}
+            className="block px-3 py-2 text-sm text-fg hover:bg-muted"
+          >
+            Pengaturan akun
+          </Link>
+          <Link
+            to="/pengaturan"
+            onClick={() => setOpen(false)}
+            className="block px-3 py-2 text-sm text-fg hover:bg-muted"
+          >
+            Profil
+          </Link>
+          <div className="my-1 border-t border-border" />
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              onLogout();
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-danger hover:bg-muted"
+          >
+            Keluar
+          </button>
         </div>
       ) : null}
     </div>
@@ -312,6 +432,8 @@ function Layout() {
   const showSetupBanner =
     pathname !== "/login" && taActiveQ.isSuccess && !taAktif;
 
+  if (pathname === "/pilih-sekolah") return <Outlet />;
+
   return (
     <AppShell
       brand={<Brand name={tenantName} />}
@@ -337,23 +459,33 @@ function Layout() {
             <GlobalSearch />
           </div>
           <div className="ml-auto flex items-center gap-3">
+            {session.activeSekolah ? (
+              <button
+                type="button"
+                onClick={() => navigate({ to: "/pilih-sekolah" })}
+                title="Ganti sekolah"
+                className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-muted/40 hover:bg-muted text-sm font-medium text-fg max-w-[220px]"
+              >
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-gradient-to-br from-brand/80 to-brand text-white text-[10px] font-semibold">
+                  {session.activeSekolah.nama
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((w) => w[0])
+                    .join("")
+                    .toUpperCase()}
+                </span>
+                <span className="truncate">{session.activeSekolah.nama}</span>
+                <span className="text-muted-fg text-xs">⇄</span>
+              </button>
+            ) : null}
             <Badge tone="success" dot>Live</Badge>
-            <button
-              aria-label="Notifikasi"
-              className="relative h-9 w-9 inline-flex items-center justify-center rounded-md hover:bg-muted text-muted-fg"
-            >
-              <span className="h-4 w-4"><IconBell /></span>
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-danger ring-2 ring-bg" />
-            </button>
-            <div className="flex items-center gap-2 pl-3 border-l border-border">
-              <Avatar name={session.user} size="sm" />
-              <div className="hidden sm:block leading-tight">
-                <div className="text-sm font-medium text-fg truncate max-w-[140px]">
-                  {session.user}
-                </div>
-                <div className="text-[11px] text-muted-fg">Admin Sekolah</div>
-              </div>
-            </div>
+            <NotificationDropdown />
+            <AvatarMenu
+              name={session.user}
+              onLogout={() => {
+                void logout().then(() => navigate({ to: "/login" }));
+              }}
+            />
           </div>
         </div>
       }
