@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Card, EmptyState, Input, Skeleton } from "@sekolahpro/ui";
+import { useSessionStore } from "@sekolahpro/auth";
 import {
   useMySchools,
   useSelectSchool,
@@ -24,6 +25,7 @@ export function PilihSekolahPage() {
   const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = useMySchools();
   const select = useSelectSchool();
+  const setActiveSekolah = useSessionStore((s) => s.setActiveSekolah);
   const [activeOrg, setActiveOrg] = useState<string>("all");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -39,9 +41,18 @@ export function PilihSekolahPage() {
     if (!only) return;
     select.mutate(
       { name: only.sekolah },
-      { onSuccess: () => navigate({ to: "/" }) },
+      {
+        onSuccess: (resp) => {
+          setActiveSekolah({
+            name: resp.sekolah,
+            nama: resp.nama,
+            subdomain: resp.subdomain,
+          });
+          navigate({ to: "/" });
+        },
+      },
     );
-  }, [data, select, navigate]);
+  }, [data, select, navigate, setActiveSekolah]);
 
   const showToolbar = !!data && (data.org_count >= 2 || data.total_schools > 4);
 
@@ -166,7 +177,16 @@ export function PilihSekolahPage() {
                     onSelect={() =>
                       select.mutate(
                         { name: school.sekolah },
-                        { onSuccess: () => navigate({ to: "/" }) },
+                        {
+                          onSuccess: (resp) => {
+                            setActiveSekolah({
+                              name: resp.sekolah,
+                              nama: resp.nama,
+                              subdomain: resp.subdomain,
+                            });
+                            navigate({ to: "/" });
+                          },
+                        },
                       )
                     }
                   />
