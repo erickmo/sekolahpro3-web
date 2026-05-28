@@ -54,6 +54,7 @@ export function PilihSekolahPage() {
       { name: only.sekolah },
       {
         onSuccess: (resp) => {
+          console.log("[chooser] auto-select ok", resp);
           setActiveSekolah({
             name: resp.sekolah,
             nama: resp.nama,
@@ -61,6 +62,9 @@ export function PilihSekolahPage() {
             slug: resp.slug,
           });
           navigate({ to: "/$sekolah", params: { sekolah: resp.slug } });
+        },
+        onError: (err) => {
+          console.error("[chooser] auto-select failed", err);
         },
       },
     );
@@ -158,6 +162,16 @@ export function PilihSekolahPage() {
           </div>
         ) : (
           <div className="space-y-8">
+            {select.isError ? (
+              <div className="rounded-xl border border-red-300/40 bg-red-500/15 backdrop-blur p-4 text-sm">
+                <div className="font-semibold text-red-100 mb-1">
+                  Gagal memilih sekolah
+                </div>
+                <div className="text-red-100/80 break-words">
+                  {(select.error as Error)?.message ?? "Unknown error"}
+                </div>
+              </div>
+            ) : null}
             <header className="space-y-3 max-w-2xl">
               <h1 className="text-3xl sm:text-4xl font-bold leading-tight tracking-tight">
                 Selamat datang.
@@ -230,11 +244,13 @@ export function PilihSekolahPage() {
                         key={school.sekolah}
                         school={school}
                         busy={select.isPending}
-                        onSelect={() =>
+                        onSelect={() => {
+                          console.log("[chooser] click", school.sekolah);
                           select.mutate(
                             { name: school.sekolah },
                             {
                               onSuccess: (resp) => {
+                                console.log("[chooser] select ok", resp);
                                 setActiveSekolah({
                                   name: resp.sekolah,
                                   nama: resp.nama,
@@ -246,9 +262,12 @@ export function PilihSekolahPage() {
                                   params: { sekolah: resp.slug },
                                 });
                               },
+                              onError: (err) => {
+                                console.error("[chooser] select failed", err);
+                              },
                             },
-                          )
-                        }
+                          );
+                        }}
                       />
                     ))}
                   </div>
