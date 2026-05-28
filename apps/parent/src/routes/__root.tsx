@@ -105,6 +105,7 @@ function RootLayout() {
         mk("/nilai", "Nilai", <IconChart />),
         mk("/absensi", "Absensi", <IconCheck />),
         mk("/pesan", "Pesan", <IconChat />),
+        mk("/pickup", "Penjemputan", <IconCheck />),
         mk("/pembayaran", "Pembayaran", <IconWallet />),
         mk("/profil", "Profil", <IconId />),
       ],
