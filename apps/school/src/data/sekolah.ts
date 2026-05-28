@@ -17,6 +17,7 @@ export interface SekolahCard {
   subdomain: string | null;
   organisasi: string;
   organisasi_nama: string;
+  slug: string;
 }
 
 export interface SekolahGroup {
@@ -37,6 +38,7 @@ export interface SelectSchoolResponse {
   nama: string;
   subdomain: string | null;
   role: string;
+  slug: string;
 }
 
 export const groupKeysShape = ["organisasi", "organisasi_nama", "schools"];

@@ -58,6 +58,7 @@ export function PilihSekolahPage() {
             name: resp.sekolah,
             nama: resp.nama,
             subdomain: resp.subdomain,
+            slug: resp.slug,
           });
           navigate({ to: "/" });
         },
@@ -238,6 +239,7 @@ export function PilihSekolahPage() {
                                   name: resp.sekolah,
                                   nama: resp.nama,
                                   subdomain: resp.subdomain,
+                                  slug: resp.slug,
                                 });
                                 navigate({ to: "/" });
                               },

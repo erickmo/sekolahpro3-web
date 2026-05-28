@@ -5,6 +5,7 @@ export interface ActiveSekolah {
   name: string;
   nama: string;
   subdomain: string | null;
+  slug: string;
 }
 
 export interface SessionState {
