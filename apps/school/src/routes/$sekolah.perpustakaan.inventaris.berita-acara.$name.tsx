@@ -16,8 +16,8 @@ import {
   Input,
   PageHeader,
   SectionCard,
-  Select,
   Textarea,
+  DatePicker,
   SearchableSelect,
   type SearchableOption,
 } from "@sekolahpro/ui";
@@ -244,8 +244,8 @@ function BADetailPage() {
       <SectionCard title="Identitas Insiden">
         <FormGrid cols={3}>
           <FormField label="Tanggal Kejadian" htmlFor="tgl" required>
-            <Input id="tgl" type="date" value={doc.tanggal_kejadian} disabled={isReadonly}
-              onChange={(e) => setDoc((p) => ({ ...p, tanggal_kejadian: e.target.value }))} />
+            <DatePicker id="tgl" value={doc.tanggal_kejadian} disabled={isReadonly}
+              onChange={(v) => setDoc((p) => ({ ...p, tanggal_kejadian: v }))} />
           </FormField>
           <FormField label="Eksemplar" htmlFor="eks" required>
             <SearchableSelect
@@ -274,13 +274,18 @@ function BADetailPage() {
             />
           </FormField>
           <FormField label="Jenis Kerusakan" htmlFor="jenis" required>
-            <Select id="jenis" value={doc.jenis_kerusakan} disabled={isReadonly}
-              onChange={(e) => setDoc((p) => ({ ...p, jenis_kerusakan: e.target.value as BA["jenis_kerusakan"] }))}>
-              <option value="">— Pilih —</option>
-              <option value="Rusak Ringan">Rusak Ringan</option>
-              <option value="Rusak Berat">Rusak Berat</option>
-              <option value="Hilang">Hilang</option>
-            </Select>
+            <SearchableSelect
+              id="jenis"
+              value={doc.jenis_kerusakan}
+              disabled={isReadonly}
+              onChange={(v) => setDoc((p) => ({ ...p, jenis_kerusakan: v as BA["jenis_kerusakan"] }))}
+              options={[
+                { value: "Rusak Ringan", label: "Rusak Ringan" },
+                { value: "Rusak Berat", label: "Rusak Berat" },
+                { value: "Hilang", label: "Hilang" },
+              ]}
+              placeholder="— Pilih —"
+            />
           </FormField>
         </FormGrid>
       </SectionCard>
@@ -322,13 +327,18 @@ function BADetailPage() {
       <SectionCard title="Keputusan" description="Diputuskan oleh Kepala Perpustakaan saat approve.">
         <FormGrid cols={2}>
           <FormField label="Keputusan" htmlFor="keputusan">
-            <Select id="keputusan" value={doc.keputusan} disabled={isReadonly}
-              onChange={(e) => setDoc((p) => ({ ...p, keputusan: e.target.value as BA["keputusan"] }))}>
-              <option value="">— Belum diputuskan —</option>
-              <option value="Diperbaiki">Diperbaiki</option>
-              <option value="Hapus">Hapus (eksemplar arsip)</option>
-              <option value="Ganti Rugi">Ganti Rugi</option>
-            </Select>
+            <SearchableSelect
+              id="keputusan"
+              value={doc.keputusan}
+              disabled={isReadonly}
+              onChange={(v) => setDoc((p) => ({ ...p, keputusan: v as BA["keputusan"] }))}
+              options={[
+                { value: "Diperbaiki", label: "Diperbaiki" },
+                { value: "Hapus", label: "Hapus (eksemplar arsip)" },
+                { value: "Ganti Rugi", label: "Ganti Rugi" },
+              ]}
+              placeholder="— Belum diputuskan —"
+            />
           </FormField>
           <FormField label="Nilai Ganti Rugi (Rp)" htmlFor="rugi"
             hint={suggestedRugi > 0 ? `Saran (harga buku): Rp ${suggestedRugi.toLocaleString("id-ID")}` : undefined}>

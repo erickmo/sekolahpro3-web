@@ -158,6 +158,16 @@ export function PilihSekolahPage() {
           </div>
         ) : (
           <div className="space-y-8">
+            {select.isError ? (
+              <div className="rounded-xl border border-red-300/40 bg-red-500/15 backdrop-blur p-4 text-sm">
+                <div className="font-semibold text-red-100 mb-1">
+                  Gagal memilih sekolah
+                </div>
+                <div className="text-red-100/80 break-words">
+                  {(select.error as Error)?.message ?? "Unknown error"}
+                </div>
+              </div>
+            ) : null}
             <header className="space-y-3 max-w-2xl">
               <h1 className="text-3xl sm:text-4xl font-bold leading-tight tracking-tight">
                 Selamat datang.
@@ -230,7 +240,7 @@ export function PilihSekolahPage() {
                         key={school.sekolah}
                         school={school}
                         busy={select.isPending}
-                        onSelect={() =>
+                        onSelect={() => {
                           select.mutate(
                             { name: school.sekolah },
                             {
@@ -247,8 +257,8 @@ export function PilihSekolahPage() {
                                 });
                               },
                             },
-                          )
-                        }
+                          );
+                        }}
                       />
                     ))}
                   </div>

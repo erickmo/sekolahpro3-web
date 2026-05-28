@@ -1,6 +1,8 @@
 // Mock data fixture untuk modul PPDB (Penerimaan Peserta Didik Baru).
 // Replace dengan @sekolahpro/api-client hooks ketika backend siap.
 
+import { type MockSchoolSlug, belongsToSchool, pickSchoolSlug } from "./school-scope";
+
 export type StatusPendaftaran =
   | "Draft"
   | "Terkirim"
@@ -98,6 +100,7 @@ export interface WaliPpdbRow {
 
 export interface Pendaftar {
   noPendaftaran: string;
+  sekolah: MockSchoolSlug;
   namaLengkap: string;
   nisn?: string | undefined;
   nik?: string | undefined;
@@ -309,6 +312,7 @@ function buildPendaftar(idx: number): Pendaftar {
 
   const result: Pendaftar = {
     noPendaftaran,
+    sekolah: pickSchoolSlug(idx),
     namaLengkap: nama,
     nisn,
     nik: `3273${pad(idx * 53, 12)}`,
@@ -354,8 +358,17 @@ function buildPendaftar(idx: number): Pendaftar {
 
 export const PPDB_LIST: Pendaftar[] = Array.from({ length: 35 }, (_, i) => buildPendaftar(i));
 
-export function findPendaftar(noPendaftaran: string): Pendaftar | undefined {
-  return PPDB_LIST.find((p) => p.noPendaftaran === noPendaftaran);
+export function findPendaftar(
+  noPendaftaran: string,
+  sekolah?: string,
+): Pendaftar | undefined {
+  return PPDB_LIST.find(
+    (p) => p.noPendaftaran === noPendaftaran && belongsToSchool(p.sekolah, sekolah),
+  );
+}
+
+export function listPpdbForSekolah(sekolah?: string): Pendaftar[] {
+  return PPDB_LIST.filter((p) => belongsToSchool(p.sekolah, sekolah));
 }
 
 export const FILTER_OPTIONS = {

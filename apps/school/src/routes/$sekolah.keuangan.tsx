@@ -4,13 +4,14 @@
 // the keuangan backend doctypes land. Once available, refactor each Tab to use
 // useResourceList<...>("Tagihan", { fields:[...], limit_page_length:0 }) etc.
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import {
   Badge,
   Button,
   type Column,
   DataTable,
   FilterBar,
+  ModuleFlow,
   PageHeader,
   SectionCard,
   StatCard,
@@ -30,11 +31,11 @@ import {
   IconArrowLeft,
 } from "@sekolahpro/ui";
 import {
-  TAGIHAN_LIST,
-  PEMBAYARAN_LIST,
-  PENGELUARAN_LIST,
-  JURNAL_LIST,
-  KAS_LIST,
+  listTagihanForSekolah,
+  listPembayaranForSekolah,
+  listPengeluaranForSekolah,
+  listJurnalForSekolah,
+  listKasForSekolah,
   RINGKASAN_BULAN,
   FILTER_OPTIONS,
   formatRupiah,
@@ -86,7 +87,10 @@ function buildOptions(arr: readonly string[]) {
 // Tab: Ringkasan
 // ---------------------------------------------------------------------------
 
-function RingkasanTab() {
+function RingkasanTab({ sekolah }: { sekolah: string }) {
+  const tagihan = useMemo(() => listTagihanForSekolah(sekolah), [sekolah]);
+  const pengeluaran = useMemo(() => listPengeluaranForSekolah(sekolah), [sekolah]);
+
   const maxValue = useMemo(
     () => Math.max(...RINGKASAN_BULAN.map((r) => Math.max(r.pemasukan, r.pengeluaran))),
     [],
@@ -94,20 +98,20 @@ function RingkasanTab() {
 
   const topTunggakan = useMemo(
     () =>
-      [...TAGIHAN_LIST]
+      [...tagihan]
         .filter((t) => t.status !== "Lunas" && t.status !== "Dibatalkan")
         .map((t) => ({ ...t, sisa: t.jumlah - t.dibayar }))
         .sort((a, b) => b.sisa - a.sisa)
         .slice(0, 5),
-    [],
+    [tagihan],
   );
 
   const pengeluaranTerbaru = useMemo(
     () =>
-      [...PENGELUARAN_LIST]
+      [...pengeluaran]
         .sort((a, b) => b.tanggal.localeCompare(a.tanggal))
         .slice(0, 5),
-    [],
+    [pengeluaran],
   );
 
   return (
@@ -223,22 +227,24 @@ function RingkasanTab() {
 // Tab: Tagihan
 // ---------------------------------------------------------------------------
 
-function TagihanTab() {
+function TagihanTab({ sekolah }: { sekolah: string }) {
   const [status, setStatus] = useState("Semua");
   const [kelas, setKelas] = useState("Semua");
   const [tahunAjaran, setTahunAjaran] = useState("Semua");
   const [search, setSearch] = useState("");
 
+  const scoped = useMemo(() => listTagihanForSekolah(sekolah), [sekolah]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return TAGIHAN_LIST.filter((t) => {
+    return scoped.filter((t) => {
       if (q && !`${t.siswa} ${t.judul} ${t.id}`.toLowerCase().includes(q)) return false;
       if (status !== "Semua" && t.status !== status) return false;
       if (kelas !== "Semua" && t.kelas !== kelas) return false;
       if (tahunAjaran !== "Semua" && t.tahunAjaran !== tahunAjaran) return false;
       return true;
     });
-  }, [search, status, kelas, tahunAjaran]);
+  }, [scoped, search, status, kelas, tahunAjaran]);
 
   const counts = useMemo(() => {
     const c = { Lunas: 0, Tertunda: 0, "Jatuh Tempo": 0, Cicilan: 0 } as Record<string, number>;
@@ -300,20 +306,22 @@ function TagihanTab() {
 // Tab: Pembayaran
 // ---------------------------------------------------------------------------
 
-function PembayaranTab() {
+function PembayaranTab({ sekolah }: { sekolah: string }) {
   const [metode, setMetode] = useState("Semua");
   const [kelas, setKelas] = useState("Semua");
   const [search, setSearch] = useState("");
 
+  const scoped = useMemo(() => listPembayaranForSekolah(sekolah), [sekolah]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return PEMBAYARAN_LIST.filter((p) => {
+    return scoped.filter((p) => {
       if (q && !`${p.siswa} ${p.judul} ${p.id} ${p.ref}`.toLowerCase().includes(q)) return false;
       if (metode !== "Semua" && p.metode !== metode) return false;
       if (kelas !== "Semua" && p.kelas !== kelas) return false;
       return true;
     });
-  }, [search, metode, kelas]);
+  }, [scoped, search, metode, kelas]);
 
   const counts = useMemo(() => {
     const c: Record<MetodeBayar, number> = {
@@ -371,22 +379,24 @@ function PembayaranTab() {
 // Tab: Pengeluaran
 // ---------------------------------------------------------------------------
 
-function PengeluaranTab() {
+function PengeluaranTab({ sekolah }: { sekolah: string }) {
   const [kategori, setKategori] = useState("Semua");
   const [status, setStatus] = useState("Semua");
   const [metode, setMetode] = useState("Semua");
   const [search, setSearch] = useState("");
 
+  const scoped = useMemo(() => listPengeluaranForSekolah(sekolah), [sekolah]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return PENGELUARAN_LIST.filter((p) => {
+    return scoped.filter((p) => {
       if (q && !`${p.deskripsi} ${p.penerima} ${p.id}`.toLowerCase().includes(q)) return false;
       if (kategori !== "Semua" && p.kategori !== kategori) return false;
       if (status !== "Semua" && p.status !== status) return false;
       if (metode !== "Semua" && p.metode !== metode) return false;
       return true;
     });
-  }, [search, kategori, status, metode]);
+  }, [scoped, search, kategori, status, metode]);
 
   const counts = useMemo(() => {
     const c = { Disetujui: 0, Approval: 0, Ditolak: 0, Dibayar: 0 } as Record<string, number>;
@@ -437,18 +447,20 @@ function PengeluaranTab() {
 // Tab: Kas
 // ---------------------------------------------------------------------------
 
-function KasTab() {
+function KasTab({ sekolah }: { sekolah: string }) {
+  const kasList = useMemo(() => listKasForSekolah(sekolah), [sekolah]);
+
   const totals = useMemo(() => {
-    const masuk = KAS_LIST.reduce((s, k) => s + k.masuk, 0);
-    const keluar = KAS_LIST.reduce((s, k) => s + k.keluar, 0);
-    const last = KAS_LIST[KAS_LIST.length - 1];
+    const masuk = kasList.reduce((s, k) => s + k.masuk, 0);
+    const keluar = kasList.reduce((s, k) => s + k.keluar, 0);
+    const last = kasList[kasList.length - 1];
     return {
       masuk,
       keluar,
       saldoAkhir: last?.saldoAkhir ?? 0,
-      hari: KAS_LIST.length,
+      hari: kasList.length,
     };
-  }, []);
+  }, [kasList]);
 
   const cols: Column<KasRow>[] = [
     { key: "tgl", header: "Tanggal", cell: (r) => <span className="text-sm tabular-nums">{formatTanggal(r.tanggal)}</span> },
@@ -466,8 +478,8 @@ function KasTab() {
         <StatCard label="Saldo Akhir" value={formatRupiah(totals.saldoAkhir)} accent="brand" icon={<IconWallet />} />
         <StatCard label="Hari Tercatat" value={totals.hari} accent="violet" icon={<IconCalendar />} />
       </div>
-      <SectionCard title={`Buku Kas Harian — ${KAS_LIST.length} entri`} padded={false}>
-        <DataTable data={KAS_LIST} columns={cols} rowKey={(r) => r.tanggal} />
+      <SectionCard title={`Buku Kas Harian — ${kasList.length} entri`} padded={false}>
+        <DataTable data={kasList} columns={cols} rowKey={(r) => r.tanggal} />
       </SectionCard>
     </div>
   );
@@ -477,18 +489,20 @@ function KasTab() {
 // Tab: Jurnal
 // ---------------------------------------------------------------------------
 
-function JurnalTab() {
+function JurnalTab({ sekolah }: { sekolah: string }) {
   const [jenis, setJenis] = useState("Semua");
   const [search, setSearch] = useState("");
 
+  const scoped = useMemo(() => listJurnalForSekolah(sekolah), [sekolah]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return JURNAL_LIST.filter((j) => {
+    return scoped.filter((j) => {
       if (q && !`${j.id} ${j.akun} ${j.ref} ${j.keterangan}`.toLowerCase().includes(q)) return false;
       if (jenis !== "Semua" && j.jenis !== jenis) return false;
       return true;
     });
-  }, [search, jenis]);
+  }, [scoped, search, jenis]);
 
   const filters: SelectFilter[] = [
     { key: "jenis", label: "Jenis", value: jenis, options: buildOptions(FILTER_OPTIONS.jenisJurnal), onChange: setJenis },
@@ -532,29 +546,36 @@ const TAB_META: { key: TabKey; label: string; icon: JSX.Element }[] = [
 ];
 
 function KeuanganPage() {
+  const { sekolah } = useParams({ from: "/$sekolah/keuangan" });
   const [tab, setTab] = useState<TabKey>("ringkasan");
 
+  const tagihanScoped = useMemo(() => listTagihanForSekolah(sekolah), [sekolah]);
+  const pembayaranScoped = useMemo(() => listPembayaranForSekolah(sekolah), [sekolah]);
+  const pengeluaranScoped = useMemo(() => listPengeluaranForSekolah(sekolah), [sekolah]);
+  const jurnalScoped = useMemo(() => listJurnalForSekolah(sekolah), [sekolah]);
+  const kasScoped = useMemo(() => listKasForSekolah(sekolah), [sekolah]);
+
   const stats = useMemo(() => {
-    const last = KAS_LIST[KAS_LIST.length - 1];
+    const last = kasScoped[kasScoped.length - 1];
     const saldoKas = last?.saldoAkhir ?? 0;
-    const pemasukanBulan = PEMBAYARAN_LIST
+    const pemasukanBulan = pembayaranScoped
       .filter((p) => p.tanggal.startsWith(CURRENT_MONTH_PREFIX))
       .reduce((s, p) => s + p.jumlah, 0);
-    const pengeluaranBulan = PENGELUARAN_LIST
+    const pengeluaranBulan = pengeluaranScoped
       .filter((p) => p.tanggal.startsWith(CURRENT_MONTH_PREFIX) && p.status === "Dibayar")
       .reduce((s, p) => s + p.jumlah, 0);
-    const tagihanTerbuka = TAGIHAN_LIST
+    const tagihanTerbuka = tagihanScoped
       .filter((t) => t.status !== "Lunas" && t.status !== "Dibatalkan")
       .reduce((s, t) => s + (t.jumlah - t.dibayar), 0);
     return { saldoKas, pemasukanBulan, pengeluaranBulan, tagihanTerbuka };
-  }, []);
+  }, [tagihanScoped, pembayaranScoped, pengeluaranScoped, kasScoped]);
 
   const counts: Partial<Record<TabKey, number>> = {
-    tagihan: TAGIHAN_LIST.length,
-    pembayaran: PEMBAYARAN_LIST.length,
-    pengeluaran: PENGELUARAN_LIST.length,
-    kas: KAS_LIST.length,
-    jurnal: JURNAL_LIST.length,
+    tagihan: tagihanScoped.length,
+    pembayaran: pembayaranScoped.length,
+    pengeluaran: pengeluaranScoped.length,
+    kas: kasScoped.length,
+    jurnal: jurnalScoped.length,
   };
 
   const tabItems: TabItem[] = TAB_META.map((t) => ({
@@ -572,12 +593,12 @@ function KeuanganPage() {
 
   const renderTab = () => {
     switch (tab) {
-      case "ringkasan": return <RingkasanTab />;
-      case "tagihan": return <TagihanTab />;
-      case "pembayaran": return <PembayaranTab />;
-      case "pengeluaran": return <PengeluaranTab />;
-      case "kas": return <KasTab />;
-      case "jurnal": return <JurnalTab />;
+      case "ringkasan": return <RingkasanTab sekolah={sekolah} />;
+      case "tagihan": return <TagihanTab sekolah={sekolah} />;
+      case "pembayaran": return <PembayaranTab sekolah={sekolah} />;
+      case "pengeluaran": return <PengeluaranTab sekolah={sekolah} />;
+      case "kas": return <KasTab sekolah={sekolah} />;
+      case "jurnal": return <JurnalTab sekolah={sekolah} />;
     }
   };
 
@@ -611,6 +632,18 @@ function KeuanganPage() {
         <StatCard label="Pengeluaran Bulan Ini" value={formatRupiah(stats.pengeluaranBulan)} accent="rose" icon={<IconArrowLeft />} />
         <StatCard label="Tagihan Terbuka" value={formatRupiah(stats.tagihanTerbuka)} accent="amber" icon={<IconAlert />} />
       </div>
+
+      <ModuleFlow
+        title="Alur Pengelolaan Keuangan"
+        description="Siklus kas sekolah: tagihan masuk, pembayaran, pengeluaran, sampai jurnal."
+        steps={[
+          { key: "tagihan", label: "Buat Tagihan", hint: "SPP & biaya siswa", onClick: () => setTab("tagihan") },
+          { key: "pembayaran", label: "Terima Pembayaran", hint: "Catat pelunasan", onClick: () => setTab("pembayaran") },
+          { key: "pengeluaran", label: "Catat Pengeluaran", hint: "Belanja operasional", onClick: () => setTab("pengeluaran") },
+          { key: "kas", label: "Buku Kas", hint: "Rekonsiliasi harian", onClick: () => setTab("kas") },
+          { key: "jurnal", label: "Jurnal", hint: "Posting akuntansi", onClick: () => setTab("jurnal") },
+        ]}
+      />
 
       <Tabs items={tabItems} />
 

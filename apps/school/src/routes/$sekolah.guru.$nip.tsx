@@ -600,7 +600,8 @@ function GuruDetailPage() {
     fields: ["name", "rombel", "slots"],
     limit_page_length: 50,
   });
-  const mock = findGuru(nip);
+  const mock = findGuru(nip, sekolah);
+  if (!mock) throw notFound();
   // Merge: real top-level fields override mock; nested arrays fall back.
   const guru: Guru | undefined = (() => {
     if (!mock) return undefined;

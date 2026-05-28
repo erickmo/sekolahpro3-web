@@ -16,8 +16,8 @@ import {
   Input,
   PageHeader,
   SectionCard,
-  Select,
   Textarea,
+  DatePicker,
   SearchableSelect,
   type SearchableOption,
 } from "@sekolahpro/ui";
@@ -244,21 +244,26 @@ function KolektifDetailPage() {
               onChange={(e) => setDoc((p) => ({ ...p, tujuan: e.target.value }))} />
           </FormField>
           <FormField label="Tanggal Pinjam" htmlFor="tp" required>
-            <Input id="tp" type="date" value={doc.tanggal_pinjam} disabled={isReadonly}
-              onChange={(e) => setDoc((p) => ({ ...p, tanggal_pinjam: e.target.value }))} />
+            <DatePicker id="tp" value={doc.tanggal_pinjam} disabled={isReadonly}
+              onChange={(v) => setDoc((p) => ({ ...p, tanggal_pinjam: v }))} />
           </FormField>
           <FormField label="Rencana Kembali" htmlFor="tkr" required>
-            <Input id="tkr" type="date" value={doc.tanggal_kembali_rencana} disabled={isReadonly}
-              onChange={(e) => setDoc((p) => ({ ...p, tanggal_kembali_rencana: e.target.value }))} />
+            <DatePicker id="tkr" value={doc.tanggal_kembali_rencana} disabled={isReadonly}
+              onChange={(v) => setDoc((p) => ({ ...p, tanggal_kembali_rencana: v }))} />
           </FormField>
           <FormField label="Status" htmlFor="st">
-            <Select id="st" value={doc.status ?? "Aktif"} disabled={isReadonly}
-              onChange={(e) => setDoc((p) => ({ ...p, status: e.target.value }))}>
-              <option value="Aktif">Aktif</option>
-              <option value="Selesai">Selesai</option>
-              <option value="Terlambat">Terlambat</option>
-              <option value="Batal">Batal</option>
-            </Select>
+            <SearchableSelect
+              id="st"
+              value={doc.status ?? "Aktif"}
+              disabled={isReadonly}
+              onChange={(v) => setDoc((p) => ({ ...p, status: v }))}
+              options={[
+                { value: "Aktif", label: "Aktif" },
+                { value: "Selesai", label: "Selesai" },
+                { value: "Terlambat", label: "Terlambat" },
+                { value: "Batal", label: "Batal" },
+              ]}
+            />
           </FormField>
         </FormGrid>
       </SectionCard>
@@ -407,7 +412,7 @@ function PengembalianKolektifModal({
         {err ? <div className="mt-3 rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-700">{err}</div> : null}
         <div className="mt-4 space-y-3">
           <FormField label="Tanggal Kembali Aktual" htmlFor="tk" required>
-            <Input id="tk" type="date" value={tgl} onChange={(e) => setTgl(e.target.value)} />
+            <DatePicker id="tk" value={tgl} onChange={setTgl} />
           </FormField>
           <FormField label="Catatan" htmlFor="ck">
             <Textarea id="ck" value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={2} />

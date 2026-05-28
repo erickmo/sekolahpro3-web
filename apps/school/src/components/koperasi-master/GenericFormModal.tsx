@@ -2,11 +2,12 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
   Textarea,
 } from "@sekolahpro/ui";
 import {
@@ -137,16 +138,12 @@ export function GenericFormModal(props: GenericFormModalProps) {
     if (f.type === "select") {
       return (
         <FormField key={f.name} label={f.label} required={f.required} className={span2 ? "sm:col-span-2" : ""}>
-          <Select
+          <SearchableSelect
             value={typeof val === "string" ? val : ""}
-            onChange={(e) => setVal(e.target.value)}
-            required={f.required}
-          >
-            <option value="">— Pilih —</option>
-            {(f.options ?? []).map((o) => (
-              <option key={o} value={o}>{o}</option>
-            ))}
-          </Select>
+            onChange={(v) => setVal(v)}
+            placeholder="— Pilih —"
+            options={(f.options ?? []).map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
       );
     }
@@ -163,9 +160,21 @@ export function GenericFormModal(props: GenericFormModalProps) {
       );
     }
 
+    if (f.type === "date") {
+      return (
+        <FormField key={f.name} label={f.label} required={f.required} className={span2 ? "sm:col-span-2" : ""}>
+          <DatePicker
+            value={typeof val === "string" ? val : ""}
+            onChange={(v) => setVal(v)}
+            {...(f.required ? { required: true } : {})}
+            {...(f.placeholder ? { placeholder: f.placeholder } : {})}
+          />
+        </FormField>
+      );
+    }
+
     const inputType =
-      f.type === "int" || f.type === "currency" ? "number" :
-      f.type === "date" ? "date" : "text";
+      f.type === "int" || f.type === "currency" ? "number" : "text";
 
     return (
       <FormField key={f.name} label={f.label} required={f.required} className={span2 ? "sm:col-span-2" : ""}>

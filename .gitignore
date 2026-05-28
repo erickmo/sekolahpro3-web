@@ -15,3 +15,6 @@ apps/*/src/routeTree.gen.ts
 test-results/
 playwright-report/
 tools/e2e/check_partner.cjs
+
+# worktrees
+.worktrees/

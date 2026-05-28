@@ -1,6 +1,8 @@
 // Mock data fixture untuk modul Staff (tenaga kependidikan & non-pengajar).
 // Replace dengan @sekolahpro/api-client hooks ketika backend siap.
 
+import { belongsToSchool, pickSchoolSlug, type MockSchoolSlug } from "./school-scope";
+
 export type StatusStaff = "Aktif" | "Cuti" | "Non-aktif" | "Pensiun" | "Kontrak Berakhir";
 export type JenisKelamin = "Laki-laki" | "Perempuan";
 export type Agama = "Islam" | "Kristen" | "Katolik" | "Hindu" | "Budha" | "Konghucu";
@@ -66,6 +68,7 @@ export interface AktivitasRow {
 }
 
 export interface Staff {
+  sekolah: MockSchoolSlug;
   nip: string;
   nik?: string | undefined;
   namaLengkap: string;
@@ -242,6 +245,7 @@ function buildStaff(idx: number): Staff {
   const jamKerja = 32 + Math.floor(rand(idx + 19) * 12);
 
   return {
+    sekolah: pickSchoolSlug(idx),
     nip,
     nik: `3273${pad(idx * 41, 12)}`,
     namaLengkap: nama,
@@ -286,8 +290,16 @@ function buildStaff(idx: number): Staff {
 
 export const STAFF_LIST: Staff[] = Array.from({ length: 30 }, (_, i) => buildStaff(i));
 
-export function findStaff(nip: string): Staff | undefined {
-  return STAFF_LIST.find((s) => s.nip === nip);
+export function findStaff(nip: string, sekolah?: string): Staff | undefined {
+  const s = STAFF_LIST.find((row) => row.nip === nip);
+  if (!s) return undefined;
+  if (!belongsToSchool(s.sekolah, sekolah)) return undefined;
+  return s;
+}
+
+export function listStaffForSekolah(sekolah?: string): Staff[] {
+  if (!sekolah) return STAFF_LIST;
+  return STAFF_LIST.filter((s) => belongsToSchool(s.sekolah, sekolah));
 }
 
 const jabatanAll = Array.from(new Set(Object.values(jabatanByDept).flat()));

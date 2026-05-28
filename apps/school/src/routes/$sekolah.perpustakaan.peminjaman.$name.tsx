@@ -10,7 +10,7 @@
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button, FormField, Input, Modal } from "@sekolahpro/ui";
+import { Button, DatePicker, FormField, Modal } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceList, updateResource } from "@sekolahpro/api-client";
 import { PerpDetailScaffold } from "../components/perpustakaan/PerpDetailScaffold";
 import { perpFormatDate } from "../components/perpustakaan/perpFormatters";
@@ -152,7 +152,7 @@ function PeminjamanDetailPage() {
         }
       >
         <FormField label="Tanggal Rencana Kembali Baru" required htmlFor="perpanjang-date">
-          <Input id="perpanjang-date" type="date" value={perpanjangDate} onChange={(e) => setPerpanjangDate(e.target.value)} />
+          <DatePicker id="perpanjang-date" value={perpanjangDate} onChange={setPerpanjangDate} />
         </FormField>
       </Modal>
       {returnOpen && (

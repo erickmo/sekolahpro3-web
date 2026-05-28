@@ -13,7 +13,7 @@ import {
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 
@@ -105,15 +105,15 @@ export function FasilitasRuanganFormModal({ open, onClose, onCreated }: Props) {
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Ruangan" required>
-            <Select value={parent} onChange={(e) => setParent(e.target.value)}>
-              <option value="">— pilih —</option>
-              {ruanganRows.map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.name}
-                  {r.nama ? ` — ${r.nama}` : ""}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={parent}
+              onChange={(v) => setParent(v)}
+              options={ruanganRows.map((r) => ({
+                value: r.name,
+                label: `${r.name}${r.nama ? ` — ${r.nama}` : ""}`,
+              }))}
+              placeholder="— pilih —"
+            />
           </FormField>
           <FormField label="Nama Fasilitas" required>
             <Input
@@ -129,14 +129,12 @@ export function FasilitasRuanganFormModal({ open, onClose, onCreated }: Props) {
             />
           </FormField>
           <FormField label="Kondisi">
-            <Select value={kondisi} onChange={(e) => setKondisi(e.target.value)}>
-              <option value="">— pilih —</option>
-              {KONDISI_OPTIONS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={kondisi}
+              onChange={(v) => setKondisi(v)}
+              options={KONDISI_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— pilih —"
+            />
           </FormField>
         </FormGrid>
 

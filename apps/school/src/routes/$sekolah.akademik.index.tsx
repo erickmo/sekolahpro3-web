@@ -16,8 +16,9 @@ import {
   IconSettings,
   IconChart,
   GlossaryTooltip,
+  ModuleFlow,
 } from "@sekolahpro/ui";
-import type { AttentionItem } from "@sekolahpro/ui";
+import type { AttentionItem, ModuleFlowStep } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
 import { useAkademikContextOptional } from "../lib/akademikContext";
@@ -68,6 +69,15 @@ type QuickAction = {
   icon: React.ReactNode;
   accent: "brand" | "emerald" | "violet" | "amber" | "rose" | "sky";
 };
+
+const AKADEMIK_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "kurikulum", label: "Kurikulum", hint: "Tetapkan kurikulum aktif", href: "/$sekolah/akademik/kurikulum" },
+  { key: "mapel", label: "Mata Pelajaran", hint: "Daftar mapel & kode", href: "/$sekolah/akademik/daftar" },
+  { key: "kkm", label: "KKM", hint: "Ketuntasan minimal", href: "/$sekolah/akademik/kkm" },
+  { key: "komponen", label: "Komponen Nilai", hint: "Bobot per komponen", href: "/$sekolah/akademik/komponen-nilai" },
+  { key: "entri", label: "Entri Nilai", hint: "Input nilai siswa", href: "/$sekolah/akademik/entri-nilai" },
+  { key: "raport", label: "Raport", hint: "Susun & cetak raport", href: "/$sekolah/akademik/raport" },
+];
 
 const QUICK_ACTIONS: QuickAction[] = [
   { to: "/$sekolah/akademik/entri-nilai", label: "Entri Nilai", description: "Input nilai harian, UTS, dan UAS.", icon: <IconEdit />, accent: "brand" },
@@ -269,6 +279,17 @@ function AkademikDashboardPage() {
           renderLink={renderStatLink}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Penilaian Akademik"
+        description="Langkah dari setup kurikulum sampai raport terbit."
+        steps={AKADEMIK_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/akademik/kurikulum"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <SectionCard title="Aksi Cepat" description="Pintasan ke alur kerja akademik utama.">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

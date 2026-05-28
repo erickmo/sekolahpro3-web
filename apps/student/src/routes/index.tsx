@@ -1,7 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Badge,
-  Button,
   DashboardTemplate,
   PageHeader,
   SectionCard,
@@ -11,60 +10,58 @@ import {
   IconChart,
   IconCheck,
 } from "@sekolahpro/ui";
+import { useSession } from "@sekolahpro/auth";
+import {
+  KELAS_SISWA,
+  agendaMendatang,
+  jadwalHariIni,
+  kehadiranBulanIni,
+  nilaiTerbaru,
+  progresSemester,
+  ringkasanStat,
+} from "../data/dashboard";
+
+function formatHariIni(d: Date = new Date()): string {
+  return d.toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
 const stats = [
   {
     label: "Rata-rata Nilai",
-    value: "87,5",
-    delta: { value: "+3,2", trend: "up" as const },
+    value: ringkasanStat.rataNilai,
+    delta: { value: ringkasanStat.deltaNilai, trend: "up" as const },
     icon: <IconChart />,
     accent: "brand" as const,
   },
   {
     label: "Kehadiran",
-    value: "98%",
-    delta: { value: "+1%", trend: "up" as const },
+    value: ringkasanStat.kehadiran,
+    delta: { value: ringkasanStat.deltaKehadiran, trend: "up" as const },
     icon: <IconCheck />,
     accent: "emerald" as const,
   },
   {
     label: "Tugas Pending",
-    value: "3",
-    hint: "1 jatuh tempo besok",
+    value: String(ringkasanStat.tugasPending),
+    hint: ringkasanStat.tugasHint,
     icon: <IconBook />,
     accent: "amber" as const,
   },
   {
     label: "Ujian Mendatang",
-    value: "2",
-    hint: "minggu ini",
+    value: String(ringkasanStat.ujianMendatang),
+    hint: ringkasanStat.ujianHint,
     icon: <IconCalendar />,
     accent: "violet" as const,
   },
 ];
 
-const schedule = [
-  { time: "07:30", subject: "Matematika", teacher: "Bu Siti", room: "R. 204" },
-  { time: "09:00", subject: "Bahasa Inggris", teacher: "Pak Joko", room: "R. 101" },
-  { time: "10:30", subject: "Fisika", teacher: "Pak Andi", room: "Lab Fisika" },
-  { time: "13:00", subject: "Sejarah", teacher: "Bu Rina", room: "R. 305" },
-];
-
-const grades = [
-  { subject: "Matematika", score: 92, grade: "A" },
-  { subject: "Bahasa Indonesia", score: 88, grade: "A" },
-  { subject: "Fisika", score: 85, grade: "B+" },
-  { subject: "Kimia", score: 79, grade: "B" },
-  { subject: "Bahasa Inggris", score: 90, grade: "A" },
-];
-
-const tasks = [
-  { title: "Esai Sejarah: Kemerdekaan", due: "Besok", tone: "danger" as const },
-  { title: "PR Matematika Bab 5", due: "2 hari lagi", tone: "warning" as const },
-  { title: "Laporan Praktikum Fisika", due: "5 hari lagi", tone: "neutral" as const },
-];
-
-function Hero() {
+function Hero({ name, hariIni }: { name: string; hariIni: string }) {
   return (
     <div
       className="relative overflow-hidden rounded-2xl p-6 lg:p-8 text-white shadow-sm"
@@ -84,25 +81,28 @@ function Hero() {
       <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-xl">
           <div className="text-xs font-semibold uppercase tracking-wider text-white/80">
-            Hari ini
+            {hariIni}
           </div>
           <h2 className="mt-2 text-2xl lg:text-3xl font-bold leading-tight">
-            Halo! Kamu punya 4 pelajaran dan 1 tugas yang jatuh tempo besok.
+            Halo, {name}! Kamu punya {jadwalHariIni.length} pelajaran dan 1 tugas jatuh tempo besok.
           </h2>
           <p className="mt-2 text-sm text-white/80">
-            Tetap semangat dan jangan lupa kumpulkan esai Sejarah ya.
+            Kelas {KELAS_SISWA} · Semangat ya, jangan lupa kumpulkan esai Sejarah.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+          <Link
+            to="/jadwal"
+            className="inline-flex h-10 items-center justify-center rounded-md border border-white/30 bg-white/10 px-4 text-sm font-medium text-white hover:bg-white/20"
           >
             Lihat Jadwal
-          </Button>
-          <Button className="bg-white text-fg hover:bg-white/90">
-            Buka Tugas
-          </Button>
+          </Link>
+          <Link
+            to="/nilai"
+            className="inline-flex h-10 items-center justify-center rounded-md bg-white px-4 text-sm font-medium text-fg hover:bg-white/90"
+          >
+            Lihat Nilai
+          </Link>
         </div>
       </div>
     </div>
@@ -110,13 +110,16 @@ function Hero() {
 }
 
 function Home() {
+  const session = useSession();
+  const name = session.user ?? "Siswa";
+  const hariIni = formatHariIni();
   return (
     <DashboardTemplate
       header={
         <PageHeader
           eyebrow="Beranda"
-          title="Dashboard Siswa"
-          description="Ringkasan belajar kamu — Senin, 24 Mei 2026."
+          title={`Dashboard ${name}`}
+          description={`Ringkasan belajarmu — ${hariIni}.`}
         />
       }
       stats={stats.map((s) => (
@@ -124,15 +127,23 @@ function Home() {
       ))}
       primary={
         <>
-          <Hero />
+          <Hero name={name} hariIni={hariIni} />
           <SectionCard
             title="Jadwal Hari Ini"
-            description="Senin · 4 mata pelajaran"
+            description={`Senin · ${jadwalHariIni.length} mata pelajaran`}
+            action={
+              <Link
+                to="/jadwal"
+                className="text-xs font-medium text-brand hover:underline"
+              >
+                Mingguan →
+              </Link>
+            }
             padded={false}
           >
             <ul className="divide-y divide-border">
-              {schedule.map((s, i) => (
-                <li key={i} className="flex items-center gap-4 px-5 py-3.5">
+              {jadwalHariIni.map((s) => (
+                <li key={s.time} className="flex items-center gap-4 px-5 py-3.5">
                   <div className="w-14 text-center">
                     <div className="text-sm font-semibold text-brand tabular-nums">
                       {s.time}
@@ -154,10 +165,17 @@ function Home() {
 
           <SectionCard
             title="Nilai Terbaru"
-            action={<Button variant="ghost" size="sm">Lihat semua</Button>}
+            action={
+              <Link
+                to="/nilai"
+                className="text-xs font-medium text-brand hover:underline"
+              >
+                Semua nilai →
+              </Link>
+            }
           >
             <ul className="space-y-3">
-              {grades.map((g) => (
+              {nilaiTerbaru.map((g) => (
                 <li key={g.subject}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm font-medium text-fg">{g.subject}</span>
@@ -184,10 +202,10 @@ function Home() {
       }
       side={
         <>
-          <SectionCard title="Tugas Mendatang" padded={false}>
+          <SectionCard title="Agenda Mendatang" padded={false}>
             <ul className="divide-y divide-border">
-              {tasks.map((t, i) => (
-                <li key={i} className="flex items-start gap-3 px-5 py-3">
+              {agendaMendatang.map((t) => (
+                <li key={t.title} className="flex items-start gap-3 px-5 py-3">
                   <span className="mt-1 h-2 w-2 rounded-full bg-brand shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium text-fg">{t.title}</div>
@@ -201,20 +219,54 @@ function Home() {
             </ul>
           </SectionCard>
 
+          <SectionCard title="Kehadiran Bulan Ini">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {[
+                { label: "Hadir", value: kehadiranBulanIni.hadir, tone: "text-emerald-600" },
+                { label: "Izin", value: kehadiranBulanIni.izin, tone: "text-amber-600" },
+                { label: "Alpa", value: kehadiranBulanIni.alpa, tone: "text-rose-600" },
+              ].map((c) => (
+                <div key={c.label} className="rounded-lg border border-border p-3">
+                  <div className={`text-xl font-semibold tabular-nums ${c.tone}`}>
+                    {c.value}
+                  </div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-fg mt-1">
+                    {c.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Link
+              to="/absensi"
+              className="mt-3 inline-block text-xs font-medium text-brand hover:underline"
+            >
+              Riwayat lengkap →
+            </Link>
+          </SectionCard>
+
           <SectionCard title="Progres Semester">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-fg">Minggu 12 dari 18</span>
-              <span className="font-semibold text-fg">67%</span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
-                style={{ width: "67%" }}
-              />
-            </div>
-            <p className="mt-3 text-xs text-muted-fg">
-              Ujian tengah semester selesai · 6 minggu menuju UAS
-            </p>
+            {(() => {
+              const pct = Math.round(
+                (progresSemester.mingguBerjalan / progresSemester.totalMinggu) * 100,
+              );
+              return (
+                <>
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-muted-fg">
+                      Minggu {progresSemester.mingguBerjalan} dari {progresSemester.totalMinggu}
+                    </span>
+                    <span className="font-semibold text-fg">{pct}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <p className="mt-3 text-xs text-muted-fg">{progresSemester.catatan}</p>
+                </>
+              );
+            })()}
           </SectionCard>
         </>
       }

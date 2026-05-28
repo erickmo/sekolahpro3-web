@@ -305,12 +305,13 @@ const ROLE_MENU_MAP: Record<string, string[]> = {
     "/absensi",
     "/ppdb",
     "/keuangan",
+    "/akuntansi",
     "/laporan",
     "/pengaturan",
   ],
   operator: ["/", "/siswa", "/guru", "/kelas", "/jadwal", "/absensi", "/ppdb", "/pesan"],
   guru: ["/", "/siswa", "/kelas", "/akademik", "/jadwal", "/absensi", "/pesan"],
-  bendahara: ["/", "/siswa", "/keuangan", "/koperasi", "/ppdb", "/laporan", "/pesan"],
+  bendahara: ["/", "/siswa", "/keuangan", "/akuntansi", "/koperasi", "/ppdb", "/laporan", "/pesan"],
   pustakawan: ["/", "/perpustakaan", "/siswa", "/pesan"],
   petugas_koperasi: ["/", "/koperasi", "/siswa", "/pesan"],
 };
@@ -458,6 +459,7 @@ function Layout() {
       title: "Operasional",
       items: [
         mk("/keuangan", "Keuangan", <IconWallet />, 3),
+        mk("/akuntansi", "Akuntansi", <IconChart />),
         mk("/pesan", "Pesan", <IconChat />),
         mk("/laporan", "Laporan", <IconChart />),
       ],

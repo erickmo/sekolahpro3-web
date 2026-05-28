@@ -2,11 +2,12 @@ import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
   Textarea,
 } from "@sekolahpro/ui";
 import { useResourceCreate } from "@sekolahpro/api-client";
@@ -45,6 +46,8 @@ export function TransaksiModal(props: TransaksiModalProps) {
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>(DOCTYPE);
   const [jenis, setJenis] = useState<TransaksiJenis>(defaultJenis);
+  const today = new Date().toISOString().slice(0, 10);
+  const [tanggal, setTanggal] = useState<string>(today);
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -74,8 +77,6 @@ export function TransaksiModal(props: TransaksiModalProps) {
     }
   };
 
-  const today = new Date().toISOString().slice(0, 10);
-
   return (
     <Modal
       open={open}
@@ -87,21 +88,19 @@ export function TransaksiModal(props: TransaksiModalProps) {
       <form onSubmit={onSubmit} className="space-y-4">
         <FormGrid cols={2}>
           <FormField label="Jenis Transaksi" required>
-            <Select
-              name="jenis"
+            <SearchableSelect
               value={jenis}
-              onChange={(e) => setJenis(e.target.value as TransaksiJenis)}
-              required
-            >
-              {JENIS_OPTIONS.map((j) => (
-                <option key={j} value={j}>
-                  {j}
-                </option>
-              ))}
-            </Select>
+              onChange={(v) => setJenis(v as TransaksiJenis)}
+              options={JENIS_OPTIONS.map((j) => ({ value: j, label: j }))}
+            />
           </FormField>
           <FormField label="Tanggal" required>
-            <Input name="tanggal" type="date" defaultValue={today} required />
+            <DatePicker
+              name="tanggal"
+              value={tanggal}
+              onChange={(v) => setTanggal(v)}
+              required
+            />
           </FormField>
           <FormField label="Rekening" required>
             <Input

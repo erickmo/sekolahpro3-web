@@ -17,7 +17,16 @@ import {
   IconFile,
   IconClock,
   IconPrint,
+  ModuleFlow,
+  type ModuleFlowStep,
 } from "@sekolahpro/ui";
+
+const PESAN_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "inbox", label: "Cek Inbox", hint: "Pesan masuk publik" },
+  { key: "respond", label: "Balas Pesan", hint: "Jawab via inline reply" },
+  { key: "compose", label: "Pesan Baru", hint: "Broadcast wali/staff" },
+  { key: "resolve", label: "Tandai Selesai", hint: "Tutup percakapan" },
+];
 import {
   useResourceList,
   useResourceCreate,
@@ -175,6 +184,12 @@ function PesanPage() {
         <StatCard label="Dibalas" value={stats.dibalas.toLocaleString("id-ID")} icon={<IconPrint />} accent="amber" />
         <StatCard label="Selesai" value={stats.selesai.toLocaleString("id-ID")} icon={<IconFile />} accent="emerald" />
       </div>
+
+      <ModuleFlow
+        title="Alur Penanganan Pesan"
+        description="Urutan kerja dari pesan masuk sampai diselesaikan."
+        steps={PESAN_FLOW_STEPS}
+      />
 
       <SectionCard padded={false}>
         <div className="grid grid-cols-[320px_1fr] gap-0 min-h-[640px]">

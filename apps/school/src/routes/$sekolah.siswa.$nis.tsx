@@ -1021,7 +1021,7 @@ function SiswaDetailPage() {
     order_by: "tanggal_mutasi desc",
     limit_page_length: 50,
   });
-  const mock = findSiswa(nis);
+  const mock = findSiswa(nis, sekolah);
   // Merge: real top-level fields override mock; nested arrays fall back.
   const siswa: Siswa | undefined = (() => {
     if (!mock) return undefined;

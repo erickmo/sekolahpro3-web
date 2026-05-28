@@ -2,11 +2,12 @@ import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
 } from "@sekolahpro/ui";
 import { useResourceCreate } from "@sekolahpro/api-client";
 
@@ -85,15 +86,17 @@ export function KartuCreateModal({ open, onClose, onCreated }: Props) {
             <Input value={form.anggota} onChange={(e) => setForm({ ...form, anggota: e.target.value })} />
           </FormField>
           <FormField label="Tanggal Terbit" required>
-            <Input type="date" value={form.tanggal_terbit} onChange={(e) => setForm({ ...form, tanggal_terbit: e.target.value })} />
+            <DatePicker value={form.tanggal_terbit} onChange={(v) => setForm({ ...form, tanggal_terbit: v })} required />
           </FormField>
           <FormField label="Kedaluwarsa">
-            <Input type="date" value={form.tanggal_kedaluwarsa} onChange={(e) => setForm({ ...form, tanggal_kedaluwarsa: e.target.value })} />
+            <DatePicker value={form.tanggal_kedaluwarsa} onChange={(v) => setForm({ ...form, tanggal_kedaluwarsa: v })} />
           </FormField>
           <FormField label="Status" required>
-            <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
-              {["Aktif", "Blokir", "Hilang", "Kedaluwarsa"].map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
+            <SearchableSelect
+              value={form.status}
+              onChange={(v) => setForm({ ...form, status: v })}
+              options={["Aktif", "Blokir", "Hilang", "Kedaluwarsa"].map((s) => ({ value: s, label: s }))}
+            />
           </FormField>
         </FormGrid>
         {mutation.isError ? (

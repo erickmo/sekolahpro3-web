@@ -19,8 +19,8 @@ import {
   Input,
   PageHeader,
   SectionCard,
-  Select,
   Textarea,
+  DatePicker,
   SearchableSelect,
   type SearchableOption,
 } from "@sekolahpro/ui";
@@ -247,25 +247,25 @@ function PengadaanDetailPage() {
       <SectionCard title="Informasi Pengadaan">
         <FormGrid cols={3}>
           <FormField label="Tanggal Pengadaan" htmlFor="tgl" required>
-            <Input
+            <DatePicker
               id="tgl"
-              type="date"
               value={doc.tanggal_pengadaan}
               disabled={isReadonly}
-              onChange={(e) => setDoc((p) => ({ ...p, tanggal_pengadaan: e.target.value }))}
+              onChange={(v) => setDoc((p) => ({ ...p, tanggal_pengadaan: v }))}
             />
           </FormField>
           <FormField label="Sumber" htmlFor="sumber" required>
-            <Select
+            <SearchableSelect
               id="sumber"
               value={doc.sumber}
               disabled={isReadonly}
-              onChange={(e) => setDoc((p) => ({ ...p, sumber: e.target.value as Header["sumber"] }))}
-            >
-              <option value="Pembelian">Pembelian</option>
-              <option value="Hibah">Hibah</option>
-              <option value="Sumbangan">Sumbangan</option>
-            </Select>
+              onChange={(v) => setDoc((p) => ({ ...p, sumber: v as Header["sumber"] }))}
+              options={[
+                { value: "Pembelian", label: "Pembelian" },
+                { value: "Hibah", label: "Hibah" },
+                { value: "Sumbangan", label: "Sumbangan" },
+              ]}
+            />
           </FormField>
           <FormField label="No. Dokumen" htmlFor="nodok">
             <Input

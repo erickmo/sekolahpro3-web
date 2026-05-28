@@ -15,7 +15,17 @@ import {
   IconHome,
   IconPlus,
   IconSettings,
+  ModuleFlow,
+  type ModuleFlowStep,
 } from "@sekolahpro/ui";
+
+const INFRA_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "daftar", label: "Daftar Gedung", hint: "Registrasi gedung", href: "/$sekolah/infrastruktur/daftar" },
+  { key: "lantai", label: "Lantai", hint: "Definisi per lantai", href: "/$sekolah/infrastruktur/lantai" },
+  { key: "ruangan", label: "Ruangan", hint: "Setup ruang & kapasitas", href: "/$sekolah/infrastruktur/ruangan" },
+  { key: "fasilitas", label: "Fasilitas", hint: "Daftar fasilitas", href: "/$sekolah/infrastruktur/fasilitas" },
+  { key: "utilitas", label: "Utilitas", hint: "Listrik, air, dll", href: "/$sekolah/infrastruktur/utilitas" },
+];
 // Button kept for "Tambah Gedung" action below.
 import { useResourceList } from "@sekolahpro/api-client";
 
@@ -186,6 +196,17 @@ function InfraDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Setup Infrastruktur"
+        description="Bangun struktur fisik sekolah dari gedung sampai fasilitas."
+        steps={INFRA_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/infrastruktur/daftar"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <SectionCard
         title="Aksi Cepat"

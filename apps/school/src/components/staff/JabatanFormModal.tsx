@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResourceCreate } from "@sekolahpro/api-client";
-import { Button, FormField, FormGrid, Input, Modal, Select, Textarea } from "@sekolahpro/ui";
+import { Button, FormField, FormGrid, Input, Modal, SearchableSelect, Textarea } from "@sekolahpro/ui";
 
 interface JabatanFormModalProps {
   open: boolean;
@@ -78,10 +78,14 @@ export function JabatanFormModal({ open, onClose, onCreated }: JabatanFormModalP
             />
           </FormField>
           <FormField label="Aktif">
-            <Select value={form.aktif} onChange={(e) => set("aktif", e.target.value)}>
-              <option value="1">Aktif</option>
-              <option value="0">Tidak Aktif</option>
-            </Select>
+            <SearchableSelect
+              value={form.aktif}
+              onChange={(v) => set("aktif", v)}
+              options={[
+                { value: "1", label: "Aktif" },
+                { value: "0", label: "Tidak Aktif" },
+              ]}
+            />
           </FormField>
           <FormField label="Keterangan" className="sm:col-span-2">
             <Textarea

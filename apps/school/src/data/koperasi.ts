@@ -1,6 +1,8 @@
 // Mock data fixture untuk modul Koperasi.
 // Replace dengan @sekolahpro/api-client hooks ketika backend siap.
 
+import { pickSchoolSlug, type MockSchoolSlug } from "./school-scope";
+
 export type StatusAnggota = "Aktif" | "Non-aktif" | "Keluar" | "Pending";
 export type TipeAnggota = "Siswa" | "Guru" | "Staff" | "Orang Tua";
 export type JenisSimpanan = "Pokok" | "Wajib" | "Sukarela" | "Berjangka";
@@ -68,6 +70,7 @@ export interface AktivitasRow {
 }
 
 export interface Anggota {
+  sekolah: MockSchoolSlug;
   noAnggota: string;
   nama: string;
   tipeAnggota: TipeAnggota;
@@ -259,6 +262,7 @@ function buildAnggota(idx: number): Anggota {
   ];
 
   return {
+    sekolah: pickSchoolSlug(idx),
     noAnggota,
     nama,
     tipeAnggota,
@@ -291,8 +295,20 @@ function buildAnggota(idx: number): Anggota {
 
 export const ANGGOTA_LIST: Anggota[] = Array.from({ length: 35 }, (_, i) => buildAnggota(i));
 
-export function findAnggota(noAnggota: string): Anggota | undefined {
-  return ANGGOTA_LIST.find((a) => a.noAnggota === noAnggota);
+export function findAnggota(
+  noAnggota: string,
+  sekolah?: MockSchoolSlug | string,
+): Anggota | undefined {
+  const a = ANGGOTA_LIST.find((row) => row.noAnggota === noAnggota);
+  if (!a) return undefined;
+  if (sekolah && a.sekolah !== sekolah) return undefined;
+  return a;
+}
+
+export function listAnggotaForSekolah(
+  sekolah: MockSchoolSlug | string,
+): Anggota[] {
+  return ANGGOTA_LIST.filter((a) => a.sekolah === sekolah);
 }
 
 export const FILTER_OPTIONS = {

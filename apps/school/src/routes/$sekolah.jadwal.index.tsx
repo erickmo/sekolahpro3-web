@@ -12,8 +12,9 @@ import {
   IconCalendar,
   IconClock,
   IconUsers,
+  ModuleFlow,
 } from "@sekolahpro/ui";
-import type { AttentionItem } from "@sekolahpro/ui";
+import type { AttentionItem, ModuleFlowStep } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 
 // TODO(/jadwal/): Jadwal Pelajaran header doctype lacks per-slot fields
@@ -40,6 +41,13 @@ const TANGGAL_HARI_INI = "Senin, 25 Mei 2026";
 const STUB_KONFLIK_SLOT = 0;
 const STUB_OVERRIDE_AKTIF = 1;
 const STUB_GURU_IZIN_DAMPAK = 2;
+
+const JADWAL_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "slot", label: "Definisi Slot", hint: "Jam pelajaran dasar", href: "/$sekolah/jadwal/slot" },
+  { key: "daftar", label: "Susun Jadwal", hint: "Mapping mapel-guru-kelas", href: "/$sekolah/jadwal/daftar" },
+  { key: "override", label: "Override", hint: "Libur & hari khusus", href: "/$sekolah/jadwal/override" },
+  { key: "slot-override", label: "Slot Override", hint: "Penyesuaian per hari", href: "/$sekolah/jadwal/slot-override" },
+];
 
 const QUICK_LINKS: { to: string; label: string; description: string }[] = [
   { to: "/$sekolah/jadwal/daftar", label: "Jadwal Pelajaran", description: "Lihat grid & daftar mingguan" },
@@ -184,6 +192,17 @@ function JadwalDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Penyusunan Jadwal"
+        description="Langkah membentuk jadwal pelajaran sampai siap dijalankan."
+        steps={JADWAL_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/jadwal/slot"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard title="Aksi Cepat" description="Pintasan ke sub-modul jadwal">

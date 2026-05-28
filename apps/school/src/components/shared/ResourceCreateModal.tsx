@@ -2,13 +2,13 @@ import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
   FormGrid,
   IconPlus,
   Input,
   Modal,
   SearchableSelect,
-  Select,
   Textarea,
   type SearchableOption,
 } from "@sekolahpro/ui";
@@ -188,18 +188,22 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
     }
     if (f.type === "select" && f.options) {
       return (
-        <Select id={id} value={val} onChange={(e) => onChange(e.target.value)}>
-          <option value="">— Pilih —</option>
-          {f.options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </Select>
+        <SearchableSelect
+          id={id}
+          value={val}
+          onChange={(v) => onChange(v)}
+          options={f.options}
+          placeholder="— Pilih —"
+        />
       );
     }
     if (f.type === "textarea") {
       return <Textarea id={id} value={val} onChange={(e) => onChange(e.target.value)} />;
     }
-    const inputType = f.type === "number" ? "number" : f.type === "date" ? "date" : "text";
+    if (f.type === "date") {
+      return <DatePicker id={id} value={val} onChange={(v) => onChange(v)} />;
+    }
+    const inputType = f.type === "number" ? "number" : "text";
     return <Input id={id} type={inputType} value={val} onChange={(e) => onChange(e.target.value)} />;
   };
 

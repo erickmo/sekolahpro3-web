@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Button, FormField, FormGrid, Input, Modal, Select } from "@sekolahpro/ui";
+import { Button, FormField, FormGrid, Input, Modal, SearchableSelect } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -136,28 +136,24 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
             />
           </FormField>
           <FormField label="Sekolah" required>
-            <Select
+            <SearchableSelect
               value={form.sekolah}
-              onChange={(e) => set("sekolah", e.target.value)}
+              onChange={(v) => set("sekolah", v)}
               disabled={sekolahQ.isLoading}
-            >
-              <option value="">
-                {sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
-              </option>
-              {sekolahOpts.map((s) => (
-                <option key={s.name} value={s.name}>
-                  {s.nama_sekolah ?? s.name}
-                </option>
-              ))}
-            </Select>
+              options={sekolahOpts.map((s) => ({
+                value: s.name,
+                label: s.nama_sekolah ?? s.name,
+              }))}
+              placeholder={sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
+            />
           </FormField>
           <FormField label="Jenis" required>
-            <Select value={form.jenis} onChange={(e) => set("jenis", e.target.value)}>
-              <option value="">— Pilih Jenis —</option>
-              {JENIS_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.jenis}
+              onChange={(v) => set("jenis", v)}
+              options={JENIS_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— Pilih Jenis —"
+            />
           </FormField>
           <FormField label="Jumlah Lantai">
             <Input
@@ -177,19 +173,19 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
             />
           </FormField>
           <FormField label="Kondisi">
-            <Select value={form.kondisi} onChange={(e) => set("kondisi", e.target.value)}>
-              <option value="">—</option>
-              {KONDISI_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.kondisi}
+              onChange={(v) => set("kondisi", v)}
+              options={KONDISI_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="—"
+            />
           </FormField>
           <FormField label="Status" required>
-            <Select value={form.status} onChange={(e) => set("status", e.target.value)}>
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.status}
+              onChange={(v) => set("status", v)}
+              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
         </FormGrid>
 

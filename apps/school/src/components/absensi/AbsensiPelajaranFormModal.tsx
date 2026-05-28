@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Button, FormField, FormGrid, Input, Modal, Select } from "@sekolahpro/ui";
+import { Button, DatePicker, FormField, FormGrid, Modal, SearchableSelect } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -133,80 +133,53 @@ export function AbsensiPelajaranFormModal({ open, onClose, onCreated }: Props) {
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Rombongan Belajar" required>
-            <Select
+            <SearchableSelect
               value={form.rombel}
-              onChange={(e) => set("rombel", e.target.value)}
+              onChange={(v) => set("rombel", v)}
               disabled={rombelQ.isLoading}
-            >
-              <option value="">
-                {rombelQ.isLoading ? "Memuat..." : "— Pilih Rombel —"}
-              </option>
-              {rombelOpts.map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.nama_rombel ?? r.name}
-                </option>
-              ))}
-            </Select>
+              options={rombelOpts.map((r) => ({ value: r.name, label: r.nama_rombel ?? r.name }))}
+              placeholder={rombelQ.isLoading ? "Memuat..." : "— Pilih Rombel —"}
+            />
           </FormField>
           <FormField label="Mata Pelajaran" required>
-            <Select
+            <SearchableSelect
               value={form.mata_pelajaran}
-              onChange={(e) => set("mata_pelajaran", e.target.value)}
+              onChange={(v) => set("mata_pelajaran", v)}
               disabled={mapelQ.isLoading}
-            >
-              <option value="">
-                {mapelQ.isLoading ? "Memuat..." : "— Pilih Mapel —"}
-              </option>
-              {mapelOpts.map((m) => (
-                <option key={m.name} value={m.name}>
-                  {m.nama_mapel ?? m.name}
-                </option>
-              ))}
-            </Select>
+              options={mapelOpts.map((m) => ({ value: m.name, label: m.nama_mapel ?? m.name }))}
+              placeholder={mapelQ.isLoading ? "Memuat..." : "— Pilih Mapel —"}
+            />
           </FormField>
           <FormField label="Tanggal" required>
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal}
-              onChange={(e) => set("tanggal", e.target.value)}
+              onChange={(v) => set("tanggal", v)}
             />
           </FormField>
           <FormField label="Guru">
-            <Select
+            <SearchableSelect
               value={form.guru}
-              onChange={(e) => set("guru", e.target.value)}
+              onChange={(v) => set("guru", v)}
               disabled={guruQ.isLoading}
-            >
-              <option value="">
-                {guruQ.isLoading ? "Memuat..." : "— Opsional —"}
-              </option>
-              {guruOpts.map((g) => (
-                <option key={g.name} value={g.name}>
-                  {g.nama_lengkap ?? g.name}
-                </option>
-              ))}
-            </Select>
+              options={guruOpts.map((g) => ({ value: g.name, label: g.nama_lengkap ?? g.name }))}
+              placeholder={guruQ.isLoading ? "Memuat..." : "— Opsional —"}
+            />
           </FormField>
           <FormField label="Slot Jadwal">
-            <Select
+            <SearchableSelect
               value={form.slot}
-              onChange={(e) => set("slot", e.target.value)}
+              onChange={(v) => set("slot", v)}
               disabled={slotQ.isLoading}
-            >
-              <option value="">
-                {slotQ.isLoading ? "Memuat..." : "— Opsional —"}
-              </option>
-              {slotOpts.map((s) => (
-                <option key={s.name} value={s.name}>{s.name}</option>
-              ))}
-            </Select>
+              options={slotOpts.map((s) => ({ value: s.name, label: s.name }))}
+              placeholder={slotQ.isLoading ? "Memuat..." : "— Opsional —"}
+            />
           </FormField>
           <FormField label="Sumber Input">
-            <Select value={form.sumber_input} onChange={(e) => set("sumber_input", e.target.value)}>
-              {SUMBER_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.sumber_input}
+              onChange={(v) => set("sumber_input", v)}
+              options={SUMBER_OPTIONS.map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
         </FormGrid>
 

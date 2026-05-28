@@ -20,6 +20,7 @@ import {
   Alert,
   Badge,
   Button,
+  DatePicker,
   Modal,
   PageHeader,
   SearchableSelect,
@@ -413,30 +414,24 @@ function PpdbBuatPage() {
                 />
               </Field>
               <Field label="Tingkat *">
-                <select
+                <SearchableSelect
                   value={gelombangForm.tingkat}
-                  onChange={(e) => setGelombangForm((s) => ({ ...s, tingkat: e.target.value }))}
-                  className={inputCls}
-                >
-                  <option value="">— pilih —</option>
-                  {TINGKAT_OPTIONS.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                  onChange={(v) => setGelombangForm((s) => ({ ...s, tingkat: v }))}
+                  options={TINGKAT_OPTIONS.map((t) => ({ value: t, label: t }))}
+                  placeholder="— pilih —"
+                />
               </Field>
               <Field label="Tanggal Buka *">
-                <input
-                  type="date"
+                <DatePicker
                   value={gelombangForm.tanggal_buka}
-                  onChange={(e) => setGelombangForm((s) => ({ ...s, tanggal_buka: e.target.value }))}
+                  onChange={(v) => setGelombangForm((s) => ({ ...s, tanggal_buka: v }))}
                   className={inputCls}
                 />
               </Field>
               <Field label="Tanggal Tutup *">
-                <input
-                  type="date"
+                <DatePicker
                   value={gelombangForm.tanggal_tutup}
-                  onChange={(e) => setGelombangForm((s) => ({ ...s, tanggal_tutup: e.target.value }))}
+                  onChange={(v) => setGelombangForm((s) => ({ ...s, tanggal_tutup: v }))}
                   className={inputCls}
                 />
               </Field>
@@ -520,15 +515,15 @@ function PpdbBuatPage() {
                 />
               </Field>
               <Field label="Jenis Kelamin *">
-                <select
+                <SearchableSelect
                   value={calonForm.jenis_kelamin}
-                  onChange={(e) => setCalonForm((s) => ({ ...s, jenis_kelamin: e.target.value }))}
-                  className={inputCls}
-                >
-                  <option value="">— pilih —</option>
-                  <option value="Laki-laki">Laki-laki</option>
-                  <option value="Perempuan">Perempuan</option>
-                </select>
+                  onChange={(v) => setCalonForm((s) => ({ ...s, jenis_kelamin: v }))}
+                  options={[
+                    { value: "Laki-laki", label: "Laki-laki" },
+                    { value: "Perempuan", label: "Perempuan" },
+                  ]}
+                  placeholder="— pilih —"
+                />
               </Field>
               <Field label="NISN">
                 <input
@@ -1049,18 +1044,16 @@ function TahunAjaranCreateModal({
           />
         </Field>
         <Field label="Tanggal Mulai *">
-          <input
-            type="date"
+          <DatePicker
             value={form.tanggal_mulai}
-            onChange={(e) => setForm((s) => ({ ...s, tanggal_mulai: e.target.value }))}
+            onChange={(v) => setForm((s) => ({ ...s, tanggal_mulai: v }))}
             className={inputCls}
           />
         </Field>
         <Field label="Tanggal Selesai *">
-          <input
-            type="date"
+          <DatePicker
             value={form.tanggal_selesai}
-            onChange={(e) => setForm((s) => ({ ...s, tanggal_selesai: e.target.value }))}
+            onChange={(v) => setForm((s) => ({ ...s, tanggal_selesai: v }))}
             className={inputCls}
           />
         </Field>

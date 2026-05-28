@@ -1,6 +1,8 @@
 // Mock data fixture untuk modul Keuangan Sekolah.
 // Replace dengan @sekolahpro/api-client hooks ketika backend siap.
 
+import { belongsToSchool, pickSchoolSlug, type MockSchoolSlug } from "./school-scope";
+
 export type StatusTagihan =
   | "Draft"
   | "Terkirim"
@@ -40,6 +42,7 @@ export interface TagihanRow {
   dibayar: number;
   status: StatusTagihan;
   tahunAjaran: string;
+  sekolah: MockSchoolSlug;
 }
 
 export interface PembayaranRow {
@@ -53,6 +56,7 @@ export interface PembayaranRow {
   ref: string;
   penerima: string;
   tagihanId: string;
+  sekolah: MockSchoolSlug;
 }
 
 export interface PengeluaranRow {
@@ -65,6 +69,7 @@ export interface PengeluaranRow {
   metode: MetodeBayar;
   approver?: string | undefined;
   status: StatusPengeluaran;
+  sekolah: MockSchoolSlug;
 }
 
 export interface JurnalRow {
@@ -76,6 +81,7 @@ export interface JurnalRow {
   debit: number;
   kredit: number;
   keterangan: string;
+  sekolah: MockSchoolSlug;
 }
 
 export interface KasRow {
@@ -84,6 +90,7 @@ export interface KasRow {
   masuk: number;
   keluar: number;
   saldoAkhir: number;
+  sekolah: MockSchoolSlug;
 }
 
 export interface RingkasanBulan {
@@ -239,6 +246,7 @@ function buildTagihan(idx: number): TagihanRow {
     dibayar,
     status,
     tahunAjaran,
+    sekolah: pickSchoolSlug(idx),
   };
 }
 
@@ -261,6 +269,7 @@ function buildPembayaran(idx: number): PembayaranRow {
     ref: `REF-${pad(idx * 37 + 101, 8)}`,
     penerima: pick(PENERIMA_KAS, idx + 17),
     tagihanId: `TAG-2026-${pad(((idx * 7) % 60) + 1, 5)}`,
+    sekolah: pickSchoolSlug(idx),
   };
 }
 
@@ -282,6 +291,7 @@ function buildPengeluaran(idx: number): PengeluaranRow {
     penerima,
     metode,
     status,
+    sekolah: pickSchoolSlug(idx),
   };
   if (status !== "Draft") {
     row.approver = pick(APPROVER_LIST, idx + 41);
@@ -308,6 +318,7 @@ function buildJurnal(idx: number): JurnalRow {
       jenis === "Penerimaan" ? "Penerimaan SPP/Tagihan siswa"
       : jenis === "Pengeluaran" ? "Pembayaran beban operasional"
       : "Penyesuaian akhir periode",
+    sekolah: pickSchoolSlug(idx),
   };
 }
 
@@ -323,6 +334,7 @@ function buildKas(idx: number): KasRow {
     masuk,
     keluar,
     saldoAkhir: saldoAwal + masuk - keluar,
+    sekolah: pickSchoolSlug(idx),
   };
 }
 
@@ -345,6 +357,52 @@ export const PENGELUARAN_LIST: PengeluaranRow[] = Array.from({ length: 40 }, (_,
 export const JURNAL_LIST: JurnalRow[] = Array.from({ length: 80 }, (_, i) => buildJurnal(i));
 export const KAS_LIST: KasRow[] = Array.from({ length: 30 }, (_, i) => buildKas(i));
 export const RINGKASAN_BULAN: RingkasanBulan[] = Array.from({ length: 12 }, (_, i) => buildRingkasan(i));
+
+export function listTagihanForSekolah(sekolah?: string): TagihanRow[] {
+  if (!sekolah) return TAGIHAN_LIST;
+  return TAGIHAN_LIST.filter((t) => belongsToSchool(t.sekolah, sekolah));
+}
+
+export function listPembayaranForSekolah(sekolah?: string): PembayaranRow[] {
+  if (!sekolah) return PEMBAYARAN_LIST;
+  return PEMBAYARAN_LIST.filter((p) => belongsToSchool(p.sekolah, sekolah));
+}
+
+export function listPengeluaranForSekolah(sekolah?: string): PengeluaranRow[] {
+  if (!sekolah) return PENGELUARAN_LIST;
+  return PENGELUARAN_LIST.filter((p) => belongsToSchool(p.sekolah, sekolah));
+}
+
+export function listJurnalForSekolah(sekolah?: string): JurnalRow[] {
+  if (!sekolah) return JURNAL_LIST;
+  return JURNAL_LIST.filter((j) => belongsToSchool(j.sekolah, sekolah));
+}
+
+export function listKasForSekolah(sekolah?: string): KasRow[] {
+  if (!sekolah) return KAS_LIST;
+  return KAS_LIST.filter((k) => belongsToSchool(k.sekolah, sekolah));
+}
+
+export function findTagihan(id: string, sekolah?: string): TagihanRow | undefined {
+  const row = TAGIHAN_LIST.find((t) => t.id === id);
+  if (!row) return undefined;
+  if (sekolah && !belongsToSchool(row.sekolah, sekolah)) return undefined;
+  return row;
+}
+
+export function findPembayaran(id: string, sekolah?: string): PembayaranRow | undefined {
+  const row = PEMBAYARAN_LIST.find((p) => p.id === id);
+  if (!row) return undefined;
+  if (sekolah && !belongsToSchool(row.sekolah, sekolah)) return undefined;
+  return row;
+}
+
+export function findPengeluaran(id: string, sekolah?: string): PengeluaranRow | undefined {
+  const row = PENGELUARAN_LIST.find((p) => p.id === id);
+  if (!row) return undefined;
+  if (sekolah && !belongsToSchool(row.sekolah, sekolah)) return undefined;
+  return row;
+}
 
 export const FILTER_OPTIONS = {
   statusTagihan: ["Semua", "Draft", "Terkirim", "Tertunda", "Lunas", "Jatuh Tempo", "Cicilan", "Dibatalkan"] as const,

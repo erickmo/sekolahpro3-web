@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
-import { Button, FormField, FormGrid, Input, Modal, Select, Textarea } from "@sekolahpro/ui";
+import { Button, DatePicker, FormField, FormGrid, Input, Modal, SearchableSelect, Textarea } from "@sekolahpro/ui";
 
 interface SkJabatanFormModalProps {
   open: boolean;
@@ -122,73 +122,61 @@ export function SkJabatanFormModal({ open, onClose, onCreated }: SkJabatanFormMo
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Staff" required className="sm:col-span-2">
-            <Select
+            <SearchableSelect
               value={form.guru}
-              onChange={(e) => set("guru", e.target.value)}
+              onChange={(v) => set("guru", v)}
               disabled={guruQ.isLoading}
-            >
-              <option value="">
-                {guruQ.isLoading ? "Memuat..." : "— Pilih Staff —"}
-              </option>
-              {(guruQ.data ?? []).map((g) => (
-                <option key={g.name} value={g.name}>
-                  {g.nama_lengkap ?? g.name}{g.nip ? ` — NIP ${g.nip}` : ""}
-                </option>
-              ))}
-            </Select>
+              options={(guruQ.data ?? []).map((g) => ({
+                value: g.name,
+                label: `${g.nama_lengkap ?? g.name}${g.nip ? ` — NIP ${g.nip}` : ""}`,
+              }))}
+              placeholder={guruQ.isLoading ? "Memuat..." : "— Pilih Staff —"}
+            />
           </FormField>
           <FormField label="Jenis Jabatan" required>
-            <Select
+            <SearchableSelect
               value={form.jenis_jabatan}
-              onChange={(e) => set("jenis_jabatan", e.target.value)}
+              onChange={(v) => set("jenis_jabatan", v)}
               disabled={jenisQ.isLoading}
-            >
-              <option value="">
-                {jenisQ.isLoading ? "Memuat..." : "— Pilih Jenis —"}
-              </option>
-              {(jenisQ.data ?? []).map((j) => (
-                <option key={j.name} value={j.name}>
-                  {j.nama_jabatan ?? j.name}
-                </option>
-              ))}
-            </Select>
+              options={(jenisQ.data ?? []).map((j) => ({
+                value: j.name,
+                label: j.nama_jabatan ?? j.name,
+              }))}
+              placeholder={jenisQ.isLoading ? "Memuat..." : "— Pilih Jenis —"}
+            />
           </FormField>
           <FormField label="Status">
-            <Select value={form.status} onChange={(e) => set("status", e.target.value)}>
-              {STATUS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-            </Select>
+            <SearchableSelect
+              value={form.status}
+              onChange={(v) => set("status", v)}
+              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
           <FormField label="Tanggal SK" required>
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal_sk}
-              onChange={(e) => set("tanggal_sk", e.target.value)}
+              onChange={(v) => set("tanggal_sk", v)}
             />
           </FormField>
           <FormField label="Tahun Ajaran">
-            <Select
+            <SearchableSelect
               value={form.tahun_ajaran}
-              onChange={(e) => set("tahun_ajaran", e.target.value)}
+              onChange={(v) => set("tahun_ajaran", v)}
               disabled={tahunQ.isLoading}
-            >
-              <option value="">— Opsional —</option>
-              {(tahunQ.data ?? []).map((t) => (
-                <option key={t.name} value={t.name}>{t.name}</option>
-              ))}
-            </Select>
+              options={(tahunQ.data ?? []).map((t) => ({ value: t.name, label: t.name }))}
+              placeholder="— Opsional —"
+            />
           </FormField>
           <FormField label="Tanggal Mulai Berlaku" required>
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal_mulai_berlaku}
-              onChange={(e) => set("tanggal_mulai_berlaku", e.target.value)}
+              onChange={(v) => set("tanggal_mulai_berlaku", v)}
             />
           </FormField>
           <FormField label="Tanggal Berakhir">
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal_berakhir}
-              onChange={(e) => set("tanggal_berakhir", e.target.value)}
+              onChange={(v) => set("tanggal_berakhir", v)}
             />
           </FormField>
           <FormField label="Nomor SK (Resmi)" className="sm:col-span-2">

@@ -510,12 +510,13 @@ function deriveStatus(kopi: KopiRow[]): StatusBuku {
 
 // Build a Buku purely from backend data when no mock fixture exists for this
 // ISBN (e.g. records freshly created via the daftar modal).
-function bukuFromBackend(d: BukuDoc, kopi: KopiRow[], peminjaman: PeminjamanRow[]): Buku {
+function bukuFromBackend(d: BukuDoc, kopi: KopiRow[], peminjaman: PeminjamanRow[], sekolah: Buku["sekolah"]): Buku {
   const kategoriRaw = d.kategori as Buku["kategori"] | undefined;
   const kategori: Buku["kategori"] = kategoriRaw && KATEGORI_SET.has(kategoriRaw) ? kategoriRaw : "Referensi";
   const tersedia = kopi.filter((k) => k.status === "Tersedia").length;
   const dipinjam = kopi.filter((k) => k.status === "Dipinjam").length;
   return {
+    sekolah,
     isbn: d.isbn ?? d.name,
     kodeBuku: d.name,
     judul: d.judul ?? d.name,
@@ -602,7 +603,7 @@ function BukuDetailPage() {
     filters: [["Item Peminjaman", "eksemplar", "in", eksemplarNames]],
     limit_page_length: 200,
   }, { enabled: eksemplarNames.length > 0 });
-  const mock = findBuku(isbn);
+  const mock = findBuku(isbn, sekolah);
   const buku: Buku | undefined = (() => {
     const d = docQ.data;
     // Backend-only path: no mock fixture but doc exists → render from backend.
@@ -610,7 +611,7 @@ function BukuDetailPage() {
       if (!d) return undefined;
       const kopi = kopiQ.data ? mapEksemplarToKopi(kopiQ.data, "Rak A") : [];
       const peminjaman = pinjQ.data ? mapPeminjamanRows(pinjQ.data) : [];
-      return bukuFromBackend(d, kopi, peminjaman);
+      return bukuFromBackend(d, kopi, peminjaman, sekolah as Buku["sekolah"]);
     }
     if (!d) return mock;
     // `pengarang` is single Data on backend; split for stub's string[] shape.

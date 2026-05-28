@@ -23,9 +23,10 @@ import {
   Modal,
   PageHeader,
   SectionCard,
-  Select,
   Tabs,
   Textarea,
+  DatePicker,
+  SearchableSelect,
   type TabItem,
   IconSettings,
   IconId,
@@ -358,27 +359,35 @@ function IdentitasModal({ open, onClose, value, onSave }: { open: boolean; onClo
         <FormField label="NPSN"><Input value={draft.npsn} onChange={(e) => set("npsn", e.target.value)} /></FormField>
         <FormField label="NSS"><Input value={draft.nss} onChange={(e) => set("nss", e.target.value)} /></FormField>
         <FormField label="Jenjang">
-          <Select value={draft.jenjang} onChange={(e) => set("jenjang", e.target.value)}>
-            <option>PAUD</option><option>TK</option><option>SD</option><option>SMP</option><option>SMA</option><option>SMK</option><option>MA</option>
-          </Select>
+          <SearchableSelect
+            value={draft.jenjang}
+            onChange={(v) => set("jenjang", v)}
+            options={["PAUD", "TK", "SD", "SMP", "SMA", "SMK", "MA"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
         <FormField label="Status">
-          <Select value={draft.status} onChange={(e) => set("status", e.target.value)}>
-            <option>Negeri</option><option>Swasta</option>
-          </Select>
+          <SearchableSelect
+            value={draft.status}
+            onChange={(v) => set("status", v)}
+            options={["Negeri", "Swasta"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
         <FormField label="Akreditasi">
-          <Select value={draft.akreditasi} onChange={(e) => set("akreditasi", e.target.value)}>
-            <option>A</option><option>B</option><option>C</option><option>Belum</option>
-          </Select>
+          <SearchableSelect
+            value={draft.akreditasi}
+            onChange={(v) => set("akreditasi", v)}
+            options={["A", "B", "C", "Belum"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
         <FormField label="Akreditasi Berlaku" className="sm:col-span-2"><Input value={draft.akreditasiBerlaku} onChange={(e) => set("akreditasiBerlaku", e.target.value)} /></FormField>
         <FormField label="Kepala Sekolah" className="sm:col-span-2"><Input value={draft.kepsek} onChange={(e) => set("kepsek", e.target.value)} /></FormField>
         <FormField label="Tahun Berdiri"><Input value={draft.tahunBerdiri} onChange={(e) => set("tahunBerdiri", e.target.value)} /></FormField>
         <FormField label="Naungan">
-          <Select value={draft.naungan} onChange={(e) => set("naungan", e.target.value)}>
-            <option>Kemendikbud</option><option>Kemenag</option><option>Yayasan</option>
-          </Select>
+          <SearchableSelect
+            value={draft.naungan}
+            onChange={(v) => set("naungan", v)}
+            options={["Kemendikbud", "Kemenag", "Yayasan"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
       </FormGrid>
     </Modal>
@@ -415,9 +424,11 @@ function DomainModal({ open, onClose, value, onSave }: { open: boolean; onClose:
         <FormField label="Domain Custom"><Input value={draft.domainCustom} onChange={(e) => set("domainCustom", e.target.value)} /></FormField>
         <FormField label="Tenant ID" hint="Tidak dapat diubah"><Input value={draft.tenantId} disabled /></FormField>
         <FormField label="Wilayah Server">
-          <Select value={draft.wilayah} onChange={(e) => set("wilayah", e.target.value)}>
-            <option>ID-JKT-1</option><option>ID-JKT-2</option><option>ID-SBY-1</option><option>SG-1</option>
-          </Select>
+          <SearchableSelect
+            value={draft.wilayah}
+            onChange={(v) => set("wilayah", v)}
+            options={["ID-JKT-1", "ID-JKT-2", "ID-SBY-1", "SG-1"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
       </FormGrid>
     </Modal>
@@ -496,12 +507,14 @@ function TahunModal({ open, onClose, value, onSave }: { open: boolean; onClose: 
       <FormGrid cols={2}>
         <FormField label="Tahun Ajaran" required><Input value={draft.tahun} onChange={(e) => setDraft({ ...draft, tahun: e.target.value })} placeholder="2026/2027" /></FormField>
         <FormField label="Semester">
-          <Select value={draft.semester} onChange={(e) => setDraft({ ...draft, semester: e.target.value })}>
-            <option>Ganjil</option><option>Genap</option>
-          </Select>
+          <SearchableSelect
+            value={draft.semester}
+            onChange={(v) => setDraft({ ...draft, semester: v })}
+            options={["Ganjil", "Genap"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
-        <FormField label="Mulai"><Input type="date" value={draft.mulai} onChange={(e) => setDraft({ ...draft, mulai: e.target.value })} /></FormField>
-        <FormField label="Selesai"><Input type="date" value={draft.selesai} onChange={(e) => setDraft({ ...draft, selesai: e.target.value })} /></FormField>
+        <FormField label="Mulai"><DatePicker value={draft.mulai} onChange={(v) => setDraft({ ...draft, mulai: v })} /></FormField>
+        <FormField label="Selesai"><DatePicker value={draft.selesai} onChange={(v) => setDraft({ ...draft, selesai: v })} /></FormField>
         <FormField label="Hari Aktif"><Input type="number" value={draft.hariAktif} onChange={(e) => setDraft({ ...draft, hariAktif: Number(e.target.value) })} /></FormField>
         <FormField label="Hari Libur"><Input type="number" value={draft.hariLibur} onChange={(e) => setDraft({ ...draft, hariLibur: Number(e.target.value) })} /></FormField>
       </FormGrid>
@@ -519,9 +532,11 @@ function SkalaModal({ open, onClose, value, onSave }: { open: boolean; onClose: 
         <FormField label="B (Baik) - Min"><Input type="number" value={draft.bMin} onChange={(e) => setNum("bMin", e.target.value)} /></FormField>
         <FormField label="C (Cukup) - Min"><Input type="number" value={draft.cMin} onChange={(e) => setNum("cMin", e.target.value)} /></FormField>
         <FormField label="Sistem Rapor">
-          <Select value={draft.sistemRapor} onChange={(e) => setDraft({ ...draft, sistemRapor: e.target.value })}>
-            <option>Kurikulum Merdeka</option><option>Kurikulum 2013</option><option>KTSP</option>
-          </Select>
+          <SearchableSelect
+            value={draft.sistemRapor}
+            onChange={(v) => setDraft({ ...draft, sistemRapor: v })}
+            options={["Kurikulum Merdeka", "Kurikulum 2013", "KTSP"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
         <FormField label="KKM Pengetahuan"><Input type="number" value={draft.kkmPengetahuan} onChange={(e) => setNum("kkmPengetahuan", e.target.value)} /></FormField>
         <FormField label="KKM Keterampilan"><Input type="number" value={draft.kkmKeterampilan} onChange={(e) => setNum("kkmKeterampilan", e.target.value)} /></FormField>
@@ -779,16 +794,20 @@ function KeamananModal({ open, onClose, value, onSave, section }: { open: boolea
         {section === "auth" && (
           <>
             <FormField label="2FA Wajib">
-              <Select value={draft.dua2faWajib} onChange={(e) => setStr("dua2faWajib", e.target.value)}>
-                <option>Tidak aktif</option><option>Aktif untuk Admin</option><option>Aktif untuk semua</option>
-              </Select>
+              <SearchableSelect
+                value={draft.dua2faWajib}
+                onChange={(v) => setStr("dua2faWajib", v)}
+                options={["Tidak aktif", "Aktif untuk Admin", "Aktif untuk semua"].map((o) => ({ value: o, label: o }))}
+              />
             </FormField>
             <FormField label="Metode 2FA"><Input value={draft.metode2fa} onChange={(e) => setStr("metode2fa", e.target.value)} /></FormField>
             <FormField label="Session Timeout (menit)"><Input type="number" value={draft.sessionTimeout} onChange={(e) => setNum("sessionTimeout", e.target.value)} /></FormField>
             <FormField label="Single Sign-On">
-              <Select value={draft.sso} onChange={(e) => setStr("sso", e.target.value)}>
-                <option>Tidak aktif</option><option>Google Workspace</option><option>Microsoft 365</option><option>SAML Custom</option>
-              </Select>
+              <SearchableSelect
+                value={draft.sso}
+                onChange={(v) => setStr("sso", v)}
+                options={["Tidak aktif", "Google Workspace", "Microsoft 365", "SAML Custom"].map((o) => ({ value: o, label: o }))}
+              />
             </FormField>
             <FormField label="Remember Me (hari)"><Input type="number" value={draft.rememberMe} onChange={(e) => setNum("rememberMe", e.target.value)} /></FormField>
             <FormField label="Concurrent Sessions"><Input type="number" value={draft.concurrentSessions} onChange={(e) => setNum("concurrentSessions", e.target.value)} /></FormField>
@@ -870,21 +889,25 @@ function PaketModal({ open, onClose, value, onSave }: { open: boolean; onClose: 
     <Modal open={open} onClose={onClose} title="Ubah Paket Berlangganan" size="lg" footer={<ModalFooter onCancel={onClose} onSave={() => onSave(draft)} />}>
       <FormGrid cols={2}>
         <FormField label="Paket">
-          <Select value={draft.paket} onChange={(e) => setDraft({ ...draft, paket: e.target.value })}>
-            <option>SekolahPro Basic</option><option>SekolahPro Plus</option><option>SekolahPro Enterprise</option>
-          </Select>
+          <SearchableSelect
+            value={draft.paket}
+            onChange={(v) => setDraft({ ...draft, paket: v })}
+            options={["SekolahPro Basic", "SekolahPro Plus", "SekolahPro Enterprise"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
         <FormField label="Siklus">
-          <Select value={draft.siklus} onChange={(e) => setDraft({ ...draft, siklus: e.target.value })}>
-            <option>Bulanan</option><option>Tahunan</option>
-          </Select>
+          <SearchableSelect
+            value={draft.siklus}
+            onChange={(v) => setDraft({ ...draft, siklus: v })}
+            options={["Bulanan", "Tahunan"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
         <FormField label="Harga"><Input value={draft.harga} onChange={(e) => setDraft({ ...draft, harga: e.target.value })} /></FormField>
         <FormField label="Penyimpanan"><Input value={draft.penyimpanan} onChange={(e) => setDraft({ ...draft, penyimpanan: e.target.value })} /></FormField>
         <FormField label="Maks Siswa"><Input type="number" value={draft.maksSiswa} onChange={(e) => setDraft({ ...draft, maksSiswa: Number(e.target.value) })} /></FormField>
         <FormField label="Maks Pegawai"><Input type="number" value={draft.maksPegawai} onChange={(e) => setDraft({ ...draft, maksPegawai: Number(e.target.value) })} /></FormField>
-        <FormField label="Mulai"><Input type="date" value={draft.mulai} onChange={(e) => setDraft({ ...draft, mulai: e.target.value })} /></FormField>
-        <FormField label="Berakhir"><Input type="date" value={draft.berakhir} onChange={(e) => setDraft({ ...draft, berakhir: e.target.value })} /></FormField>
+        <FormField label="Mulai"><DatePicker value={draft.mulai} onChange={(v) => setDraft({ ...draft, mulai: v })} /></FormField>
+        <FormField label="Berakhir"><DatePicker value={draft.berakhir} onChange={(v) => setDraft({ ...draft, berakhir: v })} /></FormField>
         <FormField label="" className="sm:col-span-2">
           <Checkbox checked={draft.autoRenew} onChange={(e) => setDraft({ ...draft, autoRenew: e.target.checked })} label="Auto-renew aktif" />
         </FormField>
@@ -899,9 +922,11 @@ function TagihanModal({ open, onClose, value, onSave }: { open: boolean; onClose
     <Modal open={open} onClose={onClose} title="Edit Tagihan & Pembayaran" footer={<ModalFooter onCancel={onClose} onSave={() => onSave(draft)} />}>
       <FormGrid cols={1}>
         <FormField label="Metode Pembayaran">
-          <Select value={draft.metodePembayaran} onChange={(e) => setDraft({ ...draft, metodePembayaran: e.target.value })}>
-            <option>Virtual Account BCA</option><option>Virtual Account Mandiri</option><option>Virtual Account BNI</option><option>Transfer Manual</option><option>Kartu Kredit</option>
-          </Select>
+          <SearchableSelect
+            value={draft.metodePembayaran}
+            onChange={(v) => setDraft({ ...draft, metodePembayaran: v })}
+            options={["Virtual Account BCA", "Virtual Account Mandiri", "Virtual Account BNI", "Transfer Manual", "Kartu Kredit"].map((o) => ({ value: o, label: o }))}
+          />
         </FormField>
         <FormField label="NPWP"><Input value={draft.npwp} onChange={(e) => setDraft({ ...draft, npwp: e.target.value })} /></FormField>
         <FormField label="Email Tagihan"><Input type="email" value={draft.emailTagihan} onChange={(e) => setDraft({ ...draft, emailTagihan: e.target.value })} /></FormField>

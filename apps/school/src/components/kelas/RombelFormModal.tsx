@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Button, FormField, FormGrid, Input, Modal, Select } from "@sekolahpro/ui";
+import { Button, FormField, FormGrid, Input, Modal, SearchableSelect } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -155,32 +155,22 @@ export function RombelFormModal({ open, onClose, onCreated }: RombelFormModalPro
             />
           </FormField>
           <FormField label="Tahun Ajaran" required>
-            <Select
+            <SearchableSelect
               value={form.tahun_ajaran}
-              onChange={(e) => set("tahun_ajaran", e.target.value)}
+              onChange={(v) => set("tahun_ajaran", v)}
               disabled={tahunAjaranQ.isLoading}
-            >
-              <option value="">
-                {tahunAjaranQ.isLoading ? "Memuat..." : "— Pilih Tahun Ajaran —"}
-              </option>
-              {tahunAjaranOpts.map((t) => (
-                <option key={t.name} value={t.name}>{t.name}</option>
-              ))}
-            </Select>
+              options={tahunAjaranOpts.map((t) => ({ value: t.name, label: t.name }))}
+              placeholder={tahunAjaranQ.isLoading ? "Memuat..." : "— Pilih Tahun Ajaran —"}
+            />
           </FormField>
           <FormField label="Jenjang" required>
-            <Select
+            <SearchableSelect
               value={form.jenjang}
-              onChange={(e) => set("jenjang", e.target.value)}
+              onChange={(v) => set("jenjang", v)}
               disabled={jenjangQ.isLoading}
-            >
-              <option value="">
-                {jenjangQ.isLoading ? "Memuat..." : "— Pilih Jenjang —"}
-              </option>
-              {jenjangOpts.map((j) => (
-                <option key={j.name} value={j.name}>{j.name}</option>
-              ))}
-            </Select>
+              options={jenjangOpts.map((j) => ({ value: j.name, label: j.name }))}
+              placeholder={jenjangQ.isLoading ? "Memuat..." : "— Pilih Jenjang —"}
+            />
           </FormField>
           <FormField label="Tingkat" required>
             <Input
@@ -192,36 +182,28 @@ export function RombelFormModal({ open, onClose, onCreated }: RombelFormModalPro
             />
           </FormField>
           <FormField label="Sekolah" required>
-            <Select
+            <SearchableSelect
               value={form.sekolah}
-              onChange={(e) => set("sekolah", e.target.value)}
+              onChange={(v) => set("sekolah", v)}
               disabled={sekolahQ.isLoading}
-            >
-              <option value="">
-                {sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
-              </option>
-              {sekolahOpts.map((s) => (
-                <option key={s.name} value={s.name}>
-                  {s.nama_sekolah ?? s.name}
-                </option>
-              ))}
-            </Select>
+              options={sekolahOpts.map((s) => ({
+                value: s.name,
+                label: s.nama_sekolah ?? s.name,
+              }))}
+              placeholder={sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
+            />
           </FormField>
           <FormField label="Wali Kelas">
-            <Select
+            <SearchableSelect
               value={form.wali_kelas}
-              onChange={(e) => set("wali_kelas", e.target.value)}
+              onChange={(v) => set("wali_kelas", v)}
               disabled={userQ.isLoading}
-            >
-              <option value="">
-                {userQ.isLoading ? "Memuat..." : "— Pilih Wali Kelas —"}
-              </option>
-              {userOpts.map((u) => (
-                <option key={u.name} value={u.name}>
-                  {u.full_name ? `${u.full_name} (${u.name})` : u.name}
-                </option>
-              ))}
-            </Select>
+              options={userOpts.map((u) => ({
+                value: u.name,
+                label: u.full_name ? `${u.full_name} (${u.name})` : u.name,
+              }))}
+              placeholder={userQ.isLoading ? "Memuat..." : "— Pilih Wali Kelas —"}
+            />
           </FormField>
           <FormField label="Kapasitas">
             <Input
@@ -233,27 +215,23 @@ export function RombelFormModal({ open, onClose, onCreated }: RombelFormModalPro
             />
           </FormField>
           <FormField label="Ruangan">
-            <Select
+            <SearchableSelect
               value={form.ruangan}
-              onChange={(e) => set("ruangan", e.target.value)}
+              onChange={(v) => set("ruangan", v)}
               disabled={ruanganQ.isLoading}
-            >
-              <option value="">
-                {ruanganQ.isLoading ? "Memuat..." : "— Pilih Ruangan —"}
-              </option>
-              {ruanganOpts.map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.nama ?? r.name}
-                </option>
-              ))}
-            </Select>
+              options={ruanganOpts.map((r) => ({
+                value: r.name,
+                label: r.nama ?? r.name,
+              }))}
+              placeholder={ruanganQ.isLoading ? "Memuat..." : "— Pilih Ruangan —"}
+            />
           </FormField>
           <FormField label="Status" required>
-            <Select value={form.status} onChange={(e) => set("status", e.target.value)}>
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.status}
+              onChange={(v) => set("status", v)}
+              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
         </FormGrid>
 

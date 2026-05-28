@@ -9,11 +9,12 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 
@@ -114,26 +115,26 @@ export function AnggotaRombelFormModal({ open, onClose, onCreated }: Props) {
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Rombel" required>
-            <Select value={parent} onChange={(e) => setParent(e.target.value)}>
-              <option value="">— pilih —</option>
-              {rombelRows.map((r) => (
-                <option key={r.name} value={r.name}>
-                  {r.name}
-                  {r.nama_rombel ? ` — ${r.nama_rombel}` : ""}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={parent}
+              onChange={(v) => setParent(v)}
+              options={rombelRows.map((r) => ({
+                value: r.name,
+                label: `${r.name}${r.nama_rombel ? ` — ${r.nama_rombel}` : ""}`,
+              }))}
+              placeholder="— pilih —"
+            />
           </FormField>
           <FormField label="Siswa" required>
-            <Select value={siswa} onChange={(e) => setSiswa(e.target.value)}>
-              <option value="">— pilih —</option>
-              {siswaRows.map((s) => (
-                <option key={s.name} value={s.name}>
-                  {s.name}
-                  {s.nama_lengkap ? ` — ${s.nama_lengkap}` : ""}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={siswa}
+              onChange={(v) => setSiswa(v)}
+              options={siswaRows.map((s) => ({
+                value: s.name,
+                label: `${s.name}${s.nama_lengkap ? ` — ${s.nama_lengkap}` : ""}`,
+              }))}
+              placeholder="— pilih —"
+            />
           </FormField>
           <FormField label="No. Urut">
             <Input
@@ -143,21 +144,18 @@ export function AnggotaRombelFormModal({ open, onClose, onCreated }: Props) {
             />
           </FormField>
           <FormField label="Tanggal Masuk Rombel">
-            <Input
-              type="date"
+            <DatePicker
               value={tanggal}
-              onChange={(e) => setTanggal(e.target.value)}
+              onChange={(v) => setTanggal(v)}
             />
           </FormField>
           <FormField label="Status">
-            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">— pilih —</option>
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={status}
+              onChange={(v) => setStatus(v)}
+              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— pilih —"
+            />
           </FormField>
         </FormGrid>
 

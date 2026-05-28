@@ -10,6 +10,7 @@ import {
   Textarea,
   FormField,
   SearchableSelect,
+  DatePicker,
   type SearchableOption,
 } from "@sekolahpro/ui";
 
@@ -131,10 +132,9 @@ function MutasiNewPage() {
             />
           </FormField>
           <FormField label="Tanggal Efektif" required>
-            <Input
-              type="date"
+            <DatePicker
               value={v.tanggal_efektif}
-              onChange={(e) => update("tanggal_efektif", e.target.value)}
+              onChange={(val) => update("tanggal_efektif", val)}
               required
             />
           </FormField>

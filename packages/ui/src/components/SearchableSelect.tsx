@@ -2,11 +2,13 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "../lib/cn";
 
 export interface SearchableOption {
@@ -63,12 +65,36 @@ export function SearchableSelect(props: SearchableSelectProps) {
   const inputId = id ?? `searchsel-${autoId}`;
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<SearchableOption[]>(options ?? []);
   const [loading, setLoading] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const [label, setLabel] = useState<string>("");
+  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const updatePos = useCallback(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX, width: r.width });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (open) updatePos();
+  }, [open, updatePos]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onScroll = () => updatePos();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [open, updatePos]);
 
   // Resolve initial label for async controlled value
   useEffect(() => {
@@ -98,7 +124,10 @@ export function SearchableSelect(props: SearchableSelectProps) {
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t)) return;
+      if (listRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -244,11 +273,13 @@ export function SearchableSelect(props: SearchableSelectProps) {
         </span>
       </div>
 
-      {open && (
+      {open && pos && typeof document !== "undefined" && createPortal(
         <div
+          ref={listRef}
           id={`${inputId}-listbox`}
           role="listbox"
-          className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-md border border-border bg-bg shadow-lg"
+          style={{ position: "absolute", top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
+          className="max-h-72 overflow-auto rounded-md border border-border bg-bg shadow-lg"
         >
           {loading ? (
             <div className="px-3 py-2 text-xs text-muted-fg">Memuat…</div>
@@ -287,7 +318,8 @@ export function SearchableSelect(props: SearchableSelectProps) {
               })}
             </ul>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

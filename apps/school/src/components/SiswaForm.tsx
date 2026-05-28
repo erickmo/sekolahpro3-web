@@ -2,11 +2,12 @@ import { useState, type FormEvent } from "react";
 import {
   Button,
   Checkbox,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
+  SearchableSelect,
   SectionCard,
-  Select,
   Textarea,
   IconCheck,
 } from "@sekolahpro/ui";
@@ -128,29 +129,37 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
             <Input name="namaPanggilan" value={values.namaPanggilan ?? ""} onChange={(e) => set("namaPanggilan", e.target.value)} />
           </FormField>
           <FormField label="Jenis Kelamin" required>
-            <Select name="jenisKelamin" value={values.jenisKelamin} onChange={(e) => set("jenisKelamin", e.target.value as JenisKelamin)}>
-              {JK_OPTIONS.map((j) => <option key={j} value={j}>{j}</option>)}
-            </Select>
+            <SearchableSelect
+              value={values.jenisKelamin}
+              onChange={(v) => set("jenisKelamin", v as JenisKelamin)}
+              options={JK_OPTIONS.map((j) => ({ value: j, label: j }))}
+            />
           </FormField>
           <FormField label="Tempat Lahir" required error={errors.tempatLahir}>
             <Input name="tempatLahir" value={values.tempatLahir} onChange={(e) => set("tempatLahir", e.target.value)} />
           </FormField>
           <FormField label="Tanggal Lahir" required error={errors.tanggalLahir}>
-            <Input name="tanggalLahir" type="date" value={values.tanggalLahir} onChange={(e) => set("tanggalLahir", e.target.value)} />
+            <DatePicker name="tanggalLahir" value={values.tanggalLahir} onChange={(v) => set("tanggalLahir", v)} />
           </FormField>
           <FormField label="Agama" required>
-            <Select name="agama" value={values.agama} onChange={(e) => set("agama", e.target.value as Agama)}>
-              {AGAMA_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
-            </Select>
+            <SearchableSelect
+              value={values.agama}
+              onChange={(v) => set("agama", v as Agama)}
+              options={AGAMA_OPTIONS.map((a) => ({ value: a, label: a }))}
+            />
           </FormField>
           <FormField label="NIK" hint="16 digit" error={errors.nik}>
             <Input name="nik" inputMode="numeric" maxLength={16} value={values.nik ?? ""} onChange={(e) => set("nik", e.target.value.replace(/\D/g, ""))} />
           </FormField>
           <FormField label="Kewarganegaraan" required>
-            <Select name="kewarganegaraan" value={values.kewarganegaraan} onChange={(e) => set("kewarganegaraan", e.target.value as "WNI" | "WNA")}>
-              <option value="WNI">WNI</option>
-              <option value="WNA">WNA</option>
-            </Select>
+            <SearchableSelect
+              value={values.kewarganegaraan}
+              onChange={(v) => set("kewarganegaraan", v as "WNI" | "WNA")}
+              options={[
+                { value: "WNI", label: "WNI" },
+                { value: "WNA", label: "WNA" },
+              ]}
+            />
           </FormField>
         </FormGrid>
       </SectionCard>
@@ -164,30 +173,38 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
             <Input name="nisn" inputMode="numeric" maxLength={10} value={values.nisn} onChange={(e) => set("nisn", e.target.value.replace(/\D/g, ""))} />
           </FormField>
           <FormField label="Status" required>
-            <Select name="status" value={values.status} onChange={(e) => set("status", e.target.value as StatusSiswa)}>
-              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
+            <SearchableSelect
+              value={values.status}
+              onChange={(v) => set("status", v as StatusSiswa)}
+              options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+            />
           </FormField>
           <FormField label="Jenjang" required>
-            <Select name="jenjang" value={values.jenjang} onChange={(e) => set("jenjang", e.target.value)}>
-              {JENJANG_OPTIONS.map((j) => <option key={j} value={j}>{j}</option>)}
-            </Select>
+            <SearchableSelect
+              value={values.jenjang}
+              onChange={(v) => set("jenjang", v)}
+              options={JENJANG_OPTIONS.map((j) => ({ value: j, label: j }))}
+            />
           </FormField>
           <FormField label="Kelas" required>
-            <Select name="kelas" value={values.kelas} onChange={(e) => set("kelas", e.target.value)}>
-              {KELAS_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
-            </Select>
+            <SearchableSelect
+              value={values.kelas}
+              onChange={(v) => set("kelas", v)}
+              options={KELAS_OPTIONS.map((k) => ({ value: k, label: k }))}
+            />
           </FormField>
           <FormField label="Rombel">
             <Input name="rombel" value={values.rombel} onChange={(e) => set("rombel", e.target.value)} placeholder="contoh: X-IPA-1 A" />
           </FormField>
           <FormField label="Tahun Masuk" required>
-            <Select name="tahunMasuk" value={values.tahunMasuk} onChange={(e) => set("tahunMasuk", e.target.value)}>
-              {TAHUN_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-            </Select>
+            <SearchableSelect
+              value={values.tahunMasuk}
+              onChange={(v) => set("tahunMasuk", v)}
+              options={TAHUN_OPTIONS.map((t) => ({ value: t, label: t }))}
+            />
           </FormField>
           <FormField label="Tanggal Diterima">
-            <Input name="tanggalDiterima" type="date" value={values.tanggalDiterima ?? ""} onChange={(e) => set("tanggalDiterima", e.target.value)} />
+            <DatePicker name="tanggalDiterima" value={values.tanggalDiterima ?? ""} onChange={(v) => set("tanggalDiterima", v)} />
           </FormField>
           <FormField label="Asal Sekolah">
             <Input name="asalSekolah" value={values.asalSekolah ?? ""} onChange={(e) => set("asalSekolah", e.target.value)} />
@@ -201,15 +218,19 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
       <SectionCard title="Data Dapodik" description="Kebutuhan khusus, transportasi, bantuan">
         <FormGrid cols={3}>
           <FormField label="Kebutuhan Khusus">
-            <Select name="kebutuhanKhusus" value={values.kebutuhanKhusus ?? "Normal"} onChange={(e) => set("kebutuhanKhusus", e.target.value)}>
-              {KEBUTUHAN_OPTIONS.map((k) => <option key={k} value={k}>{k}</option>)}
-            </Select>
+            <SearchableSelect
+              value={values.kebutuhanKhusus ?? "Normal"}
+              onChange={(v) => set("kebutuhanKhusus", v)}
+              options={KEBUTUHAN_OPTIONS.map((k) => ({ value: k, label: k }))}
+            />
           </FormField>
           <FormField label="Alat Transportasi">
-            <Select name="alatTransportasi" value={values.alatTransportasi ?? ""} onChange={(e) => set("alatTransportasi", e.target.value)}>
-              <option value="">— Pilih —</option>
-              {TRANSPORT_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-            </Select>
+            <SearchableSelect
+              value={values.alatTransportasi ?? ""}
+              onChange={(v) => set("alatTransportasi", v)}
+              options={TRANSPORT_OPTIONS.map((t) => ({ value: t, label: t }))}
+              placeholder="— Pilih —"
+            />
           </FormField>
           <FormField label="Jarak Rumah">
             <Input name="jarakRumah" value={values.jarakRumah ?? ""} onChange={(e) => set("jarakRumah", e.target.value)} placeholder="contoh: 5 km" />

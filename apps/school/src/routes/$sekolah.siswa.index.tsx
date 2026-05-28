@@ -15,9 +15,19 @@ import {
   IconGrad,
   IconBook,
   IconFile,
+  ModuleFlow,
+  type ModuleFlowStep,
   type AttentionItem,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
+
+const SISWA_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "rombel", label: "Rombel", hint: "Susun rombongan belajar", href: "/$sekolah/siswa/rombel" },
+  { key: "tambah", label: "Tambah Siswa", hint: "Satuan atau import CSV", href: "/$sekolah/siswa/new" },
+  { key: "wali", label: "Data Wali", hint: "Daftarkan wali siswa", href: "/$sekolah/siswa/wali" },
+  { key: "mutasi", label: "Mutasi", hint: "Pindah masuk/keluar", href: "/$sekolah/siswa/mutasi" },
+  { key: "kelulusan", label: "Kelulusan", hint: "Proses calon lulus", href: "/$sekolah/siswa/kelulusan" },
+];
 
 const QUICK_ACTIONS: {
   to: string;
@@ -210,6 +220,17 @@ function SiswaDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Pengelolaan Siswa"
+        description="Langkah membangun direktori siswa dari nol."
+        steps={SISWA_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/siswa/rombel"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <SectionCard title="Aksi Cepat" description="Pintasan ke alur kerja kesiswaan yang umum digunakan.">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

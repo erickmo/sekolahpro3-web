@@ -1,6 +1,10 @@
 import { configureResource } from "./frappeResource";
 
-type Config = { baseUrl: string; csrfToken?: string };
+type Config = {
+  baseUrl: string;
+  csrfToken?: string;
+  getActiveSekolah?: () => string | null | undefined;
+};
 
 let config: Config = { baseUrl: "" };
 

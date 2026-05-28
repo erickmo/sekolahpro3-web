@@ -567,7 +567,7 @@ function KelasDetailPage() {
   // TODO(/kelas/$kodeKelas): wire remaining tabs to:
   //   - Absensi Harian / Absensi Pelajaran (rekap absensi)
   //   - Entri Nilai (rekap nilai)
-  const mock = findKelas(kodeKelas);
+  const mock = findKelas(kodeKelas, sekolah);
   // Merge: real primary fields + anggota override mock; rest falls back.
   const kelas: Kelas | undefined = (() => {
     if (!docQ.data && !mock) return undefined;

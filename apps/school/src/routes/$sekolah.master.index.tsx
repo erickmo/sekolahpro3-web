@@ -16,7 +16,18 @@ import {
   IconSettings,
   IconUsers,
   GlossaryTooltip,
+  ModuleFlow,
+  type ModuleFlowStep,
 } from "@sekolahpro/ui";
+
+const MASTER_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "organisasi", label: "Organisasi", hint: "Struktur tenant", href: "/$sekolah/master/organisasi" },
+  { key: "unit", label: "Unit Jenjang", hint: "SD/SMP/SMA", href: "/$sekolah/master/unit-jenjang" },
+  { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Set TA berjalan", href: "/$sekolah/master/tahun-ajaran" },
+  { key: "semester", label: "Semester", hint: "Ganjil & Genap", href: "/$sekolah/master/semester" },
+  { key: "modul", label: "Modul & Fitur", hint: "Aktifkan modul", href: "/$sekolah/master/modul" },
+  { key: "pengguna", label: "Pengguna", hint: "Akun & peran", href: "/$sekolah/master/pengguna" },
+];
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
 
@@ -175,6 +186,17 @@ function MasterDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Setup Master Data"
+        description="Urutan konfigurasi awal sekolah."
+        steps={MASTER_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/master/organisasi"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <SectionCard
         title="Aksi Cepat"

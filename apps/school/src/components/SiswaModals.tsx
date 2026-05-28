@@ -2,11 +2,12 @@ import { useState, type FormEvent } from "react";
 import {
   Button,
   Checkbox,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
   Textarea,
 } from "@sekolahpro/ui";
 import type {
@@ -85,11 +86,15 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
       <form onSubmit={submit} className="space-y-4">
         <FormGrid cols={2}>
           <FormField label="Hubungan" required>
-            <Select value={v.hubungan} onChange={(e) => setV({ ...v, hubungan: e.target.value as WaliRow["hubungan"] })}>
-              <option value="Ayah">Ayah</option>
-              <option value="Ibu">Ibu</option>
-              <option value="Wali">Wali</option>
-            </Select>
+            <SearchableSelect
+              value={v.hubungan}
+              onChange={(val) => setV({ ...v, hubungan: val as WaliRow["hubungan"] })}
+              options={[
+                { value: "Ayah", label: "Ayah" },
+                { value: "Ibu", label: "Ibu" },
+                { value: "Wali", label: "Wali" },
+              ]}
+            />
           </FormField>
           <FormField label="Nama Lengkap" required error={err.nama}>
             <Input value={v.nama} onChange={(e) => setV({ ...v, nama: e.target.value })} />
@@ -132,10 +137,12 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
             <Input value={v.penghasilan ?? ""} onChange={(e) => setV({ ...v, penghasilan: e.target.value })} placeholder="contoh: Rp 3-5 juta" />
           </FormField>
           <FormField label="Pendidikan Terakhir">
-            <Select value={v.pendidikan ?? ""} onChange={(e) => setV({ ...v, pendidikan: e.target.value })}>
-              <option value="">— Pilih —</option>
-              {["SD","SMP","SMA/SMK","D1","D2","D3","S1","S2","S3"].map((p) => <option key={p} value={p}>{p}</option>)}
-            </Select>
+            <SearchableSelect
+              value={v.pendidikan ?? ""}
+              onChange={(val) => setV({ ...v, pendidikan: val })}
+              options={["SD","SMP","SMA/SMK","D1","D2","D3","S1","S2","S3"].map((p) => ({ value: p, label: p }))}
+              placeholder="— Pilih —"
+            />
           </FormField>
           <FormField label="Email">
             <Input type="email" value={v.email ?? ""} onChange={(e) => setV({ ...v, email: e.target.value })} />
@@ -206,15 +213,17 @@ export function TagihanModal({ open, onClose, onSubmit }: TagihanModalProps) {
             <Input value={v.judul} onChange={(e) => setV({ ...v, judul: e.target.value })} placeholder="contoh: SPP April 2026" />
           </FormField>
           <FormField label="Jatuh Tempo" required error={err.jatuhTempo}>
-            <Input type="date" value={v.jatuhTempo} onChange={(e) => setV({ ...v, jatuhTempo: e.target.value })} />
+            <DatePicker value={v.jatuhTempo} onChange={(val) => setV({ ...v, jatuhTempo: val })} />
           </FormField>
           <FormField label="Jumlah (Rp)" required error={err.jumlah}>
             <Input inputMode="numeric" value={String(v.jumlah || "")} onChange={(e) => setV({ ...v, jumlah: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
           </FormField>
           <FormField label="Status">
-            <Select value={v.status} onChange={(e) => setV({ ...v, status: e.target.value as TagihanRow["status"] })}>
-              <option>Tertunda</option><option>Jatuh Tempo</option><option>Cicilan</option><option>Lunas</option>
-            </Select>
+            <SearchableSelect
+              value={v.status}
+              onChange={(val) => setV({ ...v, status: val as TagihanRow["status"] })}
+              options={["Tertunda","Jatuh Tempo","Cicilan","Lunas"].map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
         </FormGrid>
       </form>
@@ -268,24 +277,28 @@ export function PembayaranModal({ open, onClose, tagihanList, onSubmit }: Pembay
         <FormGrid cols={2}>
           {tagihanList && tagihanList.length > 0 ? (
             <FormField label="Tagihan" className="sm:col-span-2">
-              <Select value={refTagihan} onChange={(e) => setRefTagihan(e.target.value)}>
-                <option value="">— Pilih tagihan —</option>
-                {tagihanList.filter((t) => t.status !== "Lunas").map((t) => (
-                  <option key={t.id} value={t.id}>{t.id} · {t.judul}</option>
-                ))}
-              </Select>
+              <SearchableSelect
+                value={refTagihan}
+                onChange={(val) => setRefTagihan(val)}
+                options={tagihanList
+                  .filter((t) => t.status !== "Lunas")
+                  .map((t) => ({ value: t.id, label: `${t.id} · ${t.judul}` }))}
+                placeholder="— Pilih tagihan —"
+              />
             </FormField>
           ) : null}
           <FormField label="Tanggal" required error={err.tanggal}>
-            <Input type="date" value={v.tanggal} onChange={(e) => setV({ ...v, tanggal: e.target.value })} />
+            <DatePicker value={v.tanggal} onChange={(val) => setV({ ...v, tanggal: val })} />
           </FormField>
           <FormField label="Jumlah (Rp)" required error={err.jumlah}>
             <Input inputMode="numeric" value={String(v.jumlah || "")} onChange={(e) => setV({ ...v, jumlah: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
           </FormField>
           <FormField label="Metode" required>
-            <Select value={v.metode} onChange={(e) => setV({ ...v, metode: e.target.value as PembayaranRow["metode"] })}>
-              <option>Tunai</option><option>Transfer</option><option>QRIS</option><option>Virtual Account</option>
-            </Select>
+            <SearchableSelect
+              value={v.metode}
+              onChange={(val) => setV({ ...v, metode: val as PembayaranRow["metode"] })}
+              options={["Tunai","Transfer","QRIS","Virtual Account"].map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
           <FormField label="Referensi">
             <Input value={v.ref} onChange={(e) => setV({ ...v, ref: e.target.value })} placeholder="No. invoice / VA" />
@@ -338,12 +351,14 @@ export function MutasiModal({ open, onClose, onSubmit }: MutasiModalProps) {
       <form onSubmit={submit} className="space-y-4">
         <FormGrid cols={2}>
           <FormField label="Tanggal" required error={err.tanggal}>
-            <Input type="date" value={v.tanggal} onChange={(e) => setV({ ...v, tanggal: e.target.value })} />
+            <DatePicker value={v.tanggal} onChange={(val) => setV({ ...v, tanggal: val })} />
           </FormField>
           <FormField label="Jenis" required>
-            <Select value={v.jenis} onChange={(e) => setV({ ...v, jenis: e.target.value as MutasiRow["jenis"] })}>
-              <option>Naik Kelas</option><option>Tinggal Kelas</option><option>Pindah Keluar</option><option>DO</option><option>Masuk</option>
-            </Select>
+            <SearchableSelect
+              value={v.jenis}
+              onChange={(val) => setV({ ...v, jenis: val as MutasiRow["jenis"] })}
+              options={["Naik Kelas","Tinggal Kelas","Pindah Keluar","DO","Masuk"].map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
           <FormField label="Dari">
             <Input value={v.dari ?? ""} onChange={(e) => setV({ ...v, dari: e.target.value })} placeholder="contoh: X-IPA-1" />
@@ -428,15 +443,17 @@ export function DokumenModal({ open, onClose, onSubmit }: DokumenModalProps) {
             <Input value={v.nama} onChange={(e) => setV({ ...v, nama: e.target.value })} />
           </FormField>
           <FormField label="Tipe" required>
-            <Select value={v.tipe} onChange={(e) => setV({ ...v, tipe: e.target.value as DokumenRow["tipe"] })}>
-              {DOKUMEN_TIPE.map((t) => <option key={t} value={t}>{t}</option>)}
-            </Select>
+            <SearchableSelect
+              value={v.tipe}
+              onChange={(val) => setV({ ...v, tipe: val as DokumenRow["tipe"] })}
+              options={DOKUMEN_TIPE.map((t) => ({ value: t, label: t }))}
+            />
           </FormField>
           <FormField label="Ukuran">
             <Input value={v.ukuran} onChange={(e) => setV({ ...v, ukuran: e.target.value })} placeholder="otomatis dari file" />
           </FormField>
           <FormField label="Tanggal Unggah">
-            <Input type="date" value={v.diunggah} onChange={(e) => setV({ ...v, diunggah: e.target.value })} />
+            <DatePicker value={v.diunggah} onChange={(val) => setV({ ...v, diunggah: val })} />
           </FormField>
           <FormField label="URL">
             <Input value={v.url ?? ""} onChange={(e) => setV({ ...v, url: e.target.value })} placeholder="https://..." />
@@ -532,9 +549,11 @@ export function CatatanModal({ open, onClose, onSubmit }: CatatanModalProps) {
             <Input value={v.judul} onChange={(e) => setV({ ...v, judul: e.target.value })} />
           </FormField>
           <FormField label="Kategori" required>
-            <Select value={v.kategori} onChange={(e) => setV({ ...v, kategori: e.target.value as CatatanPayload["kategori"] })}>
-              <option>Umum</option><option>Akademik</option><option>Disiplin</option><option>Kesehatan</option><option>Keuangan</option>
-            </Select>
+            <SearchableSelect
+              value={v.kategori}
+              onChange={(val) => setV({ ...v, kategori: val as CatatanPayload["kategori"] })}
+              options={["Umum","Akademik","Disiplin","Kesehatan","Keuangan"].map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
           <FormField label="Visibilitas">
             <Checkbox label="Hanya untuk staf (pribadi)" checked={v.pribadi} onChange={(e) => setV({ ...v, pribadi: e.target.checked })} />
@@ -599,9 +618,11 @@ export function PesanModal({ open, onClose, defaultPenerima, defaultKanal, onSub
       <form onSubmit={submit} className="space-y-4">
         <FormGrid cols={2}>
           <FormField label="Kanal" required>
-            <Select value={v.kanal} onChange={(e) => setV({ ...v, kanal: e.target.value as PesanPayload["kanal"] })}>
-              <option>WhatsApp</option><option>Email</option><option>SMS</option><option>In-App</option>
-            </Select>
+            <SearchableSelect
+              value={v.kanal}
+              onChange={(val) => setV({ ...v, kanal: val as PesanPayload["kanal"] })}
+              options={["WhatsApp","Email","SMS","In-App"].map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
           <FormField label="Penerima" required error={err.penerima}>
             <Input value={v.penerima} onChange={(e) => setV({ ...v, penerima: e.target.value })} placeholder={v.kanal === "Email" ? "alamat@email" : "+62..."} />
@@ -657,12 +678,14 @@ export function AbsensiModal({ open, onClose, defaultPencatat, onSubmit }: Absen
       <form onSubmit={submit} className="space-y-4">
         <FormGrid cols={2}>
           <FormField label="Tanggal" required>
-            <Input type="date" value={v.tanggal} onChange={(e) => setV({ ...v, tanggal: e.target.value })} />
+            <DatePicker value={v.tanggal} onChange={(val) => setV({ ...v, tanggal: val })} />
           </FormField>
           <FormField label="Status" required>
-            <Select value={v.status} onChange={(e) => setV({ ...v, status: e.target.value as AbsensiRow["status"] })}>
-              <option>Hadir</option><option>Sakit</option><option>Izin</option><option>Alpa</option><option>Terlambat</option>
-            </Select>
+            <SearchableSelect
+              value={v.status}
+              onChange={(val) => setV({ ...v, status: val as AbsensiRow["status"] })}
+              options={["Hadir","Sakit","Izin","Alpa","Terlambat"].map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
           <FormField label="Pencatat" className="sm:col-span-2">
             <Input value={v.pencatat} onChange={(e) => setV({ ...v, pencatat: e.target.value })} />
@@ -713,10 +736,10 @@ export function PeriodeModal({ open, onClose, initial, onApply, onClear }: Perio
     >
       <FormGrid cols={2}>
         <FormField label="Dari">
-          <Input type="date" value={v.from} onChange={(e) => setV({ ...v, from: e.target.value })} />
+          <DatePicker value={v.from} onChange={(val) => setV({ ...v, from: val })} />
         </FormField>
         <FormField label="Sampai">
-          <Input type="date" value={v.to} onChange={(e) => setV({ ...v, to: e.target.value })} />
+          <DatePicker value={v.to} onChange={(val) => setV({ ...v, to: val })} />
         </FormField>
       </FormGrid>
     </Modal>
@@ -755,14 +778,21 @@ export function SemesterModal({ open, onClose, initial, onPick }: SemesterModalP
     >
       <FormGrid cols={2}>
         <FormField label="Tahun Ajaran">
-          <Select value={v.tahunAjaran} onChange={(e) => setV({ ...v, tahunAjaran: e.target.value })}>
-            {TAHUN_AJARAN.map((t) => <option key={t} value={t}>{t}</option>)}
-          </Select>
+          <SearchableSelect
+            value={v.tahunAjaran}
+            onChange={(val) => setV({ ...v, tahunAjaran: val })}
+            options={TAHUN_AJARAN.map((t) => ({ value: t, label: t }))}
+          />
         </FormField>
         <FormField label="Semester">
-          <Select value={v.semester} onChange={(e) => setV({ ...v, semester: e.target.value as SemesterPick["semester"] })}>
-            <option>Ganjil</option><option>Genap</option>
-          </Select>
+          <SearchableSelect
+            value={v.semester}
+            onChange={(val) => setV({ ...v, semester: val as SemesterPick["semester"] })}
+            options={[
+              { value: "Ganjil", label: "Ganjil" },
+              { value: "Genap", label: "Genap" },
+            ]}
+          />
         </FormField>
       </FormGrid>
     </Modal>

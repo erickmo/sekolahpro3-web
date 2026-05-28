@@ -13,8 +13,16 @@ import {
   IconBook,
   IconCalendar,
   IconFile,
+  ModuleFlow,
 } from "@sekolahpro/ui";
-import type { AttentionItem } from "@sekolahpro/ui";
+import type { AttentionItem, ModuleFlowStep } from "@sekolahpro/ui";
+
+const ABSENSI_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "jadwal", label: "Pastikan Jadwal", hint: "Slot pelajaran aktif", href: "/$sekolah/jadwal/daftar" },
+  { key: "harian", label: "Absensi Harian", hint: "Wali kelas catat siswa", href: "/$sekolah/absensi/daftar" },
+  { key: "pelajaran", label: "Absensi Pelajaran", hint: "Guru mapel per slot", href: "/$sekolah/absensi/pelajaran" },
+  { key: "guru", label: "Absensi Guru", hint: "Kehadiran tenaga pendidik", href: "/$sekolah/absensi/guru" },
+];
 import { useResourceList } from "@sekolahpro/api-client";
 
 // TODO(/absensi/): Absensi Harian header has {name, rombel, tanggal, dibuat_oleh}.
@@ -194,6 +202,17 @@ function AbsensiDashboardPage() {
           renderLink={renderStatLink}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Pencatatan Absensi"
+        description="Urutan absensi harian: dari jadwal sampai rekap guru."
+        steps={ABSENSI_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/absensi/daftar"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <SectionCard title="Aksi Cepat" description="Buka modul absensi yang sering digunakan.">
         <div className="grid gap-3 sm:grid-cols-3">

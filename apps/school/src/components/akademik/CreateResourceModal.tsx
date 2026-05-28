@@ -333,21 +333,13 @@ function FieldControl({ field, value, error, setVal }: ControlProps): ReactNode 
     return (
       <div className={`flex flex-col gap-1.5 ${span}`}>
         {labelEl}
-        <select
+        <SearchableSelect
           id={field.name}
-          name={field.name}
-          required={!!field.required}
           value={typeof value === "string" ? value : ""}
-          onChange={(e) => setVal(field.name, e.target.value)}
-          className={baseInput}
-        >
-          <option value="">— pilih —</option>
-          {(field.options ?? []).map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setVal(field.name, v)}
+          options={(field.options ?? []).map((o) => ({ value: o.value, label: o.label }))}
+          placeholder="— pilih —"
+        />
         {errorEl ?? helpEl}
       </div>
     );

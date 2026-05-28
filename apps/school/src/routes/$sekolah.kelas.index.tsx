@@ -11,10 +11,19 @@ import {
   IconCheck,
   IconUsers,
   GlossaryTooltip,
+  ModuleFlow,
+  type ModuleFlowStep,
   type AttentionItem,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
+
+const KELAS_FLOW_STEPS: ModuleFlowStep[] = [
+  { key: "rombel", label: "Buat Rombel", hint: "Definisi struktur kelas", href: "/$sekolah/kelas/rombel" },
+  { key: "wali", label: "Tunjuk Wali Kelas", hint: "Assign wali per rombel", href: "/$sekolah/kelas/daftar" },
+  { key: "anggota", label: "Isi Anggota", hint: "Masukkan siswa", href: "/$sekolah/kelas/anggota" },
+  { key: "jadwal", label: "Buat Jadwal", hint: "Susun jadwal pelajaran", href: "/$sekolah/jadwal/daftar" },
+];
 
 type RombelRow = {
   name: string;
@@ -171,6 +180,17 @@ function KelasDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
+
+      <ModuleFlow
+        title="Alur Setup Kelas"
+        description="Langkah membentuk rombel sampai siap berjalan."
+        steps={KELAS_FLOW_STEPS}
+        renderLink={(href, children) => (
+          <Link to={href as "/$sekolah/kelas/rombel"} params={{ sekolah }}>
+            {children}
+          </Link>
+        )}
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard title="Aksi Cepat" description="Navigasi pintas ke modul kelas.">

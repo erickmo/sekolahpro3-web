@@ -12,6 +12,7 @@ import {
   Badge,
   Button,
   DataTable,
+  DatePicker,
   FilterBar,
   Modal,
   PageHeader,
@@ -371,10 +372,10 @@ function GelombangCreateModal({
           <input value={tingkat} onChange={(e) => setTingkat(e.target.value)} className={inputCls} placeholder="mis. 10" />
         </Field>
         <Field label="Tanggal Buka">
-          <input type="date" value={tanggalBuka} onChange={(e) => setTanggalBuka(e.target.value)} className={inputCls} />
+          <DatePicker value={tanggalBuka} onChange={setTanggalBuka} className={inputCls} />
         </Field>
         <Field label="Tanggal Tutup">
-          <input type="date" value={tanggalTutup} onChange={(e) => setTanggalTutup(e.target.value)} className={inputCls} />
+          <DatePicker value={tanggalTutup} onChange={setTanggalTutup} className={inputCls} />
         </Field>
         <Field label="Kuota">
           <input type="number" value={kuota} onChange={(e) => setKuota(e.target.value)} className={inputCls} />

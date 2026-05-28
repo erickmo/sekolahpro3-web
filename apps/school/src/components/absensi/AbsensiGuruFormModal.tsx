@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Button, FormField, FormGrid, Input, Modal, Select } from "@sekolahpro/ui";
+import { Button, DatePicker, FormField, FormGrid, Modal, SearchableSelect } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -120,58 +120,43 @@ export function AbsensiGuruFormModal({ open, onClose, onCreated }: Props) {
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Tanggal" required>
-            <Input
-              type="date"
+            <DatePicker
               value={form.tanggal}
-              onChange={(e) => set("tanggal", e.target.value)}
+              onChange={(v) => set("tanggal", v)}
             />
           </FormField>
           <FormField label="Tahun Ajaran" required>
-            <Select
+            <SearchableSelect
               value={form.tahun_ajaran}
-              onChange={(e) => set("tahun_ajaran", e.target.value)}
+              onChange={(v) => set("tahun_ajaran", v)}
               disabled={tahunQ.isLoading}
-            >
-              <option value="">
-                {tahunQ.isLoading ? "Memuat..." : "— Pilih Tahun Ajaran —"}
-              </option>
-              {tahunOpts.map((t) => (
-                <option key={t.name} value={t.name}>
-                  {t.tahun ?? t.name}
-                </option>
-              ))}
-            </Select>
+              options={tahunOpts.map((t) => ({ value: t.name, label: t.tahun ?? t.name }))}
+              placeholder={tahunQ.isLoading ? "Memuat..." : "— Pilih Tahun Ajaran —"}
+            />
           </FormField>
           <FormField label="Sekolah" required>
-            <Select
+            <SearchableSelect
               value={form.sekolah}
-              onChange={(e) => set("sekolah", e.target.value)}
+              onChange={(v) => set("sekolah", v)}
               disabled={sekolahQ.isLoading}
-            >
-              <option value="">
-                {sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
-              </option>
-              {sekolahOpts.map((s) => (
-                <option key={s.name} value={s.name}>
-                  {s.nama_sekolah ?? s.name}
-                </option>
-              ))}
-            </Select>
+              options={sekolahOpts.map((s) => ({ value: s.name, label: s.nama_sekolah ?? s.name }))}
+              placeholder={sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
+            />
           </FormField>
           <FormField label="Semester" required>
-            <Select value={form.semester} onChange={(e) => set("semester", e.target.value)}>
-              <option value="">— Pilih Semester —</option>
-              {SEMESTER_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.semester}
+              onChange={(v) => set("semester", v)}
+              options={SEMESTER_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— Pilih Semester —"
+            />
           </FormField>
           <FormField label="Sumber Input">
-            <Select value={form.sumber_input} onChange={(e) => set("sumber_input", e.target.value)}>
-              {SUMBER_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+            <SearchableSelect
+              value={form.sumber_input}
+              onChange={(v) => set("sumber_input", v)}
+              options={SUMBER_OPTIONS.map((o) => ({ value: o, label: o }))}
+            />
           </FormField>
         </FormGrid>
 

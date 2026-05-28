@@ -2,11 +2,12 @@ import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
   FormGrid,
   Input,
   Modal,
-  Select,
+  SearchableSelect,
   Textarea,
 } from "@sekolahpro/ui";
 import { useResourceCreate } from "@sekolahpro/api-client";
@@ -38,6 +39,8 @@ export function PembayaranAngsuranModal(props: PembayaranModalProps) {
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>(PEMBAYARAN_DOCTYPE);
   const [error, setError] = useState<string | null>(null);
+  const [tanggalBayar, setTanggalBayar] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [metode, setMetode] = useState<string>("Tunai");
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -87,12 +90,20 @@ export function PembayaranAngsuranModal(props: PembayaranModalProps) {
             <Input name="akad" defaultValue={akad ?? ""} required placeholder="No. Akad" readOnly={!!akad} />
           </FormField>
           <FormField label="Tanggal Bayar" required>
-            <Input name="tanggal_bayar" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+            <DatePicker
+              name="tanggal_bayar"
+              value={tanggalBayar}
+              onChange={(v) => setTanggalBayar(v)}
+              required
+            />
           </FormField>
           <FormField label="Metode" required>
-            <Select name="metode" required defaultValue="Tunai">
-              {METODE_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
-            </Select>
+            <SearchableSelect
+              value={metode}
+              onChange={(v) => setMetode(v)}
+              options={METODE_OPTIONS.map((m) => ({ value: m, label: m }))}
+            />
+            <input type="hidden" name="metode" value={metode} />
           </FormField>
           <FormField label="Nominal (Rp)" required>
             <Input
