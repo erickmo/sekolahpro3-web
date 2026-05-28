@@ -12,9 +12,10 @@ const KELOMPOK_TONE: Record<string, "brand" | "success" | "warning" | "neutral" 
 };
 
 function MapelDetailPage() {
-  const { name } = Route.useParams();
+  const { name, sekolah } = Route.useParams();
   return (
     <SimpleDetailPage
+      sekolah={sekolah}
       doctype="Mata Pelajaran"
       name={name}
       eyebrow="Detail Mata Pelajaran"

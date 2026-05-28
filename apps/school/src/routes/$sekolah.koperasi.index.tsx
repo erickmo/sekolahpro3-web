@@ -119,7 +119,7 @@ function KoperasiDashboardPage() {
           primaryAction={{ label: "Tambah Anggota", href: "/$sekolah/koperasi/daftar" }}
           secondaryAction={{ label: "Buka Kas Teller", href: "/$sekolah/koperasi/kas-teller" }}
           renderLink={(href, children, className) => (
-            <Link to={href as "/$sekolah/koperasi/daftar"} className={className}>
+            <Link to={href as "/$sekolah/koperasi/daftar"} params={{ sekolah }} className={className}>
               {children}
             </Link>
           )}

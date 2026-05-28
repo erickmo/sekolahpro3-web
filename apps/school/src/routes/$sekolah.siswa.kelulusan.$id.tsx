@@ -246,8 +246,8 @@ function KelulusanDetailPage() {
               </Badge>
               <span className="font-mono text-sm">{doc.arsip_ijazah}</span>
               <Link
-                to="/$sekolah/siswa/ijazah/$id"
-                params={{ sekolah, id: doc.arsip_ijazah }}
+                to="/$sekolah/siswa/ijazah"
+                params={{ sekolah }}
                 className="text-brand hover:underline text-sm"
               >
                 Lihat Arsip →

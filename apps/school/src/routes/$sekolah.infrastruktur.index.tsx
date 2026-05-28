@@ -217,7 +217,7 @@ function InfraDashboardPage() {
         <AttentionList
           items={perluPerhatian}
           renderLink={(href, children) => (
-            <Link to={href as "/$sekolah/infrastruktur/fasilitas"}>{children}</Link>
+            <Link to={href as "/$sekolah/infrastruktur/fasilitas"} params={{ sekolah }}>{children}</Link>
           )}
         />
       </SectionCard>

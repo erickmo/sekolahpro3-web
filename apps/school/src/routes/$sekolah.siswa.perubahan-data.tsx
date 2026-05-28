@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
@@ -20,7 +21,8 @@ const STATE_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> =
   Draft: "neutral",
 };
 
-const COLUMNS: Column<Row>[] = [
+function makeColumns(sekolah: string): Column<Row>[] {
+  return [
   {
     key: "name",
     header: "ID",
@@ -57,10 +59,12 @@ const COLUMNS: Column<Row>[] = [
       </Badge>
     ),
   },
-];
+  ];
+}
 
 function PerubahanDataPage() {
   const { sekolah } = useParams({ from: "/$sekolah" });
+  const columns = useMemo(() => makeColumns(sekolah), [sekolah]);
 
   const navigate = useNavigate();
   return (
@@ -70,7 +74,7 @@ function PerubahanDataPage() {
       doctype="Perubahan Data Siswa"
       fields={["name", "siswa", "field_diubah", "nilai_lama", "nilai_baru", "workflow_state", "modified"]}
       rowKey={(r) => r.name}
-      columns={COLUMNS}
+      columns={columns}
       defaultSort={{ key: "modified", dir: "desc" }}
       searchFields={["name", "siswa"]}
       selectFilters={[

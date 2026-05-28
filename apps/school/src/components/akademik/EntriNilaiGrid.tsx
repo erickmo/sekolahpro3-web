@@ -26,6 +26,7 @@ interface Selection {
 interface Props {
   selection: Selection;
   onChangeSelection: () => void;
+  sekolah?: string;
 }
 
 interface RombelDoc {
@@ -179,7 +180,7 @@ async function fetchEntri(selection: Selection, siswaNames: string[]): Promise<E
   return enriched;
 }
 
-export function EntriNilaiGrid({ selection, onChangeSelection }: Props) {
+export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props) {
   const qc = useQueryClient();
   const [rombel, setRombel] = useState<RombelDoc | null>(null);
   const [anggota, setAnggota] = useState<AnggotaRombel[]>([]);
@@ -404,7 +405,7 @@ export function EntriNilaiGrid({ selection, onChangeSelection }: Props) {
           {
             label: "Akademik",
             render: ({ className, children }) => (
-              <Link to="/akademik" className={className}>
+              <Link to={sekolah ? "/$sekolah/akademik" : "/akademik" as "/$sekolah/akademik"} {...(sekolah ? { params: { sekolah } } : {})} className={className}>
                 {children}
               </Link>
             ),
@@ -412,7 +413,7 @@ export function EntriNilaiGrid({ selection, onChangeSelection }: Props) {
           {
             label: "Entri Nilai",
             render: ({ className, children }) => (
-              <Link to="/akademik/entri-nilai" className={className}>
+              <Link to={sekolah ? "/$sekolah/akademik/entri-nilai" : "/akademik/entri-nilai" as "/$sekolah/akademik/entri-nilai"} {...(sekolah ? { params: { sekolah } } : {})} className={className}>
                 {children}
               </Link>
             ),
@@ -466,7 +467,7 @@ export function EntriNilaiGrid({ selection, onChangeSelection }: Props) {
         {komponenList.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-fg">
             Mata pelajaran ini belum memiliki Komponen Nilai. Tambahkan komponen di menu{" "}
-            <Link to="/akademik/komponen-nilai" className="text-brand hover:underline">
+            <Link to={sekolah ? "/$sekolah/akademik/komponen-nilai" : "/akademik/komponen-nilai" as "/$sekolah/akademik/komponen-nilai"} {...(sekolah ? { params: { sekolah } } : {})} className="text-brand hover:underline">
               Komponen Nilai
             </Link>{" "}
             terlebih dahulu.

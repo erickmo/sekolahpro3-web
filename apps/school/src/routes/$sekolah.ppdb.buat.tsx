@@ -675,6 +675,7 @@ function PpdbBuatPage() {
           result={result}
           paymentPhase={config.paymentPhase}
           autoTerima={config.autoTerima}
+          sekolah={sekolah}
           onSetSeleksi={async (hasil) => {
             // Set hasil pada Seleksi pertama yang terkait — best effort.
             // Endpoint set_hasil_seleksi expects seleksi name, bukan pendaftaran.
@@ -727,12 +728,14 @@ function ResultPanel({
   autoTerima,
   onSetSeleksi,
   onCreatePayment,
+  sekolah,
 }: {
   result: SubmitResult;
   paymentPhase: PaymentPhase;
   autoTerima: boolean;
   onSetSeleksi: (hasil: "Lulus" | "Tidak Lulus") => Promise<void>;
   onCreatePayment: () => Promise<void>;
+  sekolah: string;
 }) {
   return (
     <SectionCard title="5. Hasil" description="Pendaftaran berhasil dibuat.">

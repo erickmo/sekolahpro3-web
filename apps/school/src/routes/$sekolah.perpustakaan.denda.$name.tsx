@@ -22,7 +22,7 @@ export const Route = createFileRoute("/$sekolah/perpustakaan/denda/$name")({
       if (doc?.peminjaman) {
         throw redirect({
           to: "/$sekolah/perpustakaan/peminjaman/$name",
-          params: { sekolah, name: doc.peminjaman },
+          params: { sekolah: params.sekolah, name: doc.peminjaman },
         });
       }
     } catch (e) {

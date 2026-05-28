@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { EntriNilaiSelector, type EntriNilaiSelection } from "../components/akademik/EntriNilaiSelector";
 import { EntriNilaiGrid } from "../components/akademik/EntriNilaiGrid";
 import { useAkademikContextOptional } from "../lib/akademikContext";
@@ -13,6 +13,7 @@ interface EditSearch {
 
 function EntriNilaiEditPage() {
   const ctx = useAkademikContextOptional();
+  const { sekolah } = useParams({ from: "/$sekolah" });
   const search = useSearch({ from: "/$sekolah/akademik/entri-nilai/edit" });
   const navigate = useNavigate({ from: "/$sekolah/akademik/entri-nilai/edit" });
 
@@ -52,6 +53,7 @@ function EntriNilaiEditPage() {
           tahunAjaran: search.ta!,
         }}
         onChangeSelection={onChangeSelection}
+        sekolah={sekolah}
       />
     );
   }

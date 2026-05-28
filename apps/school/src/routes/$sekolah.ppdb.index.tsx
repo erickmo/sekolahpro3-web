@@ -277,6 +277,7 @@ function PpdbDashboard() {
             <Link
               key={q.to}
               to={q.to}
+              params={{ sekolah }}
               className="group flex items-start gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:border-brand hover:bg-muted/30"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-md bg-brand/10 text-brand">
@@ -297,7 +298,7 @@ function PpdbDashboard() {
       >
         <AttentionList
           items={perluPerhatian}
-          renderLink={(href, children) => <Link to={href as "/$sekolah/ppdb/calon-siswa"}>{children}</Link>}
+          renderLink={(href, children) => <Link to={href as "/$sekolah/ppdb/calon-siswa"} params={{ sekolah }}>{children}</Link>}
         />
       </SectionCard>
 

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
@@ -26,7 +27,8 @@ const JENIS_TONE: Record<Row["jenis_pendaftaran"], "neutral" | "brand"> = {
   Khusus: "brand",
 };
 
-const COLUMNS: Column<Row>[] = [
+function makeColumns(sekolah: string): Column<Row>[] {
+  return [
   {
     key: "name",
     header: "ID",
@@ -59,10 +61,12 @@ const COLUMNS: Column<Row>[] = [
       </Badge>
     ),
   },
-];
+  ];
+}
 
 function PendaftaranPage() {
   const { sekolah } = useParams({ from: "/$sekolah" });
+  const columns = useMemo(() => makeColumns(sekolah), [sekolah]);
 
   const navigate = useNavigate();
   return (
@@ -80,7 +84,7 @@ function PendaftaranPage() {
         "status",
       ]}
       rowKey={(r) => r.name}
-      columns={COLUMNS}
+      columns={columns}
       defaultSort={{ key: "tanggal_daftar", dir: "desc" }}
       searchFields={["name", "nama_lengkap", "nisn"]}
       selectFilters={[

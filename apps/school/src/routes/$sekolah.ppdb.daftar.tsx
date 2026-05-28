@@ -46,7 +46,8 @@ type Row = {
   tanggal_daftar?: string;
 };
 
-const COLUMNS_BASE: Column<Row>[] = [
+function makeColumnsBase(sekolah: string): Column<Row>[] {
+  return [
   {
     key: "name",
     header: "No. Pendaftaran",
@@ -73,7 +74,8 @@ const COLUMNS_BASE: Column<Row>[] = [
       </Badge>
     ),
   },
-];
+  ];
+}
 
 const STATUS_OPTIONS = [
   "Semua",
@@ -98,6 +100,7 @@ const VERIFIKASI_OPTIONS: VerifikasiStatus[] = [
 
 function PpdbDaftarPage() {
   const { sekolah } = useParams({ from: "/$sekolah" });
+  const columnsBase = useMemo(() => makeColumnsBase(sekolah), [sekolah]);
 
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -259,7 +262,7 @@ function PpdbDaftarPage() {
 
         <DataTable<Row>
           data={rows}
-          columns={COLUMNS_BASE}
+          columns={columnsBase}
           rowKey={(r) => r.name}
           selectable
           selected={selected}
@@ -287,7 +290,7 @@ function PpdbDaftarPage() {
         />
       </SectionCard>
 
-      <PendaftaranWizard open={showWizard} onClose={() => setShowWizard(false)} onCreated={() => q.refetch()} />
+      <PendaftaranWizard open={showWizard} onClose={() => setShowWizard(false)} onCreated={() => q.refetch()} sekolah={sekolah} />
 
       <Modal
         open={showBulkVerifikasi}
@@ -332,11 +335,12 @@ interface WizardProps {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  sekolah: string;
 }
 
 type CalonOpt = { name: string; nama_lengkap?: string };
 
-function PendaftaranWizard({ open, onClose, onCreated }: WizardProps) {
+function PendaftaranWizard({ open, onClose, onCreated, sekolah }: WizardProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [calon, setCalon] = useState<string>("");
   const [gelombang, setGelombang] = useState<string>("");

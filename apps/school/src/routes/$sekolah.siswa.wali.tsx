@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
@@ -12,7 +13,8 @@ type Row = {
   no_hp?: string;
 };
 
-const COLUMNS: Column<Row>[] = [
+function makeColumns(sekolah: string): Column<Row>[] {
+  return [
   {
     key: "primary",
     header: "Utama",
@@ -42,10 +44,12 @@ const COLUMNS: Column<Row>[] = [
     cell: (r) => <Badge tone="brand">{r.hubungan ?? "—"}</Badge>,
   },
   { key: "no_hp", header: "Telepon", cell: (r) => r.no_hp ?? "—" },
-];
+  ];
+}
 
 function WaliPage() {
   const { sekolah } = useParams({ from: "/$sekolah" });
+  const columns = useMemo(() => makeColumns(sekolah), [sekolah]);
 
   return (
     <>
@@ -60,7 +64,7 @@ function WaliPage() {
         doctype="Wali Siswa"
         fields={["name", "parent", "nama", "hubungan", "nik", "is_primary", "no_hp"]}
         rowKey={(r) => r.name}
-        columns={COLUMNS}
+        columns={columns}
         defaultSort={{ key: "nama", dir: "asc" }}
         searchFields={["nama", "no_hp"]}
         selectFilters={[

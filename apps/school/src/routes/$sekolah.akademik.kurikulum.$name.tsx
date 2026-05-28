@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SimpleDetailPage } from "../components/akademik/SimpleDetailPage";
 
 function KurikulumDetailPage() {
-  const { name } = Route.useParams();
+  const { name, sekolah } = Route.useParams();
   return (
     <SimpleDetailPage
+      sekolah={sekolah}
       doctype="Kurikulum"
       name={name}
       eyebrow="Detail Kurikulum"

@@ -218,7 +218,7 @@ function MasterDashboardPage() {
         ) : (
           <AttentionList
             items={perluPerhatian}
-            renderLink={(href, children) => <Link to={href as "/$sekolah/master/pengguna"}>{children}</Link>}
+            renderLink={(href, children) => <Link to={href as "/$sekolah/master/pengguna"} params={{ sekolah }}>{children}</Link>}
           />
         )}
       </SectionCard>

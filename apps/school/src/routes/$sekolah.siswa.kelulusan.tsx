@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
@@ -19,7 +20,8 @@ const STATE_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> =
   Draft: "neutral",
 };
 
-const COLUMNS: Column<Row>[] = [
+function makeColumns(sekolah: string): Column<Row>[] {
+  return [
   {
     key: "name",
     header: "ID",
@@ -51,10 +53,12 @@ const COLUMNS: Column<Row>[] = [
     ),
   },
   { key: "tanggal_pengesahan", header: "Tgl Disahkan", sortable: true, cell: (r) => r.tanggal_pengesahan ?? "—" },
-];
+  ];
+}
 
 function KelulusanPage() {
   const { sekolah } = useParams({ from: "/$sekolah" });
+  const columns = useMemo(() => makeColumns(sekolah), [sekolah]);
 
   const navigate = useNavigate();
   return (
@@ -64,7 +68,7 @@ function KelulusanPage() {
       doctype="Kelulusan Siswa"
       fields={["name", "siswa", "tahun_ajaran", "status_kelulusan", "tanggal_pengesahan", "workflow_state"]}
       rowKey={(r) => r.name}
-      columns={COLUMNS}
+      columns={columns}
       defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "siswa"]}
       selectFilters={[

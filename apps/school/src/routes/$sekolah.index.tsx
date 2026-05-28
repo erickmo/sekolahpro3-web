@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   AttentionList,
   type AttentionItem,
@@ -192,6 +192,7 @@ function AttendanceChart() {
 }
 
 function Home() {
+  const { sekolah } = useParams({ from: "/$sekolah" });
   const [dismissed, setDismissed] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -216,7 +217,7 @@ function Home() {
               steps={onboardingSteps}
               onDismiss={handleDismiss}
               renderLink={(href, children) => (
-                <Link to={href} className="block">
+                <Link to={href} params={{ sekolah }} className="block">
                   {children}
                 </Link>
               )}
@@ -245,7 +246,7 @@ function Home() {
             <ul role="list" className="divide-y divide-border">
               {FOCUS_BY_MODE[mode].map((item) => (
                 <li key={item.label} className="py-2.5">
-                  <Link to={item.href} className="flex items-center justify-between gap-3 group">
+                  <Link to={item.href} params={{ sekolah }} className="flex items-center justify-between gap-3 group">
                     <span className="text-sm text-fg group-hover:text-brand transition-colors">{item.label}</span>
                     <span className="text-xs text-muted-fg">{item.meta}</span>
                   </Link>
@@ -270,7 +271,7 @@ function Home() {
               }))}
               renderLink={(href, children) => (
                 // riskRollup.actionHref is typed to known routes — safe to cast.
-                <Link to={href as "/$sekolah/guru/sk-mengajar"}>{children}</Link>
+                <Link to={href as "/$sekolah/guru/sk-mengajar"} params={{ sekolah }}>{children}</Link>
               )}
             />
           </SectionCard>
@@ -335,6 +336,7 @@ function Home() {
                 <Link
                   key={q.label}
                   to={q.to}
+                  params={{ sekolah }}
                   className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-border bg-transparent hover:bg-muted h-auto py-3 px-3"
                 >
                   <span className="text-xs font-medium">{q.label}</span>

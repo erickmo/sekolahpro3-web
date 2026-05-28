@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 
@@ -25,15 +25,7 @@ const COLUMNS: Column<Row>[] = [
     key: "name",
     header: "ID",
     sortable: true,
-    cell: (r) => (
-      <Link
-        to="/$sekolah/siswa/mutasi-masuk/$id"
-        params={{ sekolah, id: r.name }}
-        className="font-mono text-xs text-brand hover:underline"
-      >
-        {r.name}
-      </Link>
-    ),
+    cell: (r) => <span className="font-mono text-xs">{r.name}</span>,
   },
   { key: "siswa_baru", header: "Nama", sortable: true, cell: (r) => r.siswa_baru },
   { key: "nisn", header: "NISN", cell: (r) => <span className="font-mono text-xs">{r.nisn}</span> },

@@ -162,7 +162,7 @@ function MutasiMasukNewPage() {
         alasan_pindah: alasanPindah,
         status: "Diverifikasi Dapodik",
       });
-      void navigate({ to: "/$sekolah/siswa/mutasi-masuk/$id", params: { sekolah, id: doc.name } });
+      void navigate({ to: "/$sekolah/siswa/mutasi-masuk", params: { sekolah } });
     } catch (e) {
       setSubmitErr(e instanceof Error ? e.message : "Gagal menyimpan mutasi masuk.");
     }

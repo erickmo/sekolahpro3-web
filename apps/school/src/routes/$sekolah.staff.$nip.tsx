@@ -199,8 +199,8 @@ function StaffDetailPage() {
         tab === "ringkasan" ? <RingkasanTab g={g} /> :
         tab === "profil" ? <ProfilTab g={g} /> :
         tab === "kepegawaian" ? <KepegawaianTab g={g} /> :
-        tab === "sk" ? <SkTab rows={skRows} loading={skQ.isLoading} /> :
-        <BerkasTab rows={berkasRows} loading={berkasQ.isLoading} />
+        tab === "sk" ? <SkTab rows={skRows} loading={skQ.isLoading} sekolah={sekolah} /> :
+        <BerkasTab rows={berkasRows} loading={berkasQ.isLoading} sekolah={sekolah} />
       }
     />
   );
@@ -290,7 +290,7 @@ function KepegawaianTab({ g }: { g: Guru }) {
   );
 }
 
-function SkTab({ rows, loading }: { rows: SkJabatanRow[]; loading: boolean }) {
+function SkTab({ rows, loading, sekolah }: { rows: SkJabatanRow[]; loading: boolean; sekolah: string }) {
   return (
     <SectionCard
       title="SK Jabatan"
@@ -325,7 +325,7 @@ function SkTab({ rows, loading }: { rows: SkJabatanRow[]; loading: boolean }) {
   );
 }
 
-function BerkasTab({ rows, loading }: { rows: BerkasRow[]; loading: boolean }) {
+function BerkasTab({ rows, loading, sekolah }: { rows: BerkasRow[]; loading: boolean; sekolah: string }) {
   return (
     <SectionCard
       title="Berkas"

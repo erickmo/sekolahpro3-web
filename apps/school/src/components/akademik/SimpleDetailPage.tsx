@@ -34,6 +34,7 @@ interface SimpleDetailPageProps {
   /** Extra sections rendered after the primary identity card. */
   extra?: ReactNode;
   actions?: ReactNode;
+  sekolah?: string;
 }
 
 const STATUS_TONE: Record<string, "success" | "warning" | "neutral" | "danger" | "brand"> = {
@@ -49,7 +50,7 @@ const STATUS_TONE: Record<string, "success" | "warning" | "neutral" | "danger" |
 export function SimpleDetailPage(props: SimpleDetailPageProps) {
   const {
     doctype, name, eyebrow, parentLabel, parentTo,
-    titleField = "name", statusField, fields, extra, actions,
+    titleField = "name", statusField, fields, extra, actions, sekolah,
   } = props;
   const navigate = useNavigate();
   const q = useResourceDoc<Record<string, unknown>>(doctype, name);
@@ -66,7 +67,7 @@ export function SimpleDetailPage(props: SimpleDetailPageProps) {
           title="Data tidak ditemukan"
           description={q.error instanceof Error ? q.error.message : `${doctype} ${name} tidak ada di sistem.`}
           action={
-            <Link to={parentTo} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link to={parentTo as "/$sekolah"} {...(sekolah ? { params: { sekolah } } : {})} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke {parentLabel}
             </Link>
           }
@@ -86,8 +87,8 @@ export function SimpleDetailPage(props: SimpleDetailPageProps) {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to="/" className={className}>{children}</Link> },
-              { label: parentLabel, render: ({ className, children }) => <Link to={parentTo} className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to={(sekolah ? "/$sekolah" : "/") as "/$sekolah"} {...(sekolah ? { params: { sekolah } } : {})} className={className}>{children}</Link> },
+              { label: parentLabel, render: ({ className, children }) => <Link to={parentTo as "/$sekolah"} {...(sekolah ? { params: { sekolah } } : {})} className={className}>{children}</Link> },
               { label: title },
             ]}
           />
