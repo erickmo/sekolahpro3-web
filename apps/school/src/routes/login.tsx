@@ -17,7 +17,7 @@ function LoginPage() {
     setErr(null);
     try {
       await login(usr, pwd);
-      navigate({ to: "/" });
+      navigate({ to: "/pilih-sekolah" });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Login gagal");
     } finally {
