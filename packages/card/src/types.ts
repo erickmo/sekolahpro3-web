@@ -17,7 +17,7 @@ export type CardReaderErrorCode =
 export class CardReaderError extends Error {
   readonly code: CardReaderErrorCode;
   constructor(code: CardReaderErrorCode, message?: string) {
-    super(message ?? code);
+    super(message ? `${code}: ${message}` : code);
     this.name = "CardReaderError";
     this.code = code;
   }
