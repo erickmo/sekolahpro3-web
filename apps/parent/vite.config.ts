@@ -4,8 +4,9 @@ import { TanStackRouterVite } from "@tanstack/router-vite-plugin";
 
 export default defineConfig({
   plugins: [TanStackRouterVite(), react()],
+  base: process.env.VITE_BASE_PATH ?? "/",
   server: {
-    port: 5181,
+    port: 5184,
     host: "0.0.0.0",
     strictPort: true,
     proxy: {
@@ -33,6 +34,5 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
-    env: { VITE_USE_MOCKS: "true" },
   },
 });

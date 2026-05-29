@@ -1,0 +1,1 @@
+{ "extends": "@sekolahpro/tsconfig/react.json", "include": ["src"] }

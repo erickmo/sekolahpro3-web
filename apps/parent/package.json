@@ -1,5 +1,5 @@
 {
-  "name": "@sekolahpro/app-school",
+  "name": "@sekolahpro/app-parent",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "lint": "ESLINT_USE_FLAT_CONFIG=true eslint 'src/**/*.{ts,tsx}'",
     "typecheck": "tsc --noEmit",
-    "test": "VITE_USE_MOCKS=true vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@sekolahpro/api-client": "workspace:*",
@@ -18,7 +18,7 @@
     "@sekolahpro/ui": "workspace:*",
     "@tanstack/react-query": "^5.51.0",
     "@tanstack/react-router": "^1.45.0",
-    "@zxing/browser": "^0.1.5",
+    "qrcode.react": "^3.1.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
   },
