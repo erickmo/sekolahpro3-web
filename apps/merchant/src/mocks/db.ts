@@ -32,7 +32,7 @@ export const db = {
   merchant: { name: "M-001", nama: "Kantin Sekolah A", tipe: "Internal" as const, kategori: "MAKAN" },
   students: [
     { kartu_id: "KARTU-001", nama: "Andi", saldo: 50000, today_spent: 0, blocked_kategori: [], postpaid: false } as MockStudent,
-    { kartu_id: "KARTU-002", nama: "Budi", saldo: 5000, today_spent: 0, blocked_kategori: [], postpaid: true } as MockStudent,
+    { kartu_id: "KARTU-002", nama: "Budi", saldo: 5000, today_spent: 0, blocked_kategori: [], postpaid: false } as MockStudent,
     { kartu_id: "KARTU-003", nama: "Citra", saldo: 100000, daily_limit: 20000, today_spent: 18000, blocked_kategori: ["JAJAN"], postpaid: false } as MockStudent,
   ] as MockStudent[],
   items: [

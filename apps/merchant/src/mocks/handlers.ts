@@ -22,7 +22,9 @@ function decodeToken(raw: string): { kartu_id: string; exp: number } | null {
 export const handlers = [
   http.get("/api/method/ping", () => HttpResponse.json({ ok: true })),
 
-  http.get("/api/method/sekolahpro.koperasi.merchant.catalog", () => {
+  // frappeFetch always POSTs to /api/method/<dotted>, so read endpoints
+  // are registered as POST too (Frappe whitelisted methods accept POST).
+  http.post("/api/method/sekolahpro.koperasi.merchant.catalog", () => {
     return HttpResponse.json({ message: db.items.filter((i) => i.aktif) });
   }),
 
@@ -103,11 +105,11 @@ export const handlers = [
     return HttpResponse.json({ message: { ok: true } });
   }),
 
-  http.get("/api/method/sekolahpro.koperasi.merchant.transaksi", () => {
+  http.post("/api/method/sekolahpro.koperasi.merchant.transaksi", () => {
     return HttpResponse.json({ message: db.transaksi });
   }),
 
-  http.get("/api/method/sekolahpro.koperasi.merchant.daily_report", () => {
+  http.post("/api/method/sekolahpro.koperasi.merchant.daily_report", () => {
     const today = db.transaksi.filter((t) => t.status === "Bayar");
     return HttpResponse.json({
       message: {
