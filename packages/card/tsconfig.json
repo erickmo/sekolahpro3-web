@@ -1,0 +1,5 @@
+{
+  "extends": "@sekolahpro/tsconfig/react.json",
+  "include": ["src"],
+  "compilerOptions": { "types": ["vitest/globals"] }
+}
