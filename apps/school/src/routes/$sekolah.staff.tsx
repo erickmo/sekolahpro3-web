@@ -3,7 +3,10 @@ import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 const TABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/$sekolah/staff", label: "Dashboard", exact: true },
-  { to: "/$sekolah/staff/daftar", label: "Daftar Staff" },
+  { to: "/$sekolah/staff/daftar", label: "Daftar Pegawai" },
+  { to: "/$sekolah/staff/mapel-pengampu", label: "Mapel Pengampu" },
+  { to: "/$sekolah/staff/penugasan", label: "Penugasan" },
+  { to: "/$sekolah/staff/sk-mengajar", label: "SK Mengajar" },
   { to: "/$sekolah/staff/sk-jabatan", label: "SK Jabatan" },
   { to: "/$sekolah/staff/jabatan", label: "Jabatan" },
   { to: "/$sekolah/staff/berkas", label: "Berkas" },

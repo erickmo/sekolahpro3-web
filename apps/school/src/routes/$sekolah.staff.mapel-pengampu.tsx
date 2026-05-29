@@ -48,4 +48,4 @@ function MapelPengampuPage() {
   );
 }
 
-export const Route = createFileRoute("/$sekolah/guru/mapel-pengampu")({ component: MapelPengampuPage });
+export const Route = createFileRoute("/$sekolah/staff/mapel-pengampu")({ component: MapelPengampuPage });

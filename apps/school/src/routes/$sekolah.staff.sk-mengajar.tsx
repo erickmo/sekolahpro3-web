@@ -45,4 +45,4 @@ function SkMengajarPage() {
   );
 }
 
-export const Route = createFileRoute("/$sekolah/guru/sk-mengajar")({ component: SkMengajarPage });
+export const Route = createFileRoute("/$sekolah/staff/sk-mengajar")({ component: SkMengajarPage });

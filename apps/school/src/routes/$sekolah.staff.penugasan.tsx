@@ -45,4 +45,4 @@ function PenugasanPage() {
   );
 }
 
-export const Route = createFileRoute("/$sekolah/guru/penugasan")({ component: PenugasanPage });
+export const Route = createFileRoute("/$sekolah/staff/penugasan")({ component: PenugasanPage });

@@ -1,292 +1,79 @@
-import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
+import { useMemo } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Avatar,
-  AttentionList,
-  Button,
   PageHeader,
-  SectionCard,
   StatCard,
+  SectionCard,
   IconUsers,
   IconCheck,
   IconAlert,
-  IconFile,
-  IconClock,
   IconPlus,
-  GlossaryTooltip,
-  ModuleFlow,
-  type ModuleFlowStep,
-  type AttentionItem,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
-import { StaffFormModal } from "../components/staff/StaffFormModal";
-import { GLOSSARY } from "../lib/glossary";
+import { scopedTo, scopedParams } from "../lib/scoped";
+import { apiIsGuru, apiIsStaff, apiIsDualRole, type PegawaiApi } from "../features/pegawai/roles";
 
-const STAFF_FLOW_STEPS: ModuleFlowStep[] = [
-  { key: "jabatan", label: "Master Jabatan", hint: "Definisikan jabatan", href: "/$sekolah/staff/jabatan" },
-  { key: "daftar", label: "Tambah Staff", hint: "Registrasi staf baru", href: "/$sekolah/staff/daftar" },
-  { key: "sk", label: "SK Jabatan", hint: "Terbitkan SK", href: "/$sekolah/staff/sk-jabatan" },
-  { key: "berkas", label: "Berkas", hint: "Unggah dokumen", href: "/$sekolah/staff/berkas" },
-];
+const PEGAWAI_LIST_LIMIT = 200;
 
-const SK_WARNING_DAYS = 90;
-const RECENT_LIMIT = 5;
-const ATTENTION_LIMIT = 6;
+export const Route = createFileRoute("/$sekolah/staff/")({
+  component: StaffIndex,
+});
 
-type GuruRow = {
-  name: string;
-  nama_lengkap?: string;
-  nip?: string;
-  jabatan_fungsional?: string;
-  sekolah?: string;
-  is_aktif?: 0 | 1;
-  tmt_pertama_kerja?: string;
-  creation?: string;
-};
+function StaffIndex() {
+  const { sekolah } = Route.useParams();
 
-type SkRow = {
-  name: string;
-  guru?: string;
-  jenis_jabatan?: string;
-  tanggal_berakhir?: string;
-  status?: string;
-};
-
-type BerkasRow = { name: string };
-
-function formatTanggal(iso?: string): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" });
-}
-
-function daysUntil(iso?: string): number | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  const now = new Date();
-  return Math.floor((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function StaffDashboardPage() {
-  const { sekolah } = useParams({ from: "/$sekolah" });
-
-  const [showCreate, setShowCreate] = useState(false);
-  const navigate = useNavigate();
-
-  const guruQ = useResourceList<GuruRow>("Guru", {
-    fields: ["name", "nama_lengkap", "nip", "jabatan_fungsional", "sekolah", "is_aktif", "tmt_pertama_kerja", "creation"],
-    order_by: "creation desc",
-    limit_page_length: 0,
-  });
-  const skQ = useResourceList<SkRow>("SK Jabatan", {
-    fields: ["name", "guru", "jenis_jabatan", "tanggal_berakhir", "status"],
-    filters: [["status", "!=", "Dicabut"]],
-    limit_page_length: 0,
-  });
-  const berkasQ = useResourceList<BerkasRow>("Berkas Guru", {
-    fields: ["name"],
-    limit_page_length: 0,
+  const q = useResourceList<PegawaiApi>("Pegawai", {
+    fields: ["name", "nama_lengkap", "nip", "jabatan_fungsional", "status_kepegawaian", "sekolah", "is_aktif", "tmt_pertama_kerja", "roles.role"],
+    filters: { sekolah },
+    order_by: "modified desc",
+    limit_page_length: PEGAWAI_LIST_LIMIT,
   });
 
-  const gurus = guruQ.data ?? [];
-  const sks = skQ.data ?? [];
-  const berkas = berkasQ.data ?? [];
-
-  const stats = useMemo(() => {
-    const aktif = gurus.filter((g) => g.is_aktif === 1).length;
-    const skHabis = sks.filter((s) => {
-      const d = daysUntil(s.tanggal_berakhir);
-      return d !== null && d >= 0 && d <= SK_WARNING_DAYS;
-    }).length;
-    return { total: gurus.length, aktif, skHabis, berkas: berkas.length };
-  }, [gurus, sks, berkas]);
-
-  const attentionItems = useMemo<AttentionItem[]>(() => {
-    const guruByName = new Map(gurus.map((g) => [g.name, g]));
-    return sks
-      .map((s) => {
-        const d = daysUntil(s.tanggal_berakhir);
-        if (d === null || d < 0 || d > SK_WARNING_DAYS) return null;
-        const g = s.guru ? guruByName.get(s.guru) : undefined;
-        return {
-          id: s.name,
-          label: g?.nama_lengkap ?? s.guru ?? s.name,
-          description: `${s.jenis_jabatan ?? "SK"} — habis dalam ${d} hari (${formatTanggal(s.tanggal_berakhir)})`,
-          tone: d <= 30 ? ("danger" as const) : ("warning" as const),
-          badge: "SK",
-          href: "/$sekolah/staff/sk-jabatan",
-          actionLabel: "Perpanjang",
-          actionHref: "/$sekolah/staff/sk-jabatan",
-        } satisfies AttentionItem;
-      })
-      .filter((x): x is AttentionItem => !!x)
-      .slice(0, ATTENTION_LIMIT);
-  }, [sks, gurus]);
-
-  const terbaru = useMemo(() => {
-    return [...gurus]
-      .sort((a, b) => (b.creation ?? "").localeCompare(a.creation ?? ""))
-      .slice(0, RECENT_LIMIT);
-  }, [gurus]);
+  const list = q.data ?? [];
+  const counts = useMemo(() => ({
+    total: list.length,
+    guru: list.filter(apiIsGuru).length,
+    staff: list.filter(apiIsStaff).length,
+    dual: list.filter(apiIsDualRole).length,
+    aktif: list.filter((p) => p.is_aktif === 1).length,
+  }), [list]);
 
   return (
-    <div className="space-y-6">
-      <StaffFormModal open={showCreate} onClose={() => setShowCreate(false)} />
+    <div className="space-y-4">
       <PageHeader
-        eyebrow="Direktori"
-        title="Dashboard Staff"
-        description="Ringkasan tenaga kependidikan dan staf non-pengajar."
+        title="Guru & Staff"
+        description="Ringkasan tenaga pendidik dan kependidikan."
         actions={
-          <>
-            <Link to="/$sekolah/staff/daftar" params={{ sekolah }}>
-              <Button variant="outline">
-                <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
-                Lihat Daftar
-              </Button>
-            </Link>
-            <Button onClick={() => setShowCreate(true)}>
-              <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
-              Tambah Staff
-            </Button>
-          </>
+          <Link
+            to={scopedTo(sekolah, "/staff/daftar")}
+            params={scopedParams(sekolah)}
+            className="inline-flex items-center h-9 px-3 rounded-md bg-brand text-white text-sm hover:opacity-90"
+          >
+            <IconPlus className="h-4 w-4 mr-1" />
+            Lihat Daftar
+          </Link>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Staff Aktif"
-          value={stats.aktif}
-          hint={`dari ${stats.total} total`}
-          icon={<IconCheck />}
-          accent="emerald"
-          urgency="normal"
-        />
-        <StatCard
-          label="Total Staff"
-          value={stats.total}
-          hint="seluruh staf terdaftar"
-          icon={<IconUsers />}
-          accent="brand"
-        />
-        <StatCard
-          label={<><GlossaryTooltip term="SK" definition={GLOSSARY.SK} /> Akan Habis</>}
-          value={stats.skHabis}
-          hint={`dalam ${SK_WARNING_DAYS} hari`}
-          icon={<IconAlert />}
-          accent="amber"
-          urgency="warn"
-          actionHref="/$sekolah/staff/sk-jabatan"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
-        />
-        <StatCard
-          label="Total Berkas"
-          value={stats.berkas}
-          hint="berkas terdaftar"
-          icon={<IconFile />}
-          accent="violet"
-          actionHref="/$sekolah/staff/berkas"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
-        />
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <StatCard icon={<IconUsers />} label="Total Pegawai" value={counts.total} />
+        <StatCard icon={<IconCheck />} label="Guru" value={counts.guru} />
+        <StatCard icon={<IconCheck />} label="Staff" value={counts.staff} />
+        <StatCard icon={<IconAlert />} label="Dual-role" value={counts.dual} />
+        <StatCard icon={<IconCheck />} label="Aktif" value={counts.aktif} />
       </div>
 
-      <ModuleFlow
-        title="Alur Pengelolaan Staff"
-        description="Langkah onboarding staf non-pengajar."
-        steps={STAFF_FLOW_STEPS}
-        renderLink={(href, children) => (
-          <Link to={href as "/$sekolah/staff/jabatan"} params={{ sekolah }}>
-            {children}
-          </Link>
-        )}
-      />
-
-      <SectionCard title="Aksi Cepat" description="Pintasan ke modul terkait pengelolaan staff.">
-        <div className="flex flex-wrap gap-2">
-          <Link to="/$sekolah/staff/jabatan" params={{ sekolah }}>
-            <Button variant="outline">
-              <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
-              Kelola Jabatan
-            </Button>
-          </Link>
-          <Link to="/$sekolah/staff/sk-jabatan" params={{ sekolah }}>
-            <Button variant="outline">
-              <span className="h-4 w-4 mr-1.5"><IconFile /></span>
-              Terbitkan SK
-            </Button>
-          </Link>
-          <Link to="/$sekolah/staff/berkas" params={{ sekolah }}>
-            <Button variant="outline">
-              <span className="h-4 w-4 mr-1.5"><IconFile /></span>
-              Unggah Berkas
-            </Button>
-          </Link>
-          <Link to="/$sekolah/staff/daftar" params={{ sekolah }}>
-            <Button>
-              <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
-              Buka Daftar Staff
-            </Button>
-          </Link>
-        </div>
-      </SectionCard>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SectionCard
-          title="Perlu Perhatian"
-          description={skQ.isLoading ? "Memuat..." : "SK akan habis dalam 90 hari."}
-        >
-          {attentionItems.length === 0 && !skQ.isLoading ? (
-            <div className="text-sm text-muted-fg">Tidak ada SK yang akan habis dalam 90 hari.</div>
-          ) : (
-            <AttentionList
-              items={attentionItems}
-              maxItems={5}
-              renderLink={(href, children, className) => (
-                <Link to={href} className={className}>
-                  {children}
-                </Link>
-              )}
-            />
-          )}
+      {q.isLoading ? (
+        <SectionCard title="Memuat data...">
+          <div className="text-sm text-muted-fg">Memuat daftar pegawai dari server.</div>
         </SectionCard>
+      ) : null}
 
-        <SectionCard
-          title="Aktivitas Terbaru"
-          description={guruQ.isLoading ? "Memuat..." : `${RECENT_LIMIT} staff terbaru terdaftar.`}
-          padded={false}
-        >
-          {terbaru.length === 0 && !guruQ.isLoading ? (
-            <div className="px-4 py-6 text-sm text-muted-fg">Belum ada staff terdaftar.</div>
-          ) : (
-            <ul className="divide-y divide-border">
-              {terbaru.map((s) => (
-                <li key={s.name}>
-                  <button
-                    type="button"
-                    onClick={() => navigate({ to: "/$sekolah/staff/$nip", params: { sekolah, nip: s.name } })}
-                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
-                  >
-                    <Avatar name={s.nama_lengkap ?? s.name} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium text-fg truncate">{s.nama_lengkap ?? s.name}</div>
-                      <div className="text-xs text-muted-fg truncate">
-                        {s.nip ? `NIP ${s.nip}` : s.name}{s.jabatan_fungsional ? ` · ${s.jabatan_fungsional}` : ""}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-fg whitespace-nowrap">
-                      <span className="h-3.5 w-3.5"><IconClock /></span>
-                      <span>TMT {formatTanggal(s.tmt_pertama_kerja)}</span>
-                    </div>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+      {q.error ? (
+        <SectionCard title="Gagal memuat">
+          <div className="text-sm text-danger">{String(q.error)}</div>
         </SectionCard>
-      </div>
+      ) : null}
     </div>
   );
 }
-
-export const Route = createFileRoute("/$sekolah/staff/")({ component: StaffDashboardPage });

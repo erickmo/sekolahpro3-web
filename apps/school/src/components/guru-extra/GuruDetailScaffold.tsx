@@ -84,7 +84,7 @@ export function GuruDetailScaffold(props: GuruDetailScaffoldProps) {
           <Breadcrumb
             items={[
               { label: "Dashboard", render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, "/")} className={className}>{children}</Link> },
-              { label: "Guru", render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, "/guru")} className={className}>{children}</Link> },
+              { label: "Guru", render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, "/staff")} className={className}>{children}</Link> },
               { label: crumbParent.label, render: ({ className, children }) => <Link {...scopedLinkProps(sekolah, crumbParent.to)} className={className}>{children}</Link> },
               { label: crumbSelf },
             ]}

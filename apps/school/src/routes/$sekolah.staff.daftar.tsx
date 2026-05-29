@@ -1,138 +1,133 @@
-import { useState } from "react";
-import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
-import { Avatar, Badge, type Column } from "@sekolahpro/ui";
-import { ResourceListPage } from "../components/ResourceListPage";
-import { StaffFormModal } from "../components/staff/StaffFormModal";
+import { useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Badge } from "@sekolahpro/ui";
+import { useResourceList } from "@sekolahpro/api-client";
+import { scopedTo, scopedParams } from "../lib/scoped";
+import { RoleBadges } from "../features/pegawai/RoleBadges";
+import { apiRoleBadges, apiIsGuru, apiIsStaff, apiIsDualRole, type PegawaiApi } from "../features/pegawai/roles";
 
-type Row = {
-  name: string;
-  nama_lengkap: string;
-  nip?: string;
-  nuptk?: string;
-  jenis_kelamin?: string;
-  status_kepegawaian?: string;
-  jabatan_fungsional?: string;
-  sekolah?: string;
-  is_aktif?: 0 | 1;
-};
+type RoleFilter = "semua" | "guru" | "staff" | "dual";
+type StatusFilter = "semua" | "aktif" | "nonaktif";
 
-const STATUS_KEP_OPTIONS = [
-  { value: "Semua", label: "Semua" },
-  { value: "PNS", label: "PNS" },
-  { value: "PPPK", label: "PPPK" },
-  { value: "GTY", label: "GTY" },
-  { value: "GTT", label: "GTT" },
-  { value: "Honorer", label: "Honorer" },
+const ROLE_OPTIONS: { value: RoleFilter; label: string }[] = [
+  { value: "semua", label: "Semua" },
+  { value: "guru", label: "Guru" },
+  { value: "staff", label: "Staff" },
+  { value: "dual", label: "Dual-role" },
 ];
 
-const JK_OPTIONS = [
-  { value: "Semua", label: "Semua" },
-  { value: "Laki-laki", label: "L" },
-  { value: "Perempuan", label: "P" },
-];
+const PEGAWAI_LIMIT = 500;
 
-const AKTIF_OPTIONS = [
-  { value: "Semua", label: "Semua" },
-  { value: "1", label: "Aktif" },
-  { value: "0", label: "Non-aktif" },
-];
+export const Route = createFileRoute("/$sekolah/staff/daftar")({
+  component: DaftarPegawai,
+});
 
-const COLUMNS: Column<Row>[] = [
-  {
-    key: "nama_lengkap",
-    header: "Staff",
-    sortable: true,
-    cell: (r) => (
-      <div className="flex items-center gap-3 min-w-0">
-        <Avatar name={r.nama_lengkap} size="sm" />
-        <div className="min-w-0">
-          <div className="font-medium text-fg truncate">{r.nama_lengkap}</div>
-          <div className="text-xs text-muted-fg tabular-nums">
-            {r.nip ? `NIP ${r.nip}` : r.name}
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    key: "jabatan_fungsional",
-    header: "Jabatan",
-    cell: (r) => <span className="text-sm">{r.jabatan_fungsional ?? "—"}</span>,
-  },
-  {
-    key: "sekolah",
-    header: "Sekolah",
-    sortable: true,
-    cell: (r) => <span className="text-sm">{r.sekolah ?? "—"}</span>,
-  },
-  {
-    key: "jenis_kelamin",
-    header: "JK",
-    align: "center",
-    width: "60px",
-    cell: (r) => (
-      <span className="text-xs">
-        {r.jenis_kelamin === "Laki-laki" ? "L" : r.jenis_kelamin === "Perempuan" ? "P" : "—"}
-      </span>
-    ),
-  },
-  {
-    key: "status_kepegawaian",
-    header: "Status Kepegawaian",
-    sortable: true,
-    cell: (r) => <Badge tone="neutral">{r.status_kepegawaian ?? "—"}</Badge>,
-  },
-  {
-    key: "is_aktif",
-    header: "Status",
-    sortable: true,
-    cell: (r) => (
-      <Badge tone={r.is_aktif ? "success" : "neutral"} dot>
-        {r.is_aktif ? "Aktif" : "Non-aktif"}
-      </Badge>
-    ),
-  },
-];
+function DaftarPegawai() {
+  const { sekolah } = Route.useParams();
+  const [role, setRole] = useState<RoleFilter>("semua");
+  const [status, setStatus] = useState<StatusFilter>("semua");
+  const [query, setQuery] = useState("");
 
-function StaffListPage() {
-  const { sekolah } = useParams({ from: "/$sekolah" });
+  const q = useResourceList<PegawaiApi>("Pegawai", {
+    fields: ["name", "nama_lengkap", "nip", "jabatan_fungsional", "status_kepegawaian", "is_aktif", "roles.role"],
+    filters: { sekolah },
+    order_by: "nama_lengkap asc",
+    limit_page_length: PEGAWAI_LIMIT,
+  });
 
-  const [showCreate, setShowCreate] = useState(false);
-  const navigate = useNavigate();
+  const list = q.data ?? [];
+
+  const filtered = useMemo(() => list.filter((p) => {
+    if (role === "guru" && !(apiIsGuru(p) && !apiIsDualRole(p))) return false;
+    if (role === "staff" && !(apiIsStaff(p) && !apiIsDualRole(p))) return false;
+    if (role === "dual" && !apiIsDualRole(p)) return false;
+    if (status === "aktif" && p.is_aktif !== 1) return false;
+    if (status === "nonaktif" && p.is_aktif === 1) return false;
+    if (query) {
+      const t = query.toLowerCase();
+      const hay = `${p.nama_lengkap ?? ""} ${p.nip ?? ""}`.toLowerCase();
+      if (!hay.includes(t)) return false;
+    }
+    return true;
+  }), [list, role, status, query]);
+
   return (
-    <>
-      <ResourceListPage<Row>
-        eyebrow="Direktori"
-        title="Staff"
-        description="Kelola data tenaga kependidikan dan staf sekolah."
-        doctype="Guru"
-        fields={[
-          "name",
-          "nama_lengkap",
-          "nip",
-          "nuptk",
-          "jenis_kelamin",
-          "status_kepegawaian",
-          "jabatan_fungsional",
-          "sekolah",
-          "is_aktif",
-        ]}
-        rowKey={(r) => r.name}
-        columns={COLUMNS}
-        defaultSort={{ key: "nama_lengkap", dir: "asc" }}
-        searchFields={["name", "nama_lengkap", "nip", "nuptk"]}
-        selectFilters={[
-          { key: "status_kepegawaian", field: "status_kepegawaian", label: "Status Kepegawaian", options: STATUS_KEP_OPTIONS },
-          { key: "jenis_kelamin", field: "jenis_kelamin", label: "JK", options: JK_OPTIONS },
-          { key: "is_aktif", field: "is_aktif", label: "Aktif", options: AKTIF_OPTIONS },
-        ]}
-        addLabel="Tambah Staff"
-        onAdd={() => setShowCreate(true)}
-        onRowClick={(r) => navigate({ to: "/$sekolah/staff/$nip", params: { sekolah, nip: r.name } })}
-      />
-      <StaffFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {ROLE_OPTIONS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => setRole(f.value)}
+            className={`h-8 px-3 rounded-md text-sm border ${role === f.value ? "border-brand bg-brand/10 text-brand" : "border-border text-fg hover:bg-muted"}`}
+          >
+            {f.label}
+          </button>
+        ))}
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as StatusFilter)}
+          className="h-8 px-2 rounded-md border border-border text-sm bg-bg"
+        >
+          <option value="semua">Semua status</option>
+          <option value="aktif">Aktif</option>
+          <option value="nonaktif">Non-aktif</option>
+        </select>
+        <input
+          type="search"
+          placeholder="Cari nama atau NIP"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="h-8 px-2 rounded-md border border-border text-sm bg-bg flex-1 min-w-[180px]"
+        />
+        <span className="text-xs text-muted-fg ml-auto">
+          {q.isLoading ? "Memuat..." : `${filtered.length} pegawai`}
+        </span>
+      </div>
+
+      <div className="rounded-lg border border-border bg-bg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="text-xs text-muted-fg bg-muted/40">
+            <tr>
+              <th className="text-left px-3 py-2">NIP</th>
+              <th className="text-left px-3 py-2">Nama</th>
+              <th className="text-left px-3 py-2">Role</th>
+              <th className="text-left px-3 py-2">Status</th>
+              <th className="text-left px-3 py-2">Jabatan / Mapel</th>
+              <th className="text-left px-3 py-2">Kepegawaian</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((p) => (
+              <tr key={p.name} className="border-t border-border hover:bg-muted/30">
+                <td className="px-3 py-2 font-mono text-xs">{p.nip ?? "—"}</td>
+                <td className="px-3 py-2">
+                  <Link
+                    to={scopedTo(sekolah, `/staff/${p.name}`)}
+                    params={scopedParams(sekolah)}
+                    className="text-brand hover:underline"
+                  >
+                    {p.nama_lengkap ?? p.name}
+                  </Link>
+                </td>
+                <td className="px-3 py-2"><RoleBadges roles={apiRoleBadges(p)} /></td>
+                <td className="px-3 py-2">
+                  <Badge tone={p.is_aktif === 1 ? "success" : "neutral"}>
+                    {p.is_aktif === 1 ? "Aktif" : "Non-aktif"}
+                  </Badge>
+                </td>
+                <td className="px-3 py-2">{p.jabatan_fungsional ?? "—"}</td>
+                <td className="px-3 py-2">{p.status_kepegawaian ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filtered.length === 0 && !q.isLoading ? (
+          <div className="px-3 py-6 text-center text-sm text-muted-fg">
+            {q.error ? `Gagal memuat: ${String(q.error)}` : "Tidak ada pegawai sesuai filter."}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
-
-export const Route = createFileRoute("/$sekolah/staff/daftar")({ component: StaffListPage });

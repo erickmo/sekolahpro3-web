@@ -122,7 +122,7 @@ const activities = [
 
 // cross-menu signal — wire to backend aggregate when ready
 const riskRollup: (AttentionItem & {
-  actionHref: "/$sekolah/guru/sk-mengajar" | "/$sekolah/jadwal/slot" | "/$sekolah/keuangan" | "/$sekolah/kelas/rombel";
+  actionHref: "/$sekolah/staff/sk-mengajar" | "/$sekolah/jadwal/slot" | "/$sekolah/keuangan" | "/$sekolah/kelas/rombel";
   metaText: string;
 })[] = [
   {
@@ -131,7 +131,7 @@ const riskRollup: (AttentionItem & {
     tone: "warning",
     badge: "SK",
     actionLabel: "Lihat Daftar SK",
-    actionHref: "/$sekolah/guru/sk-mengajar",
+    actionHref: "/$sekolah/staff/sk-mengajar",
     metaText: "6 SK",
   },
   {
@@ -271,7 +271,7 @@ function Home() {
               }))}
               renderLink={(href, children) => (
                 // riskRollup.actionHref is typed to known routes — safe to cast.
-                <Link to={href as "/$sekolah/guru/sk-mengajar"} params={{ sekolah }}>{children}</Link>
+                <Link to={href as "/$sekolah/staff/sk-mengajar"} params={{ sekolah }}>{children}</Link>
               )}
             />
           </SectionCard>
