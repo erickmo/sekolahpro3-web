@@ -36,7 +36,7 @@ describe("useNfcReader", () => {
     const token = btoa(JSON.stringify({
       kartu_id: "K-1", nonce: "n", exp: Math.floor(Date.now()/1000)+60, hmac: "h",
     })).replace(/=+$/, "");
-    act(() => FakeNDEFReader.instances[0].emit([makeRecord(token)]));
+    act(() => FakeNDEFReader.instances[0]!.emit([makeRecord(token)]));
     await waitFor(() => expect(onRead).toHaveBeenCalledTimes(1));
     expect(onRead.mock.calls[0][0].kartu_id).toBe("K-1");
   });
