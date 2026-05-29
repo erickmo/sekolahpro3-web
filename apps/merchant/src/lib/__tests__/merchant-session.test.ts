@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getMerchantContext } from "../merchant-session";
+import { getMerchantContext, type MerchantClaims } from "../merchant-session";
 
 describe("getMerchantContext", () => {
   it("returns merchant + terminal from claims", () => {
@@ -18,6 +18,6 @@ describe("getMerchantContext", () => {
   });
 
   it("throws when claims missing merchant", () => {
-    expect(() => getMerchantContext({} as any)).toThrow(/merchant/i);
+    expect(() => getMerchantContext({} as unknown as MerchantClaims)).toThrow(/merchant/i);
   });
 });
