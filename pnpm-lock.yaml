@@ -139,6 +139,9 @@ importers:
       '@tanstack/router-vite-plugin':
         specifier: ^1.45.0
         version: 1.167.10(@tanstack/react-router@1.170.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(vite@5.4.21(@types/node@20.19.41)(terser@5.48.0))
+      '@testing-library/jest-dom':
+        specifier: ^6.4.0
+        version: 6.9.1
       '@testing-library/react':
         specifier: ^16.0.0
         version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@18.3.7(@types/react@18.3.29))(@types/react@18.3.29)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -151,6 +154,9 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.0
         version: 18.3.7(@types/react@18.3.29)
+      '@types/web-bluetooth':
+        specifier: ^0.0.21
+        version: 0.0.21
       '@vitejs/plugin-react':
         specifier: ^4.3.0
         version: 4.7.0(vite@5.4.21(@types/node@20.19.41)(terser@5.48.0))
@@ -1899,6 +1905,9 @@ packages:
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
+
+  '@types/web-bluetooth@0.0.21':
+    resolution: {integrity: sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==}
 
   '@typescript-eslint/eslint-plugin@7.18.0':
     resolution: {integrity: sha512-94EQTWZ40mzBc42ATNIBimBEDltSJ9RQHCC8vc/PDbxi4k8dVwUAv4o98dk50M1zB+JGFxp43FP7f8+FP8R6Sw==}
@@ -5021,7 +5030,7 @@ snapshots:
     dependencies:
       '@babel/core': 7.29.0
       '@babel/helper-plugin-utils': 7.29.7
-      '@babel/types': 7.29.0
+      '@babel/types': 7.29.7
       esutils: 2.0.3
 
   '@babel/runtime@7.29.2': {}
@@ -5331,7 +5340,7 @@ snapshots:
   '@rollup/plugin-babel@6.1.0(@babel/core@7.29.0)(@types/babel__core@7.20.5)(rollup@4.60.4)':
     dependencies:
       '@babel/core': 7.29.0
-      '@babel/helper-module-imports': 7.28.6
+      '@babel/helper-module-imports': 7.29.7
       '@rollup/pluginutils': 5.3.0(rollup@4.60.4)
     optionalDependencies:
       '@types/babel__core': 7.20.5
@@ -5667,6 +5676,8 @@ snapshots:
 
   '@types/trusted-types@2.0.7': {}
 
+  '@types/web-bluetooth@0.0.21': {}
+
   '@typescript-eslint/eslint-plugin@7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
@@ -5793,7 +5804,7 @@ snapshots:
       pathe: 1.1.2
       picocolors: 1.1.1
       sirv: 2.0.4
-      vitest: 1.6.1(@types/node@20.19.41)(@vitest/ui@1.6.1)(jsdom@24.1.3)(terser@5.48.0)
+      vitest: 1.6.1(@types/node@20.19.41)(@vitest/ui@1.6.1)(jsdom@25.0.1)(terser@5.48.0)
 
   '@vitest/utils@1.6.1':
     dependencies:

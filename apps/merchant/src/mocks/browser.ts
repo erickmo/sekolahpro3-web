@@ -1,2 +1,7 @@
-// Temporary stub — real implementation lands in Task 9.
-export async function startMocks() {}
+import { setupWorker } from "msw/browser";
+import { handlers } from "./handlers";
+
+export async function startMocks() {
+  const worker = setupWorker(...handlers);
+  await worker.start({ onUnhandledRequest: "bypass" });
+}

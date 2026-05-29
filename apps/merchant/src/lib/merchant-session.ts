@@ -20,7 +20,7 @@ export function getMerchantContext(claims: MerchantClaims): MerchantContext {
   return {
     merchantId: claims.merchant_id,
     terminalId: claims.terminal_id,
-    operatorUser: claims.operator_user,
+    ...(claims.operator_user ? { operatorUser: claims.operator_user } : {}),
     voidWindowMinutes: claims.void_window_minutes ?? 10,
   };
 }
