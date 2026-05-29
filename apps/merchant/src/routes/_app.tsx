@@ -28,11 +28,9 @@ function AppShell() {
     }
   }, [session.status, nav]);
 
-  const tab = (to: string, label: string) => (
+  const tab = (to: "/pos" | "/catalog" | "/transaksi" | "/laporan" | "/pengaturan", label: string) => (
     <Link
-      // routes for catalog/transaksi/laporan/pengaturan land in later tasks;
-      // cast keeps the bottom-nav declarative without blocking typecheck now.
-      to={to as never}
+      to={to}
       className={`flex-1 text-center py-2 ${
         path.startsWith(to) ? "font-semibold" : ""
       }`}
