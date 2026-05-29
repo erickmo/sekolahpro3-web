@@ -4,7 +4,7 @@ Web frontend monorepo for SekolahPro (pnpm + Turborepo workspace).
 
 ## Quickstart
 
-Requirements: Node >= 20, pnpm 9.
+Requirements: Node >= 20, pnpm 10.
 
 ```bash
 pnpm install
@@ -18,10 +18,28 @@ pnpm test
 ## Layout
 
 - `apps/*`     — deployable applications
-- `packages/*` — shared libraries (ui, api client, config, etc.)
+  - `landing`  — public landing site
+  - `merchant` — mobile-first PWA POS (tap-pay kartu siswa). See `apps/merchant/README.md`.
+  - `parent`   — parent/wali app
+  - `saas`     — SaaS admin/tenant console
+  - `school`   — school staff app
+  - `student`  — student app
+- `packages/*` — shared libraries
+  - `api-client`     — RPC/API client
+  - `auth`           — auth/session
+  - `card`           — student card (NFC/QR) helpers
+  - `config`         — shared runtime config
+  - `eslint-config`  — shared ESLint config
+  - `tenant`         — multi-tenant helpers
+  - `tsconfig`       — shared TS configs
+  - `ui`             — shared UI components
 - `tools/*`    — internal tooling
+  - `caddy`       — reverse-proxy config
+  - `deploy`      — tag-triggered deploy scripts
+  - `e2e`         — Playwright end-to-end smoke tests
+  - `landing-dev` — local stack for landing site
 
-(Apps and packages are added in subsequent foundation tasks — this repo currently contains only the workspace skeleton.)
+Workspace globs (`pnpm-workspace.yaml`): `apps/*`, `packages/*`, `tools/*`.
 
 ## Spec
 
