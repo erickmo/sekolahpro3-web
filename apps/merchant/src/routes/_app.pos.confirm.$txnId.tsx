@@ -33,7 +33,7 @@ function ConfirmPage() {
   return (
     <ReceiptSheet
       txnId={t.name}
-      namaSiswa={t.kartu}
+      namaSiswa={t.nama_siswa ?? t.kartu}
       nominal={t.nominal}
       balanceAfter={0}
       voidDeadlineIso={t.void_deadline_iso}

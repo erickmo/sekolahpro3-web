@@ -52,11 +52,11 @@ function AppShell() {
         <Outlet />
       </main>
       <nav className="flex border-t bg-bg">
-        {tab("/_app/pos", "POS")}
-        {tab("/_app/catalog", "Katalog")}
-        {tab("/_app/transaksi", "Transaksi")}
-        {tab("/_app/laporan", "Laporan")}
-        {tab("/_app/pengaturan", "Setelan")}
+        {tab("/pos", "POS")}
+        {tab("/catalog", "Katalog")}
+        {tab("/transaksi", "Transaksi")}
+        {tab("/laporan", "Laporan")}
+        {tab("/pengaturan", "Setelan")}
       </nav>
     </div>
   );

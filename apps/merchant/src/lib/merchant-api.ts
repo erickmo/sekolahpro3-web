@@ -30,6 +30,7 @@ export interface ChargeResult {
 export interface MerchantTxn {
   name: string;
   kartu: string;
+  nama_siswa?: string;
   nominal: number;
   items: { name: string; qty: number; price: number }[];
   merchant: string;

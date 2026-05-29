@@ -115,7 +115,11 @@ export const handlers = [
   }),
 
   http.post("/api/method/sekolahpro.koperasi.merchant.transaksi", () => {
-    return HttpResponse.json({ message: db.transaksi });
+    const withNames = db.transaksi.map((t) => ({
+      ...t,
+      nama_siswa: db.students.find((s) => s.kartu_id === t.kartu)?.nama,
+    }));
+    return HttpResponse.json({ message: withNames });
   }),
 
   http.post("/api/method/sekolahpro.koperasi.merchant.daily_report", () => {
