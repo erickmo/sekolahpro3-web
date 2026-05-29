@@ -2,7 +2,7 @@ import type { ResourceFieldDef } from "../shared/ResourceCreateModal";
 
 // Field schema untuk form Tambah Guru (DocType: Guru).
 // Reqd fields mengikuti definisi doctype JSON di apps/sekolahpro.
-export const GURU_DOCTYPE = "Guru";
+export const GURU_DOCTYPE = "Pegawai";
 
 export const GURU_FIELDS: ResourceFieldDef[] = [
   { name: "nama_lengkap", label: "Nama Lengkap", type: "text", required: true, colSpan: 2 },

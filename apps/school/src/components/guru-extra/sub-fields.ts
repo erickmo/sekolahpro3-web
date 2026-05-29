@@ -12,7 +12,7 @@ export const BERKAS_GURU_FIELDS: ResourceFieldDef[] = [
     label: "Guru",
     type: "link",
     required: true,
-    linkDoctype: "Guru",
+    linkDoctype: "Pegawai",
     linkLabelField: "nama_lengkap",
   },
   { name: "nama_berkas", label: "Nama Berkas", type: "text", required: true, colSpan: 2 },
@@ -54,7 +54,7 @@ export const MAPEL_PENGAMPU_GURU_FIELDS: ResourceFieldDef[] = [
     label: "Guru",
     type: "link",
     required: true,
-    linkDoctype: "Guru",
+    linkDoctype: "Pegawai",
     linkLabelField: "nama_lengkap",
     hint: "Guru pengampu (induk)",
   },
@@ -77,7 +77,7 @@ export const MAPEL_PENGAMPU_GURU_FIELDS: ResourceFieldDef[] = [
 ];
 
 export const MAPEL_PENGAMPU_BASE_VALUES = {
-  parenttype: "Guru",
+  parenttype: "Pegawai",
   parentfield: "mapel_pengampu",
 };
 
@@ -89,7 +89,7 @@ export const PENUGASAN_GURU_FIELDS: ResourceFieldDef[] = [
     label: "Guru",
     type: "link",
     required: true,
-    linkDoctype: "Guru",
+    linkDoctype: "Pegawai",
     linkLabelField: "nama_lengkap",
   },
   {
@@ -125,7 +125,7 @@ export const SK_JABATAN_FIELDS: ResourceFieldDef[] = [
     label: "Guru",
     type: "link",
     required: true,
-    linkDoctype: "Guru",
+    linkDoctype: "Pegawai",
     linkLabelField: "nama_lengkap",
   },
   {
@@ -156,7 +156,7 @@ export const SK_MENGAJAR_FIELDS: ResourceFieldDef[] = [
     label: "Guru",
     type: "link",
     required: true,
-    linkDoctype: "Guru",
+    linkDoctype: "Pegawai",
     linkLabelField: "nama_lengkap",
   },
   {

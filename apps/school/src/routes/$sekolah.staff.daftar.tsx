@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Badge } from "@sekolahpro/ui";
+import { Badge, Button, IconPlus } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { scopedTo, scopedParams } from "../lib/scoped";
 import { RoleBadges } from "../features/pegawai/RoleBadges";
+import { PegawaiFormModal } from "../features/pegawai/PegawaiFormModal";
 import { apiRoleBadges, apiIsGuru, apiIsStaff, apiIsDualRole, type PegawaiApi } from "../features/pegawai/roles";
 
 type RoleFilter = "semua" | "guru" | "staff" | "dual";
@@ -27,6 +28,7 @@ function DaftarPegawai() {
   const [role, setRole] = useState<RoleFilter>("semua");
   const [status, setStatus] = useState<StatusFilter>("semua");
   const [query, setQuery] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
   const q = useResourceList<PegawaiApi>("Pegawai", {
     fields: ["name", "nama_lengkap", "nip", "jabatan_fungsional", "status_kepegawaian", "is_aktif", "roles.role"],
@@ -53,6 +55,13 @@ function DaftarPegawai() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-fg">Daftar Pegawai</h1>
+        <Button onClick={() => setShowCreate(true)}>
+          <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
+          Tambah Pegawai
+        </Button>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         {ROLE_OPTIONS.map((f) => (
           <button
@@ -128,6 +137,8 @@ function DaftarPegawai() {
           </div>
         ) : null}
       </div>
+
+      <PegawaiFormModal open={showCreate} onClose={() => setShowCreate(false)} mode="create" />
     </div>
   );
 }

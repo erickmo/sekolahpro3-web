@@ -53,7 +53,7 @@ export function BerkasGuruFormModal({ open, onClose, onCreated }: BerkasGuruForm
 
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>("Berkas Guru");
-  const guruQ = useResourceList<GuruRow>("Guru", {
+  const guruQ = useResourceList<GuruRow>("Pegawai", {
     fields: ["name", "nama_lengkap", "nip"],
     limit_page_length: 0,
   });

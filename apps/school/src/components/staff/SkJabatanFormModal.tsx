@@ -50,7 +50,7 @@ export function SkJabatanFormModal({ open, onClose, onCreated }: SkJabatanFormMo
 
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>("SK Jabatan");
-  const guruQ = useResourceList<GuruRow>("Guru", {
+  const guruQ = useResourceList<GuruRow>("Pegawai", {
     fields: ["name", "nama_lengkap", "nip"],
     limit_page_length: 0,
   });

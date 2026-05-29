@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { Button } from "@sekolahpro/ui";
 import { useResourceDoc } from "@sekolahpro/api-client";
 import { ApiPegawaiHeader } from "../features/pegawai/ApiPegawaiHeader";
+import { PegawaiFormModal } from "../features/pegawai/PegawaiFormModal";
 import { ApiProfilTab } from "../features/pegawai/ApiProfilTab";
 import { ApiMengajarTab } from "../features/pegawai/ApiMengajarTab";
 import { ApiStaffTab } from "../features/pegawai/ApiStaffTab";
@@ -20,6 +22,7 @@ function PegawaiDetail() {
   const { nip } = Route.useParams();
   const q = useResourceDoc<PegawaiApi>("Pegawai", nip);
   const [active, setActive] = useState<TabKey>("profil");
+  const [showEdit, setShowEdit] = useState(false);
 
   if (q.isLoading) {
     return <div className="text-sm text-muted-fg p-4">Memuat...</div>;
@@ -46,7 +49,10 @@ function PegawaiDetail() {
 
   return (
     <div className="space-y-4">
-      <ApiPegawaiHeader pegawai={pegawai} />
+      <div className="flex items-start gap-2">
+        <div className="flex-1"><ApiPegawaiHeader pegawai={pegawai} /></div>
+        <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>Ubah</Button>
+      </div>
 
       <div className="border-b border-border flex gap-1 overflow-x-auto">
         {tabs.map((t) => (
@@ -66,6 +72,8 @@ function PegawaiDetail() {
       {active === "staff" ? <ApiStaffTab pegawai={pegawai} /> : null}
       {active === "berkas" ? <ApiBerkasSection pegawai={pegawai} /> : null}
       {active === "kehadiran" ? <ApiKehadiranSection pegawai={pegawai} /> : null}
+
+      <PegawaiFormModal open={showEdit} onClose={() => setShowEdit(false)} mode="edit" initial={pegawai} />
     </div>
   );
 }

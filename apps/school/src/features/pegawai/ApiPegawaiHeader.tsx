@@ -7,7 +7,7 @@ export function ApiPegawaiHeader({ pegawai }: { pegawai: PegawaiApi }) {
   const badges = apiRoleBadges(pegawai);
   return (
     <div className="flex items-center gap-4 rounded-lg border border-border bg-bg p-4">
-      <Avatar name={pegawai.nama_lengkap ?? pegawai.name} size="lg" />
+      <Avatar name={pegawai.nama_lengkap ?? pegawai.name} src={pegawai.foto} size="lg" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-semibold text-fg truncate">
