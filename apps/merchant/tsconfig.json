@@ -1,0 +1,7 @@
+{
+  "extends": "@sekolahpro/tsconfig/react.json",
+  "include": ["src", "src/routeTree.gen.ts"],
+  "compilerOptions": {
+    "types": ["vite/client", "vitest/globals", "@types/web-bluetooth"]
+  }
+}
