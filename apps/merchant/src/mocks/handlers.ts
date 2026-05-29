@@ -39,7 +39,16 @@ export const handlers = [
 
     if (db.idempotency.has(body.idempotency_key)) {
       const txn = db.idempotency.get(body.idempotency_key)!;
-      return HttpResponse.json({ message: { txn_name: txn.name, balance_after: 0, replayed: true } });
+      const stu = db.students.find((s) => s.kartu_id === txn.kartu);
+      return HttpResponse.json({
+        message: {
+          txn_name: txn.name,
+          nama_siswa: stu?.nama ?? "",
+          balance_after: stu?.saldo ?? 0,
+          void_deadline_iso: txn.void_deadline_iso,
+          replayed: true,
+        },
+      });
     }
 
     const tok = decodeToken(body.card_token);
