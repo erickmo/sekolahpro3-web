@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { RequireAuth } from "@sekolahpro/auth";
 import { PageHeader, SectionCard } from "@sekolahpro/ui";
@@ -38,13 +38,13 @@ function PickupPage() {
   const issue = useIssuePickupToken();
   const [token, setToken] = useState<{ token: string; expIso: string } | null>(null);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     if (!activeNis || !selectedPersonId) return;
     const t = await issue.mutateAsync({ nis: activeNis, pickupPersonId: selectedPersonId });
     setToken(t);
-  }
+  }, [activeNis, selectedPersonId, issue]);
 
-  useEffect(() => { void refresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeNis, selectedPersonId]);
+  useEffect(() => { void refresh(); }, [refresh]);
 
   const events = useListPickupEvents(activeNis);
   const pending = (events.data ?? []).find((e) => e.status === "pending");
