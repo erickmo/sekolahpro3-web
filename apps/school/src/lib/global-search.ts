@@ -2,10 +2,10 @@
 // Replace dengan @sekolahpro/api-client hooks ketika backend siap.
 
 import { SISWA_LIST } from "../data/siswa";
-import { GURU_LIST } from "../data/guru";
+import { PEGAWAI_LIST, isGuru, isStaff } from "../data/pegawai";
 import { KELAS_LIST } from "../data/kelas";
 
-export type SearchCategory = "Siswa" | "Guru" | "Kelas";
+export type SearchCategory = "Siswa" | "Guru" | "Staff" | "Kelas";
 
 export type SearchHit = {
   id: string;
@@ -41,14 +41,25 @@ export function globalSearch(query: string, max: number = DEFAULT_MAX_HITS): Sea
     }
   }
 
-  for (const g of GURU_LIST) {
-    if (includes(g.namaLengkap, q) || includes(g.nip, q)) {
+  for (const p of PEGAWAI_LIST) {
+    if (!(includes(p.namaLengkap, q) || includes(p.nip, q))) continue;
+    if (isGuru(p)) {
       hits.push({
-        id: `guru:${g.nip}`,
-        label: g.namaLengkap,
+        id: `pegawai:${p.nip}`,
+        label: p.namaLengkap,
         category: "Guru",
-        meta: `NIP ${g.nip}`,
-        href: `/guru/${g.nip}`,
+        meta: `NIP ${p.nip}`,
+        href: `/staff/${p.nip}`,
+      });
+      if (hits.length >= max) return hits;
+    }
+    if (isStaff(p)) {
+      hits.push({
+        id: `pegawai-staff:${p.nip}`,
+        label: p.namaLengkap,
+        category: "Staff",
+        meta: `NIP ${p.nip}`,
+        href: `/staff/${p.nip}`,
       });
       if (hits.length >= max) return hits;
     }
@@ -71,7 +82,7 @@ export function globalSearch(query: string, max: number = DEFAULT_MAX_HITS): Sea
 }
 
 export function groupHitsByCategory(hits: SearchHit[]): Array<{ category: SearchCategory; items: SearchHit[] }> {
-  const order: SearchCategory[] = ["Siswa", "Guru", "Kelas"];
+  const order: SearchCategory[] = ["Siswa", "Guru", "Staff", "Kelas"];
   return order
     .map((category) => ({
       category,

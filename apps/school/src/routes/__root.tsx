@@ -92,7 +92,7 @@ function GlobalSearch({ sekolah }: { sekolah: string | undefined }) {
         }}
         onFocus={handleFocus}
         onBlur={handleBlur}
-        placeholder="Cari siswa, guru, kelas..."
+        placeholder="Cari siswa, pegawai, kelas..."
         className="h-9 w-full rounded-md border border-border bg-muted/40 pl-9 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
       />
       <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
@@ -104,7 +104,7 @@ function GlobalSearch({ sekolah }: { sekolah: string | undefined }) {
         <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-96 overflow-auto rounded-md border border-border bg-bg shadow-lg">
           {trimmed.length < SEARCH_MIN_QUERY ? (
             <div className="px-3 py-3 text-xs text-muted-fg">
-              Ketik minimal {SEARCH_MIN_QUERY} karakter untuk mencari siswa, guru, atau kelas.
+              Ketik minimal {SEARCH_MIN_QUERY} karakter untuk mencari siswa, pegawai, atau kelas.
             </div>
           ) : hits.length === 0 ? (
             <div className="px-3 py-3 text-xs text-muted-fg">
@@ -297,7 +297,6 @@ const ROLE_MENU_MAP: Record<string, string[]> = {
   kepala_sekolah: [
     "/",
     "/siswa",
-    "/guru",
     "/staff",
     "/kelas",
     "/akademik",
@@ -308,7 +307,7 @@ const ROLE_MENU_MAP: Record<string, string[]> = {
     "/laporan",
     "/pengaturan",
   ],
-  operator: ["/", "/siswa", "/guru", "/kelas", "/jadwal", "/absensi", "/ppdb", "/pesan"],
+  operator: ["/", "/siswa", "/staff", "/kelas", "/jadwal", "/absensi", "/ppdb", "/pesan"],
   guru: ["/", "/siswa", "/kelas", "/akademik", "/jadwal", "/absensi", "/pesan"],
   bendahara: ["/", "/siswa", "/keuangan", "/koperasi", "/ppdb", "/laporan", "/pesan"],
   pustakawan: ["/", "/perpustakaan", "/siswa", "/pesan"],
@@ -433,8 +432,7 @@ function Layout() {
       items: [
         mk("/", "Dashboard", <IconHome />),
         mk("/siswa", "Siswa", <IconUsers />),
-        mk("/guru", "Guru", <IconGrad />),
-        mk("/staff", "Staff", <IconId />),
+        mk("/staff", "Guru & Staff", <IconGrad />),
         mk("/kelas", "Kelas", <IconBook />),
       ],
     },
