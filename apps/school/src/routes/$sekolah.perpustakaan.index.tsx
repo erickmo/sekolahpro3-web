@@ -210,14 +210,18 @@ function PerpustakaanDashboardPage() {
 
   const isZeroState = !bukuQ.isLoading && !bukuQ.isError && buku.length === 0;
 
-  if (isZeroState) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow="Layanan"
-          title="Dashboard Perpustakaan"
-          description="Ringkasan koleksi, sirkulasi, dan tindakan cepat untuk operasional harian."
-        />
+  // The dashboard always renders. When the collection is empty we surface an
+  // inline banner inviting staff to add the first books instead of replacing
+  // the whole page with a single caption.
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Layanan"
+        title="Dashboard Perpustakaan"
+        description="Ringkasan koleksi, sirkulasi, dan tindakan cepat untuk operasional harian."
+      />
+
+      {isZeroState && (
         <GettingStartedCard
           icon={<IconBook />}
           title="Perpustakaan belum punya koleksi"
@@ -229,17 +233,7 @@ function PerpustakaanDashboardPage() {
             </Link>
           )}
         />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow="Layanan"
-        title="Dashboard Perpustakaan"
-        description="Ringkasan koleksi, sirkulasi, dan tindakan cepat untuk operasional harian."
-      />
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
