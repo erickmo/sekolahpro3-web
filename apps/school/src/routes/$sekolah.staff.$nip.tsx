@@ -19,6 +19,7 @@ export const Route = createFileRoute("/$sekolah/staff/$nip")({
 function PegawaiDetail() {
   const { nip } = Route.useParams();
   const q = useResourceDoc<PegawaiApi>("Pegawai", nip);
+  const [active, setActive] = useState<TabKey>("profil");
 
   if (q.isLoading) {
     return <div className="text-sm text-muted-fg p-4">Memuat...</div>;
@@ -42,9 +43,6 @@ function PegawaiDetail() {
     { key: "berkas", label: "Berkas" },
     { key: "kehadiran", label: "Kehadiran" },
   ];
-
-  const initial: TabKey = guruActive ? "mengajar" : staffActive ? "staff" : "profil";
-  const [active, setActive] = useState<TabKey>(initial);
 
   return (
     <div className="space-y-4">

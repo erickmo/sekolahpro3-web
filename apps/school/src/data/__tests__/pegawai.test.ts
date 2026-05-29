@@ -6,7 +6,6 @@ import {
   isGuru,
   isStaff,
   isDualRole,
-  type Pegawai,
 } from "../pegawai";
 
 describe("pegawai entity", () => {
