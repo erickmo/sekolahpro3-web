@@ -129,6 +129,10 @@ function PickupPage() {
           ) : (
             <PickupPersonList
               persons={persons.data ?? []}
+              onIssueToken={(p) => {
+                setSelectedPersonId(p.id);
+                setTab("qr");
+              }}
               onEdit={(p) => setEditing(p)}
               onRevoke={(p) => revoke.mutate({ id: p.id, nis: p.nis })}
             />
