@@ -23,6 +23,7 @@ import {
 import { logout, useSession } from "@sekolahpro/auth";
 import { useTenant } from "@sekolahpro/tenant";
 import { ChildSwitcher } from "../components/ChildSwitcher";
+import { ChildAccessNotice } from "../components/ChildAccessNotice";
 
 function Brand({ name }: { name: string }) {
   return (
@@ -143,6 +144,7 @@ function RootLayout() {
         </div>
       }
     >
+      <ChildAccessNotice />
       <Outlet />
     </AppShell>
   );
