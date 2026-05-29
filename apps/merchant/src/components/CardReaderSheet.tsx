@@ -23,6 +23,25 @@ export function CardReaderSheet({ open, onClose, onToken, nfcSupported }: Props)
     return () => stop();
   }, [open, tab, start, stop]);
 
+  // Dev-only seam: when mocks are on and the sheet is open, expose a window
+  // helper so Playwright (and ad-hoc devtools) can inject a synthetic card
+  // token without simulating NFC hardware.
+  useEffect(() => {
+    if (!open || import.meta.env.VITE_USE_MOCKS !== "true") return;
+    (window as unknown as { __devInjectCardToken?: (raw: string) => void }).__devInjectCardToken = (raw: string) => {
+      void import("@sekolahpro/card").then(({ parseCardToken }) => {
+        try {
+          onToken(parseCardToken(raw));
+        } catch {
+          /* ignore malformed dev token */
+        }
+      });
+    };
+    return () => {
+      delete (window as unknown as { __devInjectCardToken?: (raw: string) => void }).__devInjectCardToken;
+    };
+  }, [open, onToken]);
+
   if (!open) return null;
   return (
     <div role="dialog" className="fixed inset-0 bg-black/40 flex items-end">

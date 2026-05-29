@@ -22,6 +22,18 @@ function decodeToken(raw: string): { kartu_id: string; exp: number } | null {
 export const handlers = [
   http.get("/api/method/ping", () => HttpResponse.json({ ok: true })),
 
+  // Auth endpoints — minimal stubs so the dev seam (?stub_session=1) is not
+  // clobbered by `hydrateSession()` reading Guest from the real server.
+  http.post("/api/method/frappe.auth.get_logged_user", () =>
+    HttpResponse.json({ message: "merchant.operator@local" }),
+  ),
+  http.post("/api/method/frappe.core.doctype.user.user.get_roles", () =>
+    HttpResponse.json({ message: ["Merchant Operator"] }),
+  ),
+  http.post("/api/method/sekolahpro.api.auth.get_csrf", () =>
+    HttpResponse.json({ message: "stub" }),
+  ),
+
   // frappeFetch always POSTs to /api/method/<dotted>, so read endpoints
   // are registered as POST too (Frappe whitelisted methods accept POST).
   http.post("/api/method/sekolahpro.koperasi.merchant.catalog", () => {
