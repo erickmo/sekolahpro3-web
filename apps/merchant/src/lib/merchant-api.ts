@@ -85,8 +85,23 @@ async function call<T>(method: string, args?: Record<string, unknown>): Promise<
 
 const M = "sekolahpro.koperasi.merchant";
 
+export interface CatalogUpsertInput {
+  name?: string;
+  nama: string;
+  harga: number;
+  kategori_item: string;
+  aktif: boolean;
+  track_stok: boolean;
+  stok_qty: number | null;
+}
+
 export const merchantApi = {
   getCatalog: () => call<CatalogItem[]>(`${M}.catalog`),
+  listCatalog: () => call<CatalogItem[]>(`${M}.catalog_list`),
+  getCatalogItem: (name: string) => call<CatalogItem>(`${M}.catalog_get`, { name }),
+  upsertCatalog: (item: CatalogUpsertInput) =>
+    call<{ ok: true; name: string }>(`${M}.catalog_upsert`, { ...item }),
+  deleteCatalog: (name: string) => call<{ ok: true }>(`${M}.catalog_delete`, { name }),
   charge: (input: ChargeInput) => call<ChargeResult>(`${M}.charge`, { ...input }),
   void: (txn_name: string, reason: string) => call<{ ok: true }>(`${M}.void`, { txn_name, reason }),
   listTransaksi: () => call<MerchantTxn[]>(`${M}.transaksi`),

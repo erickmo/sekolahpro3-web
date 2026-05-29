@@ -114,6 +114,48 @@ export const handlers = [
     return HttpResponse.json({ message: { ok: true } });
   }),
 
+  http.post("/api/method/sekolahpro.koperasi.merchant.catalog_list", () => {
+    return HttpResponse.json({ message: db.items });
+  }),
+
+  http.post("/api/method/sekolahpro.koperasi.merchant.catalog_get", async ({ request }) => {
+    const { name } = (await request.json()) as { name: string };
+    const item = db.items.find((i) => i.name === name);
+    if (!item) return HttpResponse.json({ message: { error: "NOT_FOUND" } }, { status: 404 });
+    return HttpResponse.json({ message: item });
+  }),
+
+  http.post("/api/method/sekolahpro.koperasi.merchant.catalog_upsert", async ({ request }) => {
+    const body = (await request.json()) as {
+      name?: string;
+      nama: string;
+      harga: number;
+      kategori_item: string;
+      aktif: boolean;
+      track_stok: boolean;
+      stok_qty: number | null;
+    };
+    if (body.name) {
+      const idx = db.items.findIndex((i) => i.name === body.name);
+      if (idx >= 0) {
+        db.items[idx] = { ...db.items[idx], ...body, name: body.name };
+      } else {
+        db.items.push({ ...body, name: body.name });
+      }
+      return HttpResponse.json({ message: { ok: true, name: body.name } });
+    }
+    const newName = `I-${Date.now()}`;
+    db.items.push({ ...body, name: newName });
+    return HttpResponse.json({ message: { ok: true, name: newName } });
+  }),
+
+  http.post("/api/method/sekolahpro.koperasi.merchant.catalog_delete", async ({ request }) => {
+    const { name } = (await request.json()) as { name: string };
+    const idx = db.items.findIndex((i) => i.name === name);
+    if (idx >= 0) db.items.splice(idx, 1);
+    return HttpResponse.json({ message: { ok: true } });
+  }),
+
   http.post("/api/method/sekolahpro.koperasi.merchant.transaksi", () => {
     const withNames = db.transaksi.map((t) => ({
       ...t,
