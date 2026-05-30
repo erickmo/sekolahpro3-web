@@ -24,7 +24,7 @@ const school = {
 };
 
 const koperasi = {
-  sekolah: "S1", nama: "Sek 1 — Koperasi", slug: "s1",
+  koperasi: "KOP-O1-0001", nama: "Koperasi YPKI", slug: "s1",
   role_koperasi: "Teller", logo: null, status: "Aktif",
   organisasi: "O1", organisasi_nama: "Org 1",
 };
@@ -60,7 +60,7 @@ describe("PilihSekolahPage koperasi", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     wrap(<PilihSekolahPage />);
-    expect(screen.getByText("Sek 1 — Koperasi")).toBeInTheDocument();
+    expect(screen.getByText("Koperasi YPKI")).toBeInTheDocument();
     expect(screen.getByText("Teller")).toBeInTheDocument();
   });
 
@@ -74,7 +74,7 @@ describe("PilihSekolahPage koperasi", () => {
     expect(screen.queryByRole("heading", { name: "Koperasi" })).toBeNull();
   });
 
-  it("clicking a koperasi card calls selectKoperasi with the sekolah name", () => {
+  it("clicking a koperasi card calls selectKoperasi with the koperasi name", () => {
     const mutate = vi.fn();
     mockData([koperasi]);
     vi.spyOn(data, "useSelectKoperasi").mockReturnValue({
@@ -82,7 +82,10 @@ describe("PilihSekolahPage koperasi", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     wrap(<PilihSekolahPage />);
-    fireEvent.click(screen.getByText("Sek 1 — Koperasi").closest("button")!);
-    expect(mutate).toHaveBeenCalledWith({ name: "S1" }, expect.any(Object));
+    fireEvent.click(screen.getByText("Koperasi YPKI").closest("button")!);
+    expect(mutate).toHaveBeenCalledWith(
+      { name: "KOP-O1-0001" },
+      expect.any(Object),
+    );
   });
 });
