@@ -16,23 +16,26 @@
 
 ## Refinement vs Spec
 
-Spec menyebut `LantaiFormModal` dedicated. Setelah inspeksi, `GenericFormModal`
-(`apps/school/src/components/GenericFormModal.tsx`) sudah config-driven
-(create+edit, select/number/date, `scopeToSekolah`, `editName`, `onSaved`).
-Lebih DRY: **extend** `GenericFormModal` dgn prop `fixedValues` lalu pakai untuk
-Lantai — tanpa modal baru. Ruangan & Utilitas tetap modal khusus karena butuh
-dynamic Lantai-select + child-table grid yg di luar kemampuan generic modal.
+Spec menyebut `LantaiFormModal` dedicated. Tetap dipakai. Catatan: ada
+`GenericFormModal` config-driven di `apps/school/src/components/koperasi-master/`,
+tapi **terkopel** ke `MasterField`/`onSuccess` dan dipakai modul koperasi —
+meng-extend-nya menambah risiko regresi koperasi tanpa manfaat. Karena itu
+Lantai pakai **modal dedicated** `LantaiFormModal` yang mirror `GedungFormModal`
+(`apps/school/src/components/infrastruktur/GedungFormModal.tsx`) — self-contained,
+tanpa menyentuh komponen bersama. Ruangan & Utilitas tetap modal khusus karena
+butuh dynamic Lantai-select + child-table grid.
 
 ## File Structure
 
 - **Create** `apps/school/src/components/infrastruktur/ChildRowsEditor.tsx` — grid baris child-table generik.
 - **Create** `apps/school/src/components/infrastruktur/ChildRowsEditor.test.tsx`
+- **Create** `apps/school/src/components/infrastruktur/LantaiFormModal.tsx` — modal create/edit Lantai.
+- **Create** `apps/school/src/components/infrastruktur/LantaiFormModal.test.tsx`
 - **Create** `apps/school/src/components/infrastruktur/RuanganFormModal.tsx` — modal Ruangan + grid Fasilitas.
 - **Create** `apps/school/src/components/infrastruktur/RuanganFormModal.test.tsx`
 - **Create** `apps/school/src/components/infrastruktur/UtilitasFormModal.tsx` — modal Utilitas + grid Riwayat.
 - **Create** `apps/school/src/components/infrastruktur/UtilitasFormModal.test.tsx`
 - **Create** `apps/school/src/components/infrastruktur/ConfirmDeleteDialog.tsx` — dialog konfirmasi hapus reusable.
-- **Modify** `apps/school/src/components/GenericFormModal.tsx` — tambah prop `fixedValues`.
 - **Modify** `apps/school/src/routes/$sekolah.infrastruktur.daftar-gedung.$gedungId.tsx` — tombol Tambah, kolom Aksi (Edit/Hapus), wiring modal.
 
 ## Konvensi Test
@@ -210,95 +213,168 @@ git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat
 
 ---
 
-## Task 2: Extend GenericFormModal dgn fixedValues
+## Task 2: LantaiFormModal (modal create/edit Lantai)
 
-`GenericFormModal` saat ini hanya auto-set `sekolah`. Lantai butuh `gedung` fixed.
-Tambah prop `fixedValues` yg di-merge ke payload saat **create** (bukan edit,
-agar tdk menimpa nilai existing).
+Modal dedicated mirror `GedungFormModal`. Field: `nama`, `nomor_lantai`.
+Create: set `gedung = gedungId` + `sekolah` dari session. Edit: muat via
+`useResourceDoc`, simpan via `useResourceUpdate` (gedung/sekolah tdk dikirim
+ulang saat edit).
 
 **Files:**
-- Modify: `apps/school/src/components/GenericFormModal.tsx`
-- Test: `apps/school/src/components/GenericFormModal.fixed.test.tsx` (Create)
+- Create: `apps/school/src/components/infrastruktur/LantaiFormModal.tsx`
+- Test: `apps/school/src/components/infrastruktur/LantaiFormModal.test.tsx`
 
 - [ ] **Step 1: Tulis test gagal**
 
 ```tsx
-// apps/school/src/components/GenericFormModal.fixed.test.tsx
+// apps/school/src/components/infrastruktur/LantaiFormModal.test.tsx
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
-const createMut = vi.fn().mockResolvedValue({ name: "X-L1" });
+const createMut = vi.fn().mockResolvedValue({ name: "GA-L1" });
+const updateMut = vi.fn().mockResolvedValue({ name: "GA-L1" });
+let docData: Record<string, unknown> | undefined;
 vi.mock("@sekolahpro/api-client", () => ({
   useResourceCreate: () => ({ mutateAsync: createMut, isPending: false }),
-  useResourceUpdate: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useResourceDoc: () => ({ data: undefined }),
+  useResourceUpdate: () => ({ mutateAsync: updateMut, isPending: false }),
+  useResourceDoc: () => ({ data: docData }),
 }));
 vi.mock("@sekolahpro/auth", () => ({
   useSessionStore: (sel: (s: unknown) => unknown) => sel({ activeSekolah: { name: "SEK-1" } }),
 }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 
-import { GenericFormModal } from "./GenericFormModal";
+import { LantaiFormModal } from "./LantaiFormModal";
 
-describe("GenericFormModal fixedValues", () => {
-  beforeEach(() => createMut.mockClear());
+describe("LantaiFormModal", () => {
+  beforeEach(() => { createMut.mockClear(); updateMut.mockClear(); docData = undefined; });
 
-  it("merge fixedValues ke payload create", async () => {
-    render(
-      <GenericFormModal
-        open
-        onClose={() => {}}
-        doctype="Lantai"
-        fields={[{ name: "nama", label: "Nama", required: true }, { name: "nomor_lantai", label: "Nomor", type: "number", required: true }]}
-        fixedValues={{ gedung: "SEK-1-GA" }}
-      />,
-    );
-    fireEvent.change(screen.getByDisplayValue(""), { target: { value: "Lantai 1" } });
-    // isi nomor_lantai
-    const inputs = screen.getAllByRole("spinbutton");
-    fireEvent.change(inputs[0], { target: { value: "1" } });
+  it("create kirim nama + nomor_lantai + gedung + sekolah", async () => {
+    render(<LantaiFormModal open gedungId="SEK-1-GA" onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Nama Lantai"), { target: { value: "Lantai Dasar" } });
+    fireEvent.change(screen.getByLabelText("Nomor Lantai"), { target: { value: "1" } });
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(createMut).toHaveBeenCalled());
-    const payload = createMut.mock.calls[0][0];
-    expect(payload.gedung).toBe("SEK-1-GA");
-    expect(payload.sekolah).toBe("SEK-1");
+    expect(createMut.mock.calls[0][0]).toEqual({ nama: "Lantai Dasar", nomor_lantai: 1, gedung: "SEK-1-GA", sekolah: "SEK-1" });
+  });
+
+  it("disable Simpan saat field wajib kosong", () => {
+    render(<LantaiFormModal open gedungId="SEK-1-GA" onClose={() => {}} onSaved={() => {}} />);
+    expect((screen.getByText("Simpan") as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("edit memuat data & memanggil update tanpa gedung/sekolah", async () => {
+    docData = { name: "GA-L1", nama: "Lantai Dasar", nomor_lantai: 1 };
+    render(<LantaiFormModal open gedungId="SEK-1-GA" editName="GA-L1" onClose={() => {}} onSaved={() => {}} />);
+    await screen.findByDisplayValue("Lantai Dasar");
+    fireEvent.click(screen.getByText("Simpan"));
+    await waitFor(() => expect(updateMut).toHaveBeenCalled());
+    const arg = updateMut.mock.calls[0][0];
+    expect(arg.name).toBe("GA-L1");
+    expect(arg.patch.gedung).toBeUndefined();
+    expect(arg.patch.sekolah).toBeUndefined();
   });
 });
 ```
 
 - [ ] **Step 2: Jalankan, pastikan gagal**
 
-Run: `pnpm --filter @sekolahpro/app-school test -- GenericFormModal.fixed`
-Expected: FAIL — `fixedValues` belum ada / `payload.gedung` undefined.
+Run: `pnpm --filter @sekolahpro/app-school test -- LantaiFormModal`
+Expected: FAIL — module belum ada.
 
 - [ ] **Step 3: Implementasi**
 
-Modifikasi `GenericFormModal.tsx`:
-
-Tambah ke `GenericFormModalProps`:
 ```tsx
-  /** Nilai tetap yg digabung ke payload saat create (mis. gedung). */
-  fixedValues?: Record<string, unknown>;
-```
+// apps/school/src/components/infrastruktur/LantaiFormModal.tsx
+/**
+ * LantaiFormModal — create/edit Lantai. Mirror GedungFormModal.
+ * Create: gedung di-set dari gedungId, sekolah dari session aktif.
+ * Edit: hanya nama + nomor_lantai dikirim (gedung/sekolah tetap).
+ */
+import { useEffect, useState } from "react";
+import { Button, FormField, FormGrid, Input, Modal } from "@sekolahpro/ui";
+import { useResourceCreate, useResourceDoc, useResourceUpdate } from "@sekolahpro/api-client";
+import { useSessionStore } from "@sekolahpro/auth";
+import { useQueryClient } from "@tanstack/react-query";
 
-Tambah ke destructure props: `fixedValues,`
+interface LantaiFormModalProps {
+  open: boolean;
+  onClose: () => void;
+  gedungId: string;
+  editName?: string;
+  onSaved?: (name: string) => void;
+}
 
-Di `submit`, setelah `const payload = { ...form };` dan sebelum cek editName:
-```tsx
-      if (scopeToSekolah && sekolah && !editName) payload.sekolah = sekolah;
-      if (fixedValues && !editName) Object.assign(payload, fixedValues);
+interface FormState { nama: string; nomor_lantai: string; }
+const INITIAL: FormState = { nama: "", nomor_lantai: "" };
+
+export function LantaiFormModal({ open, onClose, gedungId, editName, onSaved }: LantaiFormModalProps) {
+  const [form, setForm] = useState<FormState>(INITIAL);
+  const [err, setErr] = useState<string | null>(null);
+
+  const qc = useQueryClient();
+  const create = useResourceCreate<{ name: string }>("Lantai");
+  const update = useResourceUpdate<{ name: string }>("Lantai");
+  const docQ = useResourceDoc<Record<string, unknown>>("Lantai", editName, { enabled: !!editName });
+  const sekolah = useSessionStore((s) => s.activeSekolah?.name);
+
+  useEffect(() => {
+    if (docQ.data) {
+      const d = docQ.data as Record<string, unknown>;
+      setForm({ nama: `${d.nama ?? ""}`, nomor_lantai: `${d.nomor_lantai ?? ""}` });
+    } else if (!editName) setForm(INITIAL);
+  }, [docQ.data, editName]);
+
+  const set = <K extends keyof FormState>(k: K, v: string) => setForm((c) => ({ ...c, [k]: v }));
+  const canSubmit = !!form.nama.trim() && form.nomor_lantai.trim() !== "" && !create.isPending && !update.isPending;
+
+  const submit = async () => {
+    setErr(null);
+    try {
+      let name: string;
+      if (editName) {
+        name = (await update.mutateAsync({ name: editName, patch: { nama: form.nama.trim(), nomor_lantai: Number(form.nomor_lantai) } })).name;
+      } else {
+        if (!sekolah) { setErr("Sekolah aktif tidak ditemukan."); return; }
+        name = (await create.mutateAsync({ nama: form.nama.trim(), nomor_lantai: Number(form.nomor_lantai), gedung: gedungId, sekolah })).name;
+      }
+      await qc.invalidateQueries({ queryKey: ["resource:list", "Lantai"] });
+      if (onSaved) onSaved(name);
+      onClose();
+    } catch (e) { setErr((e as Error)?.message ?? "Gagal menyimpan lantai."); }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} size="lg" tone="brand" title={editName ? "Edit Lantai" : "Tambah Lantai"}
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>Batal</Button>
+          <Button onClick={submit} disabled={!canSubmit}>{create.isPending || update.isPending ? "Menyimpan..." : "Simpan"}</Button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
+        <FormGrid cols={2}>
+          <FormField label="Nama Lantai" required><Input aria-label="Nama Lantai" value={form.nama} onChange={(e) => set("nama", e.target.value)} placeholder="Lantai Dasar" /></FormField>
+          <FormField label="Nomor Lantai" required><Input aria-label="Nomor Lantai" type="number" value={form.nomor_lantai} onChange={(e) => set("nomor_lantai", e.target.value)} placeholder="1" /></FormField>
+        </FormGrid>
+        {err && <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">{err}</div>}
+      </div>
+    </Modal>
+  );
+}
 ```
 
 - [ ] **Step 4: Jalankan, pastikan lulus**
 
-Run: `pnpm --filter @sekolahpro/app-school test -- GenericFormModal.fixed`
-Expected: PASS.
+Run: `pnpm --filter @sekolahpro/app-school test -- LantaiFormModal`
+Expected: PASS (3 test).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web add apps/school/src/components/GenericFormModal.tsx apps/school/src/components/GenericFormModal.fixed.test.tsx
-git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): GenericFormModal fixedValues utk link tetap"
+git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web add apps/school/src/components/infrastruktur/LantaiFormModal.tsx apps/school/src/components/infrastruktur/LantaiFormModal.test.tsx
+git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): LantaiFormModal create/edit Lantai"
 ```
 
 ---
@@ -800,7 +876,7 @@ git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat
 Tambah ke `$sekolah.infrastruktur.daftar-gedung.$gedungId.tsx`:
 tombol "Tambah" di tiap SectionCard, kolom "Aksi" (Edit/Hapus) di tabel Lantai,
 Ruangan, Utilitas, state modal, dan `ConfirmDeleteDialog`. Lantai pakai
-`GenericFormModal` (fixedValues gedung). Hapus tabel Fasilitas tetap read-only.
+`LantaiFormModal`. Tabel Fasilitas tetap read-only.
 
 **Files:**
 - Modify: `apps/school/src/routes/$sekolah.infrastruktur.daftar-gedung.$gedungId.tsx`
@@ -841,7 +917,7 @@ Di `$sekolah.infrastruktur.daftar-gedung.$gedungId.tsx`:
 
 3a. Tambah import:
 ```tsx
-import { GenericFormModal } from "../components/GenericFormModal";
+import { LantaiFormModal } from "../components/infrastruktur/LantaiFormModal";
 import { RuanganFormModal, type LantaiOption } from "../components/infrastruktur/RuanganFormModal";
 import { UtilitasFormModal } from "../components/infrastruktur/UtilitasFormModal";
 import { ConfirmDeleteDialog } from "../components/infrastruktur/ConfirmDeleteDialog";
@@ -853,11 +929,6 @@ import { useResourceDelete } from "@sekolahpro/api-client";
 export function buildLantaiOptions(lantai: Lantai[]): LantaiOption[] {
   return lantai.map((l) => ({ name: l.name, label: `L${l.nomor_lantai ?? "?"} — ${l.nama ?? l.name}` }));
 }
-
-const LANTAI_FIELDS = [
-  { name: "nama", label: "Nama Lantai", required: true },
-  { name: "nomor_lantai", label: "Nomor Lantai", type: "number" as const, required: true },
-];
 ```
 
 3c. Di dalam `GedungDetailPage`, tambah state CRUD:
@@ -910,13 +981,10 @@ const LANTAI_FIELDS = [
 
 3f. Render modal + dialog sebelum penutup `</>` di `primary`:
 ```tsx
-<GenericFormModal
+<LantaiFormModal
   open={lantaiModal.open}
   onClose={() => setLantaiModal({ open: false })}
-  doctype="Lantai"
-  fields={LANTAI_FIELDS}
-  fixedValues={{ gedung: gedungId }}
-  title={lantaiModal.editName ? "Edit Lantai" : "Tambah Lantai"}
+  gedungId={gedungId}
   {...(lantaiModal.editName ? { editName: lantaiModal.editName } : {})}
   onSaved={() => { void lantaiQ.refetch(); }}
 />
@@ -993,6 +1061,11 @@ git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "docs
 - **Spec coverage:** Lantai CRUD (T2+T6), Ruangan CRUD+Fasilitas (T4+T6),
   Utilitas CRUD+Riwayat (T5+T6), konfirmasi hapus (T3+T6), child grid (T1),
   banner error in-modal (tiap modal), R1 perm didokumentasikan (T7 step1). ✓
+- **GenericFormModal:** TIDAK disentuh — Lantai pakai modal dedicated
+  `LantaiFormModal` (hindari regresi koperasi). ✓
+- **Test infra terverifikasi:** vitest `globals:false` → import {describe,it,expect}
+  dari "vitest" (sudah). jsdom + @testing-library/react + jest-dom ada.
+  Command: `pnpm --filter @sekolahpro/app-school test -- <namaFile>`. ✓
 - **Placeholder scan:** tdk ada TBD/TODO; semua step berisi kode nyata. ✓
 - **Type consistency:** `ChildColumn`/`LantaiOption` didefinisikan T1/T4 dan
   dipakai konsisten; `useResource*` signatures sesuai `frappeResource.ts`
