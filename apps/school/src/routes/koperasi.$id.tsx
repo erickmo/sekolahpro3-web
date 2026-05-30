@@ -13,30 +13,28 @@ import { useMySchools } from "../data/sekolah";
 import { findKoperasiBySlug } from "../lib/koperasi/resolveKoperasi";
 
 /**
- * Top-level layout route for an org-level Koperasi (`/$koperasi`).
+ * Top-level layout route for an org-level Koperasi (`/koperasi/$id`).
  *
- * Mirrors the `$sekolah.tsx` tenant guard so a selected Koperasi has its own
- * bookmarkable URL not bound to first picking a school. The `koperasi` param is
- * the Koperasi slug (= sekolah_utama `kode_pendek`). We resolve it against the
- * user's accessible koperasi list, set the active sekolah (the anchor school the
- * session is scoped to), 404 when there is no match, and gate the Outlet until
- * the store reflects the matched school. A `TenantMismatchError` surfaced from a
- * cross-tenant deep link renders the same 404 so we never leak another tenant's
+ * Uses a LITERAL `/koperasi/` prefix (not a bare `$koperasi` param) so it does
+ * not collide with the bare `$sekolah` route — both would otherwise match the
+ * same `/<slug>` URL and `$sekolah` would shadow it. The `id` param is the
+ * Koperasi slug (= sekolah_utama `kode_pendek`). We resolve it against the
+ * user's accessible koperasi list, anchor the session to that school, 404 when
+ * there is no match, and gate the Outlet until the store reflects it. A
+ * `TenantMismatchError` renders the same 404 so we never leak another tenant's
  * data.
  */
 function KoperasiTenantLayout() {
-  const { koperasi } = useParams({ from: "/$koperasi" });
+  const { id } = useParams({ from: "/koperasi/$id" });
   const active = useSessionStore((s) => s.activeSekolah);
   const setActiveSekolah = useSessionStore((s) => s.setActiveSekolah);
   const { data, isLoading } = useMySchools();
 
-  const match = findKoperasiBySlug(data?.koperasi, koperasi);
+  const match = findKoperasiBySlug(data?.koperasi, id);
 
   useEffect(() => {
     if (!match) return;
     if (active?.slug === match.slug) return;
-    // The koperasi card carries no `name`/`subdomain` for the anchor school; the
-    // slug is the anchor school's kode_pendek, so we scope the session to it.
     setActiveSekolah({
       name: match.koperasi,
       nama: match.nama,
@@ -47,7 +45,7 @@ function KoperasiTenantLayout() {
 
   if (data && !match) throw notFound();
 
-  if (active?.slug === koperasi) return <Outlet />;
+  if (active?.slug === id) return <Outlet />;
 
   return (
     <div className="min-h-screen flex items-center justify-center text-muted-fg text-sm">
@@ -57,17 +55,17 @@ function KoperasiTenantLayout() {
 }
 
 function KoperasiNotFound() {
-  const { koperasi } = useParams({ strict: false }) as { koperasi?: string };
+  const { id } = useParams({ strict: false }) as { id?: string };
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg">
       <div className="max-w-md w-full text-center px-6 py-12">
         <div className="text-6xl font-bold text-muted-fg mb-3">404</div>
         <h1 className="text-xl font-semibold text-fg mb-2">Koperasi tidak ditemukan</h1>
         <p className="text-sm text-muted-fg mb-6">
-          {koperasi ? (
+          {id ? (
             <>
               Akun Anda tidak memiliki akses ke koperasi{" "}
-              <code className="px-1.5 py-0.5 rounded bg-muted text-fg">{koperasi}</code>{" "}
+              <code className="px-1.5 py-0.5 rounded bg-muted text-fg">{id}</code>{" "}
               atau koperasi tersebut tidak ada.
             </>
           ) : (
@@ -86,9 +84,6 @@ function KoperasiNotFound() {
 }
 
 function KoperasiErrorBoundary({ error }: ErrorComponentProps) {
-  // Cross-tenant deep links surface as TenantMismatchError from the api-client
-  // when a fetched doc's tenant doesn't match the active scope. Render the same
-  // 404 page so we don't leak the existence of another tenant's data.
   if (error instanceof TenantMismatchError) return <KoperasiNotFound />;
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-2 text-fg">
@@ -98,7 +93,7 @@ function KoperasiErrorBoundary({ error }: ErrorComponentProps) {
   );
 }
 
-export const Route = createFileRoute("/$koperasi")({
+export const Route = createFileRoute("/koperasi/$id")({
   component: KoperasiTenantLayout,
   notFoundComponent: KoperasiNotFound,
   errorComponent: KoperasiErrorBoundary,

@@ -1,6 +1,6 @@
 // vitest.config sets globals:false → import test API explicitly.
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PilihSekolahPage } from "../pilih-sekolah";
 import * as data from "../../data/sekolah";
@@ -53,7 +53,7 @@ describe("PilihSekolahPage koperasi", () => {
     navigate.mockReset();
   });
 
-  it("renders a koperasi card with its per-school name + role", () => {
+  it("renders a koperasi card with its name + role + type badge", () => {
     mockData([koperasi]);
     vi.spyOn(data, "useSelectKoperasi").mockReturnValue({
       mutate: vi.fn(), isPending: false,
@@ -62,6 +62,48 @@ describe("PilihSekolahPage koperasi", () => {
     wrap(<PilihSekolahPage />);
     expect(screen.getByText("Koperasi YPKI")).toBeInTheDocument();
     expect(screen.getByText("Teller")).toBeInTheDocument();
+    // distinct "Koperasi" type badge differentiates it from school cards
+    const card = screen.getByText("Koperasi YPKI").closest("button")!;
+    expect(within(card).getByText("Koperasi")).toBeInTheDocument();
+  });
+
+  it("renders koperasi inside its organisasi section (no separate 'Koperasi' heading)", () => {
+    mockData([koperasi]);
+    vi.spyOn(data, "useSelectKoperasi").mockReturnValue({
+      mutate: vi.fn(), isPending: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    wrap(<PilihSekolahPage />);
+    // no standalone "Koperasi" section heading
+    expect(screen.queryByRole("heading", { name: "Koperasi" })).toBeNull();
+    // koperasi card is within the same org section as that org's schools
+    const orgSection = screen
+      .getByRole("heading", { name: "Org 1" })
+      .closest("section")!;
+    expect(orgSection).toBeTruthy();
+    const { getByText } = within(orgSection);
+    expect(getByText("Koperasi YPKI")).toBeInTheDocument();
+    expect(getByText("Sek 1")).toBeInTheDocument();
+  });
+
+  it("renders koperasi of an org with no school group in its own section", () => {
+    const otherOrgKoperasi = {
+      ...koperasi,
+      koperasi: "KOP-O2-0001",
+      nama: "Koperasi Lain",
+      organisasi: "O2",
+      organisasi_nama: "Org 2",
+    };
+    mockData([otherOrgKoperasi]);
+    vi.spyOn(data, "useSelectKoperasi").mockReturnValue({
+      mutate: vi.fn(), isPending: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    wrap(<PilihSekolahPage />);
+    const org2 = screen
+      .getByRole("heading", { name: "Org 2" })
+      .closest("section")!;
+    expect(within(org2).getByText("Koperasi Lain")).toBeInTheDocument();
   });
 
   it("does not render the Koperasi section when there are none", () => {
@@ -114,8 +156,8 @@ describe("PilihSekolahPage koperasi", () => {
     });
 
     expect(navigate).toHaveBeenCalledWith({
-      to: "/$koperasi",
-      params: { koperasi: "ypki" },
+      to: "/koperasi/$id",
+      params: { id: "ypki" },
     });
   });
 });

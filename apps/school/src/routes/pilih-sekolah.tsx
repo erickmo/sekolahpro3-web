@@ -54,6 +54,26 @@ export function PilihSekolahPage() {
     }
   };
 
+  const handleSelectKoperasi = (koperasiName: string) => {
+    selectKoperasi.mutate(
+      { name: koperasiName },
+      {
+        onSuccess: (resp) => {
+          setActiveSekolah({
+            name: resp.sekolah,
+            nama: resp.nama,
+            subdomain: null,
+            slug: resp.slug,
+          });
+          // Top-level koperasi route: literal /koperasi/$id prefix avoids
+          // colliding with the bare $sekolah route. Bookmarkable, not bound to
+          // first picking a school.
+          navigate({ to: "/koperasi/$id", params: { id: resp.slug } });
+        },
+      },
+    );
+  };
+
   useEffect(() => {
     const t = setTimeout(
       () => setDebouncedQuery(query.trim().toLowerCase()),
@@ -99,6 +119,26 @@ export function PilihSekolahPage() {
       }))
       .filter((g) => g.schools.length > 0);
   }, [data, activeOrg, debouncedQuery]);
+
+  // Koperasi grouped by organisasi so each renders under its own org section
+  // (a koperasi is org-level — it belongs with that org's schools).
+  const koperasiByOrg = useMemo(() => {
+    const map = new Map<string, KoperasiCardData[]>();
+    for (const k of data?.koperasi ?? []) {
+      if (activeOrg !== "all" && k.organisasi !== activeOrg) continue;
+      const arr = map.get(k.organisasi) ?? [];
+      arr.push(k);
+      map.set(k.organisasi, arr);
+    }
+    return map;
+  }, [data, activeOrg]);
+
+  // Koperasi whose organisasi has no visible school group — rendered trailing
+  // so they still appear (e.g. an org the user only has koperasi access to).
+  const orphanKoperasiOrgs = useMemo(() => {
+    const inGroups = new Set(filteredGroups.map((g) => g.organisasi));
+    return [...koperasiByOrg.keys()].filter((org) => !inGroups.has(org));
+  }, [koperasiByOrg, filteredGroups]);
 
   return (
     <div
@@ -314,53 +354,37 @@ export function PilihSekolahPage() {
                       />
                     ))}
                   </div>
+
+                  <KoperasiGrid
+                    koperasi={koperasiByOrg.get(group.organisasi) ?? []}
+                    busy={selectKoperasi.isPending}
+                    onSelect={handleSelectKoperasi}
+                  />
                 </section>
               ))
             )}
 
-            {(data.koperasi?.length ?? 0) > 0 ? (
-              <section className="space-y-4">
-                <div className="flex items-baseline gap-3">
-                  <h2 className="text-lg font-semibold text-white/95">
-                    Koperasi
-                  </h2>
-                  <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-[11px] font-semibold bg-white/15 ring-1 ring-white/20">
-                    {data.koperasi.length}
-                  </span>
-                  <span className="flex-1 h-px bg-white/10 ml-2" />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {data.koperasi.map((kop) => (
-                    <KoperasiCard
-                      key={kop.koperasi}
-                      koperasi={kop}
-                      busy={selectKoperasi.isPending}
-                      onSelect={() => {
-                        selectKoperasi.mutate(
-                          { name: kop.koperasi },
-                          {
-                            onSuccess: (resp) => {
-                              setActiveSekolah({
-                                name: resp.sekolah,
-                                nama: resp.nama,
-                                subdomain: null,
-                                slug: resp.slug,
-                              });
-                              // Top-level koperasi route (PR3c): bookmarkable
-                              // URL not bound to first picking a school.
-                              navigate({
-                                to: "/$koperasi",
-                                params: { koperasi: resp.slug },
-                              });
-                            },
-                          },
-                        );
-                      }}
-                    />
-                  ))}
-                </div>
-              </section>
-            ) : null}
+            {orphanKoperasiOrgs.map((org) => {
+              const list = koperasiByOrg.get(org) ?? [];
+              return (
+                <section key={`kop-${org}`} className="space-y-4">
+                  <div className="flex items-baseline gap-3">
+                    <h2 className="text-lg font-semibold text-white/95">
+                      {list[0]?.organisasi_nama ?? org}
+                    </h2>
+                    <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-[11px] font-semibold bg-white/15 ring-1 ring-white/20">
+                      {list.length}
+                    </span>
+                    <span className="flex-1 h-px bg-white/10 ml-2" />
+                  </div>
+                  <KoperasiGrid
+                    koperasi={list}
+                    busy={selectKoperasi.isPending}
+                    onSelect={handleSelectKoperasi}
+                  />
+                </section>
+              );
+            })}
           </div>
         )}
 
@@ -415,6 +439,27 @@ function OnboardingButton({ cta }: { cta: OnboardingCta }) {
   );
 }
 
+/** Grid of koperasi cards; renders nothing when the list is empty. */
+function KoperasiGrid(props: {
+  koperasi: KoperasiCardData[];
+  busy: boolean;
+  onSelect: (koperasiName: string) => void;
+}) {
+  if (props.koperasi.length === 0) return null;
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {props.koperasi.map((kop) => (
+        <KoperasiCard
+          key={kop.koperasi}
+          koperasi={kop}
+          busy={props.busy}
+          onSelect={() => props.onSelect(kop.koperasi)}
+        />
+      ))}
+    </div>
+  );
+}
+
 const KOPERASI_ROLE_TONE: Record<string, string> = {
   "Admin Koperasi": "bg-blue-500/20 text-blue-100 ring-1 ring-blue-300/40",
   Teller: "bg-violet-500/20 text-violet-100 ring-1 ring-violet-300/40",
@@ -445,14 +490,15 @@ function KoperasiCard(props: {
       type="button"
       onClick={props.onSelect}
       disabled={props.busy}
-      className="group relative w-full text-left rounded-2xl bg-white/[0.07] backdrop-blur ring-1 ring-white/15 p-5 flex flex-col gap-4 transition hover:bg-white/[0.12] hover:ring-white/30 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/60"
+      className="group relative w-full text-left rounded-2xl bg-emerald-400/[0.08] backdrop-blur ring-1 ring-emerald-300/25 p-5 flex flex-col gap-4 transition hover:bg-emerald-400/[0.14] hover:ring-emerald-300/50 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-300/70"
     >
+      {/* Emerald left accent bar marks this as a koperasi (vs neutral school cards). */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-60 group-hover:opacity-100 transition"
+        className="pointer-events-none absolute inset-y-0 left-0 w-1 rounded-l-2xl bg-gradient-to-b from-emerald-300/70 to-emerald-500/40"
       />
       <div className="flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-400/40 to-white/5 ring-1 ring-white/25 text-white flex items-center justify-center font-bold text-sm overflow-hidden">
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-400/50 to-emerald-600/20 ring-1 ring-emerald-300/30 text-white flex items-center justify-center font-bold text-sm overflow-hidden">
           {koperasi.logo ? (
             <img
               src={koperasi.logo}
@@ -477,12 +523,28 @@ function KoperasiCard(props: {
             {koperasi.role_koperasi}
           </span>
         </div>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/25 text-emerald-100 ring-1 ring-emerald-300/40 whitespace-nowrap">
+          <svg
+            aria-hidden
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-3 w-3"
+          >
+            <path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+            <path d="M21 12h-6a2 2 0 0 0 0 4h6v-4Z" />
+          </svg>
+          Koperasi
+        </span>
       </div>
-      <div className="flex items-center justify-between text-[11px] text-white/55 pt-1 border-t border-white/10">
+      <div className="flex items-center justify-between text-[11px] text-emerald-100/55 pt-1 border-t border-emerald-300/15">
         <span className="truncate">{koperasi.organisasi_nama}</span>
         <span
           aria-hidden
-          className="opacity-0 group-hover:opacity-100 transition text-white/80"
+          className="opacity-0 group-hover:opacity-100 transition text-emerald-100/80"
         >
           Masuk →
         </span>
