@@ -1,21 +1,22 @@
 /**
- * FasilitasRuanganFormModal — create modal untuk CHILD doctype "Fasilitas Ruangan".
+ * FasilitasRuanganFormModal — create/edit modal untuk CHILD doctype
+ * "Fasilitas Ruangan".
  *
- * Child table dari Ruangan (parentfield = "fasilitas"). Payload wajib
- * menyertakan parent/parenttype/parentfield untuk dibuat via REST.
+ * Child table dari Ruangan (parentfield = "fasilitas"). Saat create payload
+ * wajib menyertakan parent/parenttype/parentfield. Saat edit hanya kirim
+ * field nilai (parent tidak diubah).
+ * defaultGedung: filter daftar ruangan ke gedung tsb.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Button, FormField, FormGrid, Input, Modal, Select } from "@sekolahpro/ui";
 import {
-  Button,
-  FormField,
-  FormGrid,
-  Input,
-  Modal,
-  SearchableSelect,
-} from "@sekolahpro/ui";
-import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
+  useResourceCreate,
+  useResourceDoc,
+  useResourceList,
+  useResourceUpdate,
+} from "@sekolahpro/api-client";
 
 type RuanganRow = { name: string; nama?: string };
 
@@ -25,9 +26,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCreated?: (name: string) => void;
+  defaultGedung?: string;
+  editName?: string;
 }
 
-export function FasilitasRuanganFormModal({ open, onClose, onCreated }: Props) {
+export function FasilitasRuanganFormModal({ open, onClose, onCreated, defaultGedung, editName }: Props) {
   const qc = useQueryClient();
   const [parent, setParent] = useState("");
   const [namaFasilitas, setNamaFasilitas] = useState("");
@@ -36,11 +39,23 @@ export function FasilitasRuanganFormModal({ open, onClose, onCreated }: Props) {
   const [err, setErr] = useState<string | null>(null);
 
   const create = useResourceCreate<{ name: string }>("Fasilitas Ruangan");
+  const update = useResourceUpdate<{ name: string }>("Fasilitas Ruangan");
+  const docQ = useResourceDoc<Record<string, unknown>>("Fasilitas Ruangan", editName, { enabled: !!editName });
 
   const ruanganQ = useResourceList<RuanganRow>("Ruangan", {
     fields: ["name", "nama"],
+    filters: defaultGedung ? [["gedung", "=", defaultGedung]] : [],
     limit_page_length: 0,
   });
+
+  useEffect(() => {
+    if (!docQ.data) return;
+    const d = docQ.data as Record<string, unknown>;
+    setNamaFasilitas(`${d.nama_fasilitas ?? ""}`);
+    setJumlah(`${d.jumlah ?? ""}`);
+    setKondisi(`${d.kondisi ?? ""}`);
+    if (d.parent) setParent(`${d.parent}`);
+  }, [docQ.data]);
 
   const reset = () => {
     setParent("");
@@ -55,29 +70,27 @@ export function FasilitasRuanganFormModal({ open, onClose, onCreated }: Props) {
     onClose();
   };
 
-  const requiredMissing = !parent || !namaFasilitas.trim();
+  const requiredMissing = !namaFasilitas.trim() || (!editName && !parent);
+  const pending = create.isPending || update.isPending;
 
   const submit = async () => {
     setErr(null);
-    const payload: Record<string, unknown> = {
-      parent,
-      parenttype: "Ruangan",
-      parentfield: "fasilitas",
-      nama_fasilitas: namaFasilitas.trim(),
-    };
+    const patch: Record<string, unknown> = { nama_fasilitas: namaFasilitas.trim() };
     if (jumlah.trim()) {
       const n = Number(jumlah);
-      if (!Number.isNaN(n)) payload.jumlah = n;
+      if (!Number.isNaN(n)) patch.jumlah = n;
     }
-    if (kondisi) payload.kondisi = kondisi;
+    if (kondisi) patch.kondisi = kondisi;
     try {
-      const created = await create.mutateAsync(payload);
+      const name = editName
+        ? (await update.mutateAsync({ name: editName, patch })).name
+        : (await create.mutateAsync({ ...patch, parent, parenttype: "Ruangan", parentfield: "fasilitas" })).name;
       await qc.invalidateQueries({ queryKey: ["resource:list", "Fasilitas Ruangan"] });
-      onCreated?.(created.name);
+      onCreated?.(name);
       reset();
       onClose();
     } catch (e) {
-      setErr((e as Error)?.message ?? "Gagal membuat fasilitas ruangan.");
+      setErr((e as Error)?.message ?? "Gagal menyimpan fasilitas.");
     }
   };
 
@@ -88,7 +101,7 @@ export function FasilitasRuanganFormModal({ open, onClose, onCreated }: Props) {
       open={open}
       onClose={closeAll}
       size="lg"
-      title="Tambah Fasilitas Ruangan"
+      title={editName ? "Edit Fasilitas" : "Tambah Fasilitas"}
       description="Pilih ruangan tujuan lalu isi data fasilitas. Tanda * wajib."
       tone="brand"
       footer={
@@ -96,8 +109,8 @@ export function FasilitasRuanganFormModal({ open, onClose, onCreated }: Props) {
           <Button variant="outline" onClick={closeAll}>
             Batal
           </Button>
-          <Button onClick={submit} disabled={requiredMissing || create.isPending}>
-            {create.isPending ? "Menyimpan..." : "Simpan"}
+          <Button onClick={submit} disabled={requiredMissing || pending}>
+            {pending ? "Menyimpan..." : "Simpan"}
           </Button>
         </div>
       }
@@ -105,36 +118,35 @@ export function FasilitasRuanganFormModal({ open, onClose, onCreated }: Props) {
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Ruangan" required>
-            <SearchableSelect
-              value={parent}
-              onChange={(v) => setParent(v)}
-              options={ruanganRows.map((r) => ({
-                value: r.name,
-                label: `${r.name}${r.nama ? ` — ${r.nama}` : ""}`,
-              }))}
-              placeholder="— pilih —"
-            />
+            <Select aria-label="Ruangan" value={parent} onChange={(e) => setParent(e.target.value)} disabled={!!editName}>
+              <option value="">— pilih —</option>
+              {ruanganRows.map((r) => (
+                <option key={r.name} value={r.name}>{r.nama ? `${r.name} — ${r.nama}` : r.name}</option>
+              ))}
+            </Select>
           </FormField>
           <FormField label="Nama Fasilitas" required>
             <Input
+              aria-label="Nama Fasilitas"
               value={namaFasilitas}
               onChange={(e) => setNamaFasilitas(e.target.value)}
             />
           </FormField>
           <FormField label="Jumlah">
             <Input
+              aria-label="Jumlah"
               type="number"
               value={jumlah}
               onChange={(e) => setJumlah(e.target.value)}
             />
           </FormField>
           <FormField label="Kondisi">
-            <SearchableSelect
-              value={kondisi}
-              onChange={(v) => setKondisi(v)}
-              options={KONDISI_OPTIONS.map((o) => ({ value: o, label: o }))}
-              placeholder="— pilih —"
-            />
+            <Select aria-label="Kondisi" value={kondisi} onChange={(e) => setKondisi(e.target.value)}>
+              <option value="">— pilih —</option>
+              {KONDISI_OPTIONS.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </Select>
           </FormField>
         </FormGrid>
 
