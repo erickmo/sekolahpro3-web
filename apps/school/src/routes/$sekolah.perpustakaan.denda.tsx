@@ -5,7 +5,7 @@
  * filter `denda=ada` agar pengguna mendarat di set peminjaman yang punya denda
  * belum lunas.
  */
-import { createFileRoute, redirect, useParams} from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/$sekolah/perpustakaan/denda")({
   beforeLoad: ({ params }) => {

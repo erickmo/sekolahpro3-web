@@ -6,7 +6,7 @@
  * gagal (404, network, dst.), fallback ke list peminjaman dengan status
  * "Selesai".
  */
-import { createFileRoute, redirect, useParams} from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { frappeFetch } from "@sekolahpro/api-client";
 
 export const Route = createFileRoute("/$sekolah/perpustakaan/pengembalian/$name")({

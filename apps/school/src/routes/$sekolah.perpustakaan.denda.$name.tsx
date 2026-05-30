@@ -5,7 +5,7 @@
  * `frappe.client.get_value` lalu redirect ke detail peminjaman terkait. Jika
  * gagal, fallback ke list peminjaman dengan filter `denda=ada`.
  */
-import { createFileRoute, redirect, useParams} from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { frappeFetch } from "@sekolahpro/api-client";
 
 export const Route = createFileRoute("/$sekolah/perpustakaan/denda/$name")({

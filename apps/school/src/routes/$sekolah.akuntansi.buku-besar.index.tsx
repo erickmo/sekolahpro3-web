@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { SectionCard, StatCard, IconChart, IconWallet, IconFile } from "@sekolahpro/ui";
+import { SectionCard, StatCard, IconChart, IconWallet } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import {
   DOCTYPE,

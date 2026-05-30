@@ -1188,7 +1188,7 @@ export const Route = createFileRoute("/$sekolah/siswa/$nis")({
     const t = typeof raw.tab === "string" ? raw.tab : undefined;
     return { tab: t && VALID_TABS.has(t as TabKey) ? (t as TabKey) : undefined };
   },
-  notFoundComponent: () => {
+  notFoundComponent: function NotFound() {
     const { sekolah } = useParams({ from: "/$sekolah" });
     return (
     <div className="py-16">
