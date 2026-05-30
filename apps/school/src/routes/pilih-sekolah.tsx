@@ -5,7 +5,9 @@ import { useSessionStore, logout } from "@sekolahpro/auth";
 import {
   useMySchools,
   useSelectSchool,
+  useSelectKoperasi,
   type FooterContent,
+  type KoperasiCard as KoperasiCardData,
   type OnboardingCta,
   type SekolahCard,
   type SekolahGroup,
@@ -34,6 +36,7 @@ export function PilihSekolahPage() {
   const navigate = useNavigate();
   const { data, isLoading, isError, refetch } = useMySchools();
   const select = useSelectSchool();
+  const selectKoperasi = useSelectKoperasi();
   const setActiveSekolah = useSessionStore((s) => s.setActiveSekolah);
   const userEmail = useSessionStore((s) => s.user);
   const [activeOrg, setActiveOrg] = useState<string>("all");
@@ -314,8 +317,61 @@ export function PilihSekolahPage() {
                 </section>
               ))
             )}
+
+            {(data.koperasi?.length ?? 0) > 0 ? (
+              <section className="space-y-4">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="text-lg font-semibold text-white/95">
+                    Koperasi
+                  </h2>
+                  <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-[11px] font-semibold bg-white/15 ring-1 ring-white/20">
+                    {data.koperasi.length}
+                  </span>
+                  <span className="flex-1 h-px bg-white/10 ml-2" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {data.koperasi.map((kop) => (
+                    <KoperasiCard
+                      key={kop.sekolah}
+                      koperasi={kop}
+                      busy={selectKoperasi.isPending}
+                      onSelect={() => {
+                        selectKoperasi.mutate(
+                          { name: kop.sekolah },
+                          {
+                            onSuccess: (resp) => {
+                              setActiveSekolah({
+                                name: resp.sekolah,
+                                nama: resp.nama,
+                                subdomain: null,
+                                slug: resp.slug,
+                              });
+                              navigate({
+                                to: "/$sekolah/koperasi",
+                                params: { sekolah: resp.slug },
+                              });
+                            },
+                          },
+                        );
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
         )}
+
+        {selectKoperasi.isError ? (
+          <div className="mt-6 rounded-xl border border-red-300/40 bg-red-500/15 backdrop-blur p-4 text-sm">
+            <div className="font-semibold text-red-100 mb-1">
+              Gagal memilih koperasi
+            </div>
+            <div className="text-red-100/80 break-words">
+              {(selectKoperasi.error as Error)?.message ?? "Unknown error"}
+            </div>
+          </div>
+        ) : null}
 
         <Footer footer={data?.footer ?? null} />
       </div>
@@ -354,6 +410,87 @@ function OnboardingButton({ cta }: { cta: OnboardingCta }) {
       </svg>
       {cta.label}
     </a>
+  );
+}
+
+const KOPERASI_ROLE_TONE: Record<string, string> = {
+  "Admin Koperasi": "bg-blue-500/20 text-blue-100 ring-1 ring-blue-300/40",
+  Teller: "bg-violet-500/20 text-violet-100 ring-1 ring-violet-300/40",
+  Pengawas: "bg-amber-500/20 text-amber-100 ring-1 ring-amber-300/40",
+  Anggota: "bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-300/40",
+};
+
+/**
+ * Card for a koperasi the user can access. A koperasi is identified by its
+ * owning sekolah; selecting it sets the active sekolah and routes into the
+ * existing per-sekolah koperasi dashboard (/$sekolah/koperasi).
+ */
+function KoperasiCard(props: {
+  koperasi: KoperasiCardData;
+  busy: boolean;
+  onSelect: () => void;
+}) {
+  const { koperasi } = props;
+  const initials = koperasi.nama
+    .replace(/ — Koperasi$/, "")
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+  return (
+    <button
+      type="button"
+      onClick={props.onSelect}
+      disabled={props.busy}
+      className="group relative w-full text-left rounded-2xl bg-white/[0.07] backdrop-blur ring-1 ring-white/15 p-5 flex flex-col gap-4 transition hover:bg-white/[0.12] hover:ring-white/30 hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-white/60"
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-60 group-hover:opacity-100 transition"
+      />
+      <div className="flex items-center gap-3">
+        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-400/40 to-white/5 ring-1 ring-white/25 text-white flex items-center justify-center font-bold text-sm overflow-hidden">
+          {koperasi.logo ? (
+            <img
+              src={koperasi.logo}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            initials
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-white truncate">
+            {koperasi.nama}
+          </div>
+          <span
+            className={
+              "inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold " +
+              (KOPERASI_ROLE_TONE[koperasi.role_koperasi] ??
+                "bg-white/10 text-white/80 ring-1 ring-white/20")
+            }
+          >
+            {koperasi.role_koperasi}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center justify-between text-[11px] text-white/55 pt-1 border-t border-white/10">
+        <span className="truncate">{koperasi.organisasi_nama}</span>
+        <span
+          aria-hidden
+          className="opacity-0 group-hover:opacity-100 transition text-white/80"
+        >
+          Masuk →
+        </span>
+      </div>
+      {props.busy ? (
+        <div className="absolute inset-0 rounded-2xl bg-slate-900/30 backdrop-blur-[2px] flex items-center justify-center">
+          <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+        </div>
+      ) : null}
+    </button>
   );
 }
 
