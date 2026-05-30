@@ -1,10 +1,9 @@
-import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
-import { RuanganFormModal } from "../components/infrastruktur/RuanganFormModal";
 
-type Row = { name: string; nama: string; nama_ruangan?: string; jenis?: string; jenis_ruangan?: string; lantai?: string; kapasitas?: number; status?: string };
+// Read-only. Klik baris membuka detail gedung pemiliknya.
+type Row = { name: string; nama: string; jenis_ruangan?: string; gedung?: string; lantai?: string; kapasitas?: number; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
@@ -17,29 +16,30 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function RuanganPage() {
-  const [showCreate, setShowCreate] = useState(false);
+  const { sekolah } = useParams({ from: "/$sekolah" });
+  const navigate = useNavigate();
   return (
-    <>
-      <ResourceListPage<Row>
-        eyebrow="Infrastruktur"
-        title="Ruangan"
-        doctype="Ruangan"
-        fields={["name", "nama", "jenis_ruangan", "lantai", "kapasitas", "status"]}
-        rowKey={(r) => r.name}
-        columns={COLUMNS}
-        defaultSort={{ key: "nama", dir: "asc" }}
-        searchFields={["name", "nama"]}
-        selectFilters={[
-          { key: "jenis", label: "Jenis", field: "jenis_ruangan",
-            options: ["Semua", "Kelas", "Lab", "Perpustakaan", "Aula", "Kamar Asrama", "Musholla", "Kantor", "Gudang", "Lainnya"].map((v) => ({ value: v, label: v })) },
-          { key: "status", label: "Status", field: "status",
-            options: ["Semua", "Tersedia", "Dipakai", "Maintenance"].map((v) => ({ value: v, label: v })) },
-        ]}
-        addLabel="Tambah Ruangan"
-        onAdd={() => setShowCreate(true)}
-      />
-      <RuanganFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    <ResourceListPage<Row>
+      eyebrow="Infrastruktur"
+      title="Ruangan"
+      description="Read-only. Klik baris untuk membuka detail gedung."
+      doctype="Ruangan"
+      fields={["name", "nama", "jenis_ruangan", "gedung", "lantai", "kapasitas", "status"]}
+      rowKey={(r) => r.name}
+      columns={COLUMNS}
+      defaultSort={{ key: "nama", dir: "asc" }}
+      searchFields={["name", "nama"]}
+      selectFilters={[
+        { key: "jenis", label: "Jenis", field: "jenis_ruangan",
+          options: ["Semua", "Kelas", "Lab", "Perpustakaan", "Aula", "Kamar Asrama", "Musholla", "Kantor", "Gudang", "Lainnya"].map((v) => ({ value: v, label: v })) },
+        { key: "status", label: "Status", field: "status",
+          options: ["Semua", "Tersedia", "Dipakai", "Maintenance"].map((v) => ({ value: v, label: v })) },
+      ]}
+      onRowClick={(r) =>
+        r.gedung &&
+        navigate({ to: "/$sekolah/infrastruktur/daftar-gedung/$gedungId", params: { sekolah, gedungId: r.gedung } })
+      }
+    />
   );
 }
 

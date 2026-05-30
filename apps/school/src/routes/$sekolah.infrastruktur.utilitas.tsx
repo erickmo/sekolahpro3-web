@@ -1,10 +1,9 @@
-import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
-import { UtilitasGedungFormModal } from "../components/infrastruktur/UtilitasGedungFormModal";
 
-type Row = { name: string; gedung?: string; jenis?: string; jenis_utilitas?: string; provider?: string; nomor_meter?: string; nomor_pelanggan?: string; status?: string };
+// Read-only. Klik baris membuka detail gedung pemiliknya.
+type Row = { name: string; gedung?: string; jenis?: string; provider?: string; nomor_pelanggan?: string; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
@@ -13,32 +12,32 @@ const COLUMNS: Column<Row>[] = [
   { key: "provider", header: "Provider", cell: (r) => r.provider ?? "—" },
   { key: "nomor_pelanggan", header: "No. Pelanggan", cell: (r) => <span className="font-mono text-xs">{r.nomor_pelanggan ?? "—"}</span> },
   { key: "status", header: "Status",
-    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : r.status === "Nonaktif" ? "neutral" : "neutral"} dot>{r.status ?? "—"}</Badge> },
+    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : "neutral"} dot>{r.status ?? "—"}</Badge> },
 ];
 
 function UtilitasPage() {
-  const [showCreate, setShowCreate] = useState(false);
+  const { sekolah } = useParams({ from: "/$sekolah" });
+  const navigate = useNavigate();
   return (
-    <>
-      <ResourceListPage<Row>
-        eyebrow="Infrastruktur"
-        title="Utilitas Gedung"
-        description="PLN, PDAM, internet, gas, dll."
-        doctype="Utilitas Gedung"
-        fields={["name", "gedung", "jenis", "provider", "nomor_pelanggan", "status"]}
-        rowKey={(r) => r.name}
-        columns={COLUMNS}
-        defaultSort={{ key: "gedung", dir: "asc" }}
-        searchFields={["name", "gedung", "provider"]}
-        selectFilters={[
-          { key: "jenis", label: "Jenis", field: "jenis",
-            options: ["Semua", "Listrik", "Air", "Internet", "Gas", "Lainnya"].map((v) => ({ value: v, label: v })) },
-        ]}
-        addLabel="Tambah Utilitas"
-        onAdd={() => setShowCreate(true)}
-      />
-      <UtilitasGedungFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    <ResourceListPage<Row>
+      eyebrow="Infrastruktur"
+      title="Utilitas Gedung"
+      description="Read-only. PLN, PDAM, internet, gas, dll. Klik baris untuk membuka detail gedung."
+      doctype="Utilitas Gedung"
+      fields={["name", "gedung", "jenis", "provider", "nomor_pelanggan", "status"]}
+      rowKey={(r) => r.name}
+      columns={COLUMNS}
+      defaultSort={{ key: "gedung", dir: "asc" }}
+      searchFields={["name", "gedung", "provider"]}
+      selectFilters={[
+        { key: "jenis", label: "Jenis", field: "jenis",
+          options: ["Semua", "Listrik", "Air", "Internet", "Gas", "Lainnya"].map((v) => ({ value: v, label: v })) },
+      ]}
+      onRowClick={(r) =>
+        r.gedung &&
+        navigate({ to: "/$sekolah/infrastruktur/daftar-gedung/$gedungId", params: { sekolah, gedungId: r.gedung } })
+      }
+    />
   );
 }
 

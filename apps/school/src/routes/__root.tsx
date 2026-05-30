@@ -406,12 +406,16 @@ function Layout() {
 
   const mk = (to: string, label: string, icon: React.ReactNode, badge?: string | number): SidebarItem => {
     const livePath = scopedActivePath(slug, to);
+    // Sidebar parent stays highlighted on nested routes (e.g. /infrastruktur/**),
+    // so deep-linking into a detail page keeps the module visibly active.
+    // Exception: "/" (Dashboard) must match exactly, else it lights up everywhere.
+    const isActive = to === "/" ? pathname === livePath : pathname === livePath || pathname.startsWith(`${livePath}/`);
     return {
       to,
       label,
       icon,
       badge,
-      active: slug ? pathname === livePath : false,
+      active: slug ? isActive : false,
       render: ({ className, children }: { className: string; children: React.ReactNode }) =>
         slug ? (
           <Link to={scopedTo(slug, to)} params={scopedParams(slug)} className={className}>
@@ -557,7 +561,7 @@ function Layout() {
             title="Tahun Ajaran belum aktif"
             description="Modul absensi, akademik, dan jadwal membutuhkan Tahun Ajaran aktif untuk berfungsi normal."
             actionLabel="Atur Tahun Ajaran"
-            actionHref="/master/tahun-ajaran"
+            actionHref="/akademik/tahun-ajaran"
             renderLink={(href, children) =>
               slug ? (
                 <Link to={scopedTo(slug, href)} params={scopedParams(slug)}>

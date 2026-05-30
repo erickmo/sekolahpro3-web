@@ -76,7 +76,7 @@ type QuickAction = {
 };
 
 const PPDB_FLOW_STEPS: ModuleFlowStep[] = [
-  { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Aktifkan TA berjalan", href: "/$sekolah/master/tahun-ajaran" },
+  { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Aktifkan TA berjalan", href: "/$sekolah/akademik/tahun-ajaran" },
   { key: "gelombang", label: "Gelombang", hint: "Atur kuota & periode", href: "/$sekolah/ppdb/gelombang" },
   { key: "pengaturan", label: "Pengaturan", hint: "Biaya, formulir, alur", href: "/$sekolah/ppdb/pengaturan" },
   { key: "calon", label: "Calon Siswa", hint: "Terima pendaftaran", href: "/$sekolah/ppdb/calon-siswa" },
