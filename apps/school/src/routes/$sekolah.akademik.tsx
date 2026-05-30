@@ -11,7 +11,7 @@ import { Tabs, type TabItem } from "@sekolahpro/ui";
 import { AkademikContextProvider } from "../lib/akademikContext";
 import { AkademikContextBar } from "../components/akademik/AkademikContextBar";
 
-interface AkademikSearch {
+export interface AkademikSearch {
   ta?: string;
   semester?: string;
 }

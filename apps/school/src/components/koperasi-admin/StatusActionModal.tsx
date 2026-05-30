@@ -33,7 +33,7 @@ interface StatusActionModalProps {
   timestampField?: string;
   /** Field operator (User) — di-set ke user aktif bila supplied. */
   operatorField?: string;
-  currentUser?: string;
+  currentUser?: string | undefined;
   onSuccess?: () => void;
 }
 

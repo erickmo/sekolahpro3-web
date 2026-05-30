@@ -10,7 +10,7 @@ const BERKAS_DOCTYPE = "Berkas Guru";
 const BULK_SK_METHOD = "sekolahpro.akademik.api.sk.bulk_generate_sk_mengajar";
 
 /** Per-row action: create the 1:1 SK Mengajar for an active Penugasan Guru. */
-export function BuatSkMengajarButton({ penugasan, status }: { penugasan: string; status?: string }) {
+export function BuatSkMengajarButton({ penugasan, status }: { penugasan: string; status?: string | undefined }) {
   const m = useDocMethod<string>(PENUGASAN_DOCTYPE, "buat_sk_mengajar");
   const qc = useQueryClient();
   if (status !== "Aktif") return <span className="text-xs text-muted-fg">—</span>;

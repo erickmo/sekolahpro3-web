@@ -62,7 +62,7 @@ describe("WizardShell", () => {
     render(wrap(<WizardShell />));
     const selects = screen.getAllByRole("combobox");
     // selects[0]=jalur (default Reguler), selects[1]=gelombang
-    fireEvent.change(selects[1], { target: { value: "G-1" } });
+    fireEvent.change(selects[1]!, { target: { value: "G-1" } });
     fireEvent.click(screen.getByText("Selanjutnya"));
     await waitFor(() => {
       expect(screen.getByText("Data Diri")).toBeInTheDocument();

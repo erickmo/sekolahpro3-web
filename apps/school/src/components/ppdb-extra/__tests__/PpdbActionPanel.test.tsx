@@ -20,7 +20,9 @@ function wrap(ui: ReactNode) {
 }
 
 describe("PpdbActionPanel", () => {
-  beforeEach(() => vi.mocked(frappeFetch).mockReset());
+  beforeEach(() => {
+    vi.mocked(frappeFetch).mockReset();
+  });
   afterEach(() => cleanup());
 
   it("Draft status menampilkan tombol Ajukan", () => {

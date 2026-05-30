@@ -9,7 +9,7 @@ type RunDocMethodArgs = {
   dt: string;
   dn: string;
   method: string;
-  args?: Record<string, unknown>;
+  args?: Record<string, unknown> | undefined;
 };
 
 function runDocMethod<T>({ dt, dn, method, args }: RunDocMethodArgs): Promise<T> {

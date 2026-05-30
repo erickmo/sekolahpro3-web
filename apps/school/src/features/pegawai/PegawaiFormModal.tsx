@@ -51,7 +51,7 @@ async function searchLink(doctype: string, labelField: string, q: string): Promi
     limit_page_length: 20,
     order_by: "modified desc",
   });
-  return rows.map((r) => ({ value: r.name, label: r[labelField] ? `${r[labelField]} (${r.name})` : r.name }));
+  return rows.map((r) => ({ value: r.name ?? "", label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? "") }));
 }
 
 export interface PegawaiFormModalProps {

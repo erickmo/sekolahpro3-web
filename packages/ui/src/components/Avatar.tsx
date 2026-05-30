@@ -2,7 +2,7 @@ import { cn } from "../lib/cn";
 
 interface Props {
   name?: string | null;
-  src?: string | null;
+  src?: string | null | undefined;
   size?: "sm" | "md" | "lg";
   className?: string;
 }

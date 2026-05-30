@@ -33,7 +33,9 @@ function wrap(ui: React.ReactNode) {
 }
 
 describe("DendaDrawer", () => {
-  beforeEach(() => vi.mocked(updateResource).mockClear());
+  beforeEach(() => {
+    vi.mocked(updateResource).mockClear();
+  });
 
   it("lists denda and marks lunas", async () => {
     render(wrap(<DendaDrawer open peminjaman="LOAN-1" onClose={() => {}} />));
