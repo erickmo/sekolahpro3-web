@@ -5,6 +5,7 @@ import { useSessionStore, logout } from "@sekolahpro/auth";
 import {
   useMySchools,
   useSelectSchool,
+  type FooterContent,
   type OnboardingCta,
   type SekolahCard,
   type SekolahGroup,
@@ -316,9 +317,7 @@ export function PilihSekolahPage() {
           </div>
         )}
 
-        <footer className="mt-16 text-[11px] text-white/40 text-center">
-          © {new Date().getFullYear()} SekolahPro · built by Thunderlab
-        </footer>
+        <Footer footer={data?.footer ?? null} />
       </div>
     </div>
   );
@@ -355,6 +354,37 @@ function OnboardingButton({ cta }: { cta: OnboardingCta }) {
       </svg>
       {cta.label}
     </a>
+  );
+}
+
+const DEFAULT_FOOTER_SUFFIX = "SekolahPro · built by Thunderlab";
+
+/**
+ * Footer for /pilih-sekolah. Renders server-managed content from SekolahPro
+ * Settings (text already has {year} substituted server-side). Falls back to the
+ * built-in default text when the backend returns no footer. An optional link is
+ * rendered only when both url + label are present and the url is safe http(s).
+ */
+function Footer({ footer }: { footer: FooterContent | null }) {
+  const text = footer?.text ?? `© ${new Date().getFullYear()} ${DEFAULT_FOOTER_SUFFIX}`;
+  const safe = footer?.url ? safeHttpUrl(footer.url) : null;
+  return (
+    <footer className="mt-16 text-[11px] text-white/40 text-center">
+      {text}
+      {safe && footer?.url_label ? (
+        <>
+          {" · "}
+          <a
+            href={safe}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-white/70 transition"
+          >
+            {footer.url_label}
+          </a>
+        </>
+      ) : null}
+    </footer>
   );
 }
 
