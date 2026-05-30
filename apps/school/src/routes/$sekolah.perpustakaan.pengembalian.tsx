@@ -5,7 +5,7 @@
  * peminjaman hub. This stub preserves the old URL by redirecting to the
  * peminjaman list filtered to "Selesai" (returned loans).
  */
-import { createFileRoute, redirect, useParams} from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/$sekolah/perpustakaan/pengembalian")({
   beforeLoad: ({ params }) => {

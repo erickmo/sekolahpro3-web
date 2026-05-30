@@ -148,7 +148,7 @@ function MutasiMasukNewPage() {
       return;
     }
     try {
-      const doc = await create.mutateAsync({
+      await create.mutateAsync({
         nisn: dapodik.nisn,
         npsn_asal: dapodik.npsn_asal,
         nama_sekolah_asal: dapodik.nama_sekolah_asal,

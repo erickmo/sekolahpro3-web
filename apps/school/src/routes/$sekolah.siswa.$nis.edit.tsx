@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, useNavigate, useParams} from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import {
   Breadcrumb,
   Button,
@@ -63,7 +63,6 @@ function SiswaEditPage() {
 export const Route = createFileRoute("/$sekolah/siswa/$nis/edit")({
   component: SiswaEditPage,
   notFoundComponent: () => {
-    const { sekolah } = useParams({ from: "/$sekolah" });
     return (
     <div className="py-16">
       <EmptyState title="Siswa tidak ditemukan" description="NIS tidak ada di sistem." />

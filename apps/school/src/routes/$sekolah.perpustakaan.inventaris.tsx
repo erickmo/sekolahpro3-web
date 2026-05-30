@@ -3,7 +3,7 @@
  * Sub-section: Stock Opname (audit terjadwal) + Berita Acara Kerusakan (ad-hoc).
  * Internal segmented control supaya hemat tab utama Perpustakaan.
  */
-import { createFileRoute, Link, Outlet, redirect, useRouterState, useParams} from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 
 const SEGMENTS: { to: string; label: string }[] = [
   { to: "/$sekolah/perpustakaan/inventaris/opname", label: "Stock Opname" },
@@ -11,7 +11,6 @@ const SEGMENTS: { to: string; label: string }[] = [
 ];
 
 function InventarisLayout() {
-  const { sekolah } = useParams({ from: "/$sekolah" });
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
