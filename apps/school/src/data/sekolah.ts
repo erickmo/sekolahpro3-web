@@ -38,7 +38,7 @@ export interface FooterContent {
 }
 
 export interface KoperasiCard {
-  sekolah: string;
+  koperasi: string;
   nama: string;
   slug: string;
   role_koperasi: string;
