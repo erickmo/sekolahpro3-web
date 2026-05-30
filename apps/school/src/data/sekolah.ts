@@ -37,12 +37,25 @@ export interface FooterContent {
   url_label: string | null;
 }
 
+export interface KoperasiCard {
+  sekolah: string;
+  nama: string;
+  slug: string;
+  role_koperasi: string;
+  logo: string | null;
+  status: string;
+  organisasi: string;
+  organisasi_nama: string;
+}
+
 export interface MySchoolsResponse {
   total_schools: number;
   org_count: number;
   groups: SekolahGroup[];
   onboarding: OnboardingCta | null;
   footer: FooterContent | null;
+  koperasi: KoperasiCard[];
+  koperasi_count: number;
 }
 
 export interface SelectSchoolResponse {
@@ -52,6 +65,15 @@ export interface SelectSchoolResponse {
   subdomain: string | null;
   role: string;
   slug: string;
+}
+
+export interface SelectKoperasiResponse {
+  ok: boolean;
+  koperasi: string;
+  sekolah: string;
+  nama: string;
+  slug: string;
+  role: string;
 }
 
 export const groupKeysShape = ["organisasi", "organisasi_nama", "schools"];
@@ -74,6 +96,20 @@ export function useSelectSchool(): UseMutationResult<
     mutationFn: ({ name }) =>
       frappeFetch<SelectSchoolResponse>(
         "sekolahpro.api.auth.select_sekolah",
+        { name },
+      ),
+  });
+}
+
+export function useSelectKoperasi(): UseMutationResult<
+  SelectKoperasiResponse,
+  Error,
+  { name: string }
+> {
+  return useMutation<SelectKoperasiResponse, Error, { name: string }>({
+    mutationFn: ({ name }) =>
+      frappeFetch<SelectKoperasiResponse>(
+        "sekolahpro.api.auth.select_koperasi",
         { name },
       ),
   });
