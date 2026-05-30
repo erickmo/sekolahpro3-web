@@ -23,7 +23,6 @@ const INFRA_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "daftar", label: "Daftar Gedung", hint: "Registrasi gedung", href: "/$sekolah/infrastruktur/daftar-gedung" },
   { key: "lantai", label: "Lantai", hint: "Definisi per lantai", href: "/$sekolah/infrastruktur/lantai" },
   { key: "ruangan", label: "Ruangan", hint: "Setup ruang & kapasitas", href: "/$sekolah/infrastruktur/ruangan" },
-  { key: "fasilitas", label: "Fasilitas", hint: "Daftar fasilitas", href: "/$sekolah/infrastruktur/fasilitas" },
   { key: "utilitas", label: "Utilitas", hint: "Listrik, air, dll", href: "/$sekolah/infrastruktur/utilitas" },
 ];
 // Button kept for "Tambah Gedung" action below.
@@ -49,7 +48,6 @@ const RECENT_LIMIT = 5;
 const AKSI_CEPAT: { to: string; label: string; desc: string; icon: React.ReactNode }[] = [
   { to: "/$sekolah/infrastruktur/ruangan", label: "Ruangan", desc: "Kelola ruangan & kapasitas", icon: <IconHome /> },
   { to: "/$sekolah/infrastruktur/lantai", label: "Lantai", desc: "Struktur lantai per gedung", icon: <IconGrad /> },
-  { to: "/$sekolah/infrastruktur/fasilitas", label: "Fasilitas", desc: "Inventaris fasilitas ruangan", icon: <IconSettings /> },
   { to: "/$sekolah/infrastruktur/utilitas", label: "Utilitas", desc: "PLN, PDAM, internet, gas", icon: <IconBell /> },
 ];
 
@@ -115,8 +113,6 @@ function InfraDashboardPage() {
         description: "Fasilitas Ruangan berstatus Rusak",
         tone: stats.fasilitasRusak > FASILITAS_CRITICAL_THRESHOLD ? "danger" : "warning",
         badge: "Fasilitas",
-        actionLabel: "Buat Perbaikan",
-        actionHref: "/$sekolah/infrastruktur/fasilitas",
       });
     }
     if (stats.utilitasAnomali > 0) {
@@ -182,8 +178,6 @@ function InfraDashboardPage() {
           icon={<IconSettings />}
           accent={stats.fasilitasRusak > FASILITAS_CRITICAL_THRESHOLD ? "rose" : "amber"}
           urgency={stats.fasilitasRusak > FASILITAS_CRITICAL_THRESHOLD ? "critical" : "warn"}
-          actionHref="/$sekolah/infrastruktur/fasilitas"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
         <StatCard
           label="Utilitas Anomali"
@@ -238,7 +232,7 @@ function InfraDashboardPage() {
         <AttentionList
           items={perluPerhatian}
           renderLink={(href, children) => (
-            <Link to={href as "/$sekolah/infrastruktur/fasilitas"} params={{ sekolah }}>{children}</Link>
+            <Link to={href as "/$sekolah/infrastruktur/utilitas"} params={{ sekolah }}>{children}</Link>
           )}
         />
       </SectionCard>

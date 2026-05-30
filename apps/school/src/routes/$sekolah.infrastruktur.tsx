@@ -6,7 +6,6 @@ import { Tabs, type TabItem } from "@sekolahpro/ui";
 const TABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/$sekolah/infrastruktur", label: "Dashboard", exact: true },
   { to: "/$sekolah/infrastruktur/daftar-gedung", label: "Gedung" },
-  { to: "/$sekolah/infrastruktur/fasilitas", label: "Fasilitas" },
 ];
 
 function InfraLayout() {
