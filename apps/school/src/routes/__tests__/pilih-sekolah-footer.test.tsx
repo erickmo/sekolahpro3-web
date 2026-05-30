@@ -59,7 +59,8 @@ describe("PilihSekolahPage footer", () => {
     });
     wrap(<PilihSekolahPage />);
     const link = screen.getByRole("link", { name: "Thunderlab" });
-    expect(link).toHaveAttribute("href", "https://thunderlab.id");
+    // safeHttpUrl normalises via URL(), which appends the root path.
+    expect(link).toHaveAttribute("href", "https://thunderlab.id/");
   });
 
   it("falls back to default footer when footer is null", () => {

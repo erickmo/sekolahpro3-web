@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Badge, EmptyState, Input, Skeleton } from "@sekolahpro/ui";
+import { EmptyState, Input, Skeleton } from "@sekolahpro/ui";
 import { useSessionStore, logout } from "@sekolahpro/auth";
 import {
   useMySchools,
