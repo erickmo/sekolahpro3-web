@@ -346,9 +346,11 @@ export function PilihSekolahPage() {
                                 subdomain: null,
                                 slug: resp.slug,
                               });
+                              // Top-level koperasi route (PR3c): bookmarkable
+                              // URL not bound to first picking a school.
                               navigate({
-                                to: "/$sekolah/koperasi",
-                                params: { sekolah: resp.slug },
+                                to: "/$koperasi",
+                                params: { koperasi: resp.slug },
                               });
                             },
                           },
