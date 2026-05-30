@@ -1,49 +1,53 @@
 import { useState } from "react";
+import { Switch } from "@sekolahpro/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResourceUpdate } from "@sekolahpro/api-client";
 
 interface Props {
   doctype: string;
+  /** Doc name (primary key) of the row to patch. */
   name: string;
+  /** Boolean (0/1) fieldname to flip. */
   field: string;
   value: number | undefined;
   onLabel?: string;
   offLabel?: string;
 }
 
+/**
+ * Inline boolean toggle for a list row. Flips a 0/1 field in one click with
+ * optimistic UI and reverts on failure — replaces the row→detail→modal→save
+ * round-trip for simple flags. Stops click propagation so toggling never
+ * triggers the row's navigate-to-detail handler.
+ */
 export function InlineToggle({ doctype, name, field, value, onLabel = "Aktif", offLabel = "Nonaktif" }: Props) {
   const qc = useQueryClient();
   const mut = useResourceUpdate(doctype);
-  const [local, setLocal] = useState<number>(value ? 1 : 0);
+  const [optimistic, setOptimistic] = useState<boolean | null>(null);
+  const checked = optimistic ?? !!value;
 
-  const handleToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    const next = e.target.checked ? 1 : 0;
-    setLocal(next);
+  const toggle = async () => {
+    if (mut.isPending) return;
+    const next = !checked;
+    setOptimistic(next);
     try {
-      await mut.mutateAsync({ name, patch: { [field]: next } });
+      await mut.mutateAsync({ name, patch: { [field]: next ? 1 : 0 } });
       qc.invalidateQueries({ queryKey: ["resource:list", doctype] });
     } catch (err) {
-      setLocal(value ? 1 : 0);
+      setOptimistic(!next);
       window.alert(err instanceof Error ? err.message : "Gagal memperbarui.");
     }
   };
 
   return (
-    <label
-      className="inline-flex items-center gap-2 cursor-pointer select-none"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <input
-        type="checkbox"
-        checked={local === 1}
-        onChange={handleToggle}
+    <span onClick={(e) => e.stopPropagation()} className="inline-flex">
+      <Switch
+        checked={checked}
+        onChange={toggle}
         disabled={mut.isPending}
-        className="h-4 w-4 rounded border-border text-brand focus:ring-brand focus:ring-2"
+        label={checked ? onLabel : offLabel}
+        aria-label={`${field}: ${checked ? onLabel : offLabel}`}
       />
-      <span className={local === 1 ? "text-xs text-emerald-700" : "text-xs text-muted-fg"}>
-        {local === 1 ? onLabel : offLabel}
-      </span>
-    </label>
+    </span>
   );
 }

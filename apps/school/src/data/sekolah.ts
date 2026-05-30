@@ -31,11 +31,18 @@ export interface OnboardingCta {
   url: string;
 }
 
+export interface FooterContent {
+  text: string;
+  url: string | null;
+  url_label: string | null;
+}
+
 export interface MySchoolsResponse {
   total_schools: number;
   org_count: number;
   groups: SekolahGroup[];
   onboarding: OnboardingCta | null;
+  footer: FooterContent | null;
 }
 
 export interface SelectSchoolResponse {

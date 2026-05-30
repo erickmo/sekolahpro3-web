@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, type Column } from "@sekolahpro/ui";
+import { type Column } from "@sekolahpro/ui";
 import { MasterResourcePage } from "../components/master/MasterResourcePage";
+import { InlineToggle } from "../components/master/InlineToggle";
 import { MODUL_FIELDS } from "../components/master/schemas";
 
 type Row = { name: string; nama: string; aktif?: number; deskripsi?: string };
@@ -9,7 +10,7 @@ const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
   { key: "nama", header: "Modul", sortable: true, cell: (r) => r.nama },
   { key: "aktif", header: "Status",
-    cell: (r) => <Badge tone={r.aktif ? "success" : "neutral"} dot>{r.aktif ? "Aktif" : "Nonaktif"}</Badge> },
+    cell: (r) => <InlineToggle doctype="Modul Aktif" name={r.name} field="aktif" value={r.aktif} onLabel="Aktif" offLabel="Nonaktif" /> },
   { key: "deskripsi", header: "Deskripsi", cell: (r) => r.deskripsi ?? "—" },
 ];
 
