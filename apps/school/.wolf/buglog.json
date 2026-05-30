@@ -1,0 +1,98 @@
+[
+  {
+    "id": "bug-001",
+    "timestamp": "2026-05-30",
+    "error_message": "cloudflared: Failed to dial a quic connection error=\"timeout: handshake did not complete in time\"; tunnel never registered",
+    "file": "(ops) cloudflared tunnel",
+    "root_cause": "QUIC uses UDP 7844 which is blocked/throttled on this network, so the quick-tunnel edge handshake times out",
+    "fix": "Run cloudflared with --protocol http2 to force the TCP/443 transport instead of QUIC",
+    "tags": [
+      "cloudflared",
+      "tunnel",
+      "quic",
+      "network",
+      "ops"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-05-30"
+  },
+  {
+    "id": "bug-002",
+    "timestamp": "2026-05-30",
+    "error_message": "Tunnel returns HTTP 403 while localhost:5181 returns 200 for the same request",
+    "file": "apps/school/vite.config.ts",
+    "root_cause": "Vite 5.4.21 host-header check (server.allowedHosts, added in the 5.4.12 CVE fix) rejects the *.trycloudflare.com Host with 403",
+    "fix": "Add allowedHosts: [\".trycloudflare.com\"] to server config in vite.config.ts",
+    "tags": [
+      "vite",
+      "allowedHosts",
+      "403",
+      "tunnel",
+      "cloudflared"
+    ],
+    "related_bugs": [
+      "bug-001"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-05-30"
+  },
+  {
+    "id": "bug-003",
+    "timestamp": "2026-05-30",
+    "error_message": "XSS via javascript: URL in href (security review, OnboardingButton)",
+    "file": "apps/school/src/routes/pilih-sekolah.tsx",
+    "root_cause": "cta.url rendered directly in <a href> without scheme validation; admin-configurable source",
+    "fix": "added safeHttpUrl() guard, only allow http/https, return null otherwise",
+    "tags": [
+      "xss",
+      "security",
+      "href",
+      "url-validation"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-05-30"
+  },
+  {
+    "id": "bug-004",
+    "timestamp": "2026-05-30",
+    "error_message": "frappe.exceptions.MandatoryError: [Lantai, ...]: sekolah  (POST /api/resource/Lantai 417)",
+    "file": "apps/school/src/components/infrastruktur/LantaiFormModal.tsx",
+    "root_cause": "Lantai doctype has reqd field 'sekolah' (ADR-0042 multi-tenant, no fetch_from from gedung), but create payload only sent {nama, nomor_lantai, gedung}",
+    "fix": "Added useSessionStore activeSekolah.name, included sekolah in create payload + guard, matching GedungFormModal pattern. Updated test mock + expected payload; added afterEach(cleanup) to fix pre-existing modal test isolation (duplicate Simpan)",
+    "tags": [
+      "frappe",
+      "MandatoryError",
+      "multi-tenant",
+      "sekolah",
+      "infrastruktur",
+      "lantai",
+      "417"
+    ],
+    "related_bugs": [],
+    "occurrences": 1,
+    "last_seen": "2026-05-30"
+  },
+  {
+    "id": "bug-005",
+    "timestamp": "2026-05-30",
+    "error_message": "/{slug}/master/unit-jenjang shows all schools' Unit Jenjang (30 rows) instead of only the active sekolah (6)",
+    "file": "packages/api-client/src/frappeResource.ts",
+    "root_cause": "Unit Jenjang was in TENANT_BLOCKLIST (mislabeled as having no sekolah field), so injectSekolahFilter skipped it — no [sekolah,=,active] filter added. Backend permission_query_conditions also missing Unit Jenjang (cross-org leak for non-super users); Administrator bypasses pqc anyway as super-role.",
+    "fix": "Removed 'Unit Jenjang' from TENANT_BLOCKLIST so client auto-injects the sekolah filter (verified: 6 vs 30). Backend: added pqc_unit_jenjang callback in tenant_scope.py + registered 'Unit Jenjang' in permission_query_conditions (hooks.py) for defense-in-depth.",
+    "tags": [
+      "multi-tenant",
+      "tenant-scope",
+      "unit-jenjang",
+      "permission_query_conditions",
+      "blocklist",
+      "data-leak"
+    ],
+    "related_bugs": [
+      "bug-004"
+    ],
+    "occurrences": 1,
+    "last_seen": "2026-05-30"
+  }
+]

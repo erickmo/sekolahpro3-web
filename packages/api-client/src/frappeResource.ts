@@ -34,7 +34,6 @@ export class TenantMismatchError extends Error {
 const TENANT_BLOCKLIST = new Set<string>([
   "Tahun Ajaran",
   "Semester",
-  "Unit Jenjang",
   "User",
   "Role",
   "DocType",
