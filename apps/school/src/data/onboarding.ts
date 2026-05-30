@@ -101,7 +101,7 @@ export function useOnboardingSteps(): OnboardingStep[] {
       id: "modul",
       label: "Aktifkan modul opsional",
       description: "Koperasi, Perpustakaan, PPDB.",
-      href: "/master/modul",
+      href: "/pengaturan/modul",
       done: false,
     },
     {

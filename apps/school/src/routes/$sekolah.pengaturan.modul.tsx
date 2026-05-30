@@ -16,7 +16,7 @@ const COLUMNS: Column<Row>[] = [
 function ModulPage() {
   return (
     <MasterResourcePage<Row>
-      eyebrow="Master Data"
+      eyebrow="Pengaturan"
       title="Modul Aktif"
       description="Toggle modul yang dipakai per tenant."
       doctype="Modul Aktif"
@@ -26,7 +26,7 @@ function ModulPage() {
       defaultSort={{ key: "nama", dir: "asc" }}
       searchFields={["name", "nama"]}
       addLabel="Tambah Modul"
-      detailRoute="/$sekolah/master/modul/$name"
+      detailRoute="/$sekolah/pengaturan/modul/$name"
       detailParams={(r) => ({ name: r.name })}
       formTitle="Tambah Modul"
       formFields={MODUL_FIELDS}
@@ -34,4 +34,4 @@ function ModulPage() {
   );
 }
 
-export const Route = createFileRoute("/$sekolah/master/modul")({ component: ModulPage });
+export const Route = createFileRoute("/$sekolah/pengaturan/modul")({ component: ModulPage });

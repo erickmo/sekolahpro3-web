@@ -13,7 +13,7 @@ function ModulDetailPage() {
       name={name}
       eyebrow="Modul Aktif"
       parentLabel="Modul Aktif"
-      parentPath="/$sekolah/master/modul"
+      parentPath="/$sekolah/pengaturan/modul"
       title={(d) => d.nama || d.name}
       fields={[
         { label: "ID", render: (d) => <span className="font-mono text-xs">{d.name}</span> },
@@ -26,4 +26,4 @@ function ModulDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/$sekolah/master/modul/$name")({ component: ModulDetailPage });
+export const Route = createFileRoute("/$sekolah/pengaturan/modul/$name")({ component: ModulDetailPage });

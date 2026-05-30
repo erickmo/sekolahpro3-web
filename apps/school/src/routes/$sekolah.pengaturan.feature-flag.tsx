@@ -16,7 +16,7 @@ const COLUMNS: Column<Row>[] = [
 function FeatureFlagPage() {
   return (
     <MasterResourcePage<Row>
-      eyebrow="Master Data"
+      eyebrow="Pengaturan"
       title="Feature Flag"
       doctype="Feature Flag"
       fields={["name", "key", "enabled", "description"]}
@@ -25,7 +25,7 @@ function FeatureFlagPage() {
       defaultSort={{ key: "key", dir: "asc" }}
       searchFields={["name", "key"]}
       addLabel="Tambah Flag"
-      detailRoute="/$sekolah/master/feature-flag/$name"
+      detailRoute="/$sekolah/pengaturan/feature-flag/$name"
       detailParams={(r) => ({ name: r.name })}
       formTitle="Tambah Feature Flag"
       formFields={FEATURE_FLAG_FIELDS}
@@ -33,4 +33,4 @@ function FeatureFlagPage() {
   );
 }
 
-export const Route = createFileRoute("/$sekolah/master/feature-flag")({ component: FeatureFlagPage });
+export const Route = createFileRoute("/$sekolah/pengaturan/feature-flag")({ component: FeatureFlagPage });

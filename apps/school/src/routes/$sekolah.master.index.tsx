@@ -22,7 +22,7 @@ import {
 const MASTER_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "unit", label: "Unit Jenjang", hint: "SD/SMP/SMA", href: "/$sekolah/master/unit-jenjang" },
   { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Set TA berjalan", href: "/$sekolah/akademik/tahun-ajaran" },
-  { key: "modul", label: "Modul & Fitur", hint: "Aktifkan modul", href: "/$sekolah/master/modul" },
+  { key: "modul", label: "Modul & Fitur", hint: "Aktifkan modul", href: "/$sekolah/pengaturan/modul" },
   { key: "pengguna", label: "Pengguna", hint: "Akun & peran", href: "/$sekolah/master/pengguna" },
 ];
 import { useResourceList } from "@sekolahpro/api-client";
@@ -42,8 +42,8 @@ const AKSI_CEPAT: { to: string; label: string; desc: string; icon: React.ReactNo
   { to: "/$sekolah/akademik/tahun-ajaran", label: "Tahun Ajaran", desc: "Kelola periode akademik & semester", icon: <IconCalendar /> },
   { to: "/$sekolah/master/pengguna", label: "Pengguna", desc: "Undang & kelola akses pengguna", icon: <IconUsers /> },
   { to: "/$sekolah/master/unit-jenjang", label: "Unit Jenjang", desc: "Atur jenjang TK/SD/SMP/SMA", icon: <IconGrad /> },
-  { to: "/$sekolah/master/modul", label: "Modul Aktif", desc: "Aktifkan modul per tenant", icon: <IconBook /> },
-  { to: "/$sekolah/master/feature-flag", label: "Feature Flag", desc: "Toggle eksperimen fitur", icon: <IconSettings /> },
+  { to: "/$sekolah/pengaturan/modul", label: "Modul Aktif", desc: "Aktifkan modul per tenant", icon: <IconBook /> },
+  { to: "/$sekolah/pengaturan/feature-flag", label: "Feature Flag", desc: "Toggle eksperimen fitur", icon: <IconSettings /> },
 ];
 
 const PERLU_PERHATIAN_LIMIT = 5;
