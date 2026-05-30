@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
-import { LantaiFormModal } from "../components/infrastruktur/LantaiFormModal";
 
+// Read-only. Pembuatan/edit Lantai dilakukan lewat modul terkait; di sini hanya
+// untuk melihat & menelusuri. Klik baris membuka detail gedung pemiliknya.
 type Row = { name: string; gedung?: string; nomor_lantai?: number; nama?: string };
 
 const COLUMNS: Column<Row>[] = [
@@ -14,23 +14,24 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function LantaiPage() {
-  const [showCreate, setShowCreate] = useState(false);
+  const { sekolah } = useParams({ from: "/$sekolah" });
+  const navigate = useNavigate();
   return (
-    <>
-      <ResourceListPage<Row>
-        eyebrow="Infrastruktur"
-        title="Lantai"
-        doctype="Lantai"
-        fields={["name", "gedung", "nomor_lantai", "nama"]}
-        rowKey={(r) => r.name}
-        columns={COLUMNS}
-        defaultSort={{ key: "gedung", dir: "asc" }}
-        searchFields={["name", "gedung"]}
-        addLabel="Tambah Lantai"
-        onAdd={() => setShowCreate(true)}
-      />
-      <LantaiFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    <ResourceListPage<Row>
+      eyebrow="Infrastruktur"
+      title="Lantai"
+      description="Read-only. Klik baris untuk membuka detail gedung."
+      doctype="Lantai"
+      fields={["name", "gedung", "nomor_lantai", "nama"]}
+      rowKey={(r) => r.name}
+      columns={COLUMNS}
+      defaultSort={{ key: "gedung", dir: "asc" }}
+      searchFields={["name", "gedung"]}
+      onRowClick={(r) =>
+        r.gedung &&
+        navigate({ to: "/$sekolah/infrastruktur/daftar-gedung/$gedungId", params: { sekolah, gedungId: r.gedung } })
+      }
+    />
   );
 }
 

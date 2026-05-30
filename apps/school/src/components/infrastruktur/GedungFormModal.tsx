@@ -3,18 +3,15 @@
  *
  * Source of truth (fields): doctype Gedung di backend Frappe.
  * autoname = format:{sekolah}-{kode} (name auto-generated).
+ * sekolah selalu di-set ke sekolah aktif (dari session store) — bukan dipilih
+ * manual, supaya gedung selalu ter-scope ke tenant yang sedang dibuka.
  */
 
 import { useState } from "react";
-import { Button, FormField, FormGrid, Input, Modal, SearchableSelect } from "@sekolahpro/ui";
-import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
+import { Button, FormField, FormGrid, Input, Modal } from "@sekolahpro/ui";
+import { useResourceCreate } from "@sekolahpro/api-client";
+import { useSessionStore } from "@sekolahpro/auth";
 import { useQueryClient } from "@tanstack/react-query";
-
-type SekolahRow = { name: string; nama_sekolah?: string };
-
-const JENIS_OPTIONS = ["Kelas", "Asrama", "Masjid", "Lab", "Kantor", "Serbaguna", "Lainnya"] as const;
-const KONDISI_OPTIONS = ["Baik", "Rusak Ringan", "Rusak Berat"] as const;
-const STATUS_OPTIONS = ["Aktif", "Nonaktif"] as const;
 
 interface GedungFormModalProps {
   open: boolean;
@@ -25,23 +22,13 @@ interface GedungFormModalProps {
 interface FormState {
   nama: string;
   kode: string;
-  sekolah: string;
-  jenis: string;
-  jumlah_lantai: string;
   tahun_dibangun: string;
-  kondisi: string;
-  status: string;
 }
 
 const INITIAL: FormState = {
   nama: "",
   kode: "",
-  sekolah: "",
-  jenis: "",
-  jumlah_lantai: "",
   tahun_dibangun: "",
-  kondisi: "",
-  status: "Aktif",
 };
 
 export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalProps) {
@@ -50,10 +37,7 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
 
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>("Gedung");
-  const sekolahQ = useResourceList<SekolahRow>("Sekolah", {
-    fields: ["name", "nama_sekolah"],
-    limit_page_length: 0,
-  });
+  const sekolah = useSessionStore((s) => s.activeSekolah?.name);
 
   const set = <K extends keyof FormState>(k: K, v: string) =>
     setForm((cur) => ({ ...cur, [k]: v }));
@@ -71,24 +55,22 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
   const canSubmit =
     !!form.nama.trim() &&
     !!form.kode.trim() &&
-    !!form.sekolah &&
-    !!form.jenis &&
-    !!form.status &&
+    !!sekolah &&
     !create.isPending;
 
   const submit = async () => {
     setErr(null);
+    if (!sekolah) {
+      setErr("Sekolah aktif tidak ditemukan.");
+      return;
+    }
     try {
       const payload: Record<string, unknown> = {
         nama: form.nama.trim(),
         kode: form.kode.trim(),
-        sekolah: form.sekolah,
-        jenis: form.jenis,
-        status: form.status,
+        sekolah,
       };
-      if (form.jumlah_lantai.trim()) payload.jumlah_lantai = Number(form.jumlah_lantai);
       if (form.tahun_dibangun.trim()) payload.tahun_dibangun = Number(form.tahun_dibangun);
-      if (form.kondisi) payload.kondisi = form.kondisi;
 
       const created = await create.mutateAsync(payload);
       await qc.invalidateQueries({ queryKey: ["resource:list", "Gedung"] });
@@ -99,8 +81,6 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
       setErr((e as Error)?.message ?? "Gagal membuat gedung.");
     }
   };
-
-  const sekolahOpts = sekolahQ.data ?? [];
 
   return (
     <Modal
@@ -135,34 +115,6 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
               placeholder="GA"
             />
           </FormField>
-          <FormField label="Sekolah" required>
-            <SearchableSelect
-              value={form.sekolah}
-              onChange={(v) => set("sekolah", v)}
-              disabled={sekolahQ.isLoading}
-              options={sekolahOpts.map((s) => ({
-                value: s.name,
-                label: s.nama_sekolah ?? s.name,
-              }))}
-              placeholder={sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
-            />
-          </FormField>
-          <FormField label="Jenis" required>
-            <SearchableSelect
-              value={form.jenis}
-              onChange={(v) => set("jenis", v)}
-              options={JENIS_OPTIONS.map((o) => ({ value: o, label: o }))}
-              placeholder="— Pilih Jenis —"
-            />
-          </FormField>
-          <FormField label="Jumlah Lantai">
-            <Input
-              type="number"
-              min={0}
-              value={form.jumlah_lantai}
-              onChange={(e) => set("jumlah_lantai", e.target.value)}
-            />
-          </FormField>
           <FormField label="Tahun Dibangun">
             <Input
               type="number"
@@ -170,21 +122,6 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
               value={form.tahun_dibangun}
               onChange={(e) => set("tahun_dibangun", e.target.value)}
               placeholder="2020"
-            />
-          </FormField>
-          <FormField label="Kondisi">
-            <SearchableSelect
-              value={form.kondisi}
-              onChange={(v) => set("kondisi", v)}
-              options={KONDISI_OPTIONS.map((o) => ({ value: o, label: o }))}
-              placeholder="—"
-            />
-          </FormField>
-          <FormField label="Status" required>
-            <SearchableSelect
-              value={form.status}
-              onChange={(v) => set("status", v)}
-              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
             />
           </FormField>
         </FormGrid>

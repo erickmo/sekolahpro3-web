@@ -1,13 +1,12 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Tabs, type TabItem } from "@sekolahpro/ui";
 
+// Lantai / Ruangan / Utilitas dipindah ke dalam halaman detail gedung
+// (daftar-gedung/$gedungId). Tab bar hanya menyisakan entry utama.
 const TABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/$sekolah/infrastruktur", label: "Dashboard", exact: true },
-  { to: "/$sekolah/infrastruktur/daftar", label: "Gedung" },
-  { to: "/$sekolah/infrastruktur/lantai", label: "Lantai" },
-  { to: "/$sekolah/infrastruktur/ruangan", label: "Ruangan" },
+  { to: "/$sekolah/infrastruktur/daftar-gedung", label: "Gedung" },
   { to: "/$sekolah/infrastruktur/fasilitas", label: "Fasilitas" },
-  { to: "/$sekolah/infrastruktur/utilitas", label: "Utilitas" },
 ];
 
 function InfraLayout() {

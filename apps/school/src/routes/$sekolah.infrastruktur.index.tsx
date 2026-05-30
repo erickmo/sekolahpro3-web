@@ -20,7 +20,7 @@ import {
 } from "@sekolahpro/ui";
 
 const INFRA_FLOW_STEPS: ModuleFlowStep[] = [
-  { key: "daftar", label: "Daftar Gedung", hint: "Registrasi gedung", href: "/$sekolah/infrastruktur/daftar" },
+  { key: "daftar", label: "Daftar Gedung", hint: "Registrasi gedung", href: "/$sekolah/infrastruktur/daftar-gedung" },
   { key: "lantai", label: "Lantai", hint: "Definisi per lantai", href: "/$sekolah/infrastruktur/lantai" },
   { key: "ruangan", label: "Ruangan", hint: "Setup ruang & kapasitas", href: "/$sekolah/infrastruktur/ruangan" },
   { key: "fasilitas", label: "Fasilitas", hint: "Daftar fasilitas", href: "/$sekolah/infrastruktur/fasilitas" },
@@ -142,7 +142,7 @@ function InfraDashboardPage() {
         actions={
           <>
             <Link
-              to="/$sekolah/infrastruktur/daftar" params={{ sekolah }}
+              to="/$sekolah/infrastruktur/daftar-gedung" params={{ sekolah }}
               className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 border border-border bg-transparent hover:bg-muted"
             >
               <span className="h-4 w-4 mr-1.5"><IconHome /></span>
@@ -202,7 +202,7 @@ function InfraDashboardPage() {
         description="Bangun struktur fisik sekolah dari gedung sampai fasilitas."
         steps={INFRA_FLOW_STEPS}
         renderLink={(href, children) => (
-          <Link to={href as "/$sekolah/infrastruktur/daftar"} params={{ sekolah }}>
+          <Link to={href as "/$sekolah/infrastruktur/daftar-gedung"} params={{ sekolah }}>
             {children}
           </Link>
         )}
