@@ -28,7 +28,7 @@ export interface MasterDetailPageProps<T extends Record<string, unknown>> {
   doctype: string;
   name: string;
   eyebrow: string;
-  // Active sekolah slug; scopes parent/delete-redirect to `/$sekolah/...`.
+  // Active sekolah slug; scopes parent/delete-redirect to `/sch/$sekolah/...`.
   sekolah?: string | undefined;
   parentLabel: string;
   parentPath: string;

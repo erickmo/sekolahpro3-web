@@ -30,7 +30,7 @@ export interface ExtraCrumb {
 
 export interface ExtraDetailScaffoldProps {
   eyebrow: string;
-  // Active sekolah slug; scopes links to `/$sekolah/...` when set.
+  // Active sekolah slug; scopes links to `/sch/$sekolah/...` when set.
   sekolah?: string | undefined;
   title: string;
   backTo: string;

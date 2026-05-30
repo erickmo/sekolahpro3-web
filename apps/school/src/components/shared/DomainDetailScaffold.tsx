@@ -24,7 +24,7 @@ export interface DomainInfoItem {
 export interface DomainDetailScaffoldProps {
   eyebrow: string;
   // Slug of the active sekolah; when set, scaffold scopes all links to
-  // `/$sekolah/...`. Pull from `useParams({ from: "/$sekolah" })`.
+  // `/sch/$sekolah/...`. Pull from `useParams({ from: "/sch/$sekolah" })`.
   sekolah?: string | undefined;
   domain: { label: string; to: string };
   title: string;

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { PilihSekolahPage } from "../pilih-sekolah";
+import { PilihSekolahPage } from "../pilih";
 import * as data from "../../data/sekolah";
 
 vi.mock("@tanstack/react-router", () => ({
