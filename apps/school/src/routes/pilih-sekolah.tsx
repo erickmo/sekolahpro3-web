@@ -318,7 +318,6 @@ export function PilihSekolahPage() {
 
         <footer className="mt-16 text-[11px] text-white/40 text-center">
           © {new Date().getFullYear()} SekolahPro · built by Thunderlab
-          melanjutkan
         </footer>
       </div>
     </div>
