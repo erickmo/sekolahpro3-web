@@ -88,4 +88,34 @@ describe("PilihSekolahPage koperasi", () => {
       expect.any(Object),
     );
   });
+
+  it("navigates to the top-level /$koperasi route on select success", () => {
+    const mutate = vi.fn();
+    mockData([koperasi]);
+    vi.spyOn(data, "useSelectKoperasi").mockReturnValue({
+      mutate, isPending: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+    wrap(<PilihSekolahPage />);
+    fireEvent.click(screen.getByText("Koperasi YPKI").closest("button")!);
+
+    // Invoke the onSuccess callback the page passed to selectKoperasi.mutate
+    // with a SelectKoperasiResponse to exercise the navigation branch.
+    const opts = mutate.mock.calls[0][1] as {
+      onSuccess: (resp: data.SelectKoperasiResponse) => void;
+    };
+    opts.onSuccess({
+      ok: true,
+      koperasi: "KOP-O1-0001",
+      sekolah: "S1",
+      nama: "Koperasi YPKI",
+      slug: "ypki",
+      role: "Teller",
+    });
+
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/$koperasi",
+      params: { koperasi: "ypki" },
+    });
+  });
 });
