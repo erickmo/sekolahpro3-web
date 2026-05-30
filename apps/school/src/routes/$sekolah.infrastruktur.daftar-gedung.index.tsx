@@ -98,7 +98,7 @@ function GedungListPage() {
               key={g.name}
               to="/$sekolah/infrastruktur/daftar-gedung/$gedungId"
               params={{ sekolah, gedungId: g.name }}
-              className="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-brand hover:bg-muted/40"
+              className="group rounded-xl border border-border bg-white p-5 transition-colors hover:border-brand hover:bg-muted/40"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">

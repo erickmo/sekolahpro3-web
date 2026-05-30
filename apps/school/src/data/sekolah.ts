@@ -26,10 +26,16 @@ export interface SekolahGroup {
   schools: SekolahCard[];
 }
 
+export interface OnboardingCta {
+  label: string;
+  url: string;
+}
+
 export interface MySchoolsResponse {
   total_schools: number;
   org_count: number;
   groups: SekolahGroup[];
+  onboarding: OnboardingCta | null;
 }
 
 export interface SelectSchoolResponse {

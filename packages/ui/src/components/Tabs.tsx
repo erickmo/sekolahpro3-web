@@ -23,7 +23,7 @@ export function Tabs({ items, className }: Props) {
           const cls = cn(
             "inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors",
             it.active
-              ? "border-brand text-brand"
+              ? "border-brand text-brand font-semibold bg-brand/10 rounded-t-md"
               : "border-transparent text-muted-fg hover:text-fg hover:border-border",
           );
           return it.render({
