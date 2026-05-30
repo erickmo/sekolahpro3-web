@@ -16,8 +16,14 @@ import {
   type Column,
   type TabItem,
 } from "@sekolahpro/ui";
-import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
+import { useResourceDoc, useResourceList, useResourceDelete } from "@sekolahpro/api-client";
 import { scopedLinkProps } from "../lib/scoped";
+import { LantaiFormModal } from "../components/infrastruktur/LantaiFormModal";
+import { RuanganFormModal } from "../components/infrastruktur/RuanganFormModal";
+import { FasilitasRuanganFormModal } from "../components/infrastruktur/FasilitasRuanganFormModal";
+import { UtilitasGedungFormModal } from "../components/infrastruktur/UtilitasGedungFormModal";
+import { ConfirmDeleteDialog } from "../components/infrastruktur/ConfirmDeleteDialog";
+import { deleteTargetLabel, type DeleteTarget } from "../components/infrastruktur/deleteTarget";
 
 type Gedung = { name: string; nama?: string; kode?: string; tahun_dibangun?: number; sekolah?: string };
 type Lantai = { name: string; nama?: string; nomor_lantai?: number };
@@ -68,14 +74,22 @@ const emptyRows = (label: string) => (
 );
 
 /**
- * Detail Gedung — read-only. Menampilkan info gedung + tab Lantai / Ruangan &
- * Fasilitas / Utilitas yang ter-scope ke gedung ini. Semua list view-only
- * (tanpa aksi tambah/edit); pembuatan data dilakukan di modul masing-masing.
+ * Detail Gedung — CRUD inline per tab. Menampilkan info gedung + tab Lantai /
+ * Ruangan & Fasilitas / Utilitas yang ter-scope ke gedung ini. Tiap tab punya
+ * aksi Tambah/Edit/Hapus via modal (reuse modal infrastruktur + ConfirmDeleteDialog).
  */
 function GedungDetailPage() {
   const { sekolah, gedungId } = useParams({ from: "/$sekolah/infrastruktur/daftar-gedung/$gedungId" });
   const navigate = useNavigate();
   const [tab, setTab] = useState(TAB_LANTAI);
+
+  const [lantaiModal, setLantaiModal] = useState<{ open: boolean; editName?: string }>({ open: false });
+  const [ruanganModal, setRuanganModal] = useState<{ open: boolean; editName?: string }>({ open: false });
+  const [fasilitasModal, setFasilitasModal] = useState<{ open: boolean; editName?: string }>({ open: false });
+  const [utilitasModal, setUtilitasModal] = useState<{ open: boolean; editName?: string }>({ open: false });
+  const [del, setDel] = useState<DeleteTarget | null>(null);
+  const [delErr, setDelErr] = useState<string | null>(null);
+  const delMut = useResourceDelete(del?.doctype ?? "Lantai");
 
   const gedungQ = useResourceDoc<Gedung>("Gedung", gedungId);
   const lantaiQ = useResourceList<Lantai>("Lantai", {
@@ -114,6 +128,32 @@ function GedungDetailPage() {
 
   const gedung = gedungQ.data;
   const backTo = "/infrastruktur/daftar-gedung";
+
+  const refetchAll = () =>
+    Promise.all([lantaiQ.refetch(), ruanganQ.refetch(), utilitasQ.refetch(), fasilitasQ.refetch()]);
+
+  const confirmDelete = async () => {
+    if (!del) return;
+    setDelErr(null);
+    try {
+      await delMut.mutateAsync(del.name);
+      await refetchAll();
+      setDel(null);
+    } catch (e) {
+      setDelErr((e as Error)?.message ?? "Gagal menghapus.");
+    }
+  };
+
+  const actionCol = <T extends { name: string }>(onEdit: (r: T) => void, doctype: string): Column<T> => ({
+    key: "aksi",
+    header: "Aksi",
+    cell: (r) => (
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={() => onEdit(r)}>Edit</Button>
+        <Button variant="outline" onClick={() => { setDelErr(null); setDel({ doctype, name: r.name }); }}>Hapus</Button>
+      </div>
+    ),
+  });
 
   if (gedungQ.isError) {
     return (
@@ -188,10 +228,11 @@ function GedungDetailPage() {
             <Tabs items={tabItems} />
 
             {tab === TAB_LANTAI && (
-              <SectionCard title="Lantai" padded={false}>
+              <SectionCard title="Lantai" padded={false}
+                action={<Button onClick={() => setLantaiModal({ open: true })}>Tambah Lantai</Button>}>
                 <DataTable<Lantai>
                   data={lantaiQ.data ?? []}
-                  columns={LANTAI_COLS}
+                  columns={[...LANTAI_COLS, actionCol<Lantai>((r) => setLantaiModal({ open: true, editName: r.name }), "Lantai")]}
                   rowKey={(r) => r.name}
                   empty={emptyRows("lantai")}
                 />
@@ -200,18 +241,20 @@ function GedungDetailPage() {
 
             {tab === TAB_RUANGAN && (
               <div className="space-y-4">
-                <SectionCard title="Ruangan" padded={false}>
+                <SectionCard title="Ruangan" padded={false}
+                  action={<Button onClick={() => setRuanganModal({ open: true })}>Tambah Ruangan</Button>}>
                   <DataTable<Ruangan>
                     data={ruanganQ.data ?? []}
-                    columns={RUANGAN_COLS}
+                    columns={[...RUANGAN_COLS, actionCol<Ruangan>((r) => setRuanganModal({ open: true, editName: r.name }), "Ruangan")]}
                     rowKey={(r) => r.name}
                     empty={emptyRows("ruangan")}
                   />
                 </SectionCard>
-                <SectionCard title="Fasilitas Ruangan" padded={false}>
+                <SectionCard title="Fasilitas Ruangan" padded={false}
+                  action={<Button onClick={() => setFasilitasModal({ open: true })}>Tambah Fasilitas</Button>}>
                   <DataTable<Fasilitas>
                     data={fasilitasQ.data ?? []}
-                    columns={FASILITAS_COLS}
+                    columns={[...FASILITAS_COLS, actionCol<Fasilitas>((r) => setFasilitasModal({ open: true, editName: r.name }), "Fasilitas Ruangan")]}
                     rowKey={(r) => r.name}
                     empty={emptyRows("fasilitas")}
                   />
@@ -220,16 +263,54 @@ function GedungDetailPage() {
             )}
 
             {tab === TAB_UTILITAS && (
-              <SectionCard title="Utilitas" padded={false}>
+              <SectionCard title="Utilitas" padded={false}
+                action={<Button onClick={() => setUtilitasModal({ open: true })}>Tambah Utilitas</Button>}>
                 <DataTable<Utilitas>
                   data={utilitasQ.data ?? []}
-                  columns={UTILITAS_COLS}
+                  columns={[...UTILITAS_COLS, actionCol<Utilitas>((r) => setUtilitasModal({ open: true, editName: r.name }), "Utilitas Gedung")]}
                   rowKey={(r) => r.name}
                   empty={emptyRows("utilitas")}
                 />
               </SectionCard>
             )}
           </div>
+
+          <LantaiFormModal
+            open={lantaiModal.open}
+            onClose={() => setLantaiModal({ open: false })}
+            defaultGedung={gedungId}
+            {...(lantaiModal.editName ? { editName: lantaiModal.editName } : {})}
+            onCreated={() => { void lantaiQ.refetch(); }}
+          />
+          <RuanganFormModal
+            open={ruanganModal.open}
+            onClose={() => setRuanganModal({ open: false })}
+            defaultGedung={gedungId}
+            {...(ruanganModal.editName ? { editName: ruanganModal.editName } : {})}
+            onCreated={() => { void ruanganQ.refetch(); }}
+          />
+          <FasilitasRuanganFormModal
+            open={fasilitasModal.open}
+            onClose={() => setFasilitasModal({ open: false })}
+            defaultGedung={gedungId}
+            {...(fasilitasModal.editName ? { editName: fasilitasModal.editName } : {})}
+            onCreated={() => { void fasilitasQ.refetch(); }}
+          />
+          <UtilitasGedungFormModal
+            open={utilitasModal.open}
+            onClose={() => setUtilitasModal({ open: false })}
+            defaultGedung={gedungId}
+            {...(utilitasModal.editName ? { editName: utilitasModal.editName } : {})}
+            onCreated={() => { void utilitasQ.refetch(); }}
+          />
+          <ConfirmDeleteDialog
+            open={!!del}
+            label={del ? deleteTargetLabel(del) : ""}
+            error={delErr}
+            pending={delMut.isPending}
+            onConfirm={confirmDelete}
+            onClose={() => { setDel(null); setDelErr(null); }}
+          />
         </>
       }
     />
