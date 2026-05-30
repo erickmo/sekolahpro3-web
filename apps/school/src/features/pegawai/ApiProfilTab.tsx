@@ -1,6 +1,6 @@
 import type { PegawaiApi } from "./roles";
 
-type Item = { label: string; value?: string | number };
+type Item = { label: string; value?: string | number | undefined };
 
 function Section({ title, items }: { title: string; items: Item[] }) {
   return (

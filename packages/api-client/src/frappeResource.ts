@@ -224,13 +224,14 @@ export function useResourceList<T = Record<string, unknown>>(
 export function useResourceDoc<T = Record<string, unknown>>(
   doctype: string,
   name: string | undefined,
-  options: Omit<UseQueryOptions<T>, "queryKey" | "queryFn" | "enabled"> = {},
+  options: Omit<UseQueryOptions<T>, "queryKey" | "queryFn"> = {},
 ) {
+  const { enabled, ...rest } = options;
   return useQuery<T>({
     queryKey: ["resource:doc", doctype, tenantKey(doctype), name],
     queryFn: () => getResource<T>(doctype, name!),
-    enabled: !!name,
-    ...options,
+    ...rest,
+    enabled: (enabled ?? true) && !!name,
   });
 }
 

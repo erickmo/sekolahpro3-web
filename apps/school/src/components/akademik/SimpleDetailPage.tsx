@@ -67,7 +67,7 @@ export function SimpleDetailPage(props: SimpleDetailPageProps) {
           title="Data tidak ditemukan"
           description={q.error instanceof Error ? q.error.message : `${doctype} ${name} tidak ada di sistem.`}
           action={
-            <Link to={parentTo as "/$sekolah"} {...(sekolah ? { params: { sekolah } } : {})} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+            <Link to={parentTo as "/$sekolah"} params={{ sekolah: sekolah ?? "" }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
               <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke {parentLabel}
             </Link>
           }
@@ -87,8 +87,8 @@ export function SimpleDetailPage(props: SimpleDetailPageProps) {
         <div className="space-y-3">
           <Breadcrumb
             items={[
-              { label: "Dashboard", render: ({ className, children }) => <Link to={(sekolah ? "/$sekolah" : "/") as "/$sekolah"} {...(sekolah ? { params: { sekolah } } : {})} className={className}>{children}</Link> },
-              { label: parentLabel, render: ({ className, children }) => <Link to={parentTo as "/$sekolah"} {...(sekolah ? { params: { sekolah } } : {})} className={className}>{children}</Link> },
+              { label: "Dashboard", render: ({ className, children }) => <Link to={(sekolah ? "/$sekolah" : "/") as "/$sekolah"} params={{ sekolah: sekolah ?? "" }} className={className}>{children}</Link> },
+              { label: parentLabel, render: ({ className, children }) => <Link to={parentTo as "/$sekolah"} params={{ sekolah: sekolah ?? "" }} className={className}>{children}</Link> },
               { label: title },
             ]}
           />

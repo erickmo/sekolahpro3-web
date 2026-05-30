@@ -14,7 +14,7 @@ export function QrScanner({ onDecode }: Props) {
     let controls: { stop: () => void } | null = null;
     (async () => {
       if (!videoRef.current) return;
-      controls = await reader.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
+      controls = await reader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
         if (stopped) return;
         if (result) onDecode(result.getText());
         void err;

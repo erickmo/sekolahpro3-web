@@ -41,7 +41,7 @@ function PpatkPage() {
 
   const columns: Column<Row>[] = [
     { key: "nomor_laporan", header: "No Laporan", cell: (r) => <span className="font-mono text-xs">{r.nomor_laporan}</span> },
-    { key: "jenis", header: "Jenis" },
+    { key: "jenis", header: "Jenis", cell: (r) => r.jenis },
     { key: "nasabah", header: "Nasabah", cell: (r) => r.nasabah ?? "—" },
     {
       key: "jumlah", header: "Jumlah", align: "right",

@@ -68,7 +68,7 @@ function PickupVerifyPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Verifikasi Penjemputan" subtitle="Scan QR atau gunakan PIN" />
+      <PageHeader title="Verifikasi Penjemputan" description="Scan QR atau gunakan PIN" />
 
       <div className="flex items-center gap-2 text-sm">
         <label className="text-muted-fg">Gerbang:</label>

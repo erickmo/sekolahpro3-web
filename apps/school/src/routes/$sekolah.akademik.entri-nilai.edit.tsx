@@ -4,7 +4,7 @@ import { EntriNilaiSelector, type EntriNilaiSelection } from "../components/akad
 import { EntriNilaiGrid } from "../components/akademik/EntriNilaiGrid";
 import { useAkademikContextOptional } from "../lib/akademikContext";
 
-interface EditSearch {
+export interface EditSearch {
   rombel?: string;
   mapel?: string;
   semester?: string;

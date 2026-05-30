@@ -27,7 +27,7 @@ interface BaseModalProps {
 // ─── Wali ───────────────────────────────────────────────────────────────────
 
 interface WaliModalProps extends BaseModalProps {
-  initial?: Partial<WaliRow>;
+  initial?: Partial<WaliRow> | undefined;
   onSubmit: (w: WaliRow) => void;
 }
 

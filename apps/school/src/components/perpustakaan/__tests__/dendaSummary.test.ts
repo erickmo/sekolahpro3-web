@@ -8,7 +8,9 @@ vi.mock("@sekolahpro/api-client", () => ({
 import { frappeFetch } from "@sekolahpro/api-client";
 
 describe("fetchDendaSummary", () => {
-  beforeEach(() => vi.mocked(frappeFetch).mockReset());
+  beforeEach(() => {
+    vi.mocked(frappeFetch).mockReset();
+  });
 
   it("returns empty object for empty input", async () => {
     expect(await fetchDendaSummary([])).toEqual({});

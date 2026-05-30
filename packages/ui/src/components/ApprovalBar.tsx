@@ -9,7 +9,7 @@ interface Props {
   /** Disabled when user role does not match required approver level. */
   canApprove: boolean;
   /** Why approve is blocked (shown when canApprove=false). */
-  blockReason?: string;
+  blockReason?: string | undefined;
   onApprove: () => void;
   onReject: () => void;
   pending?: boolean;

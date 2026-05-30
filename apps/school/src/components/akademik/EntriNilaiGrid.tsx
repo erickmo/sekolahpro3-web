@@ -405,7 +405,7 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
           {
             label: "Akademik",
             render: ({ className, children }) => (
-              <Link to={sekolah ? "/$sekolah/akademik" : "/akademik" as "/$sekolah/akademik"} {...(sekolah ? { params: { sekolah } } : {})} className={className}>
+              <Link to={sekolah ? "/$sekolah/akademik" : "/akademik" as "/$sekolah/akademik"} params={{ sekolah: sekolah ?? "" }} className={className}>
                 {children}
               </Link>
             ),
@@ -413,7 +413,7 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
           {
             label: "Entri Nilai",
             render: ({ className, children }) => (
-              <Link to={sekolah ? "/$sekolah/akademik/entri-nilai" : "/akademik/entri-nilai" as "/$sekolah/akademik/entri-nilai"} {...(sekolah ? { params: { sekolah } } : {})} className={className}>
+              <Link to={sekolah ? "/$sekolah/akademik/entri-nilai" : "/akademik/entri-nilai" as "/$sekolah/akademik/entri-nilai"} params={{ sekolah: sekolah ?? "" }} className={className}>
                 {children}
               </Link>
             ),
@@ -467,7 +467,7 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
         {komponenList.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-fg">
             Mata pelajaran ini belum memiliki Komponen Nilai. Tambahkan komponen di menu{" "}
-            <Link to={sekolah ? "/$sekolah/akademik/komponen-nilai" : "/akademik/komponen-nilai" as "/$sekolah/akademik/komponen-nilai"} {...(sekolah ? { params: { sekolah } } : {})} className="text-brand hover:underline">
+            <Link to={sekolah ? "/$sekolah/akademik/komponen-nilai" : "/akademik/komponen-nilai" as "/$sekolah/akademik/komponen-nilai"} params={{ sekolah: sekolah ?? "" }} className="text-brand hover:underline">
               Komponen Nilai
             </Link>{" "}
             terlebih dahulu.

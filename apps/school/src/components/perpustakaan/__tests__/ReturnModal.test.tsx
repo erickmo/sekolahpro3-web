@@ -16,7 +16,9 @@ function wrap(ui: ReactNode) {
 }
 
 describe("ReturnModal", () => {
-  beforeEach(() => vi.mocked(frappeFetch).mockReset());
+  beforeEach(() => {
+    vi.mocked(frappeFetch).mockReset();
+  });
   // RTL auto-cleanup is disabled when vitest globals=false; Modal renders via
   // portal to document.body, so without explicit cleanup the previous test's
   // Simpan button leaks into the next test's DOM. Clean up between tests and

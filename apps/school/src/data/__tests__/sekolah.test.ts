@@ -5,6 +5,7 @@ describe("sekolah data types", () => {
   it("MySchoolsResponse shape exported", () => {
     const sample: MySchoolsResponse = {
       total_schools: 0, org_count: 0, groups: [],
+      onboarding: null, footer: null, koperasi: [], koperasi_count: 0,
     };
     expect(sample.total_schools).toBe(0);
   });

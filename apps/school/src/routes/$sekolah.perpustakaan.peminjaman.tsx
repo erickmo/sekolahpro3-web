@@ -84,7 +84,7 @@ const CREATE_FIELDS: PerpFieldDef[] = [
   { name: "catatan", label: "Catatan", type: "textarea" },
 ];
 
-interface Search {
+export interface Search {
   status?: string;
   denda?: "ada";
 }

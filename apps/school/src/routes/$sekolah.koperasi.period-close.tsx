@@ -49,7 +49,7 @@ function PeriodClosePage() {
 
   const columns: Column<Row>[] = [
     { key: "name", header: "ID", cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-    { key: "nama_periode", header: "Periode", sortable: true },
+    { key: "nama_periode", header: "Periode", sortable: true, cell: (r) => r.nama_periode ?? "—" },
     {
       key: "tanggal_mulai",
       header: "Rentang",

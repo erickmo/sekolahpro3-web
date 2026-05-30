@@ -453,12 +453,12 @@ function TahapanTab({ pendaftar }: { pendaftar: Pendaftar }) {
   });
   const live = q.data ?? [];
   const rows: TahapanRow[] = live.length > 0
-    ? live.map((r) => ({
-        tahap: r.tahap ?? "—",
+    ? live.map((r): TahapanRow => ({
+        tahap: (r.tahap ?? "—") as TahapanRow["tahap"],
         status: (r.status === "Selesai" || r.status === "Berjalan" ? r.status : "Belum") as TahapanRow["status"],
         tanggal: r.tanggal ?? "",
-        petugas: r.petugas,
-        catatan: r.catatan,
+        petugas: r.petugas ?? "",
+        catatan: r.catatan ?? "",
       }))
     : pendaftar.tahapan;
   return (
@@ -510,7 +510,7 @@ type HasilTesDoc = {
   tanggal_tes?: string;
 };
 
-function AkademikTab({ pendaftar, actions, calonSiswaName }: { pendaftar: Pendaftar; actions: PpdbActions; calonSiswaName?: string }) {
+function AkademikTab({ pendaftar, actions, calonSiswaName }: { pendaftar: Pendaftar; actions: PpdbActions; calonSiswaName?: string | undefined }) {
   // Live: Rapor PPDB by calon_siswa + Hasil Tes Akademik PPDB by pendaftaran.
   const raporQ = useResourceList<RaporPpdbDoc>("Rapor PPDB", {
     fields: ["name", "calon_siswa", "nilai_rata_rata"],

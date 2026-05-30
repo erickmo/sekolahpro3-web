@@ -544,7 +544,7 @@ function Layout() {
             <Badge tone="success" dot>Live</Badge>
             <NotificationDropdown />
             <AvatarMenu
-              name={session.user}
+              name={session.user ?? ""}
               sekolah={slug}
               onLogout={() => {
                 void logout().then(() => navigate({ to: "/login" }));

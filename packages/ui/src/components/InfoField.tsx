@@ -24,11 +24,12 @@ export function InfoField({ label, value, icon, hint, className }: FieldProps) {
 
 interface GridProps {
   children: ReactNode;
-  cols?: 2 | 3 | 4;
+  cols?: 1 | 2 | 3 | 4;
   className?: string;
 }
 
 const colsMap = {
+  1: "grid-cols-1",
   2: "sm:grid-cols-2",
   3: "sm:grid-cols-2 lg:grid-cols-3",
   4: "sm:grid-cols-2 lg:grid-cols-4",
