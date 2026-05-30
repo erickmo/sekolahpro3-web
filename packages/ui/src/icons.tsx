@@ -213,3 +213,18 @@ export const IconClock = (p: Props) => (
     <path d="M12 7v5l3 2" />
   </svg>
 );
+
+export const IconLayers = (p: Props) => (
+  <svg {...base} {...p}>
+    <path d="M12 3 2 8.5 12 14l10-5.5L12 3Z" />
+    <path d="m2 15.5 10 5.5 10-5.5" />
+    <path d="m2 12 10 5.5L22 12" />
+  </svg>
+);
+
+export const IconFlag = (p: Props) => (
+  <svg {...base} {...p}>
+    <path d="M4 21V4" />
+    <path d="M4 4h13l-2 4 2 4H4" />
+  </svg>
+);
