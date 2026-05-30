@@ -1,10 +1,12 @@
 /**
- * RuanganFormModal — create modal untuk doctype "Ruangan".
+ * RuanganFormModal — create/edit modal untuk doctype "Ruangan".
  *
  * autoname backend: format:{lantai}-{kode}
+ * defaultGedung: kunci konteks gedung → filter daftar lantai + sembunyikan
+ * select Gedung/Sekolah (keduanya denorm otomatis di backend dari lantai).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -12,9 +14,15 @@ import {
   FormGrid,
   Input,
   Modal,
+  Select,
   SearchableSelect,
 } from "@sekolahpro/ui";
-import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
+import {
+  useResourceCreate,
+  useResourceDoc,
+  useResourceList,
+  useResourceUpdate,
+} from "@sekolahpro/api-client";
 
 type LantaiRow = { name: string; gedung?: string; nomor_lantai?: number };
 type GedungRow = { name: string; nama?: string };
@@ -38,9 +46,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onCreated?: (name: string) => void;
+  defaultGedung?: string;
+  editName?: string;
 }
 
-export function RuanganFormModal({ open, onClose, onCreated }: Props) {
+export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, editName }: Props) {
   const qc = useQueryClient();
   const [nama, setNama] = useState("");
   const [kode, setKode] = useState("");
@@ -54,9 +64,12 @@ export function RuanganFormModal({ open, onClose, onCreated }: Props) {
   const [err, setErr] = useState<string | null>(null);
 
   const create = useResourceCreate<{ name: string }>("Ruangan");
+  const update = useResourceUpdate<{ name: string }>("Ruangan");
+  const docQ = useResourceDoc<Record<string, unknown>>("Ruangan", editName, { enabled: !!editName });
 
   const lantaiQ = useResourceList<LantaiRow>("Lantai", {
     fields: ["name", "gedung", "nomor_lantai"],
+    filters: defaultGedung ? [["gedung", "=", defaultGedung]] : [],
     limit_page_length: 0,
   });
   const gedungQ = useResourceList<GedungRow>("Gedung", {
@@ -67,6 +80,18 @@ export function RuanganFormModal({ open, onClose, onCreated }: Props) {
     fields: ["name", "nama_sekolah"],
     limit_page_length: 0,
   });
+
+  useEffect(() => {
+    if (!docQ.data) return;
+    const d = docQ.data as Record<string, unknown>;
+    setNama(`${d.nama ?? ""}`);
+    setKode(`${d.kode ?? ""}`);
+    setLantai(`${d.lantai ?? ""}`);
+    setJenisRuangan(`${d.jenis_ruangan ?? "Kelas"}`);
+    setStatus(`${d.status ?? "Tersedia"}`);
+    setKapasitas(`${d.kapasitas ?? ""}`);
+    setLuasM2(`${d.luas_m2 ?? ""}`);
+  }, [docQ.data]);
 
   const reset = () => {
     setNama("");
@@ -91,44 +116,47 @@ export function RuanganFormModal({ open, onClose, onCreated }: Props) {
 
   const submit = async () => {
     setErr(null);
-    const payload: Record<string, unknown> = {
+    const patch: Record<string, unknown> = {
       nama: nama.trim(),
       kode: kode.trim(),
       lantai,
       jenis_ruangan: jenisRuangan,
       status,
     };
-    if (gedung) payload.gedung = gedung;
-    if (sekolah) payload.sekolah = sekolah;
+    if (!defaultGedung && gedung) patch.gedung = gedung;
+    if (!defaultGedung && sekolah) patch.sekolah = sekolah;
     if (kapasitas.trim()) {
       const n = parseInt(kapasitas, 10);
-      if (!Number.isNaN(n)) payload.kapasitas = n;
+      if (!Number.isNaN(n)) patch.kapasitas = n;
     }
     if (luasM2.trim()) {
       const n = parseFloat(luasM2);
-      if (!Number.isNaN(n)) payload.luas_m2 = n;
+      if (!Number.isNaN(n)) patch.luas_m2 = n;
     }
     try {
-      const created = await create.mutateAsync(payload);
+      const name = editName
+        ? (await update.mutateAsync({ name: editName, patch })).name
+        : (await create.mutateAsync(patch)).name;
       await qc.invalidateQueries({ queryKey: ["resource:list", "Ruangan"] });
-      onCreated?.(created.name);
+      onCreated?.(name);
       reset();
       onClose();
     } catch (e) {
-      setErr((e as Error)?.message ?? "Gagal membuat ruangan.");
+      setErr((e as Error)?.message ?? "Gagal menyimpan ruangan.");
     }
   };
 
   const lantaiRows = lantaiQ.data ?? [];
   const gedungRows = gedungQ.data ?? [];
   const sekolahRows = sekolahQ.data ?? [];
+  const pending = create.isPending || update.isPending;
 
   return (
     <Modal
       open={open}
       onClose={closeAll}
       size="xl"
-      title="Tambah Ruangan"
+      title={editName ? "Edit Ruangan" : "Tambah Ruangan"}
       description="Isi data ruangan. Tanda * wajib."
       tone="brand"
       footer={
@@ -136,8 +164,8 @@ export function RuanganFormModal({ open, onClose, onCreated }: Props) {
           <Button variant="outline" onClick={closeAll}>
             Batal
           </Button>
-          <Button onClick={submit} disabled={requiredMissing || create.isPending}>
-            {create.isPending ? "Menyimpan..." : "Simpan"}
+          <Button onClick={submit} disabled={requiredMissing || pending}>
+            {pending ? "Menyimpan..." : "Simpan"}
           </Button>
         </div>
       }
@@ -145,47 +173,52 @@ export function RuanganFormModal({ open, onClose, onCreated }: Props) {
       <div className="space-y-5">
         <FormGrid cols={2}>
           <FormField label="Nama" required>
-            <Input value={nama} onChange={(e) => setNama(e.target.value)} />
+            <Input aria-label="Nama" value={nama} onChange={(e) => setNama(e.target.value)} />
           </FormField>
           <FormField label="Kode" required>
-            <Input value={kode} onChange={(e) => setKode(e.target.value)} />
+            <Input aria-label="Kode" value={kode} onChange={(e) => setKode(e.target.value)} />
           </FormField>
           <FormField label="Lantai" required>
-            <SearchableSelect
-              value={lantai}
-              onChange={(v) => setLantai(v)}
-              options={lantaiRows.map((r) => ({ value: r.name, label: r.name }))}
-              placeholder="— pilih —"
-            />
+            <Select aria-label="Lantai" value={lantai} onChange={(e) => setLantai(e.target.value)}>
+              <option value="">— pilih —</option>
+              {lantaiRows.map((r) => (
+                <option key={r.name} value={r.name}>{r.name}</option>
+              ))}
+            </Select>
           </FormField>
-          <FormField label="Gedung">
-            <SearchableSelect
-              value={gedung}
-              onChange={(v) => setGedung(v)}
-              options={gedungRows.map((r) => ({
-                value: r.name,
-                label: `${r.name}${r.nama ? ` — ${r.nama}` : ""}`,
-              }))}
-              placeholder="— pilih —"
-            />
-          </FormField>
-          <FormField label="Sekolah">
-            <SearchableSelect
-              value={sekolah}
-              onChange={(v) => setSekolah(v)}
-              options={sekolahRows.map((r) => ({ value: r.name, label: r.name }))}
-              placeholder="— pilih —"
-            />
-          </FormField>
+          {!defaultGedung && (
+            <FormField label="Gedung">
+              <SearchableSelect
+                value={gedung}
+                onChange={(v) => setGedung(v)}
+                options={gedungRows.map((r) => ({
+                  value: r.name,
+                  label: `${r.name}${r.nama ? ` — ${r.nama}` : ""}`,
+                }))}
+                placeholder="— pilih —"
+              />
+            </FormField>
+          )}
+          {!defaultGedung && (
+            <FormField label="Sekolah">
+              <SearchableSelect
+                value={sekolah}
+                onChange={(v) => setSekolah(v)}
+                options={sekolahRows.map((r) => ({ value: r.name, label: r.name }))}
+                placeholder="— pilih —"
+              />
+            </FormField>
+          )}
           <FormField label="Jenis Ruangan" required>
-            <SearchableSelect
-              value={jenisRuangan}
-              onChange={(v) => setJenisRuangan(v)}
-              options={JENIS_OPTIONS.map((o) => ({ value: o, label: o }))}
-            />
+            <Select aria-label="Jenis Ruangan" value={jenisRuangan} onChange={(e) => setJenisRuangan(e.target.value)}>
+              {JENIS_OPTIONS.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </Select>
           </FormField>
           <FormField label="Kapasitas">
             <Input
+              aria-label="Kapasitas"
               type="number"
               value={kapasitas}
               onChange={(e) => setKapasitas(e.target.value)}
@@ -193,6 +226,7 @@ export function RuanganFormModal({ open, onClose, onCreated }: Props) {
           </FormField>
           <FormField label="Luas (m²)">
             <Input
+              aria-label="Luas"
               type="number"
               step="0.01"
               value={luasM2}
@@ -200,11 +234,11 @@ export function RuanganFormModal({ open, onClose, onCreated }: Props) {
             />
           </FormField>
           <FormField label="Status" required>
-            <SearchableSelect
-              value={status}
-              onChange={(v) => setStatus(v)}
-              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
-            />
+            <Select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+              {STATUS_OPTIONS.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </Select>
           </FormField>
         </FormGrid>
 
