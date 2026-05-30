@@ -19,7 +19,11 @@ async function getImpl(): Promise<ReaderImpl> {
   const inst = new BrowserQRCodeReader();
   impl = {
     decodeFromVideoDevice: (dev, el, cb) =>
-      inst.decodeFromVideoDevice(dev, el, cb as any) as unknown as Promise<ReaderControl>,
+      inst.decodeFromVideoDevice(
+        dev,
+        el,
+        cb as Parameters<typeof inst.decodeFromVideoDevice>[2],
+      ) as unknown as Promise<ReaderControl>,
   };
   return impl;
 }
@@ -45,7 +49,7 @@ export function useQrScanner({ onRead, onError }: Options) {
     }
     const reader = await getImpl();
     const el = videoRef.current ?? document.createElement("video");
-    const ctrl = await reader.decodeFromVideoDevice(undefined, el, (result, err) => {
+    const ctrl = await reader.decodeFromVideoDevice(undefined, el, (result) => {
       if (!result) return;
       try {
         const t = parseCardToken(result.getText());

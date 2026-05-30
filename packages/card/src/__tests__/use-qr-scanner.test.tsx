@@ -12,7 +12,7 @@ describe("useQrScanner", () => {
     let cb: ((text: string) => void) | null = null;
     __setQrReaderImpl({
       decodeFromVideoDevice: (_dev, _el, fn) => {
-        cb = (txt: string) => fn(({ getText: () => txt } as any), undefined);
+        cb = (txt: string) => fn({ getText: () => txt }, undefined);
         return Promise.resolve({ stop: vi.fn() });
       },
     });

@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useNfcReader } from "../use-nfc-reader";
 
+type NdefEvent = { message: { records: { recordType: string; data: ArrayBuffer }[] } };
+
 class FakeNDEFReader {
   static instances: FakeNDEFReader[] = [];
-  onreading: ((e: any) => void) | null = null;
-  onreadingerror: ((e: any) => void) | null = null;
+  onreading: ((e: NdefEvent) => void) | null = null;
+  onreadingerror: ((e: Event) => void) | null = null;
   scan = vi.fn().mockResolvedValue(undefined);
   constructor() { FakeNDEFReader.instances.push(this); }
   emit(records: { recordType: string; data: ArrayBuffer }[]) {
@@ -19,12 +21,12 @@ function makeRecord(text: string) {
 
 beforeEach(() => {
   FakeNDEFReader.instances = [];
-  (globalThis as any).NDEFReader = FakeNDEFReader;
+  (globalThis as Record<string, unknown>).NDEFReader = FakeNDEFReader;
 });
 
 describe("useNfcReader", () => {
   it("reports unsupported when NDEFReader absent", () => {
-    delete (globalThis as any).NDEFReader;
+    delete (globalThis as Record<string, unknown>).NDEFReader;
     const { result } = renderHook(() => useNfcReader({ enabled: false }));
     expect(result.current.supported).toBe(false);
   });
