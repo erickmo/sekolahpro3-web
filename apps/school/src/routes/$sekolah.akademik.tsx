@@ -24,6 +24,7 @@ const NAV_GROUPS: { label: string; items: { to: string; label: string; exact?: b
   {
     label: "Master",
     items: [
+      { to: "/$sekolah/akademik/tahun-ajaran", label: "Tahun Ajaran" },
       { to: "/$sekolah/akademik/kurikulum", label: "Kurikulum" },
       { to: "/$sekolah/akademik/daftar", label: "Mata Pelajaran" },
       { to: "/$sekolah/akademik/komponen-nilai", label: "Komponen Nilai" },

@@ -11,7 +11,6 @@ import {
   IconCalendar,
   IconCheck,
   IconGrad,
-  IconHome,
   IconPlus,
   IconSettings,
   IconUsers,
@@ -21,10 +20,8 @@ import {
 } from "@sekolahpro/ui";
 
 const MASTER_FLOW_STEPS: ModuleFlowStep[] = [
-  { key: "organisasi", label: "Organisasi", hint: "Struktur tenant", href: "/$sekolah/master/organisasi" },
   { key: "unit", label: "Unit Jenjang", hint: "SD/SMP/SMA", href: "/$sekolah/master/unit-jenjang" },
-  { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Set TA berjalan", href: "/$sekolah/master/tahun-ajaran" },
-  { key: "semester", label: "Semester", hint: "Ganjil & Genap", href: "/$sekolah/master/semester" },
+  { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Set TA berjalan", href: "/$sekolah/akademik/tahun-ajaran" },
   { key: "modul", label: "Modul & Fitur", hint: "Aktifkan modul", href: "/$sekolah/master/modul" },
   { key: "pengguna", label: "Pengguna", hint: "Akun & peran", href: "/$sekolah/master/pengguna" },
 ];
@@ -42,10 +39,8 @@ const MODUL_FIELDS = ["name", "nama_modul", "aktif"];
 const PAGE_LIMIT = 0;
 
 const AKSI_CEPAT: { to: string; label: string; desc: string; icon: React.ReactNode }[] = [
-  { to: "/$sekolah/master/tahun-ajaran", label: "Tahun Ajaran", desc: "Kelola periode akademik", icon: <IconCalendar /> },
-  { to: "/$sekolah/master/semester", label: "Semester", desc: "Atur semester ganjil & genap", icon: <IconCalendar /> },
+  { to: "/$sekolah/akademik/tahun-ajaran", label: "Tahun Ajaran", desc: "Kelola periode akademik & semester", icon: <IconCalendar /> },
   { to: "/$sekolah/master/pengguna", label: "Pengguna", desc: "Undang & kelola akses pengguna", icon: <IconUsers /> },
-  { to: "/$sekolah/master/organisasi", label: "Organisasi", desc: "Struktur yayasan & sekolah", icon: <IconHome /> },
   { to: "/$sekolah/master/unit-jenjang", label: "Unit Jenjang", desc: "Atur jenjang TK/SD/SMP/SMA", icon: <IconGrad /> },
   { to: "/$sekolah/master/modul", label: "Modul Aktif", desc: "Aktifkan modul per tenant", icon: <IconBook /> },
   { to: "/$sekolah/master/feature-flag", label: "Feature Flag", desc: "Toggle eksperimen fitur", icon: <IconSettings /> },
@@ -97,7 +92,7 @@ function MasterDashboardPage() {
         description: "Belum ada tahun ajaran aktif",
         tone: "danger",
         actionLabel: "Aktifkan TA",
-        actionHref: "/$sekolah/master/tahun-ajaran",
+        actionHref: "/$sekolah/akademik/tahun-ajaran",
       });
     }
     if (stats.akunDorman > 0) {
@@ -123,22 +118,13 @@ function MasterDashboardPage() {
         title="Dashboard Master Data"
         description="Ringkasan pengguna, periode akademik, dan modul tenant."
         actions={
-          <>
-            <Link
-              to="/$sekolah/master/daftar" params={{ sekolah }}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 border border-border bg-transparent hover:bg-muted"
-            >
-              <span className="h-4 w-4 mr-1.5"><IconHome /></span>
-              Daftar Sekolah
-            </Link>
-            <Link
-              to="/$sekolah/master/pengguna" params={{ sekolah }}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 bg-brand text-white hover:bg-brand/90"
-            >
-              <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
-              Undang Pengguna
-            </Link>
-          </>
+          <Link
+            to="/$sekolah/master/pengguna" params={{ sekolah }}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-4 bg-brand text-white hover:bg-brand/90"
+          >
+            <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
+            Undang Pengguna
+          </Link>
         }
       />
 
@@ -160,7 +146,7 @@ function MasterDashboardPage() {
           urgency={stats.tahunAjaranAktif === 0 ? "critical" : "normal"}
           {...(stats.tahunAjaranAktif === 0
             ? {
-                actionHref: "/$sekolah/master/tahun-ajaran",
+                actionHref: "/$sekolah/akademik/tahun-ajaran",
                 renderLink: (href: string, children: React.ReactNode) => <Link to={href}>{children}</Link>,
               }
             : {})}
@@ -192,7 +178,7 @@ function MasterDashboardPage() {
         description="Urutan konfigurasi awal sekolah."
         steps={MASTER_FLOW_STEPS}
         renderLink={(href, children) => (
-          <Link to={href as "/$sekolah/master/organisasi"} params={{ sekolah }}>
+          <Link to={href as "/$sekolah/master/unit-jenjang"} params={{ sekolah }}>
             {children}
           </Link>
         )}

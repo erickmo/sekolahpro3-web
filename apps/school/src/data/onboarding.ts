@@ -52,7 +52,7 @@ export function useOnboardingSteps(): OnboardingStep[] {
       id: "ta",
       label: "Aktifkan Tahun Ajaran",
       description: "Modul akademik & absensi memerlukan TA aktif.",
-      href: "/master/tahun-ajaran",
+      href: "/akademik/tahun-ajaran",
       done: (taQ.data?.length ?? 0) > 0,
     },
     {
