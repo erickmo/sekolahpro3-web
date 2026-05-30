@@ -34,7 +34,14 @@ import { logout, useSession, useSessionStore } from "@sekolahpro/auth";
 import { useTenant } from "@sekolahpro/tenant";
 import { useResourceList } from "@sekolahpro/api-client";
 import { globalSearch, groupHitsByCategory } from "../lib/global-search";
-import { scopedTo, scopedParams, scopedActivePath } from "../lib/scoped";
+import {
+  scopedTo,
+  scopedParams,
+  scopedActivePath,
+  kopScopedTo,
+  kopActivePath,
+} from "../lib/scoped";
+import { KOPERASI_NAV } from "../lib/koperasi-nav";
 
 const SEARCH_MIN_QUERY = 2;
 const SEARCH_MAX_HITS = 8;
@@ -140,7 +147,7 @@ function GlobalSearch({ sekolah }: { sekolah: string | undefined }) {
                     ) : (
                       <Link
                         key={hit.id}
-                        to="/pilih-sekolah"
+                        to="/pilih"
                         onClick={handleSelect}
                         onMouseDown={(e) => e.preventDefault()}
                         className={cls}
@@ -248,7 +255,7 @@ function AvatarMenu({
             </Link>
           ) : (
             <Link
-              to="/pilih-sekolah"
+              to="/pilih"
               onClick={() => setOpen(false)}
               className="block px-3 py-2 text-sm text-fg hover:bg-muted"
             >
@@ -266,7 +273,7 @@ function AvatarMenu({
             </Link>
           ) : (
             <Link
-              to="/pilih-sekolah"
+              to="/pilih"
               onClick={() => setOpen(false)}
               className="block px-3 py-2 text-sm text-fg hover:bg-muted"
             >
@@ -327,23 +334,37 @@ function canSee(to: string, roles: string[]): boolean {
 
 type SidebarItem = SidebarNavSection["items"][number] & { to: string };
 
-function Brand({ name }: { name: string }) {
+// Gradient brand-mark per shell — sekolah biru→violet, koperasi emerald
+// (selaras tema kartu koperasi di /pilih).
+const BRAND_GRADIENT = {
+  sekolah: "linear-gradient(135deg, hsl(222 89% 55%), hsl(262 83% 58%))",
+  koperasi: "linear-gradient(135deg, hsl(160 84% 39%), hsl(173 80% 36%))",
+} as const;
+
+function Brand({
+  name,
+  subtitle,
+  gradient,
+  glyph,
+}: {
+  name: string;
+  subtitle: string;
+  gradient: string;
+  glyph: string;
+}) {
   return (
     <div className="flex items-center gap-2.5">
       <span
         className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-white font-bold shadow-sm"
-        style={{
-          background:
-            "linear-gradient(135deg, hsl(222 89% 55%), hsl(262 83% 58%))",
-        }}
+        style={{ background: gradient }}
       >
-        S
+        {glyph}
       </span>
       <div className="leading-tight">
         <div className="text-sm font-semibold text-fg truncate max-w-[150px]">
           {name}
         </div>
-        <div className="text-[11px] text-muted-fg">Portal Sekolah</div>
+        <div className="text-[11px] text-muted-fg">{subtitle}</div>
       </div>
     </div>
   );
@@ -354,7 +375,7 @@ function Layout() {
   const tenant = useTenant();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // `__root` lives outside the `/$sekolah` segment, so `useParams` can't read
+  // `__root` lives outside the `/sch/$sekolah` segment, so `useParams` can't read
   // the slug. Pull it from the persisted session store instead — set by the
   // chooser route after `select_school` succeeds.
   const slug = useSessionStore((s) => s.activeSekolah?.slug);
@@ -422,11 +443,70 @@ function Layout() {
             {children}
           </Link>
         ) : (
-          <Link to="/pilih-sekolah" className={className}>
+          <Link to="/pilih" className={className}>
             {children}
           </Link>
         ),
     };
+  };
+
+  // Shell koperasi punya prefix /kop sendiri & sidebar khusus koperasi.
+  const isKop = pathname.startsWith("/kop/");
+
+  // Builder item sidebar koperasi — mirror `mk` tapi pakai prefix /kop.
+  const mkKop = (to: string, label: string, icon: React.ReactNode): SidebarItem => {
+    const livePath = kopActivePath(slug, to);
+    const isActive = to === "/" ? pathname === livePath : pathname === livePath || pathname.startsWith(`${livePath}/`);
+    return {
+      to,
+      label,
+      icon,
+      active: slug ? isActive : false,
+      render: ({ className, children }: { className: string; children: React.ReactNode }) =>
+        slug ? (
+          <Link to={kopScopedTo(slug, to)} params={scopedParams(slug)} className={className}>
+            {children}
+          </Link>
+        ) : (
+          <Link to="/pilih" className={className}>
+            {children}
+          </Link>
+        ),
+    };
+  };
+
+  const KOP_SECTION_ICON: Record<string, React.ReactNode> = {
+    Utama: <IconHome />,
+    "Anggota & Rekening": <IconUsers />,
+    Operasional: <IconWallet />,
+    Pembiayaan: <IconChart />,
+    Sosial: <IconCheck />,
+    Admin: <IconSettings />,
+  };
+
+  const kopSections: SidebarNavSection[] = KOPERASI_NAV.map((s) => ({
+    title: s.title,
+    items: s.items.map((it) => mkKop(it.to, it.label, KOP_SECTION_ICON[s.title] ?? <IconWallet />)),
+  }));
+
+  // Entri "Koperasi" di sidebar sekolah = cross-link ke shell koperasi
+  // (/kop/$sekolah). Tetap pakai `to: "/koperasi"` agar gating peran via
+  // canSee tak berubah, tapi link mengarah keluar ke shell koperasi.
+  const koperasiCrossLink: SidebarItem = {
+    to: "/koperasi",
+    label: "Koperasi",
+    icon: <IconWallet />,
+    active: false,
+    render: ({ className, children }: { className: string; children: React.ReactNode }) =>
+      slug ? (
+        <Link to={kopScopedTo(slug, "/")} params={scopedParams(slug)} className={className}>
+          {children}
+        </Link>
+      ) : (
+        <Link to="/pilih" className={className}>
+          {children}
+        </Link>
+      ),
   };
 
   const roles = session.roles && session.roles.length > 0 ? session.roles : ["admin_sekolah"];
@@ -454,7 +534,7 @@ function Layout() {
       items: [
         mk("/ppdb", "PPDB", <IconPlus />),
         mk("/perpustakaan", "Perpustakaan", <IconFile />),
-        mk("/koperasi", "Koperasi", <IconWallet />),
+        koperasiCrossLink,
       ],
     },
     {
@@ -488,18 +568,28 @@ function Layout() {
     .filter((s) => s.items.length > 0);
 
   // Defensive: if filtering produced an empty sidebar, fall back to all items.
-  const sections: SidebarNavSection[] = filtered.length > 0 ? filtered : rawSections;
+  const schoolSections: SidebarNavSection[] = filtered.length > 0 ? filtered : rawSections;
+  // Shell koperasi → sidebar koperasi-only; selainnya → sidebar sekolah.
+  const sections: SidebarNavSection[] = isKop ? kopSections : schoolSections;
 
   const tenantName = tenant.data?.name ?? "SekolahPro";
   const taAktif = (taActiveQ.data?.length ?? 0) > 0;
+  // Banner Tahun Ajaran khusus konteks sekolah — sembunyikan di shell koperasi.
   const showSetupBanner =
-    pathname !== "/login" && taActiveQ.isSuccess && !taAktif;
+    !isKop && pathname !== "/login" && taActiveQ.isSuccess && !taAktif;
 
-  if (pathname === "/pilih-sekolah") return <Outlet />;
+  if (pathname === "/pilih") return <Outlet />;
 
   return (
     <AppShell
-      brand={<Brand name={tenantName} />}
+      brand={
+        <Brand
+          name={tenantName}
+          subtitle={isKop ? "Portal Koperasi" : "Portal Sekolah"}
+          gradient={isKop ? BRAND_GRADIENT.koperasi : BRAND_GRADIENT.sekolah}
+          glyph={isKop ? "K" : "S"}
+        />
+      }
       sidebar={
         <SidebarNav
           sections={sections}
@@ -525,7 +615,7 @@ function Layout() {
             {session.activeSekolah ? (
               <button
                 type="button"
-                onClick={() => navigate({ to: "/pilih-sekolah" })}
+                onClick={() => navigate({ to: "/pilih" })}
                 title="Ganti sekolah"
                 className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-muted/40 hover:bg-muted text-sm font-medium text-fg max-w-[220px]"
               >
@@ -568,7 +658,7 @@ function Layout() {
                   {children}
                 </Link>
               ) : (
-                <Link to="/pilih-sekolah">{children}</Link>
+                <Link to="/pilih">{children}</Link>
               )
             }
           />

@@ -23,7 +23,7 @@ export function formatTanggal(v: string | undefined | null): string {
 
 export interface DetailShellProps {
   eyebrow: string;
-  // Active sekolah slug; scopes back/breadcrumb links to `/$sekolah/...`.
+  // Active sekolah slug; scopes back/breadcrumb links to `/sch/$sekolah/...`.
   sekolah?: string | undefined;
   title: string;
   description?: string;

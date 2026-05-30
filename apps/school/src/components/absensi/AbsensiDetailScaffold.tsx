@@ -26,8 +26,8 @@ export interface AbsensiDetailScaffoldProps {
   eyebrow: string;
   title: string;
   // Slug of the active sekolah; when set, the scaffold scopes back/breadcrumb
-  // links to `/$sekolah/...` paths. Callers (route files under `/$sekolah/...`)
-  // pull this from `useParams({ from: "/$sekolah" })`.
+  // links to `/sch/$sekolah/...` paths. Callers (route files under `/sch/$sekolah/...`)
+  // pull this from `useParams({ from: "/sch/$sekolah" })`.
   sekolah?: string | undefined;
   backTo: string;
   backLabel?: string;
