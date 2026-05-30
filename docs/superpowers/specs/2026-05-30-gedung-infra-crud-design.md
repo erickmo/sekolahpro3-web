@@ -163,3 +163,23 @@ Per modal (mock hooks `@sekolahpro/api-client` + session store):
 - **R1**: cukup System Manager, atau buka follow-up perm BE untuk role sekolah?
 - Perlukah toast global (cek apakah ada sistem toast di `@sekolahpro/ui`) atau
   cukup banner in-modal + dialog konfirmasi?
+
+## Addendum 2026-05-30 — Pivot ke Reuse (PENTING)
+
+Inspeksi codebase mengungkap 4 modal create **sudah ada** di
+`apps/school/src/components/infrastruktur/`: `LantaiFormModal`,
+`RuanganFormModal`, `FasilitasRuanganFormModal`, `UtilitasGedungFormModal`
+(create-only, dipakai di route modul terpisah). Keputusan user (2026-05-30):
+
+1. **Reuse modal existing**, bukan bikin baru. → Section 4 "komponen baru
+   reusable `ChildRowsEditor`" **DIBATALKAN**.
+2. **Fasilitas tetap modal standalone** (pola `FasilitasRuanganFormModal`:
+   child via `parent`/`parenttype`/`parentfield`), BUKAN grid-in-parent. →
+   Section 5.4 + R3 (full-replace child array) **tidak berlaku**.
+3. **CRUD penuh**: extend ke-4 modal dgn mode edit (`editName` +
+   `useResourceDoc` + `useResourceUpdate`), backward-compatible. Tambah delete
+   via `useResourceDelete` + `ConfirmDeleteDialog`.
+
+Keputusan default lain: R1 = System Manager dulu (tanpa follow-up BE);
+notifikasi = banner in-modal + dialog konfirmasi (tdk ada toast global).
+Rencana implementasi final: `docs/superpowers/plans/2026-05-30-gedung-infra-crud.md`.
