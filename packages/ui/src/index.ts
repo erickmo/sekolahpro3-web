@@ -4,6 +4,7 @@ export * from "./primitives/input";
 export * from "./primitives/select";
 export * from "./primitives/textarea";
 export * from "./primitives/checkbox";
+export * from "./primitives/switch";
 export * from "./primitives/card";
 export * from "./primitives/skeleton";
 export * from "./primitives/alert";

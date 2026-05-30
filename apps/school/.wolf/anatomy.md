@@ -1,7 +1,29 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-05-29T23:18:03.436Z
-> Files: 358 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-05-30T11:36:12.509Z
+> Files: 366 tracked | Anatomy hits: 0 | Misses: 0
+
+## ../../../../../../../.claude/projects/-Users-erickmo-Desktop-Project-frappe-apps-sekolahpro-web/memory/
+
+- `rtk-corrupts-tool-output.md` (~262 tok)
+
+## ../../../sekolahpro/docs/superpowers/plans/
+
+- `2026-05-30-koperasi-chooser-dan-footer-settings.md` — Plan — Koperasi selectable di /pilih-sekolah + Footer via SekolahPro Settings (~2499 tok)
+
+## ../../../sekolahpro/sekolahpro/api/
+
+- `test_footer.py` — Tests for the pilih-sekolah footer driven by SekolahPro Settings. (~886 tok)
+
+## ../../../sekolahpro/sekolahpro/fixtures/
+
+- `sekolahpro_settings.json` (~60 tok)
+
+## ../../../sekolahpro/sekolahpro/pengaturan/doctype/sekolahpro_settings/
+
+- `__init__.py` (~0 tok)
+- `sekolahpro_settings.json` (~429 tok)
+- `sekolahpro_settings.py` — Declares SekolahProSettings (~25 tok)
 
 ## ./
 
@@ -145,7 +167,8 @@
 
 ## src/components/master/
 
-- `InlineToggle.tsx` — InlineToggle (~440 tok)
+- `InlineToggle.tsx` — InlineToggle: one-click optimistic boolean toggle for list rows; renders @sekolahpro/ui Switch, mutates via useResourceUpdate + invalidates list, stopPropagation. Dipakai feature-flag & modul (~520 tok)
+- `InlineToggle.test.tsx` — InlineToggle tests: on/off patch, optimistic, revert-on-error, stopPropagation (~600 tok)
 - `MasterCreateModal.tsx` — emptyValues — renders form, modal — uses useEffect (~2064 tok)
 - `MasterDetailPage.tsx` — MasterDetailPage — uses useNavigate, useState (~1698 tok)
 - `MasterResourcePage.tsx` — Shared list page for master.* domain. Wires ResourceListPage + MasterCreateModal + (~617 tok)
@@ -210,7 +233,7 @@
 - `pickup.ts` — Exports useStaffScanToken, useStaffListPersonsForNis, useStaffVerifyPin, useStaffCompletePickup + 2 more (~1727 tok)
 - `ppdb.ts` — Mock data fixture untuk modul PPDB (Penerimaan Peserta Didik Baru). (~4534 tok)
 - `school-scope.ts` — Shared school-scoping helpers for mock fixtures. (~220 tok)
-- `sekolah.ts` — Exports SekolahCard, SekolahGroup, MySchoolsResponse, SelectSchoolResponse + 3 more (~434 tok)
+- `sekolah.ts` — Exports SekolahCard, SekolahGroup, OnboardingCta, FooterContent + 5 more (~502 tok)
 - `siswa.test.ts` — Declares ids (~313 tok)
 - `siswa.ts` — NIK ayah sesuai KK (digunakan jika hubungan=Ayah). (~4260 tok)
 
@@ -484,8 +507,9 @@
 - `$sekolah.staff.tsx` — TABS (~363 tok)
 - `$sekolah.tsx` — SekolahLayout — uses useParams, useEffect (~904 tok)
 - `login.tsx` — LoginPage — renders form — uses useNavigate, useState (~1903 tok)
-- `pilih-sekolah.tsx` — ROLE_TONE — uses useNavigate, useState, useEffect, useMemo (~4121 tok)
+- `pilih-sekolah.tsx` — ROLE_TONE (~5474 tok)
 
 ## src/routes/__tests__/
 
+- `pilih-sekolah-footer.test.tsx` — vitest.config sets globals:false → import test API explicitly. (~692 tok)
 - `pilih-sekolah.test.tsx` — wrap (~1777 tok)

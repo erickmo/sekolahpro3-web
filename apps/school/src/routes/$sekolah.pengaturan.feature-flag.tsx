@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, type Column } from "@sekolahpro/ui";
+import { type Column } from "@sekolahpro/ui";
 import { MasterResourcePage } from "../components/master/MasterResourcePage";
+import { InlineToggle } from "../components/master/InlineToggle";
 import { FEATURE_FLAG_FIELDS } from "../components/master/schemas";
 
 type Row = { name: string; key: string; enabled?: number; description?: string };
@@ -9,7 +10,7 @@ const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
   { key: "key", header: "Flag", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.key}</span> },
   { key: "enabled", header: "Status",
-    cell: (r) => <Badge tone={r.enabled ? "success" : "neutral"} dot>{r.enabled ? "On" : "Off"}</Badge> },
+    cell: (r) => <InlineToggle doctype="Feature Flag" name={r.name} field="enabled" value={r.enabled} onLabel="On" offLabel="Off" /> },
   { key: "description", header: "Deskripsi", cell: (r) => r.description ?? "—" },
 ];
 
