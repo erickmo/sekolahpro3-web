@@ -2,77 +2,56 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ubah tab read-only (Lantai, Ruangan, Fasilitas, Utilitas) di halaman detail Gedung jadi CRUD penuh (Tambah/Edit/Hapus), dengan **reuse** 4 modal create yang sudah ada.
+**Goal:** Ubah tab read-only (Lantai, Ruangan, Fasilitas, Utilitas) di halaman detail Gedung jadi CRUD penuh (Tambah/Edit/Hapus), dengan **reuse + extend** 4 modal yang sudah ada.
 
-**Architecture:** FE-only (repo `sekolahpro-web`, app `apps/school`). 4 modal infrastruktur sudah ada tapi **create-only** — extend masing-masing dgn mode edit (`editName` + `useResourceDoc` + `useResourceUpdate`), backward-compatible (caller lama tanpa `editName` tetap create). Tambah `ConfirmDeleteDialog` reusable + `useResourceDelete`. Wire semua ke route detail Gedung dgn konteks default (defaultGedung/defaultLantai/defaultRuangan).
+**Architecture:** FE-only (`sekolahpro-web`, app `apps/school`). 4 modal infrastruktur sudah ada tapi **create-only & tanpa konteks default**. Tiap modal di-extend dua hal: (a) **prop default-context** (`defaultGedung`/`defaultRuangan`) utk pre-fill+lock konteks dari halaman gedung; (b) **mode edit** (`editName` + `useResourceDoc` + `useResourceUpdate`). Backward-compatible (caller lama tanpa prop baru = perilaku create lama). Tambah `ConfirmDeleteDialog` + `useResourceDelete`. Wire ke route detail Gedung.
 
-**Tech Stack:** React 18, TanStack Router/Query, `@sekolahpro/ui`, `@sekolahpro/api-client`, `@sekolahpro/auth`, Vitest + @testing-library/react (jsdom, `globals:false`).
+**Tech Stack:** React 18, TanStack Router/Query, `@sekolahpro/ui`, `@sekolahpro/api-client`, Vitest + @testing-library/react (jsdom, `globals:false`).
 
 **Spec:** `docs/superpowers/specs/2026-05-30-gedung-infra-crud-design.md` (lihat Addendum 2026-05-30).
 
-**Branch:** `feat/gedung-infra-crud` (sudah dibuat; spec + plan sudah di-commit).
+**Branch:** `feat/gedung-infra-crud` (spec + plan sudah di-commit).
 
 ---
 
-## Temuan Kunci (komponen sudah ada)
+## Temuan Kunci (state aktual tiap modal — WAJIB dipakai saat edit)
 
-Keempat modal ADA di `apps/school/src/components/infrastruktur/` — **create-only**:
+Semua di `apps/school/src/components/infrastruktur/`. Props saat ini hanya
+`{ open, onClose, onCreated? }`. **Prop default belum ada** — ditambah di plan ini.
 
-| Modal | Konteks default | Catatan |
-|---|---|---|
-| `LantaiFormModal` | `defaultGedung` (sembunyikan input gedung) | doctype Lantai |
-| `RuanganFormModal` | `defaultLantai` | select lantai load SEMUA (tdk difilter gedung) |
-| `FasilitasRuanganFormModal` | `defaultRuangan` | child via `parent`/`parenttype`/`parentfield` |
-| `UtilitasGedungFormModal` | `defaultGedung` | input gedung selalu tampil |
+| Modal | doctype | Bentuk state | Catatan create |
+|---|---|---|---|
+| `LantaiFormModal` | Lantai | useState individual: `nama`, `nomorLantai`, `gedung` | payload `{nama,nomor_lantai,gedung}` — **TIDAK kirim sekolah** (hook BE `auto_set_sekolah` yg set) |
+| `RuanganFormModal` | Ruangan | useState individual: `nama,kode,lantai,gedung,sekolah,jenisRuangan,kapasitas,luasM2,status` | gedung/sekolah opsional di payload |
+| `FasilitasRuanganFormModal` | Fasilitas Ruangan | useState individual: `parent,namaFasilitas,jumlah,kondisi` | payload sertakan `parent/parenttype/parentfield` |
+| `UtilitasGedungFormModal` | Utilitas Gedung | objek `form` + `set(k,v)` + `EMPTY_FORM` | payload `{gedung,jenis,status,...}` |
 
-Semua callback `onCreated?(name)`. Tidak ada: edit, delete. Dipakai juga di route
-modul terpisah (mis. `fasilitas.tsx`) — perubahan HARUS backward-compatible.
+Semua punya `useResourceList` utk select (Gedung/Lantai/Ruangan/Sekolah), `reset()`,
+dan callback `onCreated`. Dipakai juga di route modul terpisah → perubahan HARUS
+backward-compatible.
 
 ## File Structure
 
-- **Create** `apps/school/src/components/infrastruktur/ConfirmDeleteDialog.tsx` — dialog konfirmasi hapus.
-- **Create** `apps/school/src/components/infrastruktur/ConfirmDeleteDialog.test.tsx`
-- **Modify** `apps/school/src/components/infrastruktur/LantaiFormModal.tsx` — + mode edit.
-- **Create** `apps/school/src/components/infrastruktur/LantaiFormModal.test.tsx`
-- **Modify** `apps/school/src/components/infrastruktur/RuanganFormModal.tsx` — + mode edit (+ filter lantai per gedung opsional).
-- **Create** `apps/school/src/components/infrastruktur/RuanganFormModal.test.tsx`
-- **Modify** `apps/school/src/components/infrastruktur/FasilitasRuanganFormModal.tsx` — + mode edit.
-- **Create** `apps/school/src/components/infrastruktur/FasilitasRuanganFormModal.test.tsx`
-- **Modify** `apps/school/src/components/infrastruktur/UtilitasGedungFormModal.tsx` — + mode edit.
-- **Create** `apps/school/src/components/infrastruktur/UtilitasGedungFormModal.test.tsx`
-- **Modify** `apps/school/src/routes/$sekolah.infrastruktur.daftar-gedung.$gedungId.tsx` — tombol Tambah, kolom Aksi (Edit/Hapus), wiring modal + ConfirmDeleteDialog.
+- **Create** `…/infrastruktur/ConfirmDeleteDialog.tsx` + `.test.tsx`
+- **Modify** `…/infrastruktur/LantaiFormModal.tsx` (+ `defaultGedung`, edit) + **Create** `.test.tsx`
+- **Modify** `…/infrastruktur/RuanganFormModal.tsx` (+ `defaultGedung` filter lantai, edit) + **Create** `.test.tsx`
+- **Modify** `…/infrastruktur/FasilitasRuanganFormModal.tsx` (+ `defaultGedung` filter ruangan, edit) + **Create** `.test.tsx`
+- **Modify** `…/infrastruktur/UtilitasGedungFormModal.tsx` (+ `defaultGedung`, edit) + **Create** `.test.tsx`
+- **Modify** `…/routes/$sekolah.infrastruktur.daftar-gedung.$gedungId.tsx` (Tambah/Edit/Hapus + wiring)
 
 ## Konvensi Test
 
 - Jalankan: `pnpm --filter @sekolahpro/app-school test -- <namaFile>`
 - vitest `globals:false` → WAJIB import `{ describe, it, expect, vi }` dari `"vitest"`.
-- Mock: `vi.mock("@sekolahpro/api-client", ...)`, `vi.mock("@sekolahpro/auth", ...)`,
-  `vi.mock("@tanstack/react-query", ...)` (pola di Task 2).
+- Mock SEMUA hook api-client yg dipakai modal: `useResourceCreate`,
+  `useResourceUpdate`, `useResourceDoc`, `useResourceList` (select butuh ini).
 - Lint: `pnpm --filter @sekolahpro/app-school lint`
-
-## Pola Edit-Mode (acuan semua modal)
-
-Tiap modal saat ini init `form` via `useState` initializer + reset on close.
-Tambahan edit-mode (backward-compatible):
-
-1. Prop baru: `editName?: string;`
-2. Hooks: `const update = useResourceUpdate<{name:string}>(DOCTYPE);`
-   dan `const docQ = useResourceDoc<Record<string,unknown>>(DOCTYPE, editName, { enabled: !!editName });`
-3. `useEffect` isi `form` dari `docQ.data` saat edit.
-4. `canSubmit`: tambahkan `&& !update.isPending`.
-5. `submit`: `if (editName) await update.mutateAsync({ name: editName, patch })` else create.
-6. Title: `editName ? "Edit X" : "Tambah X"`; label tombol pending mengikut.
-7. `onCreated` tetap dipanggil utk create & edit (semantik "tersimpan").
 
 ---
 
 ## Task 1: ConfirmDeleteDialog
 
-Dialog konfirmasi hapus reusable (tdk ada Toast global di `@sekolahpro/ui`).
-
-**Files:**
-- Create: `apps/school/src/components/infrastruktur/ConfirmDeleteDialog.tsx`
-- Test: `apps/school/src/components/infrastruktur/ConfirmDeleteDialog.test.tsx`
+**Files:** Create `…/infrastruktur/ConfirmDeleteDialog.tsx` + `.test.tsx`
 
 - [ ] **Step 1: Tulis test gagal**
 
@@ -85,11 +64,10 @@ import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 describe("ConfirmDeleteDialog", () => {
   it("tombol Hapus memanggil onConfirm", () => {
     const onConfirm = vi.fn();
-    render(<ConfirmDeleteDialog open label="Lantai 1" onConfirm={onConfirm} onClose={() => {}} />);
+    render(<ConfirmDeleteDialog open label="Lantai GA-L1" onConfirm={onConfirm} onClose={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "Hapus" }));
     expect(onConfirm).toHaveBeenCalled();
   });
-
   it("menampilkan error bila ada", () => {
     render(<ConfirmDeleteDialog open label="X" error="masih ada data turunan" onConfirm={() => {}} onClose={() => {}} />);
     expect(screen.getByText("masih ada data turunan")).toBeTruthy();
@@ -97,10 +75,9 @@ describe("ConfirmDeleteDialog", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan, pastikan gagal**
+- [ ] **Step 2: Run → FAIL**
 
-Run: `pnpm --filter @sekolahpro/app-school test -- ConfirmDeleteDialog`
-Expected: FAIL — module belum ada.
+Run: `pnpm --filter @sekolahpro/app-school test -- ConfirmDeleteDialog` → FAIL (module belum ada).
 
 - [ ] **Step 3: Implementasi**
 
@@ -120,12 +97,7 @@ interface ConfirmDeleteDialogProps {
 
 export function ConfirmDeleteDialog({ open, label, error, pending, onConfirm, onClose }: ConfirmDeleteDialogProps) {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      size="sm"
-      tone="rose"
-      title="Hapus data?"
+    <Modal open={open} onClose={onClose} size="sm" tone="rose" title="Hapus data?"
       description={`"${label}" akan dihapus permanen.`}
       footer={
         <div className="flex justify-end gap-2">
@@ -144,13 +116,7 @@ export function ConfirmDeleteDialog({ open, label, error, pending, onConfirm, on
 }
 ```
 
-Catatan: `tone` valid di Modal = brand|violet|emerald|amber|rose|neutral (lihat `packages/ui/src/components/Modal.tsx`). Pakai `rose`.
-
-- [ ] **Step 4: Jalankan, pastikan lulus**
-
-Run: `pnpm --filter @sekolahpro/app-school test -- ConfirmDeleteDialog`
-Expected: PASS (2 test).
-
+- [ ] **Step 4: Run → PASS** (2 test)
 - [ ] **Step 5: Commit**
 
 ```bash
@@ -160,11 +126,12 @@ git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat
 
 ---
 
-## Task 2: LantaiFormModal — tambah mode edit
+## Task 2: LantaiFormModal — defaultGedung + mode edit
 
-**Files:**
-- Modify: `apps/school/src/components/infrastruktur/LantaiFormModal.tsx`
-- Test: `apps/school/src/components/infrastruktur/LantaiFormModal.test.tsx`
+State aktual: `nama`, `nomorLantai`, `gedung` (individual useState). Tambah prop
+`defaultGedung` (pre-fill + sembunyikan select gedung) dan `editName`.
+
+**Files:** Modify `LantaiFormModal.tsx` + Create `LantaiFormModal.test.tsx`
 
 - [ ] **Step 1: Tulis test gagal**
 
@@ -180,9 +147,7 @@ vi.mock("@sekolahpro/api-client", () => ({
   useResourceCreate: () => ({ mutateAsync: createMut, isPending: false }),
   useResourceUpdate: () => ({ mutateAsync: updateMut, isPending: false }),
   useResourceDoc: () => ({ data: docData }),
-}));
-vi.mock("@sekolahpro/auth", () => ({
-  useSessionStore: (sel: (s: unknown) => unknown) => sel({ activeSekolah: { name: "SEK-1" } }),
+  useResourceList: () => ({ data: [{ name: "SEK-1-GA", nama: "Gedung A" }], isLoading: false }),
 }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 
@@ -191,16 +156,16 @@ import { LantaiFormModal } from "./LantaiFormModal";
 describe("LantaiFormModal", () => {
   beforeEach(() => { createMut.mockClear(); updateMut.mockClear(); docData = undefined; });
 
-  it("create dgn defaultGedung mengirim gedung + sekolah", async () => {
+  it("create dgn defaultGedung mengirim gedung tanpa pilih manual", async () => {
     render(<LantaiFormModal open defaultGedung="SEK-1-GA" onClose={() => {}} />);
-    fireEvent.change(screen.getByPlaceholderText("Lantai 1"), { target: { value: "Lantai Dasar" } });
-    fireEvent.change(screen.getByPlaceholderText("1"), { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("Nama"), { target: { value: "Lantai Dasar" } });
+    fireEvent.change(screen.getByLabelText("Nomor Lantai"), { target: { value: "1" } });
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(createMut).toHaveBeenCalled());
-    expect(createMut.mock.calls[0][0]).toMatchObject({ nama: "Lantai Dasar", nomor_lantai: 1, gedung: "SEK-1-GA", sekolah: "SEK-1" });
+    expect(createMut.mock.calls[0][0]).toEqual({ nama: "Lantai Dasar", nomor_lantai: 1, gedung: "SEK-1-GA" });
   });
 
-  it("edit memuat data & memanggil update (tanpa gedung/sekolah)", async () => {
+  it("edit memuat data & update {nama,nomor_lantai}", async () => {
     docData = { name: "GA-L1", nama: "Lantai Dasar", nomor_lantai: 1, gedung: "SEK-1-GA" };
     render(<LantaiFormModal open editName="GA-L1" defaultGedung="SEK-1-GA" onClose={() => {}} />);
     await screen.findByDisplayValue("Lantai Dasar");
@@ -214,84 +179,99 @@ describe("LantaiFormModal", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan, pastikan gagal**
+> Catatan: tambahkan `aria-label="Nama"` & `aria-label="Nomor Lantai"` pada Input
+> terkait saat implementasi agar `getByLabelText` cocok (FormField label belum
+> terhubung `htmlFor`).
 
-Run: `pnpm --filter @sekolahpro/app-school test -- LantaiFormModal`
-Expected: FAIL — `useResourceUpdate`/`useResourceDoc` belum dipakai, "Edit Lantai" tdk ada.
+- [ ] **Step 2: Run → FAIL**
 
-- [ ] **Step 3: Implementasi**
+- [ ] **Step 3: Implementasi** (edit `LantaiFormModal.tsx`)
 
-Edit `LantaiFormModal.tsx`:
-
-3a. Import: ganti baris import api-client jadi
-```tsx
-import { useResourceCreate, useResourceDoc, useResourceUpdate } from "@sekolahpro/api-client";
-```
-dan tambah `useEffect` ke import react:
+3a. Import:
 ```tsx
 import { useEffect, useState } from "react";
+import { useResourceCreate, useResourceDoc, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 ```
-
-3b. Prop interface tambah `editName?: string;`. Destructure: `{ open, onClose, onCreated, defaultGedung, editName }`.
-
-3c. Tambah hooks setelah `const create = ...`:
+3b. Props:
+```tsx
+interface LantaiFormModalProps {
+  open: boolean;
+  onClose: () => void;
+  onCreated?: (name: string) => void;
+  defaultGedung?: string;
+  editName?: string;
+}
+export function LantaiFormModal({ open, onClose, onCreated, defaultGedung, editName }: LantaiFormModalProps) {
+```
+3c. State init gedung dari defaultGedung:
+```tsx
+  const [gedung, setGedung] = useState(defaultGedung ?? "");
+```
+3d. Hooks tambahan setelah `create`:
 ```tsx
   const update = useResourceUpdate<{ name: string }>("Lantai");
   const docQ = useResourceDoc<Record<string, unknown>>("Lantai", editName, { enabled: !!editName });
 ```
-
-3d. Tambah effect setelah deklarasi `set`:
+3e. Effect populate (edit) + sinkron defaultGedung (create):
 ```tsx
   useEffect(() => {
     if (docQ.data) {
       const d = docQ.data as Record<string, unknown>;
-      setForm({ nama: `${d.nama ?? ""}`, nomor_lantai: `${d.nomor_lantai ?? ""}`, gedung: `${d.gedung ?? defaultGedung ?? ""}` });
+      setNama(`${d.nama ?? ""}`);
+      setNomorLantai(`${d.nomor_lantai ?? ""}`);
+      setGedung(`${d.gedung ?? defaultGedung ?? ""}`);
+    } else if (!editName && defaultGedung) {
+      setGedung(defaultGedung);
     }
-  }, [docQ.data, defaultGedung]);
+  }, [docQ.data, defaultGedung, editName]);
 ```
-
-3e. `canSubmit`: tambahkan `&& !update.isPending` di akhir rantai.
-
-3f. Ganti isi `submit` (try block) jadi:
+3f. `canSubmit`: tambahkan `&& !update.isPending`.
+3g. `submit`:
 ```tsx
+  const submit = async () => {
+    setErr(null);
     try {
       let name: string;
       if (editName) {
-        name = (await update.mutateAsync({ name: editName, patch: { nama: form.nama.trim(), nomor_lantai: Number(form.nomor_lantai) } })).name;
+        name = (await update.mutateAsync({ name: editName, patch: { nama: nama.trim(), nomor_lantai: Number(nomorLantai) } })).name;
       } else {
-        name = (await create.mutateAsync({ nama: form.nama.trim(), nomor_lantai: Number(form.nomor_lantai), gedung: form.gedung.trim(), sekolah })).name;
+        name = (await create.mutateAsync({ nama: nama.trim(), nomor_lantai: Number(nomorLantai), gedung })).name;
       }
       await qc.invalidateQueries({ queryKey: ["resource:list", "Lantai"] });
+      onCreated?.(name);
       reset();
-      if (onCreated) onCreated(name);
       onClose();
     } catch (e) {
       setErr((e as Error)?.message ?? "Gagal menyimpan lantai.");
     }
+  };
 ```
+3h. `reset()`: ganti `setGedung("")` → `setGedung(defaultGedung ?? "")`.
+3i. Title: `title={editName ? "Edit Lantai" : "Tambah Lantai"}`; tombol pending `{create.isPending || update.isPending ? "Menyimpan..." : "Simpan"}`.
+3j. Field Gedung: bila `defaultGedung` ada, JANGAN render select (terkunci). Bungkus:
+```tsx
+{!defaultGedung && (
+  <FormField label="Gedung" required> … SearchableSelect existing … </FormField>
+)}
+```
+3k. Tambah `aria-label="Nama"` pada Input nama, `aria-label="Nomor Lantai"` pada Input nomor.
 
-3g. Title Modal: `title={editName ? "Edit Lantai" : "Tambah Lantai"}`.
-Label tombol: `{create.isPending || update.isPending ? "Menyimpan..." : "Simpan"}`.
-
-- [ ] **Step 4: Jalankan, pastikan lulus**
-
-Run: `pnpm --filter @sekolahpro/app-school test -- LantaiFormModal`
-Expected: PASS (2 test).
-
+- [ ] **Step 4: Run → PASS** (2 test)
 - [ ] **Step 5: Commit**
 
 ```bash
 git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web add apps/school/src/components/infrastruktur/LantaiFormModal.tsx apps/school/src/components/infrastruktur/LantaiFormModal.test.tsx
-git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): LantaiFormModal mode edit"
+git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): LantaiFormModal defaultGedung + mode edit"
 ```
 
 ---
 
-## Task 3: RuanganFormModal — tambah mode edit (+ filter lantai per gedung)
+## Task 3: RuanganFormModal — defaultGedung (filter lantai) + mode edit
 
-**Files:**
-- Modify: `apps/school/src/components/infrastruktur/RuanganFormModal.tsx`
-- Test: `apps/school/src/components/infrastruktur/RuanganFormModal.test.tsx`
+State aktual individual. Tambah `defaultGedung` (filter list lantai per gedung +
+sembunyikan select Gedung/Sekolah karena denorm BE) dan `editName`.
+
+**Files:** Modify `RuanganFormModal.tsx` + Create `RuanganFormModal.test.tsx`
 
 - [ ] **Step 1: Tulis test gagal**
 
@@ -303,15 +283,11 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 const createMut = vi.fn().mockResolvedValue({ name: "GA-L1-R1" });
 const updateMut = vi.fn().mockResolvedValue({ name: "GA-L1-R1" });
 let docData: Record<string, unknown> | undefined;
-const lantaiList = [{ name: "GA-L1", nama: "Lantai 1" }];
 vi.mock("@sekolahpro/api-client", () => ({
   useResourceCreate: () => ({ mutateAsync: createMut, isPending: false }),
   useResourceUpdate: () => ({ mutateAsync: updateMut, isPending: false }),
   useResourceDoc: () => ({ data: docData }),
-  useResourceList: () => ({ data: lantaiList }),
-}));
-vi.mock("@sekolahpro/auth", () => ({
-  useSessionStore: (sel: (s: unknown) => unknown) => sel({ activeSekolah: { name: "SEK-1" } }),
+  useResourceList: () => ({ data: [{ name: "GA-L1", nomor_lantai: 1 }] }),
 }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 
@@ -320,120 +296,114 @@ import { RuanganFormModal } from "./RuanganFormModal";
 describe("RuanganFormModal", () => {
   beforeEach(() => { createMut.mockClear(); updateMut.mockClear(); docData = undefined; });
 
-  it("create mengirim field wajib", async () => {
-    render(<RuanganFormModal open defaultLantai="GA-L1" onClose={() => {}} />);
-    fireEvent.change(screen.getByPlaceholderText("Ruang Kelas 1A"), { target: { value: "Kelas 1A" } });
-    fireEvent.change(screen.getByPlaceholderText("R1A"), { target: { value: "R1" } });
+  it("create kirim field wajib (jenis default Kelas, status Tersedia)", async () => {
+    render(<RuanganFormModal open defaultGedung="SEK-1-GA" onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Nama"), { target: { value: "Kelas 1A" } });
+    fireEvent.change(screen.getByLabelText("Kode"), { target: { value: "R1" } });
+    fireEvent.change(screen.getByLabelText("Lantai"), { target: { value: "GA-L1" } });
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(createMut).toHaveBeenCalled());
     expect(createMut.mock.calls[0][0]).toMatchObject({ nama: "Kelas 1A", kode: "R1", lantai: "GA-L1", jenis_ruangan: "Kelas", status: "Tersedia" });
   });
 
-  it("edit memuat data & update (tanpa sekolah/gedung)", async () => {
+  it("edit memuat & update (tanpa sekolah/gedung)", async () => {
     docData = { name: "GA-L1-R1", nama: "Kelas 1A", kode: "R1", lantai: "GA-L1", jenis_ruangan: "Kelas", status: "Tersedia", kapasitas: 30 };
-    render(<RuanganFormModal open editName="GA-L1-R1" onClose={() => {}} />);
+    render(<RuanganFormModal open editName="GA-L1-R1" defaultGedung="SEK-1-GA" onClose={() => {}} />);
     await screen.findByDisplayValue("Kelas 1A");
     expect(screen.getByText("Edit Ruangan")).toBeTruthy();
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(updateMut).toHaveBeenCalled());
     const arg = updateMut.mock.calls[0][0];
     expect(arg.name).toBe("GA-L1-R1");
-    expect(arg.patch).toMatchObject({ nama: "Kelas 1A", kode: "R1", lantai: "GA-L1", jenis_ruangan: "Kelas", status: "Tersedia", kapasitas: 30 });
+    expect(arg.patch).toMatchObject({ nama: "Kelas 1A", kode: "R1", lantai: "GA-L1", kapasitas: 30 });
     expect(arg.patch.sekolah).toBeUndefined();
+    expect(arg.patch.gedung).toBeUndefined();
   });
 });
 ```
 
-- [ ] **Step 2: Jalankan, pastikan gagal**
+> Untuk test pakai `<select>` polos (Lantai) gunakan `aria-label="Lantai"`. Jika
+> tetap `SearchableSelect`, sesuaikan query (lihat catatan implementasi 3g).
 
-Run: `pnpm --filter @sekolahpro/app-school test -- RuanganFormModal`
-Expected: FAIL — update/doc belum dipakai, "Edit Ruangan" tdk ada.
+- [ ] **Step 2: Run → FAIL**
 
-- [ ] **Step 3: Implementasi**
-
-Edit `RuanganFormModal.tsx`:
+- [ ] **Step 3: Implementasi** (edit `RuanganFormModal.tsx`)
 
 3a. Import:
 ```tsx
 import { useEffect, useState } from "react";
 import { useResourceCreate, useResourceDoc, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 ```
-
-3b. Props tambah `editName?: string;` + opsional `gedung?: string;` (filter lantai). Destructure: `{ open, onClose, onCreated, defaultLantai, editName, gedung }`.
-
+3b. Props (interface `Props`): tambah `defaultGedung?: string; editName?: string;`. Destructure ikut.
 3c. Hooks setelah `create`:
 ```tsx
   const update = useResourceUpdate<{ name: string }>("Ruangan");
   const docQ = useResourceDoc<Record<string, unknown>>("Ruangan", editName, { enabled: !!editName });
 ```
-Ubah `lantaiList` filter agar bisa scope per gedung:
+3d. Ubah `lantaiQ` agar bisa difilter per gedung:
 ```tsx
-  const lantaiList = useResourceList<{ name: string; nama?: string }>("Lantai", {
-    fields: ["name", "nama"],
-    filters: gedung ? [["gedung", "=", gedung]] : [],
+  const lantaiQ = useResourceList<LantaiRow>("Lantai", {
+    fields: ["name", "gedung", "nomor_lantai"],
+    filters: defaultGedung ? [["gedung", "=", defaultGedung]] : [],
     limit_page_length: 0,
   });
 ```
-
-3d. Effect:
+3e. Effect populate saat edit:
 ```tsx
   useEffect(() => {
-    if (docQ.data) {
-      const d = docQ.data as Record<string, unknown>;
-      setForm({
-        nama: `${d.nama ?? ""}`, kode: `${d.kode ?? ""}`, lantai: `${d.lantai ?? ""}`,
-        jenis_ruangan: `${d.jenis_ruangan ?? "Kelas"}`, kapasitas: `${d.kapasitas ?? ""}`,
-        luas_m2: `${d.luas_m2 ?? ""}`, status: `${d.status ?? "Tersedia"}`,
-      });
-    }
+    if (!docQ.data) return;
+    const d = docQ.data as Record<string, unknown>;
+    setNama(`${d.nama ?? ""}`); setKode(`${d.kode ?? ""}`); setLantai(`${d.lantai ?? ""}`);
+    setJenisRuangan(`${d.jenis_ruangan ?? "Kelas"}`); setStatus(`${d.status ?? "Tersedia"}`);
+    setKapasitas(`${d.kapasitas ?? ""}`); setLuasM2(`${d.luas_m2 ?? ""}`);
   }, [docQ.data]);
 ```
-
-3e. `canSubmit`: tambahkan `&& !update.isPending`.
-
-3f. Ganti isi `submit` try block:
+3f. `submit`: bangun `patch` lalu cabang create/update; saat `defaultGedung` ada,
+JANGAN kirim gedung/sekolah (denorm BE):
 ```tsx
+  const submit = async () => {
+    setErr(null);
+    const patch: Record<string, unknown> = {
+      nama: nama.trim(), kode: kode.trim(), lantai,
+      jenis_ruangan: jenisRuangan, status,
+    };
+    if (!defaultGedung && gedung) patch.gedung = gedung;
+    if (!defaultGedung && sekolah) patch.sekolah = sekolah;
+    if (kapasitas.trim()) { const n = parseInt(kapasitas, 10); if (!Number.isNaN(n)) patch.kapasitas = n; }
+    if (luasM2.trim()) { const n = parseFloat(luasM2); if (!Number.isNaN(n)) patch.luas_m2 = n; }
     try {
-      const patch: Record<string, unknown> = {
-        nama: form.nama.trim(), kode: form.kode.trim(), lantai: form.lantai.trim(),
-        jenis_ruangan: form.jenis_ruangan, status: form.status,
-      };
-      if (form.kapasitas.trim()) patch.kapasitas = Number(form.kapasitas);
-      if (form.luas_m2.trim()) patch.luas_m2 = Number(form.luas_m2);
       const name = editName
         ? (await update.mutateAsync({ name: editName, patch })).name
         : (await create.mutateAsync(patch)).name;
       await qc.invalidateQueries({ queryKey: ["resource:list", "Ruangan"] });
-      reset();
-      if (onCreated) onCreated(name);
-      onClose();
-    } catch (e) {
-      setErr((e as Error)?.message ?? "Gagal menyimpan ruangan.");
-    }
+      onCreated?.(name); reset(); onClose();
+    } catch (e) { setErr((e as Error)?.message ?? "Gagal menyimpan ruangan."); }
+  };
 ```
-(Catatan: `sekolah` tetap dipakai di `canSubmit` guard create; di payload tidak dikirim karena denorm BE. Validasi `!sekolah` di awal submit tetap dipertahankan utk create — saat edit `sekolah` boleh undefined, jadi pindahkan guard: `if (!editName && !sekolah) { setErr(...); return; }`.)
+3g. Saat `defaultGedung` ada, sembunyikan FormField "Gedung" & "Sekolah".
+Untuk testability, render Lantai sbg `<select aria-label="Lantai">` ATAU
+pertahankan `SearchableSelect` dan ubah test pakai mekanisme komponennya. Plan
+ini pilih: **ganti Lantai+Jenis+Status ke `Select` polos `@sekolahpro/ui`** dgn
+`aria-label`, agar test sederhana & konsisten. Tambah `aria-label="Nama"`,
+`aria-label="Kode"` pada Input.
+3h. `canSubmit`/`requiredMissing`: pakai `requiredMissing || create.isPending || update.isPending`.
+3i. Title: `editName ? "Edit Ruangan" : "Tambah Ruangan"`.
 
-3g. Title: `title={editName ? "Edit Ruangan" : "Tambah Ruangan"}`. Label pending mengikut `create.isPending || update.isPending`.
-
-- [ ] **Step 4: Jalankan, pastikan lulus**
-
-Run: `pnpm --filter @sekolahpro/app-school test -- RuanganFormModal`
-Expected: PASS (2 test).
-
+- [ ] **Step 4: Run → PASS** (2 test)
 - [ ] **Step 5: Commit**
 
 ```bash
 git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web add apps/school/src/components/infrastruktur/RuanganFormModal.tsx apps/school/src/components/infrastruktur/RuanganFormModal.test.tsx
-git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): RuanganFormModal mode edit + filter lantai per gedung"
+git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): RuanganFormModal defaultGedung + mode edit"
 ```
 
 ---
 
-## Task 4: FasilitasRuanganFormModal — tambah mode edit
+## Task 4: FasilitasRuanganFormModal — defaultGedung (filter ruangan) + mode edit
 
-**Files:**
-- Modify: `apps/school/src/components/infrastruktur/FasilitasRuanganFormModal.tsx`
-- Test: `apps/school/src/components/infrastruktur/FasilitasRuanganFormModal.test.tsx`
+State aktual: `parent, namaFasilitas, jumlah, kondisi`.
+
+**Files:** Modify `FasilitasRuanganFormModal.tsx` + Create `.test.tsx`
 
 - [ ] **Step 1: Tulis test gagal**
 
@@ -459,8 +429,9 @@ describe("FasilitasRuanganFormModal", () => {
   beforeEach(() => { createMut.mockClear(); updateMut.mockClear(); docData = undefined; });
 
   it("create child dgn parent reference", async () => {
-    render(<FasilitasRuanganFormModal open defaultRuangan="GA-L1-R1" onClose={() => {}} />);
-    fireEvent.change(screen.getByPlaceholderText("Proyektor"), { target: { value: "Kursi" } });
+    render(<FasilitasRuanganFormModal open onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Ruangan"), { target: { value: "GA-L1-R1" } });
+    fireEvent.change(screen.getByLabelText("Nama Fasilitas"), { target: { value: "Kursi" } });
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(createMut).toHaveBeenCalled());
     expect(createMut.mock.calls[0][0]).toMatchObject({ nama_fasilitas: "Kursi", parent: "GA-L1-R1", parenttype: "Ruangan", parentfield: "fasilitas" });
@@ -468,99 +439,84 @@ describe("FasilitasRuanganFormModal", () => {
 
   it("edit memuat & update tanpa parent", async () => {
     docData = { name: "fas-1", nama_fasilitas: "Kursi", jumlah: 10, kondisi: "Baik", parent: "GA-L1-R1" };
-    render(<FasilitasRuanganFormModal open editName="fas-1" defaultRuangan="GA-L1-R1" onClose={() => {}} />);
+    render(<FasilitasRuanganFormModal open editName="fas-1" onClose={() => {}} />);
     await screen.findByDisplayValue("Kursi");
     expect(screen.getByText("Edit Fasilitas")).toBeTruthy();
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(updateMut).toHaveBeenCalled());
     const arg = updateMut.mock.calls[0][0];
     expect(arg.name).toBe("fas-1");
-    expect(arg.patch).toEqual({ nama_fasilitas: "Kursi", jumlah: 10, kondisi: "Baik" });
+    expect(arg.patch).toMatchObject({ nama_fasilitas: "Kursi", jumlah: 10, kondisi: "Baik" });
     expect(arg.patch.parent).toBeUndefined();
   });
 });
 ```
 
-- [ ] **Step 2: Jalankan, pastikan gagal**
+> Render Ruangan sbg `Select aria-label="Ruangan"`, Nama sbg Input `aria-label="Nama Fasilitas"`.
 
-Run: `pnpm --filter @sekolahpro/app-school test -- FasilitasRuanganFormModal`
-Expected: FAIL.
+- [ ] **Step 2: Run → FAIL**
 
-- [ ] **Step 3: Implementasi**
+- [ ] **Step 3: Implementasi** (edit `FasilitasRuanganFormModal.tsx`)
 
-Edit `FasilitasRuanganFormModal.tsx`:
-
-3a. Import:
-```tsx
-import { useEffect, useState } from "react";
-import { useResourceCreate, useResourceDoc, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
-```
-
-3b. Props tambah `editName?: string;`. Destructure ikut.
-
+3a. Import: tambah `useEffect`; `useResourceDoc, useResourceUpdate` dari api-client.
+3b. Props (`Props`): tambah `defaultGedung?: string; editName?: string;`. Destructure ikut.
 3c. Hooks setelah `create`:
 ```tsx
   const update = useResourceUpdate<{ name: string }>("Fasilitas Ruangan");
   const docQ = useResourceDoc<Record<string, unknown>>("Fasilitas Ruangan", editName, { enabled: !!editName });
 ```
-
-3d. Effect:
+3d. `ruanganQ` filter per gedung (denorm Ruangan.gedung ada):
+```tsx
+  const ruanganQ = useResourceList<RuanganRow>("Ruangan", {
+    fields: ["name", "nama"],
+    filters: defaultGedung ? [["gedung", "=", defaultGedung]] : [],
+    limit_page_length: 0,
+  });
+```
+3e. Effect:
 ```tsx
   useEffect(() => {
-    if (docQ.data) {
-      const d = docQ.data as Record<string, unknown>;
-      setForm({ nama_fasilitas: `${d.nama_fasilitas ?? ""}`, jumlah: `${d.jumlah ?? "1"}`, kondisi: `${d.kondisi ?? "Baik"}` });
-      if (d.parent) setRuangan(`${d.parent}`);
-    }
+    if (!docQ.data) return;
+    const d = docQ.data as Record<string, unknown>;
+    setNamaFasilitas(`${d.nama_fasilitas ?? ""}`);
+    setJumlah(`${d.jumlah ?? ""}`); setKondisi(`${d.kondisi ?? ""}`);
+    if (d.parent) setParent(`${d.parent}`);
   }, [docQ.data]);
 ```
-
-3e. `canSubmit`: tambahkan `&& !update.isPending`.
-
-3f. Ganti `submit` try block:
+3f. `submit`:
 ```tsx
+  const submit = async () => {
+    setErr(null);
+    const patch: Record<string, unknown> = { nama_fasilitas: namaFasilitas.trim() };
+    if (jumlah.trim()) { const n = Number(jumlah); if (!Number.isNaN(n)) patch.jumlah = n; }
+    if (kondisi) patch.kondisi = kondisi;
     try {
-      const patch: Record<string, unknown> = {
-        nama_fasilitas: form.nama_fasilitas.trim(),
-        jumlah: Number(form.jumlah) || 1,
-        kondisi: form.kondisi,
-      };
-      let name: string;
-      if (editName) {
-        name = (await update.mutateAsync({ name: editName, patch })).name;
-      } else {
-        name = (await create.mutateAsync({ ...patch, parent: ruangan.trim(), parenttype: "Ruangan", parentfield: "fasilitas" })).name;
-      }
+      const name = editName
+        ? (await update.mutateAsync({ name: editName, patch })).name
+        : (await create.mutateAsync({ ...patch, parent, parenttype: "Ruangan", parentfield: "fasilitas" })).name;
       await qc.invalidateQueries({ queryKey: ["resource:list", "Fasilitas Ruangan"] });
-      reset();
-      if (onCreated) onCreated(name);
-      onClose();
-    } catch (e) {
-      setErr((e as Error)?.message ?? "Gagal menyimpan fasilitas.");
-    }
+      onCreated?.(name); reset(); onClose();
+    } catch (e) { setErr((e as Error)?.message ?? "Gagal menyimpan fasilitas."); }
+  };
 ```
+3g. `requiredMissing` saat edit: `parent` tdk wajib → `const requiredMissing = !namaFasilitas.trim() || (!editName && !parent);`
+3h. Render Ruangan sbg `Select aria-label="Ruangan"`, Nama Input `aria-label="Nama Fasilitas"`. Title `editName ? "Edit Fasilitas" : "Tambah Fasilitas"`. Tombol disabled `requiredMissing || create.isPending || update.isPending`.
 
-3g. Title: `title={editName ? "Edit Fasilitas" : "Tambah Fasilitas"}`. Label pending mengikut.
-
-- [ ] **Step 4: Jalankan, pastikan lulus**
-
-Run: `pnpm --filter @sekolahpro/app-school test -- FasilitasRuanganFormModal`
-Expected: PASS (2 test).
-
+- [ ] **Step 4: Run → PASS** (2 test)
 - [ ] **Step 5: Commit**
 
 ```bash
 git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web add apps/school/src/components/infrastruktur/FasilitasRuanganFormModal.tsx apps/school/src/components/infrastruktur/FasilitasRuanganFormModal.test.tsx
-git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): FasilitasRuanganFormModal mode edit"
+git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): FasilitasRuanganFormModal defaultGedung + mode edit"
 ```
 
 ---
 
-## Task 5: UtilitasGedungFormModal — tambah mode edit
+## Task 5: UtilitasGedungFormModal — defaultGedung + mode edit
 
-**Files:**
-- Modify: `apps/school/src/components/infrastruktur/UtilitasGedungFormModal.tsx`
-- Test: `apps/school/src/components/infrastruktur/UtilitasGedungFormModal.test.tsx`
+State aktual: objek `form` + `set(k,v)` + `EMPTY_FORM`.
+
+**Files:** Modify `UtilitasGedungFormModal.tsx` + Create `.test.tsx`
 
 - [ ] **Step 1: Tulis test gagal**
 
@@ -576,9 +532,7 @@ vi.mock("@sekolahpro/api-client", () => ({
   useResourceCreate: () => ({ mutateAsync: createMut, isPending: false }),
   useResourceUpdate: () => ({ mutateAsync: updateMut, isPending: false }),
   useResourceDoc: () => ({ data: docData }),
-}));
-vi.mock("@sekolahpro/auth", () => ({
-  useSessionStore: (sel: (s: unknown) => unknown) => sel({ activeSekolah: { name: "SEK-1" } }),
+  useResourceList: () => ({ data: [{ name: "SEK-1-GA", nama: "Gedung A" }] }),
 }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 
@@ -587,8 +541,9 @@ import { UtilitasGedungFormModal } from "./UtilitasGedungFormModal";
 describe("UtilitasGedungFormModal", () => {
   beforeEach(() => { createMut.mockClear(); updateMut.mockClear(); docData = undefined; });
 
-  it("create mengirim gedung + jenis + status", async () => {
+  it("create dgn defaultGedung + jenis", async () => {
     render(<UtilitasGedungFormModal open defaultGedung="SEK-1-GA" onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Jenis"), { target: { value: "Listrik" } });
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(createMut).toHaveBeenCalled());
     expect(createMut.mock.calls[0][0]).toMatchObject({ gedung: "SEK-1-GA", jenis: "Listrik", status: "Aktif" });
@@ -609,97 +564,81 @@ describe("UtilitasGedungFormModal", () => {
 });
 ```
 
-- [ ] **Step 2: Jalankan, pastikan gagal**
+> Render Jenis sbg `Select aria-label="Jenis"`.
 
-Run: `pnpm --filter @sekolahpro/app-school test -- UtilitasGedungFormModal`
-Expected: FAIL.
+- [ ] **Step 2: Run → FAIL**
 
-- [ ] **Step 3: Implementasi**
+- [ ] **Step 3: Implementasi** (edit `UtilitasGedungFormModal.tsx`)
 
-Edit `UtilitasGedungFormModal.tsx`:
-
-3a. Import:
+3a. Import: tambah `useEffect`; `useResourceDoc, useResourceUpdate`.
+3b. Props `Props`: tambah `defaultGedung?: string; editName?: string;`. Destructure ikut.
+3c. Init form gedung dari default:
 ```tsx
-import { useEffect, useState } from "react";
-import { useResourceCreate, useResourceDoc, useResourceUpdate } from "@sekolahpro/api-client";
+  const [form, setForm] = useState<FormState>({ ...EMPTY_FORM, gedung: defaultGedung ?? "" });
 ```
-
-3b. Props tambah `editName?: string;`. Destructure ikut.
-
-3c. Hooks setelah `create`:
+3d. Hooks setelah `create`:
 ```tsx
   const update = useResourceUpdate<{ name: string }>("Utilitas Gedung");
   const docQ = useResourceDoc<Record<string, unknown>>("Utilitas Gedung", editName, { enabled: !!editName });
 ```
-
-3d. Effect:
+3e. Effect:
 ```tsx
   useEffect(() => {
     if (docQ.data) {
       const d = docQ.data as Record<string, unknown>;
       setForm({
-        gedung: `${d.gedung ?? defaultGedung ?? ""}`, jenis: `${d.jenis ?? "Listrik"}`,
-        provider: `${d.provider ?? ""}`, nomor_pelanggan: `${d.nomor_pelanggan ?? ""}`,
-        kapasitas: `${d.kapasitas ?? ""}`, satuan: `${d.satuan ?? ""}`, status: `${d.status ?? "Aktif"}`,
+        gedung: `${d.gedung ?? defaultGedung ?? ""}`, sekolah: `${d.sekolah ?? ""}`,
+        jenis: `${d.jenis ?? ""}`, provider: `${d.provider ?? ""}`, kapasitas: `${d.kapasitas ?? ""}`,
+        satuan: `${d.satuan ?? ""}`, nomor_pelanggan: `${d.nomor_pelanggan ?? ""}`, status: `${d.status ?? "Aktif"}`,
       });
+    } else if (!editName && defaultGedung) {
+      setForm((c) => ({ ...c, gedung: defaultGedung }));
     }
-  }, [docQ.data, defaultGedung]);
+  }, [docQ.data, defaultGedung, editName]);
 ```
-
-3e. `canSubmit`: tambahkan `&& !update.isPending`. Guard `!sekolah` di submit jadi `if (!editName && !sekolah)`.
-
-3f. Ganti `submit` try block:
+3f. `requiredOk` saat edit: gedung tdk wajib → `const requiredOk = (!!form.gedung || !!editName) && !!form.jenis && !!form.status;` dan `submitDisabled = !requiredOk || create.isPending || update.isPending;`
+3g. `submit`:
 ```tsx
+  const submit = async () => {
+    setErr(null);
+    const patch: Record<string, string> = { jenis: form.jenis, status: form.status };
+    if (form.provider) patch.provider = form.provider;
+    if (form.kapasitas) patch.kapasitas = form.kapasitas;
+    if (form.satuan) patch.satuan = form.satuan;
+    if (form.nomor_pelanggan) patch.nomor_pelanggan = form.nomor_pelanggan;
     try {
-      const patch: Record<string, unknown> = { jenis: form.jenis, status: form.status };
-      if (form.provider.trim()) patch.provider = form.provider.trim();
-      if (form.nomor_pelanggan.trim()) patch.nomor_pelanggan = form.nomor_pelanggan.trim();
-      if (form.kapasitas.trim()) patch.kapasitas = form.kapasitas.trim();
-      if (form.satuan.trim()) patch.satuan = form.satuan.trim();
       let name: string;
       if (editName) {
         name = (await update.mutateAsync({ name: editName, patch })).name;
       } else {
-        name = (await create.mutateAsync({ ...patch, gedung: form.gedung.trim() })).name;
+        const createPayload: Record<string, string> = { ...patch, gedung: form.gedung };
+        if (form.sekolah) createPayload.sekolah = form.sekolah;
+        name = (await create.mutateAsync(createPayload)).name;
       }
       await qc.invalidateQueries({ queryKey: ["resource:list", "Utilitas Gedung"] });
-      reset();
-      if (onCreated) onCreated(name);
-      onClose();
-    } catch (e) {
-      setErr((e as Error)?.message ?? "Gagal menyimpan utilitas.");
-    }
+      reset(); onCreated?.(name); onClose();
+    } catch (e) { setErr((e as Error)?.message ?? "Gagal menyimpan utilitas."); }
+  };
 ```
+3h. `reset()`: `setForm({ ...EMPTY_FORM, gedung: defaultGedung ?? "" })`.
+3i. Bila `defaultGedung` ada → sembunyikan FormField "Gedung" & "Sekolah". Render Jenis sbg `Select aria-label="Jenis"`. Title `editName ? "Edit Utilitas" : "Tambah Utilitas"`.
 
-3g. Title: `title={editName ? "Edit Utilitas" : "Tambah Utilitas"}`. Label pending mengikut.
-
-- [ ] **Step 4: Jalankan, pastikan lulus**
-
-Run: `pnpm --filter @sekolahpro/app-school test -- UtilitasGedungFormModal`
-Expected: PASS (2 test).
-
+- [ ] **Step 4: Run → PASS** (2 test)
 - [ ] **Step 5: Commit**
 
 ```bash
 git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web add apps/school/src/components/infrastruktur/UtilitasGedungFormModal.tsx apps/school/src/components/infrastruktur/UtilitasGedungFormModal.test.tsx
-git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): UtilitasGedungFormModal mode edit"
+git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat(infrastruktur): UtilitasGedungFormModal defaultGedung + mode edit"
 ```
 
 ---
 
 ## Task 6: Wiring ke route detail Gedung
 
-Tambah ke `$sekolah.infrastruktur.daftar-gedung.$gedungId.tsx`: tombol "Tambah"
-per SectionCard, kolom "Aksi" (Edit/Hapus) di tabel Lantai, Ruangan, Fasilitas,
-Utilitas, state modal + `ConfirmDeleteDialog`.
+**Files:** Modify `$sekolah.infrastruktur.daftar-gedung.$gedungId.tsx` +
+Create `apps/school/src/routes/__tests__/gedungDetailDelete.test.tsx`
 
-**Files:**
-- Modify: `apps/school/src/routes/$sekolah.infrastruktur.daftar-gedung.$gedungId.tsx`
-- Test: `apps/school/src/routes/__tests__/gedungDetailDelete.test.tsx` (Create — helper murni)
-
-- [ ] **Step 1: Tulis test gagal (helper deskripsi hapus)**
-
-Ekstrak helper kecil agar teruji tanpa router.
+- [ ] **Step 1: Tulis test gagal (helper)**
 
 ```tsx
 // apps/school/src/routes/__tests__/gedungDetailDelete.test.tsx
@@ -707,22 +646,19 @@ import { describe, it, expect } from "vitest";
 import { deleteTargetLabel } from "../$sekolah.infrastruktur.daftar-gedung.$gedungId";
 
 describe("deleteTargetLabel", () => {
-  it("format label hapus dgn doctype + name", () => {
+  it("format label hapus", () => {
     expect(deleteTargetLabel({ doctype: "Lantai", name: "GA-L1" })).toBe("Lantai GA-L1");
   });
 });
 ```
 
-- [ ] **Step 2: Jalankan, pastikan gagal**
-
-Run: `pnpm --filter @sekolahpro/app-school test -- gedungDetailDelete`
-Expected: FAIL — `deleteTargetLabel` belum di-export.
+- [ ] **Step 2: Run → FAIL** (`deleteTargetLabel` belum di-export)
 
 - [ ] **Step 3: Implementasi wiring**
 
-3a. Import baru (tambah ke import existing):
+3a. Import tambahan:
 ```tsx
-import { Button } from "@sekolahpro/ui"; // pastikan Button termasuk
+import { Button } from "@sekolahpro/ui"; // tambahkan ke import @sekolahpro/ui yg ada
 import { useResourceDelete } from "@sekolahpro/api-client";
 import { LantaiFormModal } from "../components/infrastruktur/LantaiFormModal";
 import { RuanganFormModal } from "../components/infrastruktur/RuanganFormModal";
@@ -731,7 +667,7 @@ import { UtilitasGedungFormModal } from "../components/infrastruktur/UtilitasGed
 import { ConfirmDeleteDialog } from "../components/infrastruktur/ConfirmDeleteDialog";
 ```
 
-3b. Helper di-export sebelum komponen:
+3b. Helper export sebelum komponen:
 ```tsx
 export function deleteTargetLabel(t: { doctype: string; name: string }): string {
   return `${t.doctype} ${t.name}`;
@@ -757,7 +693,7 @@ export function deleteTargetLabel(t: { doctype: string; name: string }): string 
   };
 ```
 
-3d. Kolom Aksi reusable (dalam komponen):
+3d. Kolom Aksi reusable:
 ```tsx
   const actionCol = <T extends { name: string }>(onEdit: (r: T) => void, doctype: string): Column<T> => ({
     key: "aksi", header: "Aksi",
@@ -770,73 +706,42 @@ export function deleteTargetLabel(t: { doctype: string; name: string }): string 
   });
 ```
 
-3e. Tiap SectionCard: prop `action` = tombol Tambah; columns += actionCol.
-Contoh Lantai:
+3e. Tiap SectionCard: prop `action` tombol Tambah + `columns` += actionCol. Contoh Lantai:
 ```tsx
 <SectionCard title="Lantai" padded={false}
   action={<Button onClick={() => setLantaiModal({ open: true })}>Tambah Lantai</Button>}>
   <DataTable<Lantai>
     data={lantaiQ.data ?? []}
     columns={[...LANTAI_COLS, actionCol<Lantai>((r) => setLantaiModal({ open: true, editName: r.name }), "Lantai")]}
-    rowKey={(r) => r.name}
-    empty={emptyRows("lantai")}
+    rowKey={(r) => r.name} empty={emptyRows("lantai")}
   />
 </SectionCard>
 ```
-Idem:
-- Ruangan → `setRuanganModal`, doctype "Ruangan".
-- Fasilitas → `setFasilitasModal`, doctype "Fasilitas Ruangan" (beri tombol "Tambah Fasilitas").
-- Utilitas → `setUtilitasModal`, doctype "Utilitas Gedung".
+Idem: Ruangan → `setRuanganModal`/"Ruangan"; Fasilitas → `setFasilitasModal`/"Fasilitas Ruangan" (tombol "Tambah Fasilitas"); Utilitas → `setUtilitasModal`/"Utilitas Gedung".
 
 3f. Render modal + dialog sebelum penutup fragment `primary`:
 ```tsx
-<LantaiFormModal
-  open={lantaiModal.open}
-  onClose={() => setLantaiModal({ open: false })}
-  defaultGedung={gedungId}
-  {...(lantaiModal.editName ? { editName: lantaiModal.editName } : {})}
-  onCreated={() => { void lantaiQ.refetch(); }}
-/>
-<RuanganFormModal
-  open={ruanganModal.open}
-  onClose={() => setRuanganModal({ open: false })}
-  gedung={gedungId}
-  {...(ruanganModal.editName ? { editName: ruanganModal.editName } : {})}
-  onCreated={() => { void ruanganQ.refetch(); }}
-/>
-<FasilitasRuanganFormModal
-  open={fasilitasModal.open}
-  onClose={() => setFasilitasModal({ open: false })}
-  {...(fasilitasModal.editName ? { editName: fasilitasModal.editName } : {})}
-  onCreated={() => { void fasilitasQ.refetch(); }}
-/>
-<UtilitasGedungFormModal
-  open={utilitasModal.open}
-  onClose={() => setUtilitasModal({ open: false })}
-  defaultGedung={gedungId}
-  {...(utilitasModal.editName ? { editName: utilitasModal.editName } : {})}
-  onCreated={() => { void utilitasQ.refetch(); }}
-/>
-<ConfirmDeleteDialog
-  open={!!del}
-  label={del ? deleteTargetLabel(del) : ""}
-  error={delErr}
-  pending={delMut.isPending}
-  onConfirm={confirmDelete}
-  onClose={() => { setDel(null); setDelErr(null); }}
-/>
+<LantaiFormModal open={lantaiModal.open} onClose={() => setLantaiModal({ open: false })}
+  defaultGedung={gedungId} {...(lantaiModal.editName ? { editName: lantaiModal.editName } : {})}
+  onCreated={() => { void lantaiQ.refetch(); }} />
+<RuanganFormModal open={ruanganModal.open} onClose={() => setRuanganModal({ open: false })}
+  defaultGedung={gedungId} {...(ruanganModal.editName ? { editName: ruanganModal.editName } : {})}
+  onCreated={() => { void ruanganQ.refetch(); }} />
+<FasilitasRuanganFormModal open={fasilitasModal.open} onClose={() => setFasilitasModal({ open: false })}
+  defaultGedung={gedungId} {...(fasilitasModal.editName ? { editName: fasilitasModal.editName } : {})}
+  onCreated={() => { void fasilitasQ.refetch(); }} />
+<UtilitasGedungFormModal open={utilitasModal.open} onClose={() => setUtilitasModal({ open: false })}
+  defaultGedung={gedungId} {...(utilitasModal.editName ? { editName: utilitasModal.editName } : {})}
+  onCreated={() => { void utilitasQ.refetch(); }} />
+<ConfirmDeleteDialog open={!!del} label={del ? deleteTargetLabel(del) : ""} error={delErr}
+  pending={delMut.isPending} onConfirm={confirmDelete}
+  onClose={() => { setDel(null); setDelErr(null); }} />
 ```
 
-3g. Update comment header file: hapus klaim "read-only ... pembuatan data dilakukan di modul masing-masing"; ganti jadi "CRUD inline per tab". Pastikan `Button` ada di import `@sekolahpro/ui`.
+3g. Update comment header file: hapus klaim "read-only"; ganti "CRUD inline per tab".
 
-Catatan: `RuanganFormModal` tdk punya `defaultLantai` di sini (user pilih lantai
-dalam gedung; select sudah difilter `gedung={gedungId}` dari Task 3).
-`FasilitasRuanganFormModal` user pilih ruangan (select global; pemfilteran per
-gedung = peningkatan opsional di luar scope).
+- [ ] **Step 4: Test + typecheck + lint**
 
-- [ ] **Step 4: Test + lint + typecheck**
-
-Run: `pnpm --filter @sekolahpro/app-school test -- gedungDetailDelete` → PASS.
 Run: `pnpm --filter @sekolahpro/app-school test` → semua lulus.
 Run: `pnpm --filter @sekolahpro/app-school typecheck` → 0 error.
 Run: `pnpm --filter @sekolahpro/app-school lint` → 0 error.
@@ -852,22 +757,12 @@ git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "feat
 
 ## Task 7: Verifikasi manual + dokumentasi OpenWolf
 
-- [ ] **Step 1: Dev server & cek UI**
-
-Run: `pnpm --filter @sekolahpro/app-school dev`
-Buka `/{sekolah}/infrastruktur/daftar-gedung/{gedungId}`. Verifikasi tiap tab:
-Tambah membuka modal dgn konteks gedung; Edit memuat data; Hapus minta konfirmasi;
-tabel refresh tanpa reload.
-Catatan R1: jika login bukan System Manager → mutasi gagal 403 (lihat spec R1).
-
-- [ ] **Step 2: Update OpenWolf**
-
-Update `apps/school/.wolf/anatomy.md` (1 file baru ConfirmDeleteDialog + 4 modal
-dimodifikasi + route) dan append `apps/school/.wolf/memory.md`. Bila ada bug saat
-run, log ke `apps/school/.wolf/buglog.json`.
-
-- [ ] **Step 3: Commit dokumentasi**
-
+- [ ] **Step 1:** `pnpm --filter @sekolahpro/app-school dev`, buka
+  `/{sekolah}/infrastruktur/daftar-gedung/{gedungId}`, verifikasi Tambah/Edit/Hapus
+  tiap tab + refresh tabel. R1: non-System-Manager → 403 (lihat spec).
+- [ ] **Step 2:** Update `apps/school/.wolf/anatomy.md` (1 file baru + 4 modal +
+  route) & append `.wolf/memory.md`; bug → `.wolf/buglog.json`.
+- [ ] **Step 3:** Commit:
 ```bash
 git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web add apps/school/.wolf
 git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "docs(infrastruktur): update anatomy + memory utk CRUD Gedung"
@@ -877,17 +772,22 @@ git -C /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro-web commit -m "docs
 
 ## Self-Review (penulis plan)
 
-- **Spec coverage (Addendum):** Lantai CRUD (T2+T6), Ruangan CRUD (T3+T6),
-  Fasilitas CRUD (T4+T6), Utilitas CRUD (T5+T6), konfirmasi hapus (T1+T6),
-  R1 perm didokumentasikan (T7). ✓
-- **Reuse, bukan rebuild:** 4 modal existing diperluas (edit), tidak dibuat ulang;
-  `ChildRowsEditor`/grid-in-parent DIBATALKAN (Fasilitas pakai modal standalone
-  sesuai pola codebase). ✓
-- **Backward-compat:** `editName` opsional; caller lama (route modul terpisah)
-  tanpa `editName` tetap create. `onCreated` dipakai utk create & edit. ✓
-- **Type/signature:** `useResourceUpdate` = `{name, patch}`, `useResourceDelete`
-  = `name`, `useResourceDoc(doctype, name, {enabled})` — sesuai
-  `packages/api-client/src/frappeResource.ts`. Modal `tone="rose"` valid. ✓
-- **Placeholder scan:** tdk ada TBD/TODO; tiap step berisi kode nyata. ✓
-- **Test infra:** vitest `globals:false` → import dari "vitest"; jsdom + RTL +
-  jest-dom ada. Command `pnpm --filter @sekolahpro/app-school test -- <file>`. ✓
+- **Spec coverage (Addendum):** Lantai (T2+T6), Ruangan (T3+T6), Fasilitas (T4+T6),
+  Utilitas (T5+T6), konfirmasi hapus (T1+T6), R1 perm (T7). ✓
+- **Akurasi vs kode aktual:** state shape tiap modal sudah dicocokkan (Lantai/
+  Ruangan/Fasilitas = useState individual; Utilitas = objek `form`). Lantai create
+  TIDAK kirim sekolah (hook BE). Prop default & editName = penambahan baru
+  (sebelumnya tdk ada). ✓
+- **Reuse, bukan rebuild:** extend 4 modal; `ChildRowsEditor`/grid-in-parent
+  DIBATALKAN; Fasilitas = modal standalone via parent ref. ✓
+- **Backward-compat:** `defaultGedung`/`editName` opsional; caller lama tetap jalan;
+  `onCreated` dipakai create & edit. ✓
+- **Type/signature:** `useResourceUpdate`={name,patch}, `useResourceDelete`=name,
+  `useResourceDoc(dt,name,{enabled})`, `useResourceList(dt,{filters,...})` sesuai
+  `frappeResource.ts`. Modal `tone="rose"` valid. ✓
+- **Catatan a11y/test:** beberapa Input/Select diberi `aria-label` agar
+  `getByLabelText` di test cocok (FormField label belum `htmlFor`-linked). Untuk
+  Lantai/Jenis/Status/Ruangan, plan mengganti `SearchableSelect`→`Select` polos
+  demi test deterministik. ✓
+- **Placeholder scan:** tidak ada TBD/TODO. ✓
+```
