@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { cleanup } from "@testing-library/react";
 
 const createMut = vi.fn().mockResolvedValue({ name: "GA-L1-R1" });
 const updateMut = vi.fn().mockResolvedValue({ name: "GA-L1-R1" });
@@ -15,6 +16,7 @@ vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQue
 import { RuanganFormModal } from "./RuanganFormModal";
 
 describe("RuanganFormModal", () => {
+  afterEach(() => cleanup());
   beforeEach(() => { createMut.mockClear(); updateMut.mockClear(); docData = undefined; });
 
   it("create kirim field wajib (jenis default Kelas, status Tersedia)", async () => {

@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { cleanup } from "@testing-library/react";
 
 const createMut = vi.fn().mockResolvedValue({ name: "GA-L1" });
 const updateMut = vi.fn().mockResolvedValue({ name: "GA-L1" });
@@ -15,6 +16,7 @@ vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQue
 import { LantaiFormModal } from "./LantaiFormModal";
 
 describe("LantaiFormModal", () => {
+  afterEach(() => cleanup());
   beforeEach(() => { createMut.mockClear(); updateMut.mockClear(); docData = undefined; });
 
   it("create dgn defaultGedung mengirim gedung tanpa pilih manual", async () => {
