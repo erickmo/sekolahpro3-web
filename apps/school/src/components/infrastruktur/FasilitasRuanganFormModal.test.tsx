@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { cleanup } from "@testing-library/react";
 
 const createMut = vi.fn().mockResolvedValue({ name: "fas-1" });
 const updateMut = vi.fn().mockResolvedValue({ name: "fas-1" });
@@ -15,6 +16,7 @@ vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQue
 import { FasilitasRuanganFormModal } from "./FasilitasRuanganFormModal";
 
 describe("FasilitasRuanganFormModal", () => {
+  afterEach(() => cleanup());
   beforeEach(() => { createMut.mockClear(); updateMut.mockClear(); docData = undefined; });
 
   it("create child dgn parent reference", async () => {
