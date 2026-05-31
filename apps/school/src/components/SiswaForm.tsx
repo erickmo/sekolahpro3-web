@@ -1,5 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
+  Avatar,
+  Badge,
   Button,
   Checkbox,
   DatePicker,
@@ -11,12 +13,16 @@ import {
   Textarea,
   IconCheck,
 } from "@sekolahpro/ui";
-import type { Agama, JenisKelamin, Siswa, StatusSiswa } from "../data/siswa";
+import type { Agama, JenisKelamin, Siswa, StatusSiswa, WaliRow } from "../data/siswa";
+import { WaliModal } from "./SiswaModals";
 
 export type SiswaFormValues = Omit<Siswa,
   "nilai" | "absensi" | "tagihan" | "pembayaran" | "mutasi" | "dokumen" | "aktivitas" |
-  "rataNilai" | "persenKehadiran" | "saldoTagihan" | "wali"
+  "rataNilai" | "persenKehadiran" | "saldoTagihan"
 >;
+
+const BIRTH_YEAR_FROM = 1990;
+const CURRENT_YEAR = new Date().getFullYear();
 
 interface SiswaFormProps {
   initial?: Partial<SiswaFormValues>;
@@ -75,6 +81,7 @@ function defaults(initial?: Partial<SiswaFormValues>): SiswaFormValues {
     telepon: "",
     email: "",
     fotoUrl: "",
+    wali: [],
     ...initial,
   } as SiswaFormValues;
 }
@@ -97,10 +104,33 @@ function validate(v: SiswaFormValues): Errors {
 export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: SiswaFormProps) {
   const [values, setValues] = useState<SiswaFormValues>(() => defaults(initial));
   const [errors, setErrors] = useState<Errors>({});
+  const [waliModalOpen, setWaliModalOpen] = useState(false);
+  const [waliEditIdx, setWaliEditIdx] = useState<number | null>(null);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof SiswaFormValues>(key: K, val: SiswaFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: val }));
     if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
+
+  const handleFotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    set("fotoUrl", URL.createObjectURL(file));
+  };
+
+  const waliRows: WaliRow[] = values.wali ?? [];
+
+  const handleWaliSubmit = (w: WaliRow) => {
+    const next = waliEditIdx != null
+      ? waliRows.map((r, i) => (i === waliEditIdx ? w : r))
+      : [...waliRows, w];
+    set("wali", next);
+    setWaliEditIdx(null);
+  };
+
+  const handleWaliRemove = (idx: number) => {
+    set("wali", waliRows.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -139,7 +169,14 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
             <Input name="tempatLahir" value={values.tempatLahir} onChange={(e) => set("tempatLahir", e.target.value)} />
           </FormField>
           <FormField label="Tanggal Lahir" required error={errors.tanggalLahir}>
-            <DatePicker name="tanggalLahir" value={values.tanggalLahir} onChange={(v) => set("tanggalLahir", v)} />
+            <DatePicker
+              name="tanggalLahir"
+              value={values.tanggalLahir}
+              onChange={(v) => set("tanggalLahir", v)}
+              captionLayout="dropdown-buttons"
+              fromYear={BIRTH_YEAR_FROM}
+              toYear={CURRENT_YEAR}
+            />
           </FormField>
           <FormField label="Agama" required>
             <SearchableSelect
@@ -179,22 +216,31 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
               options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
             />
           </FormField>
-          <FormField label="Jenjang" required>
+          <FormField label="Jenjang" required hint="Ditetapkan otomatis">
             <SearchableSelect
               value={values.jenjang}
               onChange={(v) => set("jenjang", v)}
               options={JENJANG_OPTIONS.map((j) => ({ value: j, label: j }))}
+              disabled
             />
           </FormField>
-          <FormField label="Kelas" required>
+          <FormField label="Kelas" required hint="Ditetapkan otomatis">
             <SearchableSelect
               value={values.kelas}
               onChange={(v) => set("kelas", v)}
               options={KELAS_OPTIONS.map((k) => ({ value: k, label: k }))}
+              disabled
             />
           </FormField>
-          <FormField label="Rombel">
-            <Input name="rombel" value={values.rombel} onChange={(e) => set("rombel", e.target.value)} placeholder="contoh: X-IPA-1 A" />
+          <FormField label="Rombel" hint="Ditetapkan otomatis">
+            <Input
+              name="rombel"
+              value={values.rombel}
+              onChange={(e) => set("rombel", e.target.value)}
+              placeholder="contoh: X-IPA-1 A"
+              readOnly
+              className="bg-muted text-muted-fg cursor-not-allowed"
+            />
           </FormField>
           <FormField label="Tahun Masuk" required>
             <SearchableSelect
@@ -298,11 +344,96 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
           <FormField label="Email" error={errors.email}>
             <Input name="email" type="email" value={values.email ?? ""} onChange={(e) => set("email", e.target.value)} placeholder="nama@sekolah.sch.id" />
           </FormField>
-          <FormField label="URL Foto" className="sm:col-span-2">
-            <Input name="fotoUrl" value={values.fotoUrl ?? ""} onChange={(e) => set("fotoUrl", e.target.value)} placeholder="https://..." />
+          <FormField label="Foto Siswa" className="sm:col-span-2" hint="JPG/PNG, maks. 2 MB">
+            <div className="flex items-center gap-4">
+              <Avatar name={values.namaLengkap} src={values.fotoUrl || null} size="lg" />
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={fotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFotoSelect}
+                />
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="outline" onClick={() => fotoInputRef.current?.click()}>
+                    {values.fotoUrl ? "Ganti Foto" : "Unggah Foto"}
+                  </Button>
+                  {values.fotoUrl ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        set("fotoUrl", "");
+                        if (fotoInputRef.current) fotoInputRef.current.value = "";
+                      }}
+                    >
+                      Hapus
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </FormField>
         </FormGrid>
       </SectionCard>
+
+      <SectionCard
+        title="Wali Siswa"
+        description="Data Ayah, Ibu, atau Wali resmi (child table dari Siswa)"
+        action={
+          <Button type="button" variant="outline" onClick={() => { setWaliEditIdx(null); setWaliModalOpen(true); }}>
+            Tambah Wali
+          </Button>
+        }
+      >
+        {waliRows.length === 0 ? (
+          <p className="text-sm text-muted-fg py-2">Belum ada data wali. Klik “Tambah Wali” untuk menambah.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-muted-fg">
+                  <th className="py-2 pr-3 font-medium">Hubungan</th>
+                  <th className="py-2 pr-3 font-medium">Nama</th>
+                  <th className="py-2 pr-3 font-medium">Pekerjaan</th>
+                  <th className="py-2 pr-3 font-medium">Telepon</th>
+                  <th className="py-2 pr-3 font-medium">Utama</th>
+                  <th className="py-2 pr-3 font-medium text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {waliRows.map((w, i) => (
+                  <tr key={`${i}-${w.hubungan}-${w.nama}`} className="border-b border-border/60">
+                    <td className="py-2 pr-3"><Badge tone="brand">{w.hubungan}</Badge></td>
+                    <td className="py-2 pr-3">{w.nama}</td>
+                    <td className="py-2 pr-3">{w.pekerjaan || "—"}</td>
+                    <td className="py-2 pr-3">{w.telepon || "—"}</td>
+                    <td className="py-2 pr-3">{w.isPrimary ? <Badge tone="success">Ya</Badge> : "—"}</td>
+                    <td className="py-2 pr-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { setWaliEditIdx(i); setWaliModalOpen(true); }}>
+                          Edit
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleWaliRemove(i)}>
+                          Hapus
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
+
+      <WaliModal
+        open={waliModalOpen}
+        onClose={() => { setWaliModalOpen(false); setWaliEditIdx(null); }}
+        initial={waliEditIdx != null ? waliRows[waliEditIdx] : undefined}
+        onSubmit={handleWaliSubmit}
+      />
 
       <div className="sticky bottom-0 -mx-1 px-1 py-3 bg-bg/80 backdrop-blur border-t border-border flex items-center justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
