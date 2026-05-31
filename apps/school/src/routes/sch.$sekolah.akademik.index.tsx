@@ -78,6 +78,7 @@ const AKADEMIK_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "kkm", label: "KKM", hint: "Ketuntasan minimal", href: "/sch/$sekolah/master/kkm" },
   { key: "komponen", label: "Komponen Nilai", hint: "Bobot per komponen", href: "/sch/$sekolah/master/komponen-nilai" },
   { key: "asesmen", label: "Input Nilai Test", hint: "Nilai per test/ulangan", href: "/sch/$sekolah/akademik/asesmen" },
+  { key: "entri", label: "Entri Nilai", hint: "Input nilai siswa", href: "/sch/$sekolah/akademik/entri-nilai" },
   { key: "raport", label: "Raport", hint: "Susun & cetak raport", href: "/sch/$sekolah/akademik/raport" },
 ];
 
@@ -87,6 +88,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   { to: "/sch/$sekolah/akademik/raport", label: "Raport", description: "Susun & cetak raport siswa.", icon: <IconFile />, accent: "emerald" },
   { to: "/sch/$sekolah/master/kkm", label: "KKM", description: "Atur Kriteria Ketuntasan Minimal.", icon: <IconCheck />, accent: "amber" },
   { to: "/sch/$sekolah/master/komponen-nilai", label: "Komponen Nilai", description: "Definisikan bobot komponen penilaian.", icon: <IconChart />, accent: "violet" },
+  { to: "/sch/$sekolah/master/kurikulum", label: "Kurikulum", description: "Kelola kurikulum & struktur mapel.", icon: <IconGrad />, accent: "sky" },
   { to: "/sch/$sekolah/master/konfigurasi", label: "Konfigurasi", description: "Pengaturan modul akademik.", icon: <IconSettings />, accent: "rose" },
 ];
 

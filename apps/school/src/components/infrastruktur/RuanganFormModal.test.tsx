@@ -42,4 +42,45 @@ describe("RuanganFormModal", () => {
     expect(arg.patch.sekolah).toBeUndefined();
     expect(arg.patch.gedung).toBeUndefined();
   });
+
+  it("create dengan baris fasilitas kirim child table", async () => {
+    render(<RuanganFormModal open defaultGedung="SEK-1-GA" onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Nama"), { target: { value: "Lab IPA" } });
+    fireEvent.change(screen.getByLabelText("Kode"), { target: { value: "R2" } });
+    fireEvent.change(screen.getByLabelText("Lantai"), { target: { value: "GA-L1" } });
+    fireEvent.click(screen.getByText("+ Tambah baris"));
+    fireEvent.change(screen.getByLabelText("Nama Fasilitas 1"), { target: { value: "Proyektor" } });
+    fireEvent.change(screen.getByLabelText("Jumlah 1"), { target: { value: "2" } });
+    fireEvent.click(screen.getByText("Simpan"));
+    await waitFor(() => expect(createMut).toHaveBeenCalled());
+    expect(createMut.mock.calls[0][0].fasilitas).toEqual([
+      { nama_fasilitas: "Proyektor", jumlah: 2, kondisi: "Baik" },
+    ]);
+  });
+
+  it("baris fasilitas tanpa nama di-drop sebelum submit", async () => {
+    render(<RuanganFormModal open defaultGedung="SEK-1-GA" onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Nama"), { target: { value: "Kelas 2A" } });
+    fireEvent.change(screen.getByLabelText("Kode"), { target: { value: "R3" } });
+    fireEvent.change(screen.getByLabelText("Lantai"), { target: { value: "GA-L1" } });
+    fireEvent.click(screen.getByText("+ Tambah baris"));
+    fireEvent.click(screen.getByText("Simpan"));
+    await waitFor(() => expect(createMut).toHaveBeenCalled());
+    expect(createMut.mock.calls[0][0].fasilitas).toEqual([]);
+  });
+
+  it("edit menghidrasi baris fasilitas dari child table", async () => {
+    docData = {
+      name: "GA-L1-R1", nama: "Kelas 1A", kode: "R1", lantai: "GA-L1",
+      jenis_ruangan: "Kelas", status: "Tersedia",
+      fasilitas: [{ nama_fasilitas: "AC", jumlah: 1, kondisi: "Baik" }],
+    };
+    render(<RuanganFormModal open editName="GA-L1-R1" defaultGedung="SEK-1-GA" onClose={() => {}} />);
+    await screen.findByDisplayValue("AC");
+    fireEvent.click(screen.getByText("Simpan"));
+    await waitFor(() => expect(updateMut).toHaveBeenCalled());
+    expect(updateMut.mock.calls[0][0].patch.fasilitas).toEqual([
+      { nama_fasilitas: "AC", jumlah: 1, kondisi: "Baik" },
+    ]);
+  });
 });

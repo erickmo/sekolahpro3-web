@@ -28,6 +28,13 @@ type LantaiRow = { name: string; gedung?: string; nomor_lantai?: number };
 type GedungRow = { name: string; nama?: string };
 type SekolahRow = { name: string; nama_sekolah?: string };
 
+/** Editable child-table row for the "fasilitas" table on Ruangan. */
+type FasilitasRow = { nama_fasilitas: string; jumlah: string; kondisi: string };
+
+const KONDISI_OPTIONS = ["Baik", "Rusak"] as const;
+const KONDISI_DEFAULT = "Baik";
+const emptyFasilitas = (): FasilitasRow => ({ nama_fasilitas: "", jumlah: "", kondisi: KONDISI_DEFAULT });
+
 const JENIS_OPTIONS = [
   "Kelas",
   "Lab",
@@ -61,6 +68,7 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
   const [kapasitas, setKapasitas] = useState("");
   const [luasM2, setLuasM2] = useState("");
   const [status, setStatus] = useState<string>("Tersedia");
+  const [fasilitas, setFasilitas] = useState<FasilitasRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
 
   const create = useResourceCreate<{ name: string }>("Ruangan");
@@ -91,6 +99,15 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
     setStatus(`${d.status ?? "Tersedia"}`);
     setKapasitas(`${d.kapasitas ?? ""}`);
     setLuasM2(`${d.luas_m2 ?? ""}`);
+    // Hydrate child rows: get_doc returns the "fasilitas" child table.
+    const rows = Array.isArray(d.fasilitas) ? (d.fasilitas as Record<string, unknown>[]) : [];
+    setFasilitas(
+      rows.map((r) => ({
+        nama_fasilitas: `${r.nama_fasilitas ?? ""}`,
+        jumlah: r.jumlah == null ? "" : `${r.jumlah}`,
+        kondisi: `${r.kondisi ?? KONDISI_DEFAULT}`,
+      })),
+    );
   }, [docQ.data]);
 
   const reset = () => {
@@ -103,8 +120,16 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
     setKapasitas("");
     setLuasM2("");
     setStatus("Tersedia");
+    setFasilitas([]);
     setErr(null);
   };
+
+  // --- Child-table (fasilitas) editors ---
+  const addFasilitas = () => setFasilitas((rows) => [...rows, emptyFasilitas()]);
+  const removeFasilitas = (idx: number) =>
+    setFasilitas((rows) => rows.filter((_, i) => i !== idx));
+  const patchFasilitas = (idx: number, key: keyof FasilitasRow, value: string) =>
+    setFasilitas((rows) => rows.map((r, i) => (i === idx ? { ...r, [key]: value } : r)));
 
   const closeAll = () => {
     reset();
@@ -133,11 +158,25 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
       const n = parseFloat(luasM2);
       if (!Number.isNaN(n)) patch.luas_m2 = n;
     }
+    // Child table: drop blank-name rows, coerce jumlah to number. Sent whole →
+    // Frappe replaces the child set in one save (parent linkage server-side).
+    patch.fasilitas = fasilitas
+      .filter((r) => r.nama_fasilitas.trim())
+      .map((r) => {
+        const row: Record<string, unknown> = { nama_fasilitas: r.nama_fasilitas.trim() };
+        if (r.jumlah.trim()) {
+          const n = Number(r.jumlah);
+          if (!Number.isNaN(n)) row.jumlah = n;
+        }
+        if (r.kondisi) row.kondisi = r.kondisi;
+        return row;
+      });
     try {
       const name = editName
         ? (await update.mutateAsync({ name: editName, patch })).name
         : (await create.mutateAsync(patch)).name;
       await qc.invalidateQueries({ queryKey: ["resource:list", "Ruangan"] });
+      await qc.invalidateQueries({ queryKey: ["resource:list", "Fasilitas Ruangan"] });
       onCreated?.(name);
       reset();
       onClose();
@@ -241,6 +280,52 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
             </Select>
           </FormField>
         </FormGrid>
+
+        <div className="space-y-2 rounded-lg border border-border p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold text-fg">Fasilitas</div>
+            <Button variant="outline" onClick={addFasilitas}>+ Tambah baris</Button>
+          </div>
+          {fasilitas.length === 0 ? (
+            <div className="py-2 text-xs text-muted-fg">Belum ada fasilitas. Klik tombol Tambah baris.</div>
+          ) : (
+            <div className="space-y-2">
+              {fasilitas.map((row, idx) => (
+                <div key={idx} className="grid grid-cols-[1fr_6rem_8rem_auto] items-end gap-2">
+                  <FormField label={idx === 0 ? "Nama Fasilitas" : ""}>
+                    <Input
+                      aria-label={`Nama Fasilitas ${idx + 1}`}
+                      value={row.nama_fasilitas}
+                      onChange={(e) => patchFasilitas(idx, "nama_fasilitas", e.target.value)}
+                    />
+                  </FormField>
+                  <FormField label={idx === 0 ? "Jumlah" : ""}>
+                    <Input
+                      aria-label={`Jumlah ${idx + 1}`}
+                      type="number"
+                      value={row.jumlah}
+                      onChange={(e) => patchFasilitas(idx, "jumlah", e.target.value)}
+                    />
+                  </FormField>
+                  <FormField label={idx === 0 ? "Kondisi" : ""}>
+                    <Select
+                      aria-label={`Kondisi ${idx + 1}`}
+                      value={row.kondisi}
+                      onChange={(e) => patchFasilitas(idx, "kondisi", e.target.value)}
+                    >
+                      {KONDISI_OPTIONS.map((o) => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </Select>
+                  </FormField>
+                  <Button variant="outline" onClick={() => removeFasilitas(idx)} aria-label={`Hapus fasilitas ${idx + 1}`}>
+                    Hapus
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">

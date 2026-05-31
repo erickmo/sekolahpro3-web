@@ -20,7 +20,6 @@ import { useResourceDoc, useResourceList, useResourceDelete } from "@sekolahpro/
 import { scopedLinkProps } from "../lib/scoped";
 import { LantaiFormModal } from "../components/infrastruktur/LantaiFormModal";
 import { RuanganFormModal } from "../components/infrastruktur/RuanganFormModal";
-import { FasilitasRuanganFormModal } from "../components/infrastruktur/FasilitasRuanganFormModal";
 import { UtilitasGedungFormModal } from "../components/infrastruktur/UtilitasGedungFormModal";
 import { ConfirmDeleteDialog } from "../components/infrastruktur/ConfirmDeleteDialog";
 import { deleteTargetLabel, type DeleteTarget } from "../components/infrastruktur/deleteTarget";
@@ -46,14 +45,6 @@ const RUANGAN_COLS: Column<Ruangan>[] = [
     cell: (r) => <Badge tone={r.status === "Tersedia" ? "success" : r.status === "Dipakai" ? "brand" : r.status === "Maintenance" ? "warning" : "neutral"} dot>{r.status ?? "—"}</Badge> },
 ];
 
-const FASILITAS_COLS: Column<Fasilitas>[] = [
-  { key: "parent", header: "Ruangan", cell: (r) => r.parent ?? "—" },
-  { key: "nama_fasilitas", header: "Fasilitas", cell: (r) => r.nama_fasilitas ?? "—" },
-  { key: "jumlah", header: "Jumlah", align: "right", cell: (r) => r.jumlah ?? "—" },
-  { key: "kondisi", header: "Kondisi",
-    cell: (r) => <Badge tone={r.kondisi === "Baik" ? "success" : r.kondisi === "Rusak" ? "danger" : "neutral"} dot>{r.kondisi ?? "—"}</Badge> },
-];
-
 const UTILITAS_COLS: Column<Utilitas>[] = [
   { key: "jenis", header: "Jenis", cell: (r) => <Badge tone="neutral">{r.jenis ?? "—"}</Badge> },
   { key: "provider", header: "Provider", cell: (r) => r.provider ?? "—" },
@@ -74,6 +65,34 @@ const emptyRows = (label: string) => (
 );
 
 /**
+ * Read-only facility list shown in a room's expanded row. Editing facilities is
+ * done via the room form (RuanganFormModal child-table editor).
+ */
+const renderFasilitas = (rows: Fasilitas[]) => {
+  if (rows.length === 0) {
+    return <div className="text-xs text-muted-fg">Belum ada fasilitas. Tambah lewat tombol Edit ruangan.</div>;
+  }
+  return (
+    <div className="space-y-1">
+      <div className="text-xs font-semibold uppercase tracking-wider text-muted-fg">Fasilitas</div>
+      <ul className="divide-y divide-border rounded-md border border-border">
+        {rows.map((f) => (
+          <li key={f.name} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+            <span className="text-fg">{f.nama_fasilitas ?? "—"}</span>
+            <span className="flex items-center gap-3 text-muted-fg">
+              <span>Jumlah: {f.jumlah ?? "—"}</span>
+              <Badge tone={f.kondisi === "Baik" ? "success" : f.kondisi === "Rusak" ? "danger" : "neutral"} dot>
+                {f.kondisi ?? "—"}
+              </Badge>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+/**
  * Detail Gedung — CRUD inline per tab. Menampilkan info gedung + tab Lantai /
  * Ruangan & Fasilitas / Utilitas yang ter-scope ke gedung ini. Tiap tab punya
  * aksi Tambah/Edit/Hapus via modal (reuse modal infrastruktur + ConfirmDeleteDialog).
@@ -85,7 +104,6 @@ function GedungDetailPage() {
 
   const [lantaiModal, setLantaiModal] = useState<{ open: boolean; editName?: string }>({ open: false });
   const [ruanganModal, setRuanganModal] = useState<{ open: boolean; editName?: string }>({ open: false });
-  const [fasilitasModal, setFasilitasModal] = useState<{ open: boolean; editName?: string }>({ open: false });
   const [utilitasModal, setUtilitasModal] = useState<{ open: boolean; editName?: string }>({ open: false });
   const [del, setDel] = useState<DeleteTarget | null>(null);
   const [delErr, setDelErr] = useState<string | null>(null);
@@ -125,6 +143,17 @@ function GedungDetailPage() {
     },
     { enabled: ruanganNames.length > 0 },
   );
+
+  // Group facilities by their parent room for read-only expanded display.
+  const fasilitasByParent = useMemo(() => {
+    const map = new Map<string, Fasilitas[]>();
+    for (const f of fasilitasQ.data ?? []) {
+      const list = map.get(f.parent ?? "") ?? [];
+      list.push(f);
+      map.set(f.parent ?? "", list);
+    }
+    return map;
+  }, [fasilitasQ.data]);
 
   const gedung = gedungQ.data;
   const backTo = "/infrastruktur/daftar-gedung";
@@ -240,26 +269,16 @@ function GedungDetailPage() {
             )}
 
             {tab === TAB_RUANGAN && (
-              <div className="space-y-4">
-                <SectionCard title="Ruangan" padded={false}
-                  action={<Button onClick={() => setRuanganModal({ open: true })}>Tambah Ruangan</Button>}>
-                  <DataTable<Ruangan>
-                    data={ruanganQ.data ?? []}
-                    columns={[...RUANGAN_COLS, actionCol<Ruangan>((r) => setRuanganModal({ open: true, editName: r.name }), "Ruangan")]}
-                    rowKey={(r) => r.name}
-                    empty={emptyRows("ruangan")}
-                  />
-                </SectionCard>
-                <SectionCard title="Fasilitas Ruangan" padded={false}
-                  action={<Button onClick={() => setFasilitasModal({ open: true })}>Tambah Fasilitas</Button>}>
-                  <DataTable<Fasilitas>
-                    data={fasilitasQ.data ?? []}
-                    columns={[...FASILITAS_COLS, actionCol<Fasilitas>((r) => setFasilitasModal({ open: true, editName: r.name }), "Fasilitas Ruangan")]}
-                    rowKey={(r) => r.name}
-                    empty={emptyRows("fasilitas")}
-                  />
-                </SectionCard>
-              </div>
+              <SectionCard title="Ruangan" padded={false}
+                action={<Button onClick={() => setRuanganModal({ open: true })}>Tambah Ruangan</Button>}>
+                <DataTable<Ruangan>
+                  data={ruanganQ.data ?? []}
+                  columns={[...RUANGAN_COLS, actionCol<Ruangan>((r) => setRuanganModal({ open: true, editName: r.name }), "Ruangan")]}
+                  rowKey={(r) => r.name}
+                  empty={emptyRows("ruangan")}
+                  renderExpanded={(r) => renderFasilitas(fasilitasByParent.get(r.name) ?? [])}
+                />
+              </SectionCard>
             )}
 
             {tab === TAB_UTILITAS && (
@@ -288,13 +307,6 @@ function GedungDetailPage() {
             defaultGedung={gedungId}
             {...(ruanganModal.editName ? { editName: ruanganModal.editName } : {})}
             onCreated={() => { void ruanganQ.refetch(); }}
-          />
-          <FasilitasRuanganFormModal
-            open={fasilitasModal.open}
-            onClose={() => setFasilitasModal({ open: false })}
-            defaultGedung={gedungId}
-            {...(fasilitasModal.editName ? { editName: fasilitasModal.editName } : {})}
-            onCreated={() => { void fasilitasQ.refetch(); }}
           />
           <UtilitasGedungFormModal
             open={utilitasModal.open}

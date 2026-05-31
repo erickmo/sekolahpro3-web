@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
-import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
+import type { NavTabGroup } from "../components/GroupedNavTabs";
+import { MegaMenuNav } from "../components/MegaMenuNav";
 
 // Master Data = pusat setup. Grup "Akademik" menampung master akademik yang
 // dipindah dari modul Akademik (Tahun Ajaran, Kurikulum, Mapel, dll).
@@ -29,7 +30,7 @@ function MasterLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <div className="space-y-4">
-      <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} />
+      <MegaMenuNav groups={NAV_GROUPS} pathname={pathname} triggerLabel="Master Data" />
       <Outlet />
     </div>
   );
