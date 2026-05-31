@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SekolahPro — Dokumentasi School App</title>
+<style>
+  :root {
+    --bg-base:#0f172a; --bg-surface:#1e293b; --bg-elevated:#293548; --bg-border:#334155;
+    --text-primary:#e2e8f0; --text-muted:#94a3b8; --text-faint:#475569;
+    --accent:#6366f1; --accent-hover:#818cf8; --accent-subtle:#1e1b4b;
+    --success:#10b981; --warning:#f59e0b; --danger:#ef4444; --info:#38bdf8;
+    --code-bg:#0d1117; --code-border:#21262d; --code-text:#c9d1d9;
+    --font-sans:'Inter',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+    --content-width:860px; --sidebar-width:260px; --toc-width:200px;
+    --radius-sm:4px; --radius-md:8px; --radius-lg:12px;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    margin:0; background:var(--bg-base); color:var(--text-primary);
+    font-family:var(--font-sans); font-size:16px; line-height:1.6;
+  }
+  a { color:var(--accent-hover); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  /* Topbar */
+  .topbar {
+    position:sticky; top:0; z-index:30; height:56px;
+    display:flex; align-items:center; gap:24px;
+    padding:0 24px; background:var(--bg-surface);
+    border-bottom:1px solid var(--bg-border);
+  }
+  .topbar-brand { display:flex; align-items:center; gap:10px; font-weight:600; }
+  .brand-logo {
+    width:28px; height:28px; border-radius:var(--radius-sm);
+    background:var(--accent); color:#fff; display:flex;
+    align-items:center; justify-content:center; font-weight:700;
+  }
+  .brand-name { font-size:15px; }
+  .brand-name .sub { color:var(--text-muted); font-weight:400; }
+  .audience-switcher { display:flex; gap:4px; margin-left:8px; }
+  .aud-btn {
+    background:transparent; border:1px solid var(--bg-border);
+    color:var(--text-muted); padding:4px 12px; border-radius:9999px;
+    font-size:12px; font-weight:600; cursor:pointer; transition:.15s;
+  }
+  .aud-btn:hover { color:var(--text-primary); border-color:var(--accent); }
+  .aud-btn.active { background:var(--accent-subtle); color:var(--accent-hover); border-color:var(--accent); }
+  .topbar-meta { margin-left:auto; display:flex; gap:14px; font-size:12px; color:var(--text-muted); }
+  .topbar-meta .doc-version { color:var(--accent-hover); font-family:var(--font-mono); }
+
+  /* Layout */
+  .layout { display:grid; grid-template-columns:var(--sidebar-width) 1fr var(--toc-width); }
+
+  /* Sidebar */
+  .sidebar {
+    position:sticky; top:56px; height:calc(100vh - 56px); overflow-y:auto;
+    background:var(--bg-surface); border-right:1px solid var(--bg-border);
+    padding:16px 12px;
+  }
+  .search-box {
+    width:100%; background:var(--bg-base); border:1px solid var(--bg-border);
+    color:var(--text-primary); border-radius:var(--radius-md);
+    padding:8px 12px; font-size:13px; margin-bottom:16px; font-family:var(--font-sans);
+  }
+  .search-box::placeholder { color:var(--text-faint); }
+  .nav-group { margin-bottom:18px; }
+  .nav-group-title {
+    display:flex; align-items:center; gap:6px;
+    font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--text-faint); font-weight:700; margin:0 8px 8px;
+  }
+  .nav-item {
+    display:block; padding:6px 12px; border-radius:var(--radius-sm);
+    color:var(--text-muted); font-size:13.5px; cursor:pointer;
+    border-left:2px solid transparent;
+  }
+  .nav-item:hover { background:var(--bg-elevated); color:var(--text-primary); text-decoration:none; }
+  .nav-item.active { background:var(--accent-subtle); color:var(--accent-hover); border-left-color:var(--accent); }
+  .nav-item.hidden, .nav-group.hidden { display:none; }
+
+  /* Content */
+  .content { padding:40px 48px; max-width:var(--content-width); width:100%; margin:0 auto; }
+  .breadcrumb { font-size:12.5px; color:var(--text-muted); margin-bottom:18px; display:flex; gap:8px; }
+  .breadcrumb span.sep { color:var(--text-faint); }
+  .aud-banner {
+    display:none; background:#1c1509; border-left:3px solid var(--warning);
+    padding:10px 16px; border-radius:var(--radius-md); font-size:13px;
+    color:var(--text-muted); margin-bottom:24px;
+  }
+  .aud-banner.show { display:block; }
+  h1 { font-size:2rem; font-weight:700; line-height:1.2; margin:0 0 8px; }
+  h2 { font-size:1.5rem; font-weight:600; line-height:1.3; margin:40px 0 14px; padding-top:8px; border-top:1px solid var(--bg-border); }
+  h3 { font-size:1.2rem; font-weight:600; line-height:1.4; margin:26px 0 10px; }
+  h4 { font-size:1rem; font-weight:600; color:var(--text-muted); margin:18px 0 8px; }
+  p { line-height:1.8; margin:0 0 14px; }
+  .lead { color:var(--text-muted); font-size:1.05rem; }
+  ul,ol { line-height:1.8; padding-left:22px; }
+  li { margin-bottom:4px; }
+  code {
+    font-family:var(--font-mono); font-size:.86em; background:var(--code-bg);
+    border:1px solid var(--code-border); border-radius:var(--radius-sm);
+    padding:1px 5px; color:var(--code-text);
+  }
+  pre {
+    background:var(--code-bg); border:1px solid var(--code-border);
+    border-radius:var(--radius-md); padding:16px; overflow-x:auto; margin:16px 0;
+  }
+  pre code { background:none; border:none; padding:0; font-size:13px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; margin:18px 0; }
+  th { background:var(--bg-elevated); color:var(--text-muted); font-weight:600; text-align:left; padding:9px 14px; border-bottom:1px solid var(--bg-border); }
+  td { padding:9px 14px; border-bottom:1px solid var(--bg-border); vertical-align:top; }
+  tr:hover td { background:var(--bg-elevated); }
+  .callout { display:flex; gap:12px; padding:14px 16px; border-radius:var(--radius-md); border-left:3px solid; margin:20px 0; font-size:14px; }
+  .callout-info { background:#0c1a2e; border-color:var(--info); }
+  .callout-warning { background:#1c1509; border-color:var(--warning); }
+  .callout-danger { background:#1c0909; border-color:var(--danger); }
+  .callout-tip { background:#071c14; border-color:var(--success); }
+  .callout-icon { font-weight:700; }
+  .badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:9999px; font-size:11px; font-weight:600; margin-left:6px; vertical-align:middle; }
+  .badge-dev { background:#1e1b4b; color:#818cf8; }
+  .badge-user { background:#071c14; color:#10b981; }
+  .badge-admin { background:#1c0909; color:#f87171; }
+
+  /* TOC */
+  .toc { position:sticky; top:56px; height:calc(100vh - 56px); overflow-y:auto; padding:40px 16px; font-size:12.5px; }
+  .toc-title { text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); font-weight:700; font-size:11px; margin-bottom:12px; }
+  .toc a { display:block; color:var(--text-muted); padding:4px 0 4px 10px; border-left:2px solid var(--bg-border); }
+  .toc a:hover { color:var(--text-primary); text-decoration:none; }
+  .toc a.active { color:var(--accent-hover); border-left-color:var(--accent); }
+
+  .module-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; margin:24px 0; }
+  .module-card { background:var(--bg-surface); border:1px solid var(--bg-border); border-radius:var(--radius-lg); padding:18px; cursor:pointer; transition:.15s; }
+  .module-card:hover { border-color:var(--accent); background:var(--bg-elevated); }
+  .module-card h3 { margin:0 0 6px; font-size:1rem; }
+  .module-card p { margin:0; font-size:13px; color:var(--text-muted); }
+
+  @media (max-width:1100px) { .toc { display:none; } .layout { grid-template-columns:var(--sidebar-width) 1fr; } }
+  @media (max-width:768px) {
+    .layout { grid-template-columns:1fr; }
+    .sidebar { position:fixed; left:0; top:56px; width:var(--sidebar-width); z-index:20; transform:translateX(-100%); transition:.2s; }
+    .sidebar.open { transform:translateX(0); }
+    .content { padding:24px 20px; }
+    .hamburger { display:flex !important; }
+  }
+  .hamburger { display:none; background:none; border:none; color:var(--text-primary); font-size:20px; cursor:pointer; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+  <div class="topbar-brand">
+    <span class="brand-logo">S</span>
+    <span class="brand-name">SekolahPro <span class="sub">· School App Docs</span></span>
+  </div>
+  <nav class="audience-switcher">
+    <button class="aud-btn active" data-aud="all">Semua</button>
+    <button class="aud-btn" data-aud="dev">Developer</button>
+    <button class="aud-btn" data-aud="user">User</button>
+    <button class="aud-btn" data-aud="admin">Admin</button>
+  </nav>
+  <div class="topbar-meta">
+    <span class="doc-version">v0.6.0</span>
+    <span class="doc-updated">Diperbarui 31 Mei 2026</span>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <input class="search-box" type="text" placeholder="Cari dokumentasi…" oninput="onSearch(this.value)" />
+    <div id="nav"></div>
+  </aside>
+
+  <main class="content">
+    <nav class="breadcrumb" id="breadcrumb"></nav>
+    <div class="aud-banner" id="audBanner"></div>
+    <div id="page"></div>
+  </main>
+
+  <aside class="toc">
+    <div class="toc-title">Di Halaman Ini</div>
+    <div id="toc"></div>
+  </aside>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────
+// Konten halaman. audience: all | dev | user | admin (boleh banyak).
+// content = HTML siap render. toc digenerate otomatis dari <h2>.
+// ─────────────────────────────────────────────────────────────────────────
+const PAGES = {
+  introduction: {
+    title: "Pengantar",
+    group: "Mulai",
+    audience: ["all"],
+    content: `
+      <h1>Dokumentasi School App</h1>
+      <p class="lead">Aplikasi web frontend SekolahPro (<code>apps/school</code>) — modul operasional sekolah di atas backend Frappe.</p>
+      <div class="callout callout-info"><span class="callout-icon">ℹ</span><div>Portal ini mengagregasi dokumentasi modul dari <code>apps/school/docs/*.md</code>. Edit file <code>.md</code> sumber lalu regenerasi portal, jangan edit HTML langsung.</div></div>
+      <h2>Modul Terdokumentasi</h2>
+      <div class="module-grid">
+        <div class="module-card" onclick="go('akademik')"><h3>Akademik</h3><p>Penilaian operasional — input nilai test, entri nilai, raport.</p></div>
+        <div class="module-card" onclick="go('staff')"><h3>Staff (Pegawai)</h3><p>Kelola guru &amp; staff, role, penugasan, rantai SK, berkas.</p></div>
+        <div class="module-card" onclick="go('perpustakaan')"><h3>Perpustakaan</h3><p>Sirkulasi — pinjam, kembali, denda dalam satu hub.</p></div>
+      </div>
+      <h2>Konvensi Dokumentasi</h2>
+      <p>Tiap modul punya satu file <code>.md</code> flat di <code>apps/school/docs/</code>. Desain &amp; keputusan ada di <code>docs/superpowers/specs/</code> dan <code>docs/adr/</code>. Portal ini = tampilan baca-saja teragregasi.</p>
+    `,
+  },
+
+  akademik: {
+    title: "Akademik",
+    group: "Modul",
+    audience: ["dev","user"],
+    content: `
+      <h1>Akademik — Penilaian Operasional <span class="badge badge-user">User</span><span class="badge badge-dev">Developer</span></h1>
+      <p class="lead">Hub: <code>/sch/:sekolah/akademik</code>. <strong>Operasional saja</strong> (input test → entri nilai → raport). Setup pindah ke modul Master Data.</p>
+
+      <h2>Pemisahan Akademik vs Master</h2>
+      <table>
+        <tr><th>Modul</th><th>Isi</th><th>Tujuan</th></tr>
+        <tr><td><strong>Akademik</strong></td><td>Dashboard · Input Nilai Test · Entri Nilai · Raport</td><td>Kerja harian guru per periode</td></tr>
+        <tr><td><strong>Master Data</strong> › Akademik</td><td>Tahun Ajaran · Kurikulum · Mapel · Komponen Nilai · KKM · Konfigurasi</td><td>Setup sekali, jarang berubah</td></tr>
+      </table>
+      <p>Dashboard Akademik <code>ModuleFlow</code> merentang dua modul: langkah setup (kurikulum→komponen) nge-link ke Master, langkah operasional (test→entri→raport) tetap di Akademik.</p>
+
+      <h2>Konteks Periode</h2>
+      <p><code>AkademikContextProvider</code> simpan <strong>Tahun Ajaran + Semester</strong> di URL search (<code>?ta=…&amp;semester=…</code>). <code>AkademikContextBar</code> hanya muncul di halaman operasional yang filter per periode (<code>CONTEXT_BAR_PREFIXES</code>: asesmen, entri-nilai, raport). Setup tak butuh → bar disembunyikan.</p>
+
+      <h2>Alur Input Nilai Test (Asesmen)</h2>
+      <p>Input nilai cepat <strong>satu test untuk satu kelas</strong> — alternatif ringan dari Entri Nilai (rekap per siswa × komponen).</p>
+      <ol>
+        <li><strong>Pilih kelas &amp; mapel</strong> — <code>SearchableSelect</code> Rombongan Belajar (status Aktif) + Mata Pelajaran. Keduanya wajib sebelum daftar test tampil.</li>
+        <li><strong>Daftar Test</strong> — list <code>Asesmen</code> difilter rombel + mapel + TA aktif, urut <code>tanggal desc</code>.</li>
+        <li><strong>Test Baru</strong> (<code>CreateTestModal</code>) — judul, tanggal, komponen, semester, TA → <code>createResource("Asesmen")</code>. Komponen difilter per mapel. <code>sekolah</code> diisi dari <code>activeSekolah</code> sesi. Sukses → navigate ke halaman input.</li>
+        <li><strong>Input nilai</strong> (<code>AsesmenInput</code>) — grid 1 baris/siswa, ambil anggota rombel aktif (<code>Anggota Rombel</code>, urut <code>no_urut</code>) + info siswa (nama, NIS).</li>
+      </ol>
+      <h3>Perilaku grid input</h3>
+      <ul>
+        <li>Nilai <strong>0–100</strong>, validasi per sel (<code>clampNilai</code>); kosong = belum dinilai.</li>
+        <li><strong>Autosave on-blur</strong>: keluar dari kolom → <code>updateResource</code> kirim <strong>seluruh</strong> array <code>nilai</code> (Frappe ganti semua child rows; baris kosong di-drop).</li>
+        <li><strong>Enter</strong> = simpan baris + lompat ke siswa berikut (<code>focusRow</code>).</li>
+        <li>Status per sel: <code>idle → dirty → saving → saved | error</code>. Badge merah saat invalid/gagal.</li>
+        <li>StatCard ringkasan: Terisi (n/total) · Rata-rata · Tertinggi.</li>
+      </ul>
+
+      <h2>Routes</h2>
+      <table>
+        <tr><th>Route</th><th>DocType</th><th>Aksi</th></tr>
+        <tr><td><code>…/akademik</code> (index)</td><td>Mata Pelajaran, KKM, Kurikulum, Komponen</td><td>Dashboard: cut-off raport, KKM belum diatur, alur, perlu perhatian</td></tr>
+        <tr><td><code>…/akademik/asesmen</code></td><td>Asesmen</td><td>Pilih rombel+mapel, list test, buat test baru</td></tr>
+        <tr><td><code>…/akademik/asesmen/$id</code></td><td>Asesmen</td><td>Input nilai per siswa (autosave)</td></tr>
+        <tr><td><code>…/akademik/entri-nilai</code></td><td>—</td><td>Rekap nilai per siswa × komponen</td></tr>
+        <tr><td><code>…/akademik/raport</code></td><td>—</td><td>Susun &amp; cetak raport</td></tr>
+      </table>
+
+      <h2>DocType Asesmen</h2>
+      <table>
+        <tr><th>Field</th><th>Isi</th></tr>
+        <tr><td><code>judul</code></td><td>mis. "Ulangan Harian Bab 3"</td></tr>
+        <tr><td><code>komponen</code></td><td>link Komponen Nilai (UH/UTS/UAS), difilter per mapel</td></tr>
+        <tr><td><code>mata_pelajaran</code> · <code>rombel</code></td><td>link mapel + Rombongan Belajar</td></tr>
+        <tr><td><code>semester</code> · <code>tahun_ajaran</code></td><td>konteks periode</td></tr>
+        <tr><td><code>tanggal</code></td><td>tanggal pelaksanaan</td></tr>
+        <tr><td><code>nilai[]</code></td><td>child rows <code>{ siswa, nilai }</code> — diganti utuh tiap autosave</td></tr>
+      </table>
+
+      <h2>Komponen Kunci</h2>
+      <table>
+        <tr><th>File</th><th>Peran</th></tr>
+        <tr><td><code>routes/sch.$sekolah.akademik.tsx</code></td><td>Layout: nav grup + context bar kondisional</td></tr>
+        <tr><td><code>lib/akademikContext.tsx</code></td><td>Provider TA+Semester (URL search)</td></tr>
+        <tr><td><code>components/akademik/AkademikContextBar.tsx</code></td><td>Selector periode</td></tr>
+        <tr><td><code>components/akademik/AsesmenInput.tsx</code></td><td>Grid input nilai + autosave on-blur</td></tr>
+        <tr><td><code>routes/…asesmen.index.tsx</code></td><td>Filter rombel/mapel + <code>CreateTestModal</code></td></tr>
+        <tr><td><code>components/akademik/EntriNilaiGrid.tsx</code></td><td>Rekap nilai per komponen</td></tr>
+      </table>
+      <div class="callout callout-tip"><span class="callout-icon">✓</span><div>Master Data pakai <code>MegaMenuNav</code> (dropdown); Akademik pakai <code>GroupedNavTabs</code>.</div></div>
+    `,
+  },
+
+  staff: {
+    title: "Staff (Pegawai)",
+    group: "Modul",
+    audience: ["dev","admin"],
+    content: `
+      <h1>Staff (Pegawai) — Kelola Guru &amp; Staff <span class="badge badge-admin">Admin</span><span class="badge badge-dev">Developer</span></h1>
+      <p class="lead">Hub: <code>/sch/:sekolah/staff</code>. Satu modul, 8 tab. <strong>Role</strong> (<code>Pegawai Guru</code> / <code>Pegawai Staff</code>, boleh dual) menentukan jalur kerja admin.</p>
+
+      <h2>Alur Admin</h2>
+      <ol>
+        <li><strong>Dashboard</strong> — ringkasan: total · guru · staff · dual-role · aktif.</li>
+        <li><strong>Daftar Pegawai</strong> — list + filter (role/status/cari) → <strong>Tambah Pegawai</strong> (<code>PegawaiFormModal</code>, pilih ≥1 role + sekolah). Klik baris → detail.</li>
+        <li><strong>Jalur Guru:</strong> Mapel Pengampu → Penugasan → SK Mengajar.</li>
+        <li><strong>Jalur Staff:</strong> Jabatan (master) → SK Jabatan.</li>
+        <li><strong>Berkas</strong> (semua pegawai) — lisensi/sertifikat + tracking expiry.</li>
+        <li><strong>Detail Pegawai</strong> — tab adaptif sesuai role.</li>
+      </ol>
+
+      <h2>Routes</h2>
+      <table>
+        <tr><th>Route</th><th>DocType</th><th>Aksi admin</th></tr>
+        <tr><td><code>…/staff</code> (index)</td><td>Pegawai</td><td>Dashboard statistik (read)</td></tr>
+        <tr><td><code>…/staff/daftar</code></td><td>Pegawai</td><td>Tambah, filter role/status/cari, sort, paginate, row→detail</td></tr>
+        <tr><td><code>…/staff/$nip</code></td><td>Pegawai</td><td>Ubah; tab adaptif Profil/Mengajar/Kepegawaian/Berkas/Kehadiran</td></tr>
+        <tr><td><code>…/staff/mapel-pengampu</code></td><td>Mapel Pengampu Guru</td><td>Tetapkan <code>guru ↔ mapel ↔ kelas</code></td></tr>
+        <tr><td><code>…/staff/penugasan</code></td><td>Penugasan Guru</td><td>Buat penugasan (JJM); per-baris Aktif → "Buat SK"</td></tr>
+        <tr><td><code>…/staff/sk-mengajar</code></td><td>SK Mengajar</td><td>Buat; <strong>Generate SK Massal</strong> per tahun_ajaran</td></tr>
+        <tr><td><code>…/staff/jabatan</code></td><td>Jenis Jabatan</td><td>Master jenis jabatan (tambah/edit)</td></tr>
+        <tr><td><code>…/staff/sk-jabatan</code></td><td>SK Jabatan</td><td>Terbitkan SK posisi</td></tr>
+        <tr><td><code>…/staff/berkas</code></td><td>Berkas Guru</td><td>Unggah; per-baris <strong>Perpanjang</strong> masa berlaku</td></tr>
+      </table>
+
+      <h2>Sistem Role</h2>
+      <p><code>Pegawai.roles[]</code> → <code>[{ role: "Pegawai Guru" }, { role: "Pegawai Staff" }]</code>. Dual-role didukung. Helper di <code>features/pegawai/roles.ts</code>:</p>
+      <ul>
+        <li><code>apiIsGuru</code> / <code>apiIsStaff</code> / <code>apiIsDualRole</code> — klasifikasi.</li>
+        <li><code>apiRoleBadges</code> — render badge (<code>RoleBadges.tsx</code>).</li>
+      </ul>
+      <p>UI adaptif: Mapel Pengampu &amp; Penugasan hanya relevan untuk guru; SK Jabatan &amp; tab Kepegawaian hanya saat staff.</p>
+
+      <h2>Rantai SK</h2>
+      <ul>
+        <li><strong>SK Mengajar:</strong> Penugasan Guru (status Aktif) → tombol "Buat SK" (1:1) <strong>atau</strong> <code>BulkGenerateSkButton</code> (massal per tahun_ajaran) → SK Mengajar draft.</li>
+        <li><strong>SK Jabatan:</strong> dari Jenis Jabatan → "Terbitkan SK".</li>
+        <li>Workflow status (keduanya): <strong>Diajukan → Disetujui Kepsek → Diterbitkan</strong> (atau <strong>Dicabut</strong>).</li>
+      </ul>
+
+      <h2>Berkas (compliance)</h2>
+      <p><code>Berkas Guru</code> dengan <code>tanggal_kadaluarsa</code> → status auto Aktif/Expired. <code>RenewBerkasButton</code> extend masa berlaku.</p>
+
+      <h2>Komponen Kunci</h2>
+      <table>
+        <tr><th>File</th><th>Peran</th></tr>
+        <tr><td><code>features/pegawai/roles.ts</code></td><td>Logika klasifikasi role</td></tr>
+        <tr><td><code>features/pegawai/PegawaiFormModal.tsx</code></td><td>Form tambah/ubah pegawai</td></tr>
+        <tr><td><code>features/pegawai/RoleBadges.tsx</code></td><td>Badge role</td></tr>
+        <tr><td><code>features/pegawai/PegawaiActions.tsx</code></td><td><code>BuatSkMengajarButton</code>, <code>RenewBerkasButton</code>, <code>BulkGenerateSkButton</code></td></tr>
+      </table>
+    `,
+  },
+
+  perpustakaan: {
+    title: "Perpustakaan",
+    group: "Modul",
+    audience: ["dev","user"],
+    content: `
+      <h1>Perpustakaan — Sirkulasi <span class="badge badge-user">User</span><span class="badge badge-dev">Developer</span></h1>
+      <p class="lead">One hub: <code>/perpustakaan/peminjaman</code>. Pinjam → Kembali → Denda semua di sini. (v0.6.0)</p>
+
+      <h2>Routes</h2>
+      <table>
+        <tr><th>Route</th><th>Tujuan</th></tr>
+        <tr><td><code>/perpustakaan/peminjaman</code></td><td>List + filter + row actions (Kembalikan, Bayar Denda)</td></tr>
+        <tr><td><code>/perpustakaan/peminjaman/$name</code></td><td>Detail; buka <code>ReturnModal</code> + <code>DendaDrawer</code></td></tr>
+        <tr><td><code>/perpustakaan/anggota/$name</code></td><td>Section "Peminjaman Aktif" dengan per-row return</td></tr>
+        <tr><td><code>/perpustakaan/$isbn</code></td><td>Section "Sedang Dipinjam" dengan per-row return</td></tr>
+        <tr><td><code>/perpustakaan/pengembalian[/$name]</code></td><td><strong>Redirect</strong> → <code>…/peminjaman?status=Selesai</code></td></tr>
+        <tr><td><code>/perpustakaan/denda[/$name]</code></td><td><strong>Redirect</strong> → <code>…/peminjaman?denda=ada</code></td></tr>
+      </table>
+
+      <h2>Write Paths</h2>
+      <ul>
+        <li><strong>Pinjam:</strong> <code>PerpCreateModal</code> → <code>frappe.client.insert</code> pada <code>Peminjaman Buku</code>.</li>
+        <li><strong>Kembali:</strong> <code>ReturnModal</code> → <code>frappe.client.insert</code> lalu <code>frappe.client.submit</code> pada <code>Pengembalian Buku</code>. Backend <code>on_submit</code> melepas eksemplar, generate <code>Denda Perpustakaan</code> saat telat, promote reservasi.</li>
+        <li><strong>Bayar denda:</strong> <code>DendaDrawer</code> → <code>updateResource("Denda Perpustakaan", name, { status_bayar: "Lunas", tanggal_lunas })</code>.</li>
+      </ul>
+      <div class="callout callout-danger"><span class="callout-icon">⚠</span><div><strong>Jangan</strong> <code>db.set_value(status="Selesai")</code> — bypass hooks backend (pelepasan eksemplar, denda, reservasi tak jalan).</div></div>
+
+      <h2>Denda Summary</h2>
+      <p>List view enrich rows via <code>fetchDendaSummary(names)</code> → whitelisted <code>sekolahpro.perpustakaan.api.denda.get_denda_summary</code>. Cap: 100 names/call. Gagal → muncul di list (commit <code>237fb35</code>); tabel tetap render, kolom denda tampil error state.</p>
+
+      <h2>Invalidation Contract</h2>
+      <p>Setelah return submit, invalidate query keys:</p>
+      <ul>
+        <li><code>["resource:list", "Peminjaman Buku"]</code></li>
+        <li><code>["resource:doc", "Peminjaman Buku", &lt;name&gt;]</code></li>
+        <li><code>["resource:list", "Denda Perpustakaan"]</code></li>
+      </ul>
+      <p>Setelah mark-lunas, invalidate <code>["resource:list", "Denda Perpustakaan"]</code>.</p>
+
+      <h2>See Also</h2>
+      <ul>
+        <li>ADR: <code>docs/adr/PERP-ADR-0001-sirkulasi-merge.md</code></li>
+        <li>Spec: <code>docs/superpowers/specs/2026-05-25-perpustakaan-sirkulasi-merge-design.md</code></li>
+      </ul>
+    `,
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Runtime
+// ─────────────────────────────────────────────────────────────────────────
+const AUD_LABEL = { all:"Semua", dev:"Developer", user:"User", admin:"Admin" };
+let currentAud = localStorage.getItem("sp_aud") || "all";
+let currentPage = (location.hash || "#introduction").slice(1);
+
+function buildToc(html) {
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  return [...div.querySelectorAll("h2")].map((h, i) => {
+    const id = "sec-" + i + "-" + h.textContent.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return { id, text: h.textContent };
+  });
+}
+
+function renderNav() {
+  const groups = {};
+  for (const [key, p] of Object.entries(PAGES)) {
+    (groups[p.group] ??= []).push({ key, ...p });
+  }
+  const nav = document.getElementById("nav");
+  nav.innerHTML = Object.entries(groups).map(([g, items]) => {
+    const visible = items.filter(it => audMatch(it.audience));
+    const cls = visible.length ? "" : " hidden";
+    return `<div class="nav-group${cls}" data-group="${g}">
+      <div class="nav-group-title">${g}</div>
+      ${items.map(it => `<a class="nav-item${it.key===currentPage?" active":""}${audMatch(it.audience)?"":" hidden"}" data-key="${it.key}" data-aud="${it.audience.join(",")}" onclick="go('${it.key}')">${it.title}</a>`).join("")}
+    </div>`;
+  }).join("");
+}
+
+function audMatch(audArr) {
+  if (currentAud === "all") return true;
+  return audArr.includes("all") || audArr.includes(currentAud);
+}
+
+function renderPage() {
+  const p = PAGES[currentPage] || PAGES.introduction;
+  document.getElementById("breadcrumb").innerHTML =
+    `<a onclick="go('introduction')">Home</a><span class="sep">/</span><span>${p.group}</span><span class="sep">/</span><span>${p.title}</span>`;
+
+  // Audience banner
+  const banner = document.getElementById("audBanner");
+  if (currentAud !== "all" && !p.audience.includes("all") && !p.audience.includes(currentAud)) {
+    banner.className = "aud-banner show";
+    banner.innerHTML = `Halaman ini ditujukan untuk <strong>${p.audience.map(a=>AUD_LABEL[a]).join(", ")}</strong>, bukan ${AUD_LABEL[currentAud]}.`;
+  } else {
+    banner.className = "aud-banner";
+  }
+
+  // Inject content + assign h2 ids
+  const page = document.getElementById("page");
+  page.innerHTML = p.content;
+  const toc = buildToc(p.content);
+  page.querySelectorAll("h2").forEach((h, i) => { if (toc[i]) h.id = toc[i].id; });
+
+  // Right TOC
+  document.getElementById("toc").innerHTML = toc.map(t => `<a href="#${currentPage}" onclick="scrollToSec(event,'${t.id}')" data-sec="${t.id}">${t.text}</a>`).join("");
+
+  // Active nav
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.key === currentPage));
+  window.scrollTo(0, 0);
+  setupScrollspy();
+}
+
+function go(key) {
+  currentPage = key;
+  history.pushState(null, "", "#" + key);
+  document.querySelector(".sidebar").classList.remove("open");
+  renderPage();
+}
+
+function scrollToSec(e, id) {
+  e.preventDefault();
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
+
+function setupScrollspy() {
+  const links = [...document.querySelectorAll("#toc a")];
+  if (!links.length) return;
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        links.forEach(l => l.classList.toggle("active", l.dataset.sec === en.target.id));
+      }
+    });
+  }, { rootMargin: "-10% 0px -80% 0px" });
+  document.querySelectorAll("#page h2").forEach(h => obs.observe(h));
+}
+
+function setAud(aud) {
+  currentAud = aud;
+  localStorage.setItem("sp_aud", aud);
+  document.querySelectorAll(".aud-btn").forEach(b => b.classList.toggle("active", b.dataset.aud === aud));
+  renderNav();
+  renderPage();
+}
+
+function onSearch(q) {
+  q = q.trim().toLowerCase();
+  document.querySelectorAll(".nav-item").forEach(item => {
+    const p = PAGES[item.dataset.key];
+    const hay = (p.title + " " + p.content).toLowerCase();
+    const audOk = audMatch(item.dataset.aud.split(","));
+    item.classList.toggle("hidden", !(audOk && (!q || hay.includes(q))));
+  });
+}
+
+document.querySelectorAll(".aud-btn").forEach(b => b.addEventListener("click", () => setAud(b.dataset.aud)));
+window.addEventListener("popstate", () => { currentPage = (location.hash || "#introduction").slice(1); renderPage(); });
+
+// init
+setAud(currentAud);
+renderNav();
+renderPage();
+</script>
+</body>
+</html>
