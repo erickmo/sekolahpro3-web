@@ -57,7 +57,19 @@ const CONTEXT_BAR_PREFIXES = [
   "/akademik/raport",
 ];
 
+// Editor grid (entri-nilai/edit) mengelola periode lewat selector-nya sendiri
+// (param rombel/mapel/ta/semester di rute itu, plus tombol "Ubah Konteks").
+// Bar periode layout disembunyikan & efek redirect/persist dilewati di sana agar
+// tidak mengeluarkan user dari editor atau menjadikan periode edit sementara
+// "lengket" di localStorage.
+const PERIODE_SELF_MANAGED = "/akademik/entri-nilai/edit";
+
+function isPeriodeSelfManaged(pathname: string): boolean {
+  return pathname.includes(PERIODE_SELF_MANAGED);
+}
+
 function showContextBar(pathname: string): boolean {
+  if (isPeriodeSelfManaged(pathname)) return false;
   return CONTEXT_BAR_PREFIXES.some((p) => pathname.includes(p));
 }
 
@@ -96,8 +108,10 @@ function AkademikLayout() {
     return { ta, semester, taRow, noActiveTa: !!noActiveTa };
   }, [taList, search.ta, search.semester, sekolah, refDate]);
 
-  // Redirect (replace) ke URL ter-resolve bila param belum lengkap → satu sumber kebenaran.
+  // Redirect (replace) ke URL ter-resolve bila param belum lengkap → satu sumber
+  // kebenaran. Dilewati di editor (periode dikelola rute /edit sendiri).
   useEffect(() => {
+    if (isPeriodeSelfManaged(pathname)) return;
     if (!resolved || !resolved.ta) return;
     if (search.ta === resolved.ta && search.semester === resolved.semester) return;
     navigate({
@@ -105,14 +119,16 @@ function AkademikLayout() {
       search: (prev) => ({ ...prev, ta: resolved.ta, semester: resolved.semester }),
       replace: true,
     });
-  }, [resolved, search.ta, search.semester, navigate]);
+  }, [resolved, search.ta, search.semester, navigate, pathname]);
 
-  // Sinkron pilihan aktif ke localStorage.
+  // Sinkron pilihan aktif ke localStorage — kecuali di editor, agar periode edit
+  // sementara tak menimpa default (stored ranking di atas is_current).
   useEffect(() => {
+    if (isPeriodeSelfManaged(pathname)) return;
     if (search.ta && search.semester) {
       writeStoredPeriode(sekolah, { ta: search.ta, semester: search.semester });
     }
-  }, [sekolah, search.ta, search.semester]);
+  }, [sekolah, search.ta, search.semester, pathname]);
 
   const setTahunAjaran = useCallback(
     (v: string) => navigate({ to: ".", search: (prev) => ({ ...prev, ta: v }), replace: true }),
