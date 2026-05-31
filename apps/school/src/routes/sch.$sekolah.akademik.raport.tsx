@@ -85,6 +85,7 @@ const COLUMNS: Column<Row>[] = [
 
 function RaportPage() {
   const ctx = useAkademikContextOptional();
+  const periodeSuffix = ctx?.tahunAjaran ? ` · Periode: ${ctx.tahunAjaran} ${ctx.semester}` : "";
   const [openGenerate, setOpenGenerate] = useState(false);
 
   const baseFilters = useMemo(() => {
@@ -99,7 +100,7 @@ function RaportPage() {
     <ResourceListPage<Row>
       eyebrow="Akademik"
       title="Raport"
-      description="Kelola raport siswa per semester. Status mengikuti alur Draft → Review → Submitted → Final → Locked/Tercetak."
+      description={`Kelola raport siswa per semester. Status mengikuti alur Draft → Review → Submitted → Final → Locked/Tercetak.${periodeSuffix}`}
       doctype="Raport"
       fields={[
         "name",

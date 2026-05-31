@@ -5,6 +5,13 @@ export interface AkademikContextValue {
   semester: string;
   setTahunAjaran: (v: string) => void;
   setSemester: (v: string) => void;
+  // Keamanan periode + UX (diisi oleh layout):
+  isPastPeriod: boolean;
+  noActiveTa: boolean;
+  // Edit belum tersimpan — halaman entri melapor lewat setDirty; bar memakai
+  // untuk konfirmasi sebelum ganti periode.
+  dirty: boolean;
+  setDirty: (v: boolean) => void;
 }
 
 const Ctx = createContext<AkademikContextValue | null>(null);
@@ -15,7 +22,10 @@ interface ProviderProps {
 }
 
 export function AkademikContextProvider({ value, children }: ProviderProps) {
-  const memo = useMemo(() => value, [value.tahunAjaran, value.semester]);
+  const memo = useMemo(
+    () => value,
+    [value.tahunAjaran, value.semester, value.isPastPeriod, value.noActiveTa, value.dirty],
+  );
   return <Ctx.Provider value={memo}>{children}</Ctx.Provider>;
 }
 
