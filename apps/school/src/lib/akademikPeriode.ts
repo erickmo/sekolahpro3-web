@@ -19,11 +19,21 @@ export interface TahunAjaranRow {
 
 const STATUS_AKTIF = "Aktif";
 const STATUS_CLOSED = "Closed";
+const JULY_MONTH_INDEX = 6; // getMonth() is 0-based: Jul=6
+
+// Window strings are date-only (YYYY-MM-DD). Compare in the LOCAL calendar to
+// avoid UTC-vs-local skew on boundary days (server runs Asia/Jakarta, UTC+7).
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 function inWindow(ref: Date, start?: string, end?: string): boolean {
   if (!start || !end) return false;
-  const t = ref.getTime();
-  return t >= new Date(start).getTime() && t <= new Date(end).getTime();
+  const r = toLocalDateStr(ref);
+  return r >= start.slice(0, 10) && r <= end.slice(0, 10);
 }
 
 // TA "terbaru" = tanggal_mulai terbesar; fallback urutan nama desc bila tanggal kosong.
@@ -78,7 +88,7 @@ export interface ComputeSemesterInput {
 
 function monthFallback(ref: Date): SemesterValue {
   // Jul–Des (bulan 6–11) → Ganjil; Jan–Jun → Genap.
-  return ref.getMonth() >= 6 ? "Ganjil" : "Genap";
+  return ref.getMonth() >= JULY_MONTH_INDEX ? "Ganjil" : "Genap";
 }
 
 // Semester: URL → localStorage → window tanggal TA → fallback bulan.
