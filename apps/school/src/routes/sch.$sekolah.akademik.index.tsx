@@ -1,5 +1,9 @@
+// Akademik dashboard (landing) — role-aware command center for
+// Administrator Akademik, Guru, and Kepala Sekolah. Presentation, guidance,
+// and visualization redesign only: every data hook, doctype/field name, filter,
+// and the AttentionList + cut-off raport logic are preserved verbatim.
 import { useMemo } from "react";
-import { createFileRoute, Link, useParams} from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   AttentionList,
   Badge,
@@ -15,13 +19,25 @@ import {
   IconGrad,
   IconSettings,
   IconChart,
+  IconUsers,
   GlossaryTooltip,
   ModuleFlow,
+  cn,
 } from "@sekolahpro/ui";
 import type { AttentionItem, ModuleFlowStep } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
 import { useAkademikContextOptional } from "../lib/akademikContext";
+import {
+  DonutChart,
+  DistributionBar,
+  HBarChart,
+  ProgressRing,
+} from "../components/viz";
+import type { ChartDatum, DistributionSegment } from "../components/viz/charts";
+import { PageGuide } from "../components/guide";
+import { useAkademikRole, ROLE_LABEL } from "../lib/akademikRole";
+import type { AkademikRole } from "../lib/akademikRole";
 
 type Mapel = {
   name: string;
@@ -52,6 +68,19 @@ const RECENT_LIMIT = 5;
 const ATTENTION_CAP = 20;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
+// Cut-off urgency thresholds (in days) — named to avoid magic numbers.
+const CUTOFF_CRITICAL_DAYS = 7;
+const CUTOFF_WARN_DAYS = 14;
+
+// Number of foundation setup pillars feeding the overall completeness ring.
+const SETUP_PILLAR_COUNT = 4;
+const PERCENT_MAX = 100;
+const HBAR_GROUP_LIMIT = 8;
+
+// Completeness ring tone thresholds (percent).
+const SETUP_GOOD_PCT = 80;
+const SETUP_OK_PCT = 50;
+
 function daysUntil(target: Date, from: Date): number {
   return Math.max(0, Math.ceil((target.getTime() - from.getTime()) / MS_PER_DAY));
 }
@@ -70,6 +99,14 @@ type QuickAction = {
   accent: "brand" | "emerald" | "violet" | "amber" | "rose" | "sky";
 };
 
+// Role-framed quick-action groups. Every existing destination is preserved;
+// grouping is purely presentational so each role finds its tasks fast.
+type QuickActionGroup = {
+  role: AkademikRole;
+  blurb: string;
+  actions: QuickAction[];
+};
+
 // Alur penilaian: langkah setup (kurikulum→komponen) kini di Master Data,
 // langkah operasional (input test→entri→raport) tetap di modul Akademik.
 const AKADEMIK_FLOW_STEPS: ModuleFlowStep[] = [
@@ -82,20 +119,122 @@ const AKADEMIK_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "raport", label: "Raport", hint: "Susun & cetak raport", href: "/sch/$sekolah/akademik/raport" },
 ];
 
-const QUICK_ACTIONS: QuickAction[] = [
-  { to: "/sch/$sekolah/akademik/asesmen", label: "Input Nilai Test", description: "Input nilai satu test untuk satu kelas, cepat.", icon: <IconEdit />, accent: "brand" },
-  { to: "/sch/$sekolah/akademik/entri-nilai", label: "Entri Nilai", description: "Rekap nilai per siswa × komponen.", icon: <IconChart />, accent: "sky" },
-  { to: "/sch/$sekolah/akademik/raport", label: "Raport", description: "Susun & cetak raport siswa.", icon: <IconFile />, accent: "emerald" },
-  { to: "/sch/$sekolah/master/kkm", label: "KKM", description: "Atur Kriteria Ketuntasan Minimal.", icon: <IconCheck />, accent: "amber" },
-  { to: "/sch/$sekolah/master/komponen-nilai", label: "Komponen Nilai", description: "Definisikan bobot komponen penilaian.", icon: <IconChart />, accent: "violet" },
-  { to: "/sch/$sekolah/master/kurikulum", label: "Kurikulum", description: "Kelola kurikulum & struktur mapel.", icon: <IconGrad />, accent: "sky" },
-  { to: "/sch/$sekolah/master/konfigurasi", label: "Konfigurasi", description: "Pengaturan modul akademik.", icon: <IconSettings />, accent: "rose" },
+const QUICK_ACTION_GROUPS: QuickActionGroup[] = [
+  {
+    role: "guru",
+    blurb: "Tugas harian guru: masukkan dan rekap nilai.",
+    actions: [
+      { to: "/sch/$sekolah/akademik/asesmen", label: "Input Nilai Test", description: "Input nilai satu test untuk satu kelas, cepat.", icon: <IconEdit />, accent: "brand" },
+      { to: "/sch/$sekolah/akademik/entri-nilai", label: "Entri Nilai", description: "Rekap nilai per siswa × komponen.", icon: <IconChart />, accent: "sky" },
+    ],
+  },
+  {
+    role: "admin",
+    blurb: "Setup & konfigurasi yang menopang seluruh penilaian.",
+    actions: [
+      { to: "/sch/$sekolah/master/kkm", label: "KKM", description: "Atur Kriteria Ketuntasan Minimal.", icon: <IconCheck />, accent: "amber" },
+      { to: "/sch/$sekolah/master/komponen-nilai", label: "Komponen Nilai", description: "Definisikan bobot komponen penilaian.", icon: <IconChart />, accent: "violet" },
+      { to: "/sch/$sekolah/master/kurikulum", label: "Kurikulum", description: "Kelola kurikulum & struktur mapel.", icon: <IconGrad />, accent: "sky" },
+      { to: "/sch/$sekolah/master/konfigurasi", label: "Konfigurasi", description: "Pengaturan modul akademik.", icon: <IconSettings />, accent: "rose" },
+    ],
+  },
+  {
+    role: "kepala",
+    blurb: "Pantau progres penilaian dan terbitkan raport.",
+    actions: [
+      { to: "/sch/$sekolah/akademik/raport", label: "Raport", description: "Susun & cetak raport siswa.", icon: <IconFile />, accent: "emerald" },
+      { to: "/sch/$sekolah/akademik/entri-nilai", label: "Monitoring Nilai", description: "Pantau kelengkapan nilai per kelas.", icon: <IconChart />, accent: "sky" },
+    ],
+  },
 ];
+
+const GUIDE_STEPS = [
+  {
+    title: "Administrator menyiapkan fondasi",
+    detail: "Tetapkan kurikulum aktif, daftar mata pelajaran, KKM, dan komponen nilai. Ini sumber semua perhitungan.",
+    roles: ["admin"] as AkademikRole[],
+  },
+  {
+    title: "Guru memasukkan nilai",
+    detail: "Pakai Input Nilai Test untuk nilai per ulangan, lalu Entri Nilai untuk rekap per siswa × komponen.",
+    roles: ["guru"] as AkademikRole[],
+  },
+  {
+    title: "Kepala Sekolah memantau & menerbitkan",
+    detail: "Cek kelengkapan nilai, perhatikan cut-off raport, lalu susun dan cetak raport.",
+    roles: ["kepala"] as AkademikRole[],
+  },
+  {
+    title: "Pantau kartu \"Perlu Perhatian\"",
+    detail: "Mapel tanpa KKM atau komponen nilai, serta cut-off yang mendekat, muncul di sini agar cepat ditindak.",
+  },
+];
+
+const GUIDE_TIPS = [
+  "Warna kartu: hijau = beres, kuning = perlu dilengkapi, merah = mendesak.",
+  "Pilih chip peran di atas untuk menyorot pintasan yang paling relevan untuk Anda.",
+];
+
+/** Build KKM coverage segments: mapel dengan vs tanpa KKM. */
+function buildKkmCoverage(mapelCount: number, mapelTanpaKkm: number): DistributionSegment[] {
+  const dengan = Math.max(0, mapelCount - mapelTanpaKkm);
+  return [
+    { label: "Sudah ada KKM", value: dengan, tone: "emerald" },
+    { label: "Belum ada KKM", value: mapelTanpaKkm, tone: "rose" },
+  ];
+}
+
+/** Build Komponen-nilai coverage segments: mapel dengan vs tanpa komponen. */
+function buildKomponenCoverage(mapelCount: number, komponenCovered: number): DistributionSegment[] {
+  const dengan = Math.min(mapelCount, komponenCovered);
+  const tanpa = Math.max(0, mapelCount - dengan);
+  return [
+    { label: "Sudah ada komponen", value: dengan, tone: "violet" },
+    { label: "Belum ada komponen", value: tanpa, tone: "amber" },
+  ];
+}
+
+/** Aggregate mapel counts per kelompok_mapel for the horizontal bar chart. */
+function buildKelompokBars(mapelList: Mapel[]): ChartDatum[] {
+  const counts = new Map<string, number>();
+  for (const m of mapelList) {
+    const key = m.kelompok_mapel?.trim() || "Tanpa kelompok";
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .map(([label, value]) => ({ label, value, tone: "brand" as const }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, HBAR_GROUP_LIMIT);
+}
+
+/** Overall setup completeness (0..100) across the four foundation pillars. */
+function computeSetupCompleteness(input: {
+  mapelCount: number;
+  mapelTanpaKkm: number;
+  komponenCovered: number;
+  kurikulumAktif: number;
+}): number {
+  const { mapelCount, mapelTanpaKkm, komponenCovered, kurikulumAktif } = input;
+  const hasMapel = mapelCount > 0 ? 1 : 0;
+  const kkmRatio = mapelCount > 0 ? (mapelCount - mapelTanpaKkm) / mapelCount : 0;
+  const komponenRatio = mapelCount > 0 ? Math.min(1, komponenCovered / mapelCount) : 0;
+  const hasKurikulum = kurikulumAktif > 0 ? 1 : 0;
+  const score = (hasMapel + kkmRatio + komponenRatio + hasKurikulum) / SETUP_PILLAR_COUNT;
+  return Math.round(score * PERCENT_MAX);
+}
+
+/** Tone for the completeness ring based on the percent achieved. */
+function setupTone(pct: number): "emerald" | "amber" | "rose" {
+  if (pct >= SETUP_GOOD_PCT) return "emerald";
+  if (pct >= SETUP_OK_PCT) return "amber";
+  return "rose";
+}
 
 function AkademikDashboardPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
 
   const ctx = useAkademikContextOptional();
+  const role = useAkademikRole();
   const now = useMemo(() => new Date(), []);
 
   const mapelQ = useResourceList<Mapel>("Mata Pelajaran", {
@@ -144,6 +283,12 @@ function AkademikDashboardPage() {
     return upcoming.sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
   }, [activeTA, ctx?.semester, now]);
 
+  // Count of mapel that have at least one komponen nilai (by mapel "name").
+  const komponenCovered = useMemo(
+    () => new Set(komponenList.map((k) => k.mata_pelajaran).filter(Boolean) as string[]).size,
+    [komponenList],
+  );
+
   const stats = useMemo(() => {
     const totalMapel = mapelList.length;
     const mapelDenganKkm = new Set(kkmList.map((k) => k.mata_pelajaran));
@@ -152,13 +297,38 @@ function AkademikDashboardPage() {
     return { totalMapel, kkmBelumDiatur, kurikulumAktif };
   }, [mapelList, kkmList, kurikulumList]);
 
+  // Visualization data derived purely from already-fetched lists.
+  const kkmCoverage = useMemo(
+    () => buildKkmCoverage(stats.totalMapel, stats.kkmBelumDiatur),
+    [stats.totalMapel, stats.kkmBelumDiatur],
+  );
+  const komponenCoverage = useMemo(
+    () => buildKomponenCoverage(stats.totalMapel, komponenCovered),
+    [stats.totalMapel, komponenCovered],
+  );
+  const kelompokBars = useMemo(() => buildKelompokBars(mapelList), [mapelList]);
+  const setupPercent = useMemo(
+    () =>
+      computeSetupCompleteness({
+        mapelCount: stats.totalMapel,
+        mapelTanpaKkm: stats.kkmBelumDiatur,
+        komponenCovered,
+        kurikulumAktif: stats.kurikulumAktif,
+      }),
+    [stats.totalMapel, stats.kkmBelumDiatur, stats.kurikulumAktif, komponenCovered],
+  );
+  const kkmDonut = useMemo<ChartDatum[]>(
+    () => kkmCoverage.map((s) => ({ label: s.label, value: s.value, tone: s.tone })),
+    [kkmCoverage],
+  );
+
   const cutOffDays = cutoff ? daysUntil(cutoff, now) : null;
   const cutOffUrgency: "normal" | "warn" | "critical" =
     cutOffDays === null
       ? "normal"
-      : cutOffDays <= 7
+      : cutOffDays <= CUTOFF_CRITICAL_DAYS
         ? "critical"
-        : cutOffDays <= 14
+        : cutOffDays <= CUTOFF_WARN_DAYS
           ? "warn"
           : "normal";
 
@@ -169,12 +339,12 @@ function AkademikDashboardPage() {
     const komponenSet = new Set(komponenList.map((k) => k.mata_pelajaran).filter(Boolean));
     const items: AttentionItem[] = [];
 
-    if (cutOffDays !== null && cutOffDays <= 14) {
+    if (cutOffDays !== null && cutOffDays <= CUTOFF_WARN_DAYS) {
       items.push({
         id: "cutoff-raport",
         label: `Cut-off raport dalam ${cutOffDays} hari`,
         description: "Pastikan entri nilai selesai sebelum batas waktu.",
-        tone: cutOffDays <= 7 ? "danger" : "warning",
+        tone: cutOffDays <= CUTOFF_CRITICAL_DAYS ? "danger" : "warning",
         badge: "Cut-off",
         actionLabel: "Buka Entri Nilai",
         actionHref: "/sch/$sekolah/akademik/entri-nilai",
@@ -231,11 +401,21 @@ function AkademikDashboardPage() {
         title="Dashboard Akademik"
         description={
           <>
-            Ringkasan mapel, <GlossaryTooltip term="KKM" definition={GLOSSARY.KKM} />, kurikulum,
-            dan progres penilaian.
+            Pusat kendali penilaian untuk Administrator, Guru, dan Kepala Sekolah —
+            ringkasan mapel, <GlossaryTooltip term="KKM" definition={GLOSSARY.KKM} />,
+            kurikulum, dan progres penilaian.
           </>
         }
       />
+
+      <PageGuide
+        storageId="dashboard"
+        intro="Halaman ini menyatukan tiga peran dalam satu alur penilaian. Ikuti langkah sesuai peran Anda."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+
+      <RoleChips primary={role.primary} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -284,6 +464,40 @@ function AkademikDashboardPage() {
         />
       </div>
 
+      <SectionCard
+        title="Kesiapan Setup Akademik"
+        description="Gambaran fondasi penilaian dari data yang sudah ada — tanpa endpoint baru."
+      >
+        {anyLoading ? (
+          <VizSkeleton />
+        ) : anyError ? (
+          <ErrorRetry onRetry={refetchAll} />
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <VizTile title="Kesiapan keseluruhan" hint="Mapel, KKM, komponen, kurikulum">
+              <ProgressRing value={setupPercent} tone={setupTone(setupPercent)} label="setup beres" />
+            </VizTile>
+            <VizTile title="Cakupan KKM" hint={`${stats.totalMapel} mapel`}>
+              <DonutChart
+                data={kkmDonut}
+                centerTop={<span className="text-lg font-semibold text-fg">{stats.totalMapel}</span>}
+                centerBottom={<span className="text-[11px] text-muted-fg">mapel</span>}
+              />
+            </VizTile>
+            <VizTile title="Cakupan Komponen Nilai" hint="mapel dengan vs tanpa komponen">
+              <DistributionBar segments={komponenCoverage} />
+            </VizTile>
+            <VizTile title="Mapel per Kelompok" hint="distribusi kelompok mapel">
+              {kelompokBars.length > 0 ? (
+                <HBarChart data={kelompokBars} className="w-full" />
+              ) : (
+                <div className="text-xs text-muted-fg">Belum ada data mapel.</div>
+              )}
+            </VizTile>
+          </div>
+        )}
+      </SectionCard>
+
       <ModuleFlow
         title="Alur Penilaian Akademik"
         description="Langkah dari setup kurikulum sampai raport terbit."
@@ -295,22 +509,13 @@ function AkademikDashboardPage() {
         )}
       />
 
-      <SectionCard title="Aksi Cepat" description="Pintasan ke alur kerja akademik utama.">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {QUICK_ACTIONS.map((a) => (
-            <Link
-              key={a.to}
-              to={a.to}
-              className="group flex items-start gap-3 rounded-lg border border-border bg-bg p-4 hover:border-brand hover:shadow-sm transition"
-            >
-              <div className="h-9 w-9 shrink-0 rounded-md bg-muted flex items-center justify-center text-fg group-hover:text-brand">
-                <span className="h-5 w-5">{a.icon}</span>
-              </div>
-              <div className="min-w-0">
-                <div className="font-medium text-fg group-hover:text-brand">{a.label}</div>
-                <div className="text-xs text-muted-fg mt-0.5">{a.description}</div>
-              </div>
-            </Link>
+      <SectionCard
+        title="Aksi Cepat per Peran"
+        description="Pintasan dikelompokkan per peran. Kelompok peran utama Anda disorot."
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          {QUICK_ACTION_GROUPS.map((g) => (
+            <QuickActionGroupCard key={g.role} group={g} emphasized={g.role === role.primary} />
           ))}
         </div>
       </SectionCard>
@@ -374,6 +579,106 @@ function AkademikDashboardPage() {
           )}
         </SectionCard>
       </div>
+    </div>
+  );
+}
+
+/** Read-only role chips highlighting the active primary role (framing only). */
+function RoleChips({ primary }: { primary: AkademikRole }) {
+  const roles: AkademikRole[] = ["admin", "guru", "kepala"];
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs text-muted-fg inline-flex items-center gap-1.5">
+        <span className="h-4 w-4 text-muted-fg">
+          <IconUsers />
+        </span>
+        Tampilan untuk:
+      </span>
+      {roles.map((r) => (
+        <span
+          key={r}
+          className={cn(
+            "rounded-full border px-3 py-1 text-xs font-medium transition",
+            r === primary
+              ? "border-brand bg-brand/10 text-brand"
+              : "border-border bg-bg text-muted-fg",
+          )}
+        >
+          {ROLE_LABEL[r]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** A titled tile wrapping a single visualization with a caption. */
+function VizTile({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-lg border border-border bg-bg p-4">
+      <div className="w-full text-center">
+        <div className="text-sm font-medium text-fg">{title}</div>
+        {hint ? <div className="text-[11px] text-muted-fg">{hint}</div> : null}
+      </div>
+      <div className="flex w-full flex-1 items-center justify-center">{children}</div>
+    </div>
+  );
+}
+
+/** One role-framed quick-action group; emphasized when it matches the role. */
+function QuickActionGroupCard({
+  group,
+  emphasized,
+}: {
+  group: QuickActionGroup;
+  emphasized: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border p-4 transition",
+        emphasized ? "border-brand bg-brand/5 shadow-sm" : "border-border bg-bg",
+      )}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="text-sm font-semibold text-fg">Untuk {ROLE_LABEL[group.role]}</div>
+        {emphasized ? <Badge tone="brand">Peran Anda</Badge> : null}
+      </div>
+      <p className="mb-3 text-xs text-muted-fg">{group.blurb}</p>
+      <div className="space-y-2">
+        {group.actions.map((a) => (
+          <Link
+            key={`${group.role}-${a.label}`}
+            to={a.to}
+            className="group flex items-start gap-3 rounded-lg border border-border bg-bg p-3 hover:border-brand hover:shadow-sm transition"
+          >
+            <div className="h-8 w-8 shrink-0 rounded-md bg-muted flex items-center justify-center text-fg group-hover:text-brand">
+              <span className="h-4 w-4">{a.icon}</span>
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-fg group-hover:text-brand">{a.label}</div>
+              <div className="text-xs text-muted-fg mt-0.5">{a.description}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VizSkeleton() {
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 animate-pulse" aria-hidden>
+      {Array.from({ length: SETUP_PILLAR_COUNT }).map((_, i) => (
+        <div key={i} className="h-40 rounded-lg bg-muted" />
+      ))}
     </div>
   );
 }

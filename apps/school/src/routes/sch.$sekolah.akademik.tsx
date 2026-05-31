@@ -11,6 +11,9 @@ import { useResourceList } from "@sekolahpro/api-client";
 import { AkademikContextProvider } from "../lib/akademikContext";
 import { AkademikContextBar } from "../components/akademik/AkademikContextBar";
 import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
+import { PageGuide, type PageGuideStep } from "../components/guide";
+import { DistributionBar, type DistributionSegment } from "../components/viz";
+import { SectionCard } from "@sekolahpro/ui";
 import {
   resolveTahunAjaran,
   computeSemester,
@@ -71,6 +74,56 @@ function isPeriodeSelfManaged(pathname: string): boolean {
 function showContextBar(pathname: string): boolean {
   if (isPeriodeSelfManaged(pathname)) return false;
   return CONTEXT_BAR_PREFIXES.some((p) => pathname.includes(p));
+}
+
+// Panduan singkat fitur Konteks Periode — muncul bersama context bar di halaman
+// operasional. Per-langkah diberi badge peran agar 3 alur (admin/guru/kepala)
+// jelas tanpa menyembunyikan fitur apa pun.
+const CONTEXT_GUIDE_STEPS: PageGuideStep[] = [
+  {
+    title: "Pastikan Tahun Ajaran & Semester benar",
+    detail: "Semua data nilai disaring per periode. Cek bar Konteks di atas sebelum input.",
+    roles: ["admin", "guru", "kepala"],
+  },
+  {
+    title: "Ganti periode lewat selector",
+    detail: "Pilih Tahun Ajaran lalu Semester. Bila ada perubahan belum tersimpan, sistem minta konfirmasi.",
+    roles: ["admin", "guru"],
+  },
+  {
+    title: "Perhatikan penanda periode",
+    detail: "Badge hijau = periode berjalan, kuning = periode lampau/ditutup. Periode lampau tetap bisa dilihat untuk audit.",
+    roles: ["kepala", "admin"],
+  },
+];
+
+const CONTEXT_GUIDE_TIPS = [
+  "Periode terakhir yang Anda pilih disimpan otomatis dan dipakai lagi saat membuka modul ini.",
+  "Tahun Ajaran aktif diatur di Master Data, bukan di sini.",
+];
+
+// Subset field TA yang dibutuhkan untuk ringkasan distribusi (struktural agar
+// tidak bergantung pada bentuk persis TahunAjaranRow dari lib periode).
+type TaStatusRow = { is_current?: number; status?: string };
+
+/**
+ * Ringkas daftar Tahun Ajaran menjadi segmen distribusi (Berjalan / Aktif /
+ * Ditutup) untuk DistributionBar. Hanya memakai data taList yang sudah ada.
+ */
+function buildTaSegments(taList: TaStatusRow[]): DistributionSegment[] {
+  let berjalan = 0;
+  let aktif = 0;
+  let ditutup = 0;
+  for (const t of taList) {
+    if (t.is_current) berjalan += 1;
+    else if (t.status && t.status !== "Aktif") ditutup += 1;
+    else aktif += 1;
+  }
+  return [
+    { label: "Berjalan", value: berjalan, tone: "emerald" },
+    { label: "Aktif", value: aktif, tone: "sky" },
+    { label: "Ditutup/Lampau", value: ditutup, tone: "amber" },
+  ];
 }
 
 function AkademikLayout() {
@@ -143,6 +196,14 @@ function AkademikLayout() {
   const semester = search.semester ?? resolved?.semester ?? "";
   const past = isPastPeriod(resolved?.taRow, refDate);
 
+  // Panduan kontekstual hanya relevan di halaman operasional (yang juga
+  // menampilkan context bar). Dashboard punya panduannya sendiri.
+  const contextual = showContextBar(pathname);
+
+  // Ringkasan distribusi Tahun Ajaran — visualisasi dari data taList yang sudah
+  // diambil layout (tanpa panggilan backend tambahan).
+  const taSegments = useMemo(() => buildTaSegments(taList), [taList]);
+
   return (
     <AkademikContextProvider
       value={{
@@ -157,7 +218,30 @@ function AkademikLayout() {
       }}
     >
       <div className="space-y-4">
-        {showContextBar(pathname) ? <AkademikContextBar /> : null}
+        {contextual ? (
+          <>
+            <AkademikContextBar />
+            <PageGuide
+              storageId="layout-contextbar"
+              title="Cara pakai Konteks Periode"
+              intro="Bar di atas menentukan Tahun Ajaran & Semester untuk seluruh data nilai di modul Akademik."
+              steps={CONTEXT_GUIDE_STEPS}
+              tips={CONTEXT_GUIDE_TIPS}
+            />
+            <SectionCard
+              title="Sebaran Tahun Ajaran"
+              description="Status semua Tahun Ajaran yang tersedia untuk dipilih di Konteks."
+            >
+              {taList.length > 0 ? (
+                <DistributionBar segments={taSegments} />
+              ) : (
+                <p className="text-sm text-muted-fg">
+                  Belum ada Tahun Ajaran. Tambahkan di Master Data agar periode bisa dipilih.
+                </p>
+              )}
+            </SectionCard>
+          </>
+        ) : null}
         <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="inline" />
         <Outlet />
       </div>

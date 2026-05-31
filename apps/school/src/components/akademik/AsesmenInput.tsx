@@ -1,19 +1,41 @@
+/**
+ * AsesmenInput.tsx — Halaman input nilai test per rombel (detail Asesmen).
+ *
+ * Memuat dokumen Asesmen, anggota rombel aktif, dan info siswa; menampilkan
+ * grid nilai per-siswa dengan autosave saat keluar dari kolom (on-blur / Enter).
+ * Redesign ini menambah PageGuide, ringkasan meta test (InfoGrid), serta
+ * visualisasi progres pengisian dan distribusi nilai — TANPA mengubah perilaku
+ * jaringan, nama doctype/field, mutasi, atau invalidasi cache.
+ *
+ * Role framing (label/penekanan saja, tidak pernah menyembunyikan fungsi):
+ *  - Guru: pelaku utama input nilai (autosave on-blur).
+ *  - Administrator Akademik: memastikan kelengkapan & konsistensi data.
+ *  - Kepala Sekolah: memantau sebaran nilai & ketuntasan kelas.
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
+  Alert,
   Badge,
   Breadcrumb,
   Button,
+  InfoField,
+  InfoGrid,
   PageHeader,
   SectionCard,
+  Skeleton,
   StatCard,
   IconArrowLeft,
   IconCheck,
   IconChart,
+  IconClock,
   IconEdit,
+  IconUsers,
 } from "@sekolahpro/ui";
 import { getResource, listResource, updateResource } from "@sekolahpro/api-client";
+import { DistributionBar, ProgressRing, type Tone } from "../viz";
+import { PageGuide, type PageGuideStep } from "../guide";
 
 interface NilaiRow {
   siswa: string;
@@ -63,15 +85,34 @@ interface SiswaCell {
 const ANGGOTA_FIELDS = ["name", "siswa", "no_urut", "status", "parent"];
 const SISWA_FIELDS = ["name", "nama_lengkap", "nis"];
 
+// Batas nilai valid.
+const NILAI_MIN = 0;
+const NILAI_MAX = 100;
+
+// Ambang predikat untuk distribusi rentang nilai (batas bawah inklusif).
+const GRADE_BANDS: { label: string; min: number; tone: Tone }[] = [
+  { label: "85–100 (A)", min: 85, tone: "emerald" },
+  { label: "70–84 (B)", min: 70, tone: "sky" },
+  { label: "55–69 (C)", min: 55, tone: "amber" },
+  { label: "0–54 (D)", min: 0, tone: "rose" },
+];
+
+/** Validasi input nilai mentah: kosong = boleh, selain itu harus angka 0–100. */
 function clampNilai(raw: string): { ok: boolean; error: string | null } {
   const t = raw.trim();
   if (t === "") return { ok: true, error: null };
   const n = Number(t);
   if (Number.isNaN(n)) return { ok: false, error: "Bukan angka" };
-  if (n < 0 || n > 100) return { ok: false, error: "0–100" };
+  if (n < NILAI_MIN || n > NILAI_MAX) return { ok: false, error: `${NILAI_MIN}–${NILAI_MAX}` };
   return { ok: true, error: null };
 }
 
+/** Guard rentang nilai valid untuk agregasi ringkasan. */
+function inRange(n: number): boolean {
+  return n >= NILAI_MIN && n <= NILAI_MAX;
+}
+
+/** Ambil daftar anggota rombel aktif terurut nomor urut. */
 async function loadAnggota(rombel: string): Promise<AnggotaRow[]> {
   return listResource<AnggotaRow>("Anggota Rombel", {
     fields: ANGGOTA_FIELDS,
@@ -84,6 +125,7 @@ async function loadAnggota(rombel: string): Promise<AnggotaRow[]> {
   });
 }
 
+/** Ambil info nama & NIS siswa untuk daftar nama yang diberikan. */
 async function loadSiswa(names: string[]): Promise<Map<string, SiswaInfo>> {
   if (names.length === 0) return new Map();
   const rows = await listResource<SiswaInfo>("Siswa", {
@@ -93,6 +135,56 @@ async function loadSiswa(names: string[]): Promise<Map<string, SiswaInfo>> {
   });
   return new Map(rows.map((r) => [r.name, r]));
 }
+
+/** Susun baris sel siswa dari anggota + info siswa + nilai tersimpan. */
+function buildCells(
+  anggota: AnggotaRow[],
+  siswaMap: Map<string, SiswaInfo>,
+  nilaiBySiswa: Map<string, NilaiRow>,
+): SiswaCell[] {
+  return anggota.map((a) => {
+    const existing = nilaiBySiswa.get(a.siswa);
+    const v = existing?.nilai != null ? String(existing.nilai) : "";
+    const info = siswaMap.get(a.siswa);
+    return {
+      siswa: a.siswa,
+      nama: info?.nama_lengkap ?? a.siswa,
+      ...(info?.nis ? { nis: info.nis } : {}),
+      value: v,
+      baseline: v,
+      status: "saved" as RowStatus,
+    };
+  });
+}
+
+/** Langkah panduan halaman, ditujukan terutama untuk Guru. */
+const GUIDE_STEPS: PageGuideStep[] = [
+  {
+    title: "Periksa info test di atas",
+    detail: "Pastikan mata pelajaran, komponen, rombel, dan semester sudah benar sebelum mengisi.",
+    roles: ["guru", "admin"],
+  },
+  {
+    title: "Ketik nilai 0–100 pada kolom siswa",
+    detail: "Gunakan angka saja. Nilai di luar 0–100 atau bukan angka akan ditandai merah.",
+    roles: ["guru"],
+  },
+  {
+    title: "Tersimpan otomatis saat keluar kolom",
+    detail: "Tidak ada tombol Simpan. Begitu Anda pindah kolom (atau tekan Enter), nilai langsung disimpan.",
+    roles: ["guru"],
+  },
+  {
+    title: "Pantau progres & sebaran",
+    detail: "Lihat lingkaran ketuntasan dan batang distribusi untuk melihat kemajuan kelas secara cepat.",
+    roles: ["kepala", "admin"],
+  },
+];
+
+const GUIDE_TIPS = [
+  "Tekan Enter untuk menyimpan baris ini dan langsung pindah ke siswa berikutnya.",
+  "Tanda centang hijau = tersimpan, 'menyimpan…' = sedang dikirim, badge merah = gagal/keliru.",
+];
 
 export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekolah?: string }) {
   const qc = useQueryClient();
@@ -113,20 +205,7 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
       const nilaiBySiswa = new Map<string, NilaiRow>(
         (d.nilai ?? []).map((r) => [r.siswa, r]),
       );
-      const next: SiswaCell[] = anggota.map((a) => {
-        const existing = nilaiBySiswa.get(a.siswa);
-        const v = existing?.nilai != null ? String(existing.nilai) : "";
-        const info = siswaMap.get(a.siswa);
-        return {
-          siswa: a.siswa,
-          nama: info?.nama_lengkap ?? a.siswa,
-          ...(info?.nis ? { nis: info.nis } : {}),
-          value: v,
-          baseline: v,
-          status: "saved",
-        };
-      });
-      setCells(next);
+      setCells(buildCells(anggota, siswaMap, nilaiBySiswa));
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Gagal memuat asesmen.");
     } finally {
@@ -174,7 +253,7 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
           const t = c.value.trim();
           if (t === "") return null;
           const n = Number(t);
-          if (Number.isNaN(n) || n < 0 || n > 100) return null;
+          if (Number.isNaN(n) || n < NILAI_MIN || n > NILAI_MAX) return null;
           return { siswa: c.siswa, nilai: n };
         })
         .filter((r): r is PayloadRow => r !== null);
@@ -208,32 +287,27 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
     }
   }, []);
 
-  const summary = useMemo(() => {
-    const vals = cells
-      .map((c) => Number(c.value.trim()))
-      .filter((n) => !Number.isNaN(n) && c2(n));
-    const filled = cells.filter((c) => c.value.trim() !== "").length;
-    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    const max = vals.length ? Math.max(...vals) : null;
-    return { filled, total: cells.length, avg, max };
-  }, [cells]);
+  const summary = useMemo(() => deriveSummary(cells), [cells]);
 
-  if (loading) {
-    return <div className="py-12 text-center text-sm text-muted-fg">Memuat asesmen…</div>;
-  }
+  if (loading) return <AsesmenSkeleton />;
+
   if (loadError || !doc) {
     return (
-      <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-        {loadError ?? "Asesmen tidak ditemukan."}
-        <Button variant="outline" className="ml-3" onClick={reload}>
-          Coba lagi
-        </Button>
+      <div className="space-y-6">
+        <Alert tone="danger" title="Gagal memuat asesmen">
+          <div className="flex items-center justify-between gap-3">
+            <span>{loadError ?? "Asesmen tidak ditemukan."}</span>
+            <Button variant="outline" onClick={reload}>
+              Coba lagi
+            </Button>
+          </div>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Breadcrumb
         items={[
           {
@@ -255,6 +329,7 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
           { label: doc.judul },
         ]}
       />
+
       <PageHeader
         eyebrow="Akademik · Input Nilai Test"
         title={doc.judul}
@@ -271,59 +346,47 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
         }
       />
 
+      <PageGuide
+        storageId="asesmen-detail"
+        intro="Halaman ini untuk mengisi nilai test setiap siswa di rombel. Nilai tersimpan otomatis — tidak perlu menekan tombol Simpan."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+
+      <MetaSection doc={doc} totalSiswa={cells.length} />
+
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Terisi" value={`${summary.filled}/${summary.total}`} hint="siswa dinilai" icon={<IconEdit />} accent="brand" urgency="normal" />
+        <StatCard label="Terisi" value={`${summary.filled}/${summary.total}`} hint="siswa dinilai" icon={<IconEdit />} accent="brand" urgency={summary.empty > 0 ? "warn" : "normal"} />
         <StatCard label="Rata-rata" value={summary.avg != null ? summary.avg.toFixed(1) : "—"} hint="nilai kelas" icon={<IconChart />} accent="violet" urgency="normal" />
         <StatCard label="Tertinggi" value={summary.max != null ? String(summary.max) : "—"} hint="nilai puncak" icon={<IconCheck />} accent="emerald" urgency="normal" />
       </div>
 
+      <ProgressSection summary={summary} grades={summary.gradeSegments} />
+
       <SectionCard
-        title={`${cells.length} siswa`}
+        title={`Daftar Nilai · ${cells.length} siswa`}
         description="Isi nilai 0–100 per siswa. Enter pindah ke bawah; tersimpan otomatis saat keluar dari kolom."
         padded={false}
       >
         {cells.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-fg">Rombel ini belum punya anggota aktif.</div>
+          <div className="px-4 py-10 text-center text-sm text-muted-fg">
+            Rombel ini belum punya anggota aktif.
+          </div>
         ) : (
           <ul className="divide-y divide-border">
             {cells.map((c, idx) => (
-              <li key={c.siswa} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                <div className="min-w-0 flex items-center gap-3">
-                  <span className="text-xs text-muted-fg tabular-nums w-6 text-right">{idx + 1}</span>
-                  <div className="min-w-0">
-                    <div className="font-medium text-fg truncate">{c.nama}</div>
-                    {c.nis ? <div className="text-xs text-muted-fg font-mono">{c.nis}</div> : null}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {c.status === "saving" ? <span className="text-xs text-muted-fg">menyimpan…</span> : null}
-                  {c.status === "saved" && c.baseline.trim() !== "" ? <span className="text-emerald-600"><span className="h-4 w-4 inline-block"><IconCheck /></span></span> : null}
-                  {c.status === "error" ? <Badge tone="danger">{c.error ?? "error"}</Badge> : null}
-                  <input
-                    ref={(el) => {
-                      if (el) inputRefs.current.set(idx, el);
-                      else inputRefs.current.delete(idx);
-                    }}
-                    type="number"
-                    min={0}
-                    max={100}
-                    inputMode="numeric"
-                    value={c.value}
-                    onChange={(e) => setValue(idx, e.target.value)}
-                    onBlur={() => void saveCell(idx)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        void saveCell(idx);
-                        focusRow(idx + 1);
-                      }
-                    }}
-                    className={`w-20 rounded-md border bg-bg px-2 py-1.5 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-brand/40 ${
-                      c.status === "error" ? "border-rose-400" : "border-border"
-                    }`}
-                  />
-                </div>
-              </li>
+              <NilaiRowItem
+                key={c.siswa}
+                cell={c}
+                idx={idx}
+                onChange={setValue}
+                onSave={saveCell}
+                onEnter={focusRow}
+                registerRef={(el) => {
+                  if (el) inputRefs.current.set(idx, el);
+                  else inputRefs.current.delete(idx);
+                }}
+              />
             ))}
           </ul>
         )}
@@ -332,7 +395,199 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
   );
 }
 
-// Guard 0..100 helper for summary aggregation.
-function c2(n: number): boolean {
-  return n >= 0 && n <= 100;
+/** Ringkasan terhitung dari nilai saat ini (terisi, rata-rata, distribusi). */
+interface AsesmenSummary {
+  filled: number;
+  empty: number;
+  total: number;
+  avg: number | null;
+  max: number | null;
+  gradeSegments: { label: string; value: number; tone: Tone }[];
+}
+
+/** Hitung ringkasan & segmen distribusi predikat dari sel saat ini. */
+function deriveSummary(cells: SiswaCell[]): AsesmenSummary {
+  const vals = cells
+    .map((c) => Number(c.value.trim()))
+    .filter((n) => !Number.isNaN(n) && inRange(n));
+  const filled = cells.filter((c) => c.value.trim() !== "").length;
+  const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  const max = vals.length ? Math.max(...vals) : null;
+  const gradeSegments = GRADE_BANDS.map((band) => ({
+    label: band.label,
+    tone: band.tone,
+    value: vals.filter((n) => n >= band.min && bandUpper(n, band.min)).length,
+  }));
+  return { filled, empty: cells.length - filled, total: cells.length, avg, max, gradeSegments };
+}
+
+/** True jika n tergolong band yang dimulai pada `min` (band tertinggi yg cocok). */
+function bandUpper(n: number, min: number): boolean {
+  const higher = GRADE_BANDS.filter((b) => b.min > min).map((b) => b.min);
+  const ceiling = higher.length ? Math.min(...higher) : NILAI_MAX + 1;
+  return n < ceiling;
+}
+
+/** Kartu ringkasan meta test (judul, mapel, komponen, rombel, semester). */
+function MetaSection({ doc, totalSiswa }: { doc: AsesmenDoc; totalSiswa: number }) {
+  return (
+    <SectionCard
+      title="Info Test"
+      description="Detail asesmen yang sedang dinilai."
+      action={<Badge tone="brand">{doc.semester}</Badge>}
+    >
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Badge tone="brand">{doc.mata_pelajaran}</Badge>
+        <Badge tone="neutral">{doc.komponen}</Badge>
+        <Badge tone="success">{doc.tahun_ajaran}</Badge>
+        <span className="inline-flex items-center gap-1 text-xs text-muted-fg">
+          <span className="h-3.5 w-3.5"><IconUsers /></span>
+          {totalSiswa} siswa
+        </span>
+      </div>
+      <InfoGrid cols={3}>
+        <InfoField label="Judul Test" value={doc.judul} />
+        <InfoField label="Mata Pelajaran" value={doc.mata_pelajaran} />
+        <InfoField label="Komponen" value={doc.komponen} />
+        <InfoField label="Rombel" value={doc.rombel} />
+        <InfoField label="Semester" value={doc.semester} />
+        <InfoField label="Tahun Ajaran" value={doc.tahun_ajaran} />
+      </InfoGrid>
+    </SectionCard>
+  );
+}
+
+/** Visualisasi progres pengisian + distribusi terisi/kosong + predikat. */
+function ProgressSection({
+  summary,
+  grades,
+}: {
+  summary: AsesmenSummary;
+  grades: { label: string; value: number; tone: Tone }[];
+}) {
+  const pct = summary.total > 0 ? Math.round((summary.filled / summary.total) * 100) : 0;
+  const fillTone: Tone = summary.empty === 0 ? "emerald" : pct >= 50 ? "brand" : "amber";
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <SectionCard title="Ketuntasan Pengisian" className="lg:col-span-1">
+        <div className="flex flex-col items-center gap-3 py-2">
+          <ProgressRing value={pct} tone={fillTone} label={`${summary.filled} dari ${summary.total} siswa terisi`} />
+          <div className="flex items-center gap-1.5 text-xs text-muted-fg">
+            <span className="h-3.5 w-3.5"><IconClock /></span>
+            {summary.empty > 0 ? `${summary.empty} siswa belum dinilai` : "Semua siswa sudah dinilai"}
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Status Pengisian" className="lg:col-span-2">
+        <DistributionBar
+          segments={[
+            { label: "Terisi", value: summary.filled, tone: "emerald" },
+            { label: "Kosong", value: summary.empty, tone: "neutral" },
+          ]}
+        />
+        <div className="mt-6">
+          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-fg">
+            Sebaran Predikat
+          </div>
+          {summary.filled === 0 ? (
+            <p className="text-sm text-muted-fg">Belum ada nilai untuk dianalisis.</p>
+          ) : (
+            <DistributionBar segments={grades} />
+          )}
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/** Satu baris siswa pada grid nilai (status simpan + input ramah keyboard). */
+function NilaiRowItem({
+  cell,
+  idx,
+  onChange,
+  onSave,
+  onEnter,
+  registerRef,
+}: {
+  cell: SiswaCell;
+  idx: number;
+  onChange: (idx: number, value: string) => void;
+  onSave: (idx: number) => void;
+  onEnter: (idx: number) => void;
+  registerRef: (el: HTMLInputElement | null) => void;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-muted/40">
+      <div className="min-w-0 flex items-center gap-3">
+        <span className="text-xs text-muted-fg tabular-nums w-6 text-right">{idx + 1}</span>
+        <div className="min-w-0">
+          <div className="font-medium text-fg truncate">{cell.nama}</div>
+          {cell.nis ? <div className="text-xs text-muted-fg font-mono">{cell.nis}</div> : null}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <RowStatusIndicator status={cell.status} saved={cell.baseline.trim() !== ""} error={cell.error} />
+        <input
+          ref={registerRef}
+          type="number"
+          min={NILAI_MIN}
+          max={NILAI_MAX}
+          inputMode="numeric"
+          aria-label={`Nilai untuk ${cell.nama}`}
+          value={cell.value}
+          onChange={(e) => onChange(idx, e.target.value)}
+          onBlur={() => onSave(idx)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onSave(idx);
+              onEnter(idx + 1);
+            }
+          }}
+          className={`w-20 rounded-md border bg-bg px-2 py-1.5 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-brand/40 ${
+            cell.status === "error" ? "border-rose-400" : "border-border"
+          }`}
+        />
+      </div>
+    </li>
+  );
+}
+
+/** Indikator status simpan untuk satu baris (menyimpan / tersimpan / error). */
+function RowStatusIndicator({ status, saved, error }: { status: RowStatus; saved: boolean; error?: string | undefined }) {
+  if (status === "saving") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-fg">
+        <span className="h-3.5 w-3.5 animate-pulse"><IconClock /></span>
+        menyimpan…
+      </span>
+    );
+  }
+  if (status === "error") return <Badge tone="danger">{error ?? "error"}</Badge>;
+  if (status === "dirty") return <span className="text-xs text-amber-600">belum tersimpan</span>;
+  if (status === "saved" && saved) {
+    return (
+      <span className="text-emerald-600" title="Tersimpan">
+        <span className="h-4 w-4 inline-block"><IconCheck /></span>
+      </span>
+    );
+  }
+  return null;
+}
+
+/** Skeleton placeholder saat memuat data asesmen. */
+function AsesmenSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-8 w-64" />
+      <Skeleton className="h-24 w-full" />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+      <Skeleton className="h-64 w-full" />
+    </div>
+  );
 }

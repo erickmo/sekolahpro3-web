@@ -152,6 +152,11 @@ export function GenerateRaportModal({ open, onClose, initial, onCreated }: Props
         </>
       }
     >
+      <div className="mb-4 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+        Raport baru dibuat berstatus <strong>Draft</strong> lalu mengikuti alur Draft → Review →
+        Submitted → Final → Locked/Tercetak. Generate ulang memperbarui draft dari Entri Nilai
+        terkini.
+      </div>
       <FormSection title="Sumber Data Raport" description="Tanda * wajib diisi.">
         <FormField label="Siswa" required className="col-span-2">
           <SearchableSelect
