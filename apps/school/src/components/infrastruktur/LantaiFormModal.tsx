@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useResourceCreate, useResourceDoc, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
+import { humanizeFrappeError, useResourceCreate, useResourceDoc, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { Modal, Button, FormField, FormGrid, Input, SearchableSelect } from "@sekolahpro/ui";
 
 interface LantaiFormModalProps {
@@ -74,7 +74,7 @@ export function LantaiFormModal({ open, onClose, onCreated, defaultGedung, editN
       reset();
       onClose();
     } catch (e) {
-      setErr((e as Error)?.message ?? "Gagal menyimpan lantai.");
+      setErr(humanizeFrappeError(e) ?? (e as Error)?.message ?? "Gagal menyimpan lantai.");
     }
   };
 

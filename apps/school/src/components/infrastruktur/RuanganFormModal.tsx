@@ -18,6 +18,7 @@ import {
   SearchableSelect,
 } from "@sekolahpro/ui";
 import {
+  humanizeFrappeError,
   useResourceCreate,
   useResourceDoc,
   useResourceList,
@@ -181,7 +182,7 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
       reset();
       onClose();
     } catch (e) {
-      setErr((e as Error)?.message ?? "Gagal menyimpan ruangan.");
+      setErr(humanizeFrappeError(e) ?? (e as Error)?.message ?? "Gagal menyimpan ruangan.");
     }
   };
 

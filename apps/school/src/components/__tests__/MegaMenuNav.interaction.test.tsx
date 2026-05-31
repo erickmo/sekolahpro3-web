@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MegaMenuNav } from "../MegaMenuNav";
 import type { NavTabGroup } from "../GroupedNavTabs";
@@ -34,6 +34,10 @@ const GROUPS: NavTabGroup[] = [
     items: [{ to: "/sch/x/master/tahun-ajaran", label: "Tahun Ajaran" }],
   },
 ];
+
+// globals:false in vitest.config means afterEach(cleanup) is NOT auto-wired;
+// register it so each test starts with a fresh DOM (no element leakage).
+afterEach(cleanup);
 
 describe("MegaMenuNav interaction", () => {
   it("panel hidden until trigger clicked", () => {
