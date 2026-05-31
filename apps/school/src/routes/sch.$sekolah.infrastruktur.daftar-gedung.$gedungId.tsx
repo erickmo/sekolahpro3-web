@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   Badge,
@@ -28,6 +28,8 @@ type Gedung = { name: string; nama?: string; kode?: string; tahun_dibangun?: num
 type Lantai = { name: string; nama?: string; nomor_lantai?: number };
 type Ruangan = { name: string; nama?: string; jenis_ruangan?: string; lantai?: string; kapasitas?: number; status?: string };
 type Fasilitas = { name: string; parent?: string; nama_fasilitas?: string; jumlah?: number; kondisi?: string };
+// Ruangan doc as returned by get_doc — carries its "fasilitas" child table inline.
+type RuanganDoc = { name: string; fasilitas?: Fasilitas[] };
 type Utilitas = { name: string; jenis?: string; provider?: string; nomor_pelanggan?: string; status?: string };
 
 const LANTAI_COLS: Column<Lantai>[] = [
@@ -65,10 +67,22 @@ const emptyRows = (label: string) => (
 );
 
 /**
- * Read-only facility list shown in a room's expanded row. Editing facilities is
- * done via the room form (RuanganFormModal child-table editor).
+ * Read-only facility list shown in a room's expanded row.
+ *
+ * Fasilitas live in the "fasilitas" child table on Ruangan (istable=1). Querying
+ * that child doctype directly via REST (`/api/resource/Fasilitas Ruangan`) is
+ * denied for non-admin web users and carries no `sekolah` field for tenant
+ * scoping — so we read the parent Ruangan doc instead, whose child rows come
+ * embedded and whose read is tenant-checked. Lazy by design: DataTable only
+ * mounts this when the row is expanded, so each open fetches just one doc.
+ * Editing is done via RuanganFormModal (child-table editor).
  */
-const renderFasilitas = (rows: Fasilitas[]) => {
+export function FasilitasExpanded({ ruanganName }: { ruanganName: string }) {
+  const docQ = useResourceDoc<RuanganDoc>("Ruangan", ruanganName);
+  const rows = docQ.data?.fasilitas ?? [];
+  if (docQ.isLoading) {
+    return <div className="text-xs text-muted-fg">Memuat fasilitas…</div>;
+  }
   if (rows.length === 0) {
     return <div className="text-xs text-muted-fg">Belum ada fasilitas. Tambah lewat tombol Edit ruangan.</div>;
   }
@@ -90,7 +104,7 @@ const renderFasilitas = (rows: Fasilitas[]) => {
       </ul>
     </div>
   );
-};
+}
 
 /**
  * Detail Gedung — CRUD inline per tab. Menampilkan info gedung + tab Lantai /
@@ -129,37 +143,15 @@ function GedungDetailPage() {
     limit_page_length: 0,
   });
 
-  const ruanganNames = useMemo(() => (ruanganQ.data ?? []).map((r) => r.name), [ruanganQ.data]);
-  const fasilitasQ = useResourceList<Fasilitas>(
-    "Fasilitas Ruangan",
-    {
-      fields: ["name", "parent", "nama_fasilitas", "jumlah", "kondisi"],
-      filters: [
-        ["parenttype", "=", "Ruangan"],
-        ["parent", "in", ruanganNames],
-      ],
-      order_by: "parent asc",
-      limit_page_length: 0,
-    },
-    { enabled: ruanganNames.length > 0 },
-  );
-
-  // Group facilities by their parent room for read-only expanded display.
-  const fasilitasByParent = useMemo(() => {
-    const map = new Map<string, Fasilitas[]>();
-    for (const f of fasilitasQ.data ?? []) {
-      const list = map.get(f.parent ?? "") ?? [];
-      list.push(f);
-      map.set(f.parent ?? "", list);
-    }
-    return map;
-  }, [fasilitasQ.data]);
+  // Fasilitas are read per-room on expand via FasilitasExpanded (parent Ruangan
+  // doc), not bulk-queried here — the child doctype isn't list-readable for web
+  // users and has no own tenant scope.
 
   const gedung = gedungQ.data;
   const backTo = "/infrastruktur/daftar-gedung";
 
   const refetchAll = () =>
-    Promise.all([lantaiQ.refetch(), ruanganQ.refetch(), utilitasQ.refetch(), fasilitasQ.refetch()]);
+    Promise.all([lantaiQ.refetch(), ruanganQ.refetch(), utilitasQ.refetch()]);
 
   const confirmDelete = async () => {
     if (!del) return;
@@ -276,7 +268,7 @@ function GedungDetailPage() {
                   columns={[...RUANGAN_COLS, actionCol<Ruangan>((r) => setRuanganModal({ open: true, editName: r.name }), "Ruangan")]}
                   rowKey={(r) => r.name}
                   empty={emptyRows("ruangan")}
-                  renderExpanded={(r) => renderFasilitas(fasilitasByParent.get(r.name) ?? [])}
+                  renderExpanded={(r) => <FasilitasExpanded ruanganName={r.name} />}
                 />
               </SectionCard>
             )}
