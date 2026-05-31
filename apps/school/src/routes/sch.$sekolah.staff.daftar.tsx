@@ -1,8 +1,19 @@
-import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Badge, Button, IconPlus } from "@sekolahpro/ui";
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  Avatar,
+  Badge,
+  Button,
+  DataTable,
+  FilterBar,
+  IconPlus,
+  PageHeader,
+  Pagination,
+  SectionCard,
+  type Column,
+  type SortState,
+} from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
-import { scopedTo, scopedParams } from "../lib/scoped";
 import { RoleBadges } from "../features/pegawai/RoleBadges";
 import { PegawaiFormModal } from "../features/pegawai/PegawaiFormModal";
 import { apiRoleBadges, apiIsGuru, apiIsStaff, apiIsDualRole, type PegawaiApi } from "../features/pegawai/roles";
@@ -18,17 +29,69 @@ const ROLE_OPTIONS: { value: RoleFilter; label: string }[] = [
 ];
 
 const PEGAWAI_LIMIT = 500;
+const PAGE_SIZE = 25;
+
+const COLUMNS: Column<PegawaiApi>[] = [
+  {
+    key: "nama_lengkap",
+    header: "Pegawai",
+    sortable: true,
+    cell: (p) => (
+      <div className="flex items-center gap-3 min-w-0">
+        <Avatar name={p.nama_lengkap ?? p.name} size="sm" />
+        <div className="min-w-0">
+          <div className="font-medium text-fg truncate">{p.nama_lengkap ?? p.name}</div>
+          <div className="text-xs text-muted-fg tabular-nums">NIP {p.nip ?? "—"}</div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    key: "role",
+    header: "Role",
+    cell: (p) => <RoleBadges roles={apiRoleBadges(p)} />,
+  },
+  {
+    key: "is_aktif",
+    header: "Status",
+    sortable: true,
+    cell: (p) => (
+      <Badge tone={p.is_aktif === 1 ? "success" : "neutral"}>
+        {p.is_aktif === 1 ? "Aktif" : "Non-aktif"}
+      </Badge>
+    ),
+  },
+  {
+    key: "jabatan_fungsional",
+    header: "Jabatan / Mapel",
+    cell: (p) => <span className="text-sm">{p.jabatan_fungsional ?? "—"}</span>,
+  },
+  {
+    key: "status_kepegawaian",
+    header: "Kepegawaian",
+    cell: (p) => <span className="text-sm">{p.status_kepegawaian ?? "—"}</span>,
+  },
+];
 
 export const Route = createFileRoute("/sch/$sekolah/staff/daftar")({
   component: DaftarPegawai,
 });
 
+function sortVal(p: PegawaiApi, key: string): string | number {
+  if (key === "is_aktif") return p.is_aktif === 1 ? 1 : 0;
+  const v = (p as Record<string, unknown>)[key];
+  return typeof v === "number" ? v : String(v ?? "").toLowerCase();
+}
+
 function DaftarPegawai() {
   const { sekolah } = Route.useParams();
+  const navigate = useNavigate();
   const [role, setRole] = useState<RoleFilter>("semua");
   const [status, setStatus] = useState<StatusFilter>("semua");
   const [query, setQuery] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [sort, setSort] = useState<SortState>({ key: "nama_lengkap", dir: "asc" });
+  const [page, setPage] = useState(1);
 
   const q = useResourceList<PegawaiApi>("Pegawai", {
     fields: ["name", "nama_lengkap", "nip", "jabatan_fungsional", "status_kepegawaian", "is_aktif", "roles.role"],
@@ -53,90 +116,111 @@ function DaftarPegawai() {
     return true;
   }), [list, role, status, query]);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-fg">Daftar Pegawai</h1>
-        <Button onClick={() => setShowCreate(true)}>
-          <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
-          Tambah Pegawai
-        </Button>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {ROLE_OPTIONS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setRole(f.value)}
-            className={`h-8 px-3 rounded-md text-sm border ${role === f.value ? "border-brand bg-brand/10 text-brand" : "border-border text-fg hover:bg-muted"}`}
-          >
-            {f.label}
-          </button>
-        ))}
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value as StatusFilter)}
-          className="h-8 px-2 rounded-md border border-border text-sm bg-bg"
-        >
-          <option value="semua">Semua status</option>
-          <option value="aktif">Aktif</option>
-          <option value="nonaktif">Non-aktif</option>
-        </select>
-        <input
-          type="search"
-          placeholder="Cari nama atau NIP"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="h-8 px-2 rounded-md border border-border text-sm bg-bg flex-1 min-w-[180px]"
-        />
-        <span className="text-xs text-muted-fg ml-auto">
-          {q.isLoading ? "Memuat..." : `${filtered.length} pegawai`}
-        </span>
-      </div>
+  const sorted = useMemo(() => {
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      const va = sortVal(a, sort.key);
+      const vb = sortVal(b, sort.key);
+      if (va < vb) return -1 * dir;
+      if (va > vb) return 1 * dir;
+      return 0;
+    });
+  }, [filtered, sort]);
 
-      <div className="rounded-lg border border-border bg-bg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="text-xs text-muted-fg bg-muted/40">
-            <tr>
-              <th className="text-left px-3 py-2">NIP</th>
-              <th className="text-left px-3 py-2">Nama</th>
-              <th className="text-left px-3 py-2">Role</th>
-              <th className="text-left px-3 py-2">Status</th>
-              <th className="text-left px-3 py-2">Jabatan / Mapel</th>
-              <th className="text-left px-3 py-2">Kepegawaian</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => (
-              <tr key={p.name} className="border-t border-border hover:bg-muted/30">
-                <td className="px-3 py-2 font-mono text-xs">{p.nip ?? "—"}</td>
-                <td className="px-3 py-2">
-                  <Link
-                    to={scopedTo(sekolah, `/staff/${p.name}`)}
-                    params={scopedParams(sekolah)}
-                    className="text-brand hover:underline"
-                  >
-                    {p.nama_lengkap ?? p.name}
-                  </Link>
-                </td>
-                <td className="px-3 py-2"><RoleBadges roles={apiRoleBadges(p)} /></td>
-                <td className="px-3 py-2">
-                  <Badge tone={p.is_aktif === 1 ? "success" : "neutral"}>
-                    {p.is_aktif === 1 ? "Aktif" : "Non-aktif"}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2">{p.jabatan_fungsional ?? "—"}</td>
-                <td className="px-3 py-2">{p.status_kepegawaian ?? "—"}</td>
-              </tr>
+  // Reset to first page whenever the result set or its ordering changes.
+  useEffect(() => setPage(1), [role, status, query, sort]);
+
+  const total = sorted.length;
+  const paged = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Direktori"
+        title="Pegawai"
+        description="Kelola data guru dan staff, role, serta status kepegawaian."
+        actions={
+          <Button onClick={() => setShowCreate(true)}>
+            <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
+            Tambah Pegawai
+          </Button>
+        }
+      />
+
+      <FilterBar
+        search={{
+          value: query,
+          onChange: setQuery,
+          placeholder: "Cari nama atau NIP",
+        }}
+        filters={[
+          {
+            key: "status",
+            label: "Status",
+            value: status,
+            options: [
+              { value: "semua", label: "Semua status" },
+              { value: "aktif", label: "Aktif" },
+              { value: "nonaktif", label: "Non-aktif" },
+            ],
+            onChange: (v) => setStatus(v as StatusFilter),
+          },
+        ]}
+        trailing={
+          <div className="flex flex-wrap items-center gap-1.5">
+            {ROLE_OPTIONS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setRole(f.value)}
+                className={`h-9 px-3 rounded-md text-sm border ${role === f.value ? "border-brand bg-brand/10 text-brand" : "border-border text-fg hover:bg-muted"}`}
+              >
+                {f.label}
+              </button>
             ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && !q.isLoading ? (
-          <div className="px-3 py-6 text-center text-sm text-muted-fg">
-            {q.error ? `Gagal memuat: ${String(q.error)}` : "Tidak ada pegawai sesuai filter."}
           </div>
-        ) : null}
-      </div>
+        }
+      />
+
+      <SectionCard
+        title={q.isLoading ? "Memuat..." : `${total} pegawai`}
+        action={
+          q.isError ? (
+            <div className="flex items-center gap-2">
+              <Badge tone="danger">Gagal memuat</Badge>
+              <Button variant="outline" onClick={() => q.refetch()}>Coba lagi</Button>
+            </div>
+          ) : null
+        }
+        padded={false}
+      >
+        <DataTable<PegawaiApi>
+          data={paged}
+          columns={COLUMNS}
+          rowKey={(p) => p.name}
+          sort={sort}
+          onSortChange={setSort}
+          onRowClick={(p) => navigate({ to: "/sch/$sekolah/staff/$nip", params: { sekolah, nip: p.name } })}
+          empty={
+            <div>
+              <div className="font-medium text-fg">
+                {q.isError ? "Gagal memuat data" : "Belum ada pegawai"}
+              </div>
+              <div className="text-xs mt-1">
+                {q.isError ? String(q.error) : "Coba ubah filter atau tambah pegawai baru."}
+              </div>
+            </div>
+          }
+          footer={
+            <Pagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={total}
+              onPageChange={setPage}
+            />
+          }
+        />
+      </SectionCard>
 
       <PegawaiFormModal open={showCreate} onClose={() => setShowCreate(false)} mode="create" />
     </div>
