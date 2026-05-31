@@ -120,6 +120,12 @@ export function DatePicker(props: DatePickerProps) {
   const minDate = useMemo(() => toDate(min ?? ""), [min]);
   const maxDate = useMemo(() => toDate(max ?? ""), [max]);
 
+  // With dropdown caption layouts react-day-picker renders BOTH the month/year
+  // <select>s AND a textual caption_label ("Mei 2024"). Showing the label too
+  // duplicates the caption, so collapse it to screen-reader-only in that case.
+  const usesDropdown = captionLayout === "dropdown" || captionLayout === "dropdown-buttons";
+  const captionLabelClass = usesDropdown ? "sr-only" : "text-sm font-medium";
+
   return (
     <>
       <button
@@ -179,7 +185,7 @@ export function DatePicker(props: DatePickerProps) {
                 showOutsideDays
                 classNames={{
                   caption: "flex justify-center pt-1 relative items-center text-sm font-medium",
-                  caption_label: "text-sm font-medium",
+                  caption_label: captionLabelClass,
                   caption_dropdowns: "flex gap-1",
                   dropdown:
                     "appearance-none rounded border border-border bg-bg px-1.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand",
