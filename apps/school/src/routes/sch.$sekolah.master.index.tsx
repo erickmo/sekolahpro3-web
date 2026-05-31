@@ -21,7 +21,7 @@ import {
 
 const MASTER_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "unit", label: "Unit Jenjang", hint: "SD/SMP/SMA", href: "/sch/$sekolah/master/unit-jenjang" },
-  { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Set TA berjalan", href: "/sch/$sekolah/akademik/tahun-ajaran" },
+  { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Set TA berjalan", href: "/sch/$sekolah/master/tahun-ajaran" },
   { key: "modul", label: "Modul & Fitur", hint: "Aktifkan modul", href: "/sch/$sekolah/pengaturan/modul" },
   { key: "pengguna", label: "Pengguna", hint: "Akun & peran", href: "/sch/$sekolah/master/pengguna" },
 ];
@@ -39,9 +39,12 @@ const MODUL_FIELDS = ["name", "nama_modul", "aktif"];
 const PAGE_LIMIT = 0;
 
 const AKSI_CEPAT: { to: string; label: string; desc: string; icon: React.ReactNode }[] = [
-  { to: "/sch/$sekolah/akademik/tahun-ajaran", label: "Tahun Ajaran", desc: "Kelola periode akademik & semester", icon: <IconCalendar /> },
+  { to: "/sch/$sekolah/master/tahun-ajaran", label: "Tahun Ajaran", desc: "Kelola periode akademik & semester", icon: <IconCalendar /> },
   { to: "/sch/$sekolah/master/pengguna", label: "Pengguna", desc: "Undang & kelola akses pengguna", icon: <IconUsers /> },
   { to: "/sch/$sekolah/master/unit-jenjang", label: "Unit Jenjang", desc: "Atur jenjang TK/SD/SMP/SMA", icon: <IconGrad /> },
+  { to: "/sch/$sekolah/master/kurikulum", label: "Kurikulum", desc: "Kurikulum & struktur mapel", icon: <IconBook /> },
+  { to: "/sch/$sekolah/master/mapel", label: "Mata Pelajaran", desc: "Daftar mapel & kode", icon: <IconBook /> },
+  { to: "/sch/$sekolah/master/kkm", label: "KKM", desc: "Kriteria Ketuntasan Minimal", icon: <IconCheck /> },
   { to: "/sch/$sekolah/pengaturan/modul", label: "Modul Aktif", desc: "Aktifkan modul per tenant", icon: <IconBook /> },
   { to: "/sch/$sekolah/pengaturan/feature-flag", label: "Feature Flag", desc: "Toggle eksperimen fitur", icon: <IconSettings /> },
 ];
@@ -92,7 +95,7 @@ function MasterDashboardPage() {
         description: "Belum ada tahun ajaran aktif",
         tone: "danger",
         actionLabel: "Aktifkan TA",
-        actionHref: "/sch/$sekolah/akademik/tahun-ajaran",
+        actionHref: "/sch/$sekolah/master/tahun-ajaran",
       });
     }
     if (stats.akunDorman > 0) {
@@ -146,7 +149,7 @@ function MasterDashboardPage() {
           urgency={stats.tahunAjaranAktif === 0 ? "critical" : "normal"}
           {...(stats.tahunAjaranAktif === 0
             ? {
-                actionHref: "/sch/$sekolah/akademik/tahun-ajaran",
+                actionHref: "/sch/$sekolah/master/tahun-ajaran",
                 renderLink: (href: string, children: React.ReactNode) => <Link to={href}>{children}</Link>,
               }
             : {})}

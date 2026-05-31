@@ -70,11 +70,13 @@ type QuickAction = {
   accent: "brand" | "emerald" | "violet" | "amber" | "rose" | "sky";
 };
 
+// Alur penilaian: langkah setup (kurikulum→komponen) kini di Master Data,
+// langkah operasional (entri→raport) tetap di modul Akademik.
 const AKADEMIK_FLOW_STEPS: ModuleFlowStep[] = [
-  { key: "kurikulum", label: "Kurikulum", hint: "Tetapkan kurikulum aktif", href: "/sch/$sekolah/akademik/kurikulum" },
-  { key: "mapel", label: "Mata Pelajaran", hint: "Daftar mapel & kode", href: "/sch/$sekolah/akademik/daftar" },
-  { key: "kkm", label: "KKM", hint: "Ketuntasan minimal", href: "/sch/$sekolah/akademik/kkm" },
-  { key: "komponen", label: "Komponen Nilai", hint: "Bobot per komponen", href: "/sch/$sekolah/akademik/komponen-nilai" },
+  { key: "kurikulum", label: "Kurikulum", hint: "Tetapkan kurikulum aktif", href: "/sch/$sekolah/master/kurikulum" },
+  { key: "mapel", label: "Mata Pelajaran", hint: "Daftar mapel & kode", href: "/sch/$sekolah/master/mapel" },
+  { key: "kkm", label: "KKM", hint: "Ketuntasan minimal", href: "/sch/$sekolah/master/kkm" },
+  { key: "komponen", label: "Komponen Nilai", hint: "Bobot per komponen", href: "/sch/$sekolah/master/komponen-nilai" },
   { key: "entri", label: "Entri Nilai", hint: "Input nilai siswa", href: "/sch/$sekolah/akademik/entri-nilai" },
   { key: "raport", label: "Raport", hint: "Susun & cetak raport", href: "/sch/$sekolah/akademik/raport" },
 ];
@@ -82,10 +84,10 @@ const AKADEMIK_FLOW_STEPS: ModuleFlowStep[] = [
 const QUICK_ACTIONS: QuickAction[] = [
   { to: "/sch/$sekolah/akademik/entri-nilai", label: "Entri Nilai", description: "Input nilai harian, UTS, dan UAS.", icon: <IconEdit />, accent: "brand" },
   { to: "/sch/$sekolah/akademik/raport", label: "Raport", description: "Susun & cetak raport siswa.", icon: <IconFile />, accent: "emerald" },
-  { to: "/sch/$sekolah/akademik/kkm", label: "KKM", description: "Atur Kriteria Ketuntasan Minimal.", icon: <IconCheck />, accent: "amber" },
-  { to: "/sch/$sekolah/akademik/komponen-nilai", label: "Komponen Nilai", description: "Definisikan bobot komponen penilaian.", icon: <IconChart />, accent: "violet" },
-  { to: "/sch/$sekolah/akademik/kurikulum", label: "Kurikulum", description: "Kelola kurikulum & struktur mapel.", icon: <IconGrad />, accent: "sky" },
-  { to: "/sch/$sekolah/akademik/konfigurasi", label: "Konfigurasi", description: "Pengaturan modul akademik.", icon: <IconSettings />, accent: "rose" },
+  { to: "/sch/$sekolah/master/kkm", label: "KKM", description: "Atur Kriteria Ketuntasan Minimal.", icon: <IconCheck />, accent: "amber" },
+  { to: "/sch/$sekolah/master/komponen-nilai", label: "Komponen Nilai", description: "Definisikan bobot komponen penilaian.", icon: <IconChart />, accent: "violet" },
+  { to: "/sch/$sekolah/master/kurikulum", label: "Kurikulum", description: "Kelola kurikulum & struktur mapel.", icon: <IconGrad />, accent: "sky" },
+  { to: "/sch/$sekolah/master/konfigurasi", label: "Konfigurasi", description: "Pengaturan modul akademik.", icon: <IconSettings />, accent: "rose" },
 ];
 
 function AkademikDashboardPage() {
@@ -187,7 +189,7 @@ function AkademikDashboardPage() {
           tone: "danger",
           badge: "KKM",
           actionLabel: "Atur KKM",
-          actionHref: "/sch/$sekolah/akademik/kkm",
+          actionHref: "/sch/$sekolah/master/kkm",
         });
       }
       if (items.length >= ATTENTION_CAP) break;
@@ -199,7 +201,7 @@ function AkademikDashboardPage() {
           tone: "warning",
           badge: "Komponen",
           actionLabel: "Atur Komponen",
-          actionHref: "/sch/$sekolah/akademik/komponen-nilai",
+          actionHref: "/sch/$sekolah/master/komponen-nilai",
         });
       }
     }
@@ -257,7 +259,7 @@ function AkademikDashboardPage() {
           icon={<IconAlert />}
           accent="amber"
           urgency="warn"
-          actionHref="/sch/$sekolah/akademik/kkm"
+          actionHref="/sch/$sekolah/master/kkm"
           renderLink={renderStatLink}
         />
         <StatCard
@@ -285,7 +287,7 @@ function AkademikDashboardPage() {
         description="Langkah dari setup kurikulum sampai raport terbit."
         steps={AKADEMIK_FLOW_STEPS}
         renderLink={(href, children) => (
-          <Link to={href as "/sch/$sekolah/akademik/kurikulum"} params={{ sekolah }}>
+          <Link to={href as "/sch/$sekolah/master/kurikulum"} params={{ sekolah }}>
             {children}
           </Link>
         )}
@@ -342,7 +344,7 @@ function AkademikDashboardPage() {
           title="Aktivitas Terbaru"
           description="Mata pelajaran terakhir diperbarui."
           action={
-            <Link to="/sch/$sekolah/akademik/daftar" params={{ sekolah }} className="text-xs text-brand hover:underline">
+            <Link to="/sch/$sekolah/master/mapel" params={{ sekolah }} className="text-xs text-brand hover:underline">
               Lihat semua
             </Link>
           }

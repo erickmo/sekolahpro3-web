@@ -467,7 +467,7 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
         {komponenList.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-fg">
             Mata pelajaran ini belum memiliki Komponen Nilai. Tambahkan komponen di menu{" "}
-            <Link to={sekolah ? "/sch/$sekolah/akademik/komponen-nilai" : "/akademik/komponen-nilai" as "/sch/$sekolah/akademik/komponen-nilai"} params={{ sekolah: sekolah ?? "" }} className="text-brand hover:underline">
+            <Link to={sekolah ? "/sch/$sekolah/master/komponen-nilai" : "/master/komponen-nilai" as "/sch/$sekolah/master/komponen-nilai"} params={{ sekolah: sekolah ?? "" }} className="text-brand hover:underline">
               Komponen Nilai
             </Link>{" "}
             terlebih dahulu.
