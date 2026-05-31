@@ -8,6 +8,13 @@ type Config = {
 
 let cfg: Config = { baseUrl: "" };
 
+// Request header carrying the active Sekolah's doc-ID. The backend
+// (`sekolahpro.api.tenant_scope.auto_set_tenant`) reads this header on every
+// write to populate `sekolah`/`organisasi`, and validates it against the
+// user's memberships. Sent on ALL requests so server-side scoping never has
+// to fall back to guessing the tenant from the session.
+export const ACTIVE_SEKOLAH_HEADER = "X-Active-Sekolah";
+
 export function configureResource(next: Partial<Config>) {
   cfg = { ...cfg, ...next };
 }
@@ -93,6 +100,7 @@ function buildHeaders(extra?: Record<string, string>): Record<string, string> {
     "Content-Type": "application/json",
     Accept: "application/json",
     "X-Frappe-CSRF-Token": cfg.csrfToken ?? "",
+    [ACTIVE_SEKOLAH_HEADER]: activeSekolah() ?? "",
     ...(extra ?? {}),
   };
 }

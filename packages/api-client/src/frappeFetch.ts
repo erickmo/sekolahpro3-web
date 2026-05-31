@@ -1,4 +1,4 @@
-import { configureResource } from "./frappeResource";
+import { ACTIVE_SEKOLAH_HEADER, configureResource } from "./frappeResource";
 
 type Config = {
   baseUrl: string;
@@ -36,6 +36,7 @@ export async function frappeFetch<T = unknown>(
     "Content-Type": "application/json",
     Accept: "application/json",
     "X-Frappe-CSRF-Token": config.csrfToken ?? "",
+    [ACTIVE_SEKOLAH_HEADER]: config.getActiveSekolah?.() ?? "",
   };
 
   const res = await fetch(url, {

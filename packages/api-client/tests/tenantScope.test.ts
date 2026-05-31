@@ -2,7 +2,9 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { setupServer } from "msw/node";
 import { http, HttpResponse } from "msw";
 import {
+  ACTIVE_SEKOLAH_HEADER,
   configureResource,
+  createResource,
   getResource,
   listResource,
   TenantMismatchError,
@@ -90,6 +92,47 @@ describe("tenant-scoped listResource", () => {
     );
     await listResource("Siswa");
     expect(captured?.searchParams.get("filters")).toBeNull();
+  });
+});
+
+describe("active-sekolah request header", () => {
+  it("sends X-Active-Sekolah on list requests", async () => {
+    setup();
+    let captured: Request | undefined;
+    server.use(
+      http.get("https://api.test/api/resource/Siswa", ({ request }) => {
+        captured = request.clone();
+        return HttpResponse.json({ data: [] });
+      }),
+    );
+    await listResource("Siswa");
+    expect(captured?.headers.get(ACTIVE_SEKOLAH_HEADER)).toBe(ACTIVE);
+  });
+
+  it("sends X-Active-Sekolah on create requests", async () => {
+    setup();
+    let captured: Request | undefined;
+    server.use(
+      http.post("https://api.test/api/resource/Lantai", ({ request }) => {
+        captured = request.clone();
+        return HttpResponse.json({ data: { name: "GA-L1" } });
+      }),
+    );
+    await createResource("Lantai", { nama: "LT 1", nomor_lantai: 1, gedung: "GA" });
+    expect(captured?.headers.get(ACTIVE_SEKOLAH_HEADER)).toBe(ACTIVE);
+  });
+
+  it("sends an empty header when no active sekolah is set", async () => {
+    configureResource({ baseUrl: "https://api.test", getActiveSekolah: () => null });
+    let captured: Request | undefined;
+    server.use(
+      http.get("https://api.test/api/resource/Siswa", ({ request }) => {
+        captured = request.clone();
+        return HttpResponse.json({ data: [] });
+      }),
+    );
+    await listResource("Siswa");
+    expect(captured?.headers.get(ACTIVE_SEKOLAH_HEADER)).toBe("");
   });
 });
 
