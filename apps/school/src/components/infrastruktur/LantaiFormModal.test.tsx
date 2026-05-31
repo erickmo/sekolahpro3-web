@@ -9,7 +9,8 @@ vi.mock("@sekolahpro/api-client", () => ({
   useResourceCreate: () => ({ mutateAsync: createMut, isPending: false }),
   useResourceUpdate: () => ({ mutateAsync: updateMut, isPending: false }),
   useResourceDoc: () => ({ data: docData }),
-  useResourceList: () => ({ data: [{ name: "SEK-1-GA", nama: "Gedung A" }], isLoading: false }),
+  listResource: vi.fn().mockResolvedValue([{ name: "SEK-1-GA", nama: "Gedung A" }]),
+  humanizeFrappeError: () => null,
 }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 

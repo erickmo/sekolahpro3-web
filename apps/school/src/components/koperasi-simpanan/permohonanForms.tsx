@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -8,8 +8,9 @@ import {
   Modal,
   SearchableSelect,
   Textarea,
+  type SearchableOption,
 } from "@sekolahpro/ui";
-import { useResourceCreate } from "@sekolahpro/api-client";
+import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -57,6 +58,61 @@ const KIND_META: Record<
     submitLabel: "Ajukan Aktivasi",
   },
 };
+
+const AKAD_OPTIONS = ["Wadiah", "Mudharabah", "Wadiah Yad Dhamanah"];
+
+/** Convert plain string values into SearchableSelect options. */
+function toOptions(values: string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Async option loader for a Frappe link field. */
+async function searchLink(
+  doctype: string,
+  labelField: string,
+  q: string,
+): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q
+      ? {
+          or_filters: [
+            ["name", "like", `%${q}%`],
+            [labelField, "like", `%${q}%`],
+          ] as [string, string, unknown][],
+        }
+      : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({
+    value: r.name ?? "",
+    label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? ""),
+  }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? (
+          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
+        ) : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
 
 interface PermohonanModalProps {
   kind: PermohonanKind;
@@ -122,10 +178,11 @@ export function PermohonanModal(props: PermohonanModalProps) {
       open={open}
       onClose={onClose}
       title={meta.title}
-      description={meta.description}
-      size="md"
+      description={`${meta.description} Tanda * wajib diisi.`}
+      size="mega"
+      tone="brand"
     >
-      <form id={`permohonan-${kind}`} onSubmit={onSubmit} className="space-y-4">
+      <form id={`permohonan-${kind}`} onSubmit={onSubmit} className="space-y-5">
         <PermohonanFields
           kind={kind}
           {...(rekening !== undefined ? { rekening } : {})}
@@ -159,13 +216,26 @@ interface FieldsProps {
   anggota?: string;
 }
 
+/** Render the per-kind field set inside a labeled section. */
 function PermohonanFields({ kind, rekening, anggota }: FieldsProps) {
   const [akad, setAkad] = useState("Wadiah");
+  const [anggotaVal, setAnggotaVal] = useState(anggota ?? "");
+  const [rekeningVal, setRekeningVal] = useState(rekening ?? "");
+
   if (kind === "buka") {
     return (
-      <FormGrid cols={2}>
+      <FormSection
+        title="Detail Pembukaan Rekening"
+        description="Pilih anggota dan tentukan produk simpanan."
+      >
         <FormField label="Anggota" required>
-          <Input name="anggota" defaultValue={anggota ?? ""} required placeholder="No. Anggota" />
+          <SearchableSelect
+            value={anggotaVal}
+            onChange={(v) => setAnggotaVal(v)}
+            loadOptions={(q) => searchLink("Anggota Koperasi", "nasabah", q)}
+            placeholder="Cari anggota…"
+          />
+          <input type="hidden" name="anggota" value={anggotaVal} />
         </FormField>
         <FormField label="Produk" required>
           <Input name="produk" required placeholder="Misal: Simpanan Wajib" />
@@ -174,38 +244,44 @@ function PermohonanFields({ kind, rekening, anggota }: FieldsProps) {
           <SearchableSelect
             value={akad}
             onChange={(v) => setAkad(v)}
-            options={[
-              { value: "Wadiah", label: "Wadiah" },
-              { value: "Mudharabah", label: "Mudharabah" },
-              { value: "Wadiah Yad Dhamanah", label: "Wadiah Yad Dhamanah" },
-            ]}
+            options={toOptions(AKAD_OPTIONS)}
+            placeholder="— pilih —"
           />
           <input type="hidden" name="akad" value={akad} />
         </FormField>
         <FormField label="Setoran Awal (Rp)">
           <Input name="setoran_awal" type="number" min={0} placeholder="0" />
         </FormField>
-        <FormField label="Catatan" className="sm:col-span-2">
+        <FormField label="Catatan" className="col-span-2">
           <Textarea name="catatan" placeholder="Catatan permohonan (opsional)" />
         </FormField>
-      </FormGrid>
+      </FormSection>
     );
   }
   // tutup / blokir share alasan + catatan; unblokir/dormant only catatan
   const needsAlasan = kind === "tutup" || kind === "blokir";
   return (
-    <div className="space-y-4">
-      <FormField label="Rekening" required>
-        <Input name="rekening" defaultValue={rekening ?? ""} required placeholder="No. Rekening" />
+    <FormSection
+      title="Detail Permohonan"
+      description="Pilih rekening yang akan diproses."
+    >
+      <FormField label="Rekening" required className="col-span-2">
+        <SearchableSelect
+          value={rekeningVal}
+          onChange={(v) => setRekeningVal(v)}
+          loadOptions={(q) => searchLink("Rekening Simpanan", "name", q)}
+          placeholder="Cari rekening…"
+        />
+        <input type="hidden" name="rekening" value={rekeningVal} />
       </FormField>
       {needsAlasan ? (
-        <FormField label="Alasan" required>
+        <FormField label="Alasan" required className="col-span-2">
           <Input name="alasan" required placeholder="Alasan permohonan" />
         </FormField>
       ) : null}
-      <FormField label="Catatan">
+      <FormField label="Catatan" className="col-span-2">
         <Textarea name="catatan" placeholder="Catatan tambahan (opsional)" />
       </FormField>
-    </div>
+    </FormSection>
   );
 }

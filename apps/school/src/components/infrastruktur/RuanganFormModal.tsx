@@ -6,7 +6,7 @@
  * select Gedung/Sekolah (keduanya denorm otomatis di backend dari lantai).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -14,11 +14,12 @@ import {
   FormGrid,
   Input,
   Modal,
-  Select,
   SearchableSelect,
+  type SearchableOption,
 } from "@sekolahpro/ui";
 import {
   humanizeFrappeError,
+  listResource,
   useResourceCreate,
   useResourceDoc,
   useResourceList,
@@ -26,8 +27,6 @@ import {
 } from "@sekolahpro/api-client";
 
 type LantaiRow = { name: string; gedung?: string; nomor_lantai?: number };
-type GedungRow = { name: string; nama?: string };
-type SekolahRow = { name: string; nama_sekolah?: string };
 
 /** Editable child-table row for the "fasilitas" table on Ruangan. */
 type FasilitasRow = { nama_fasilitas: string; jumlah: string; kondisi: string };
@@ -47,6 +46,34 @@ const JENIS_OPTIONS = [
   "Gudang",
   "Lainnya",
 ] as const;
+
+function toOptions(values: readonly string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Async option loader for a Frappe link field. */
+async function searchLink(doctype: string, labelField: string, q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`], [labelField, "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({ value: r.name ?? "", label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? "") }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string | undefined; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
 
 interface Props {
   open: boolean;
@@ -77,14 +104,6 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
   const lantaiQ = useResourceList<LantaiRow>("Lantai", {
     fields: ["name", "gedung", "nomor_lantai"],
     filters: defaultGedung ? [["gedung", "=", defaultGedung]] : [],
-    limit_page_length: 0,
-  });
-  const gedungQ = useResourceList<GedungRow>("Gedung", {
-    fields: ["name", "nama"],
-    limit_page_length: 0,
-  });
-  const sekolahQ = useResourceList<SekolahRow>("Sekolah", {
-    fields: ["name", "nama_sekolah"],
     limit_page_length: 0,
   });
 
@@ -187,17 +206,15 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
   };
 
   const lantaiRows = lantaiQ.data ?? [];
-  const gedungRows = gedungQ.data ?? [];
-  const sekolahRows = sekolahQ.data ?? [];
   const pending = create.isPending || update.isPending;
 
   return (
     <Modal
       open={open}
       onClose={closeAll}
-      size="xl"
+      size="mega"
       title={editName ? "Edit Ruangan" : "Tambah Ruangan"}
-      description="Isi data ruangan. Tanda * wajib."
+      description="Isi data ruangan. Tanda * wajib diisi."
       tone="brand"
       footer={
         <div className="flex justify-end gap-2">
@@ -211,7 +228,7 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
       }
     >
       <div className="space-y-5">
-        <FormGrid cols={2}>
+        <FormSection title="Identitas Ruangan" description="Penamaan dan penempatan ruangan dalam gedung.">
           <FormField label="Nama" required>
             <Input aria-label="Nama" value={nama} onChange={(e) => setNama(e.target.value)} />
           </FormField>
@@ -232,11 +249,8 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
               <SearchableSelect
                 value={gedung}
                 onChange={(v) => setGedung(v)}
-                options={gedungRows.map((r) => ({
-                  value: r.name,
-                  label: `${r.name}${r.nama ? ` — ${r.nama}` : ""}`,
-                }))}
-                placeholder="— pilih —"
+                loadOptions={(q) => searchLink("Gedung", "nama", q)}
+                placeholder="Cari gedung…"
               />
             </FormField>
           )}
@@ -245,8 +259,8 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
               <SearchableSelect
                 value={sekolah}
                 onChange={(v) => setSekolah(v)}
-                options={sekolahRows.map((r) => ({ value: r.name, label: r.name }))}
-                placeholder="— pilih —"
+                loadOptions={(q) => searchLink("Sekolah", "nama_sekolah", q)}
+                placeholder="Cari sekolah…"
               />
             </FormField>
           )}
@@ -255,10 +269,17 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
               id="ruangan-jenis"
               value={jenisRuangan}
               onChange={(v) => setJenisRuangan(v)}
-              options={JENIS_OPTIONS.map((o) => ({ value: o, label: o }))}
+              options={toOptions(JENIS_OPTIONS)}
               placeholder="— pilih —"
             />
           </FormField>
+          <FormField label="Status">
+            {/* Status dikelola sistem (default Tersedia / transisi backend) → readonly di form. */}
+            <Input aria-label="Status" value={status} readOnly tabIndex={-1} />
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Kapasitas & Ukuran" description="Daya tampung dan luas ruangan (opsional).">
           <FormField label="Kapasitas">
             <Input
               aria-label="Kapasitas"
@@ -281,13 +302,9 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
               onChange={(e) => setLuasM2(e.target.value.replace(/[^0-9]/g, ""))}
             />
           </FormField>
-          <FormField label="Status">
-            {/* Status dikelola sistem (default Tersedia / transisi backend) → readonly di form. */}
-            <Input aria-label="Status" value={status} readOnly tabIndex={-1} />
-          </FormField>
-        </FormGrid>
+        </FormSection>
 
-        <div className="space-y-2 rounded-lg border border-border p-4">
+        <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold text-fg">Fasilitas</div>
             <Button variant="outline" onClick={addFasilitas}>+ Tambah baris</Button>
@@ -314,15 +331,12 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
                     />
                   </FormField>
                   <FormField label={idx === 0 ? "Kondisi" : ""}>
-                    <Select
-                      aria-label={`Kondisi ${idx + 1}`}
+                    <SearchableSelect
                       value={row.kondisi}
-                      onChange={(e) => patchFasilitas(idx, "kondisi", e.target.value)}
-                    >
-                      {KONDISI_OPTIONS.map((o) => (
-                        <option key={o} value={o}>{o}</option>
-                      ))}
-                    </Select>
+                      onChange={(v) => patchFasilitas(idx, "kondisi", v)}
+                      options={toOptions(KONDISI_OPTIONS)}
+                      placeholder="— pilih —"
+                    />
                   </FormField>
                   <Button variant="outline" onClick={() => removeFasilitas(idx)} aria-label={`Hapus fasilitas ${idx + 1}`}>
                     Hapus

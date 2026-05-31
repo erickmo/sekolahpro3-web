@@ -16,6 +16,10 @@ import { useResourceCreate } from "@sekolahpro/api-client";
 // sub-routes. Field schema is declarative; the modal renders fields, validates
 // required fields, coerces numbers and POSTs to /api/resource/<doctype>.
 
+// Rentang tahun DatePicker generik: satu dekade ke belakang s/d satu tahun ke depan.
+const MIN_YEAR = new Date().getFullYear() - 10;
+const MAX_YEAR = new Date().getFullYear() + 1;
+
 export type ExtraFieldType = "text" | "number" | "date" | "select" | "textarea";
 
 export interface ExtraFieldDef {
@@ -26,6 +30,38 @@ export interface ExtraFieldDef {
   hint?: string;
   options?: Array<{ value: string; label: string }>;
   defaultValue?: string | number;
+  /** Judul section tempat field ini dikelompokkan. Tanpa ini → section default. */
+  section?: string;
+}
+
+/** Heading section + grid untuk satu kelompok logis field. */
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+      </div>
+      <FormGrid cols={2}>{children}</FormGrid>
+    </section>
+  );
+}
+
+/** Kelompokkan field per `section`; pertahankan urutan kemunculan section. */
+function groupBySection<T extends { section?: string }>(
+  fields: T[],
+  fallbackTitle: string,
+): Array<{ title: string; fields: T[] }> {
+  const order: string[] = [];
+  const map = new Map<string, T[]>();
+  for (const f of fields) {
+    const key = f.section ?? fallbackTitle;
+    if (!map.has(key)) {
+      map.set(key, []);
+      order.push(key);
+    }
+    map.get(key)!.push(f);
+  }
+  return order.map((title) => ({ title, fields: map.get(title)! }));
 }
 
 export interface ExtraCreateModalProps {
@@ -121,7 +157,16 @@ export function ExtraCreateModal(props: ExtraCreateModalProps) {
       return <Textarea id={id} value={val} onChange={(e) => onChange(e.target.value)} />;
     }
     if (f.type === "date") {
-      return <DatePicker id={id} value={val} onChange={(v) => onChange(v)} />;
+      return (
+        <DatePicker
+          id={id}
+          value={val}
+          onChange={(v) => onChange(v)}
+          captionLayout="dropdown-buttons"
+          fromYear={MIN_YEAR}
+          toYear={MAX_YEAR}
+        />
+      );
     }
     const inputType = f.type === "number" ? "number" : "text";
     return <Input id={id} type={inputType} value={val} onChange={(e) => onChange(e.target.value)} />;
@@ -133,7 +178,8 @@ export function ExtraCreateModal(props: ExtraCreateModalProps) {
       onClose={handleClose}
       title={title}
       {...(description ? { description } : {})}
-      size="lg"
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button variant="outline" onClick={handleClose} disabled={mut.isPending}>Batal</Button>
@@ -143,25 +189,27 @@ export function ExtraCreateModal(props: ExtraCreateModalProps) {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {errMsg ? (
           <div className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-700">
             {errMsg}
           </div>
         ) : null}
-        <FormGrid cols={2}>
-          {fields.map((f) => (
-            <FormField
-              key={f.name}
-              label={f.label}
-              htmlFor={`extra-create-${f.name}`}
-              {...(f.required ? { required: true } : {})}
-              {...(f.hint ? { hint: f.hint } : {})}
-            >
-              {renderField(f)}
-            </FormField>
-          ))}
-        </FormGrid>
+        {groupBySection(fields, "Data").map((group) => (
+          <FormSection key={group.title} title={group.title}>
+            {group.fields.map((f) => (
+              <FormField
+                key={f.name}
+                label={f.label}
+                htmlFor={`extra-create-${f.name}`}
+                {...(f.required ? { required: true } : {})}
+                {...(f.hint ? { hint: f.hint } : {})}
+              >
+                {renderField(f)}
+              </FormField>
+            ))}
+          </FormSection>
+        ))}
         <button type="submit" hidden />
       </form>
     </Modal>

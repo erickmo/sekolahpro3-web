@@ -6,13 +6,29 @@
  * push a new row into its `anggota` array, then PUT the parent.
  */
 
-import { useState } from "react";
-import { Button, DatePicker, FormField, FormGrid, Input, Modal, SearchableSelect } from "@sekolahpro/ui";
-import { getResource, updateResource, useResourceList } from "@sekolahpro/api-client";
+import { useState, type ReactNode } from "react";
+import {
+  Button,
+  DatePicker,
+  FormField,
+  FormGrid,
+  Input,
+  Modal,
+  SearchableSelect,
+  type SearchableOption,
+} from "@sekolahpro/ui";
+import { getResource, listResource, updateResource } from "@sekolahpro/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 
-type RombelRow = { name: string; nama_rombel?: string; tahun_ajaran?: string };
-type SiswaRow = { name: string; nama_lengkap?: string; nis?: string };
+const ROMBEL_DOCTYPE = "Rombongan Belajar";
+const ANGGOTA_DOCTYPE = "Anggota Rombel";
+const SISWA_DOCTYPE = "Siswa";
+const STATUS_OPTIONS = ["Aktif", "Keluar"] as const;
+
+// Tanggal masuk bersifat transaksional (tahun ajaran berjalan), jadi rentang
+// dropdown tahun cukup sempit di sekitar tahun sekarang.
+const MIN_YEAR = new Date().getFullYear() - 10;
+const MAX_YEAR = new Date().getFullYear() + 1;
 
 interface AnggotaRow {
   siswa: string;
@@ -40,8 +56,6 @@ interface FormState {
   status: string;
 }
 
-const STATUS_OPTIONS = ["Aktif", "Keluar"] as const;
-
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const initial = (): FormState => ({
@@ -52,21 +66,56 @@ const initial = (): FormState => ({
   status: "Aktif",
 });
 
+/** Build static enum options for SearchableSelect. */
+function toOptions(values: readonly string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Async option loader untuk rombel aktif saja. */
+async function searchRombelAktif(q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(ROMBEL_DOCTYPE, {
+    fields: ["name", "nama_rombel"],
+    filters: [["status", "=", "Aktif"]],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`], ["nama_rombel", "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({ value: r.name ?? "", label: r.nama_rombel ? `${r.nama_rombel} (${r.name})` : (r.name ?? "") }));
+}
+
+/** Async option loader untuk siswa (label nama + NIS). */
+async function searchSiswa(q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(SISWA_DOCTYPE, {
+    fields: ["name", "nama_lengkap", "nis"],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`], ["nama_lengkap", "like", `%${q}%`], ["nis", "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({
+    value: r.name ?? "",
+    label: r.nama_lengkap ? `${r.nama_lengkap}${r.nis ? ` · ${r.nis}` : ""}` : (r.name ?? ""),
+  }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
+
 export function AnggotaRombelFormModal({ open, onClose, onCreated }: Props) {
   const [form, setForm] = useState<FormState>(initial);
   const [err, setErr] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const qc = useQueryClient();
-  const rombelQ = useResourceList<RombelRow>("Rombongan Belajar", {
-    fields: ["name", "nama_rombel", "tahun_ajaran"],
-    filters: [["status", "=", "Aktif"]],
-    limit_page_length: 0,
-  });
-  const siswaQ = useResourceList<SiswaRow>("Siswa", {
-    fields: ["name", "nama_lengkap", "nis"],
-    limit_page_length: 0,
-  });
 
   const set = <K extends keyof FormState>(k: K, v: string) =>
     setForm((cur) => ({ ...cur, [k]: v }));
@@ -88,7 +137,7 @@ export function AnggotaRombelFormModal({ open, onClose, onCreated }: Props) {
     setErr(null);
     setPending(true);
     try {
-      const parent = await getResource<ParentDoc>("Rombongan Belajar", form.rombel);
+      const parent = await getResource<ParentDoc>(ROMBEL_DOCTYPE, form.rombel);
       const existing = parent.anggota ?? [];
       if (existing.some((r) => r.siswa === form.siswa)) {
         throw new Error("Siswa sudah terdaftar di rombel ini.");
@@ -100,12 +149,12 @@ export function AnggotaRombelFormModal({ open, onClose, onCreated }: Props) {
       };
       if (form.no_urut.trim()) row.no_urut = Number(form.no_urut);
 
-      await updateResource("Rombongan Belajar", form.rombel, {
+      await updateResource(ROMBEL_DOCTYPE, form.rombel, {
         anggota: [...existing, row],
       });
-      await qc.invalidateQueries({ queryKey: ["resource:list", "Anggota Rombel"] });
-      await qc.invalidateQueries({ queryKey: ["resource:list", "Rombongan Belajar"] });
-      await qc.invalidateQueries({ queryKey: ["resource:doc", "Rombongan Belajar", form.rombel] });
+      await qc.invalidateQueries({ queryKey: ["resource:list", ANGGOTA_DOCTYPE] });
+      await qc.invalidateQueries({ queryKey: ["resource:list", ROMBEL_DOCTYPE] });
+      await qc.invalidateQueries({ queryKey: ["resource:doc", ROMBEL_DOCTYPE, form.rombel] });
       reset();
       if (onCreated) onCreated(form.rombel, form.siswa);
       onClose();
@@ -116,52 +165,44 @@ export function AnggotaRombelFormModal({ open, onClose, onCreated }: Props) {
     }
   };
 
-  const rombelOpts = rombelQ.data ?? [];
-  const siswaOpts = siswaQ.data ?? [];
-
   return (
     <Modal
       open={open}
       onClose={close}
-      size="lg"
-      title="Tambah Anggota Rombel"
-      description="Tambahkan siswa ke rombongan belajar. Tanda * wajib."
+      size="mega"
       tone="brand"
+      title="Tambah Anggota Rombel"
+      description="Tambahkan siswa ke rombongan belajar. Tanda * wajib diisi."
       footer={
-        <div className="flex justify-end gap-2">
+        <>
           <Button variant="outline" onClick={close} disabled={pending}>Batal</Button>
           <Button onClick={submit} disabled={!canSubmit}>
-            {pending ? "Menyimpan..." : "Simpan"}
+            {pending ? "Menyimpan…" : "Simpan"}
           </Button>
-        </div>
+        </>
       }
     >
       <div className="space-y-5">
-        <FormGrid cols={2}>
+        <FormSection title="Penempatan" description="Rombel aktif tujuan dan siswa yang ditambahkan.">
           <FormField label="Rombongan Belajar" required>
             <SearchableSelect
               value={form.rombel}
               onChange={(v) => set("rombel", v)}
-              disabled={rombelQ.isLoading}
-              options={rombelOpts.map((r) => ({
-                value: r.name,
-                label: r.nama_rombel ? `${r.nama_rombel} (${r.name})` : r.name,
-              }))}
-              placeholder={rombelQ.isLoading ? "Memuat..." : "— Pilih Rombel —"}
+              loadOptions={searchRombelAktif}
+              placeholder="Cari rombel aktif…"
             />
           </FormField>
           <FormField label="Siswa" required>
             <SearchableSelect
               value={form.siswa}
               onChange={(v) => set("siswa", v)}
-              disabled={siswaQ.isLoading}
-              options={siswaOpts.map((s) => ({
-                value: s.name,
-                label: s.nama_lengkap ? `${s.nama_lengkap}${s.nis ? ` · ${s.nis}` : ""}` : s.name,
-              }))}
-              placeholder={siswaQ.isLoading ? "Memuat..." : "— Pilih Siswa —"}
+              loadOptions={searchSiswa}
+              placeholder="Cari siswa…"
             />
           </FormField>
+        </FormSection>
+
+        <FormSection title="Detail Keanggotaan" description="Nomor absen, tanggal masuk, dan status.">
           <FormField label="No. Urut/Absen">
             <Input
               type="number"
@@ -174,16 +215,20 @@ export function AnggotaRombelFormModal({ open, onClose, onCreated }: Props) {
             <DatePicker
               value={form.tanggal_masuk_rombel}
               onChange={(v) => set("tanggal_masuk_rombel", v)}
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
             />
           </FormField>
           <FormField label="Status" required>
             <SearchableSelect
               value={form.status}
               onChange={(v) => set("status", v)}
-              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+              options={toOptions(STATUS_OPTIONS)}
+              placeholder="— pilih —"
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
 
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">

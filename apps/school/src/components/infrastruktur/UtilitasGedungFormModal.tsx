@@ -6,7 +6,7 @@
  * editName: mode edit (gedung tidak diubah).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -14,13 +14,13 @@ import {
   FormGrid,
   Input,
   Modal,
-  Select,
   SearchableSelect,
+  type SearchableOption,
 } from "@sekolahpro/ui";
 import {
+  listResource,
   useResourceCreate,
   useResourceDoc,
-  useResourceList,
   useResourceUpdate,
 } from "@sekolahpro/api-client";
 
@@ -32,11 +32,36 @@ type Props = {
   editName?: string;
 };
 
-type GedungRow = { name: string; nama?: string };
-type SekolahRow = { name: string; nama_sekolah?: string };
-
 const JENIS_OPTIONS = ["Listrik", "Air", "Internet", "Gas", "Lainnya"] as const;
 const STATUS_OPTIONS = ["Aktif", "Nonaktif"] as const;
+
+function toOptions(values: readonly string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Async option loader for a Frappe link field. */
+async function searchLink(doctype: string, labelField: string, q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`], [labelField, "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({ value: r.name ?? "", label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? "") }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string | undefined; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
 
 type FormState = {
   gedung: string;
@@ -67,15 +92,6 @@ export function UtilitasGedungFormModal({ open, onClose, onCreated, defaultGedun
   const create = useResourceCreate<{ name: string }>("Utilitas Gedung");
   const update = useResourceUpdate<{ name: string }>("Utilitas Gedung");
   const docQ = useResourceDoc<Record<string, unknown>>("Utilitas Gedung", editName, { enabled: !!editName });
-
-  const gedungQ = useResourceList<GedungRow>("Gedung", {
-    fields: ["name", "nama"],
-    limit_page_length: 0,
-  });
-  const sekolahQ = useResourceList<SekolahRow>("Sekolah", {
-    fields: ["name", "nama_sekolah"],
-    limit_page_length: 0,
-  });
 
   useEffect(() => {
     if (docQ.data) {
@@ -141,9 +157,9 @@ export function UtilitasGedungFormModal({ open, onClose, onCreated, defaultGedun
     <Modal
       open={open}
       onClose={close}
-      size="lg"
+      size="mega"
       title={editName ? "Edit Utilitas" : "Tambah Utilitas"}
-      description="Catat utilitas (listrik, air, internet, dsb) untuk satu gedung."
+      description="Catat utilitas (listrik, air, internet, dsb) untuk satu gedung. Tanda * wajib diisi."
       tone="brand"
       footer={
         <div className="flex justify-end gap-2">
@@ -155,17 +171,14 @@ export function UtilitasGedungFormModal({ open, onClose, onCreated, defaultGedun
       }
     >
       <div className="space-y-5">
-        <FormGrid cols={2}>
+        <FormSection title="Penempatan & Jenis" description="Gedung pemilik utilitas serta jenis dan statusnya.">
           {!defaultGedung && (
             <FormField label="Gedung" required>
               <SearchableSelect
                 value={form.gedung}
                 onChange={(v) => set("gedung", v)}
-                options={(gedungQ.data ?? []).map((g) => ({
-                  value: g.name,
-                  label: g.nama ? `${g.name} — ${g.nama}` : g.name,
-                }))}
-                placeholder="— Pilih gedung —"
+                loadOptions={(q) => searchLink("Gedung", "nama", q)}
+                placeholder="Cari gedung…"
               />
             </FormField>
           )}
@@ -175,29 +188,34 @@ export function UtilitasGedungFormModal({ open, onClose, onCreated, defaultGedun
               <SearchableSelect
                 value={form.sekolah}
                 onChange={(v) => set("sekolah", v)}
-                options={(sekolahQ.data ?? []).map((s) => ({ value: s.name, label: s.name }))}
-                placeholder="— Pilih sekolah —"
+                loadOptions={(q) => searchLink("Sekolah", "nama_sekolah", q)}
+                placeholder="Cari sekolah…"
               />
             </FormField>
           )}
 
-          <FormField label="Jenis" required>
-            <Select aria-label="Jenis" value={form.jenis} onChange={(e) => set("jenis", e.target.value)}>
-              <option value="">— pilih —</option>
-              {JENIS_OPTIONS.map((j) => (
-                <option key={j} value={j}>{j}</option>
-              ))}
-            </Select>
+          <FormField label="Jenis" required htmlFor="utilitas-jenis">
+            <SearchableSelect
+              id="utilitas-jenis"
+              value={form.jenis}
+              onChange={(v) => set("jenis", v)}
+              options={toOptions(JENIS_OPTIONS)}
+              placeholder="— pilih —"
+            />
           </FormField>
 
-          <FormField label="Status" required>
-            <Select aria-label="Status" value={form.status} onChange={(e) => set("status", e.target.value)}>
-              {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </Select>
+          <FormField label="Status" required htmlFor="utilitas-status">
+            <SearchableSelect
+              id="utilitas-status"
+              value={form.status}
+              onChange={(v) => set("status", v)}
+              options={toOptions(STATUS_OPTIONS)}
+              placeholder="— pilih —"
+            />
           </FormField>
+        </FormSection>
 
+        <FormSection title="Detail Langganan" description="Informasi penyedia dan kapasitas (opsional).">
           <FormField label="Provider">
             <Input
               aria-label="Provider"
@@ -232,7 +250,7 @@ export function UtilitasGedungFormModal({ open, onClose, onCreated, defaultGedun
               placeholder="VA, Mbps, m3, dsb"
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
 
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">

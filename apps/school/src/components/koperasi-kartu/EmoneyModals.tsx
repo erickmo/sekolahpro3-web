@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -8,8 +8,15 @@ import {
   Input,
   Modal,
   SearchableSelect,
+  type SearchableOption,
 } from "@sekolahpro/ui";
-import { useResourceCreate } from "@sekolahpro/api-client";
+import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+
+// E-money transactions stay near the present — narrow year range.
+const MIN_YEAR = new Date().getFullYear() - 10;
+const MAX_YEAR = new Date().getFullYear() + 1;
+
+const METODE_OPTIONS = ["Tunai", "Transfer", "QRIS", "Voucher"];
 
 interface BaseProps {
   open: boolean;
@@ -20,6 +27,59 @@ interface BaseProps {
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Async option loader for a Frappe link field. */
+async function searchLink(
+  doctype: string,
+  labelField: string,
+  q: string,
+): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q
+      ? {
+          or_filters: [
+            ["name", "like", `%${q}%`],
+            [labelField, "like", `%${q}%`],
+          ] as [string, string, unknown][],
+        }
+      : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({
+    value: r.name ?? "",
+    label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? ""),
+  }));
+}
+
+/** Async loader for the Kartu link field — shared by both modals. */
+function loadKartu(q: string): Promise<SearchableOption[]> {
+  return searchLink("Kartu", "uid_rfid", q);
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? (
+          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
+        ) : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
 }
 
 export function TopUpModal({ open, onClose, defaultKartu = "", onCreated }: BaseProps) {
@@ -53,7 +113,7 @@ export function TopUpModal({ open, onClose, defaultKartu = "", onCreated }: Base
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Top-up Kartu" description="Catat top-up saldo e-money." size="lg"
+    <Modal open={open} onClose={onClose} title="Top-up Kartu" description="Catat top-up saldo e-money. Tanda * wajib diisi." size="mega" tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -63,25 +123,41 @@ export function TopUpModal({ open, onClose, defaultKartu = "", onCreated }: Base
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormGrid cols={2}>
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection
+          title="Detail Top-up"
+          description="Pilih kartu dan tentukan nominal pengisian saldo."
+        >
           <FormField label="Kartu" required error={err.kartu}>
-            <Input value={kartu} onChange={(e) => setKartu(e.target.value)} />
+            <SearchableSelect
+              value={kartu}
+              onChange={(v) => setKartu(v)}
+              loadOptions={loadKartu}
+              placeholder="Cari kartu…"
+            />
           </FormField>
           <FormField label="Nominal" required error={err.nominal}>
             <Input inputMode="numeric" value={nominal} onChange={(e) => setNominal(e.target.value.replace(/\D/g, ""))} />
           </FormField>
           <FormField label="Tanggal" required>
-            <DatePicker value={tanggal} onChange={(v) => setTanggal(v)} required />
+            <DatePicker
+              value={tanggal}
+              onChange={(v) => setTanggal(v)}
+              required
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
+            />
           </FormField>
           <FormField label="Metode" required>
             <SearchableSelect
               value={metode}
               onChange={(v) => setMetode(v)}
-              options={["Tunai", "Transfer", "QRIS", "Voucher"].map((m) => ({ value: m, label: m }))}
+              options={METODE_OPTIONS.map((m) => ({ value: m, label: m }))}
+              placeholder="— pilih —"
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
         {create.isError ? <p className="text-xs text-rose-600">{(create.error as Error).message}</p> : null}
       </form>
     </Modal>
@@ -129,7 +205,7 @@ export function TransaksiKartuModal({ open, onClose, defaultKartu = "", jenis, t
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={title} size="lg"
+    <Modal open={open} onClose={onClose} title={title} description="Tanda * wajib diisi." size="mega" tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -139,10 +215,18 @@ export function TransaksiKartuModal({ open, onClose, defaultKartu = "", jenis, t
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormGrid cols={2}>
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection
+          title="Detail Transaksi"
+          description="Kartu, nominal, dan tanggal transaksi e-money."
+        >
           <FormField label="Kartu" required error={err.kartu}>
-            <Input value={kartu} onChange={(e) => setKartu(e.target.value)} />
+            <SearchableSelect
+              value={kartu}
+              onChange={(v) => setKartu(v)}
+              loadOptions={loadKartu}
+              placeholder="Cari kartu…"
+            />
           </FormField>
           <FormField label="Nominal" required error={err.nominal}>
             <Input inputMode="numeric" value={nominal} onChange={(e) => setNominal(e.target.value.replace(/\D/g, ""))} />
@@ -154,9 +238,16 @@ export function TransaksiKartuModal({ open, onClose, defaultKartu = "", jenis, t
             <Input value={terminal} onChange={(e) => setTerminal(e.target.value)} />
           </FormField>
           <FormField label="Tanggal" required>
-            <DatePicker value={tanggal} onChange={(v) => setTanggal(v)} required />
+            <DatePicker
+              value={tanggal}
+              onChange={(v) => setTanggal(v)}
+              required
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
+            />
           </FormField>
-        </FormGrid>
+        </FormSection>
         {create.isError ? <p className="text-xs text-rose-600">{(create.error as Error).message}</p> : null}
       </form>
     </Modal>

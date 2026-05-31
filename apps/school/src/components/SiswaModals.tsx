@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import {
   Button,
   Checkbox,
@@ -9,6 +9,7 @@ import {
   Modal,
   SearchableSelect,
   Textarea,
+  type SearchableOption,
 } from "@sekolahpro/ui";
 import type {
   AbsensiRow,
@@ -22,6 +23,29 @@ import type {
 interface BaseModalProps {
   open: boolean;
   onClose: () => void;
+}
+
+// Tanggal di modul siswa (jatuh tempo, pembayaran, mutasi, dokumen, absensi)
+// bersifat transaksional, jadi rentang dropdown tahun cukup sempit.
+const TX_YEAR_FROM = new Date().getFullYear() - 10;
+const TX_YEAR_TO = new Date().getFullYear() + 1;
+
+/** Build static enum options for SearchableSelect. */
+function toOptions(values: readonly string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
 }
 
 // ─── Wali ───────────────────────────────────────────────────────────────────
@@ -74,8 +98,9 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
       open={open}
       onClose={onClose}
       title={initial ? "Edit Wali" : "Tambah Wali"}
-      description="Data Ayah, Ibu, atau Wali resmi (child table dari Siswa)"
-      size="lg"
+      description="Data Ayah, Ibu, atau Wali resmi (child table dari Siswa). Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -83,17 +108,14 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormGrid cols={2}>
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection title="Identitas Wali" description="Hubungan dan identitas sesuai dokumen resmi.">
           <FormField label="Hubungan" required>
             <SearchableSelect
               value={v.hubungan}
               onChange={(val) => setV({ ...v, hubungan: val as WaliRow["hubungan"] })}
-              options={[
-                { value: "Ayah", label: "Ayah" },
-                { value: "Ibu", label: "Ibu" },
-                { value: "Wali", label: "Wali" },
-              ]}
+              options={toOptions(["Ayah", "Ibu", "Wali"])}
+              placeholder="— pilih —"
             />
           </FormField>
           <FormField label="Nama Lengkap" required error={err.nama}>
@@ -127,9 +149,9 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
           <FormField label="NIK (generic)" hint="16 digit — fallback bila NIK Ayah/Ibu kosong" error={err.nik}>
             <Input inputMode="numeric" maxLength={16} value={v.nik ?? ""} onChange={(e) => setV({ ...v, nik: e.target.value.replace(/\D/g, "") })} />
           </FormField>
-          <FormField label="Telepon">
-            <Input type="tel" value={v.telepon ?? ""} onChange={(e) => setV({ ...v, telepon: e.target.value })} />
-          </FormField>
+        </FormSection>
+
+        <FormSection title="Pekerjaan & Pendidikan" description="Latar belakang sosial-ekonomi wali.">
           <FormField label="Pekerjaan">
             <Input value={v.pekerjaan ?? ""} onChange={(e) => setV({ ...v, pekerjaan: e.target.value })} />
           </FormField>
@@ -140,24 +162,30 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
             <SearchableSelect
               value={v.pendidikan ?? ""}
               onChange={(val) => setV({ ...v, pendidikan: val })}
-              options={["SD","SMP","SMA/SMK","D1","D2","D3","S1","S2","S3"].map((p) => ({ value: p, label: p }))}
-              placeholder="— Pilih —"
+              options={toOptions(["SD", "SMP", "SMA/SMK", "D1", "D2", "D3", "S1", "S2", "S3"])}
+              placeholder="— pilih —"
             />
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Kontak & Status" description="Informasi kontak dan penanda wali utama.">
+          <FormField label="Telepon">
+            <Input type="tel" value={v.telepon ?? ""} onChange={(e) => setV({ ...v, telepon: e.target.value })} />
           </FormField>
           <FormField label="Email">
             <Input type="email" value={v.email ?? ""} onChange={(e) => setV({ ...v, email: e.target.value })} />
           </FormField>
-          <FormField label="Alamat" className="sm:col-span-2">
+          <FormField label="Alamat" className="col-span-2">
             <Textarea rows={2} value={v.alamat ?? ""} onChange={(e) => setV({ ...v, alamat: e.target.value })} />
           </FormField>
-          <FormField label="Wali Utama" className="sm:col-span-2" hint="Hanya 1 wali per siswa boleh ditandai sebagai utama — menerima semua notifikasi dan approval portal">
+          <FormField label="Wali Utama" className="col-span-2" hint="Hanya 1 wali per siswa boleh ditandai sebagai utama — menerima semua notifikasi dan approval portal">
             <Checkbox
               checked={!!v.isPrimary}
               onChange={(e) => setV({ ...v, isPrimary: e.target.checked })}
               label="Tandai sebagai wali utama (primary contact)"
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
       </form>
     </Modal>
   );
@@ -196,7 +224,9 @@ export function TagihanModal({ open, onClose, onSubmit }: TagihanModalProps) {
       open={open}
       onClose={onClose}
       title="Buat Tagihan"
-      description="Tagihan baru untuk siswa"
+      description="Tagihan baru untuk siswa. Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -204,16 +234,22 @@ export function TagihanModal({ open, onClose, onSubmit }: TagihanModalProps) {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormGrid cols={2}>
-          <FormField label="ID Tagihan" className="sm:col-span-2">
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection title="Detail Tagihan" description="Judul, jatuh tempo, dan nominal tagihan.">
+          <FormField label="ID Tagihan" className="col-span-2">
             <Input value={v.id} onChange={(e) => setV({ ...v, id: e.target.value })} />
           </FormField>
-          <FormField label="Judul" required error={err.judul} className="sm:col-span-2">
+          <FormField label="Judul" required error={err.judul} className="col-span-2">
             <Input value={v.judul} onChange={(e) => setV({ ...v, judul: e.target.value })} placeholder="contoh: SPP April 2026" />
           </FormField>
           <FormField label="Jatuh Tempo" required error={err.jatuhTempo}>
-            <DatePicker value={v.jatuhTempo} onChange={(val) => setV({ ...v, jatuhTempo: val })} />
+            <DatePicker
+              value={v.jatuhTempo}
+              onChange={(val) => setV({ ...v, jatuhTempo: val })}
+              captionLayout="dropdown-buttons"
+              fromYear={TX_YEAR_FROM}
+              toYear={TX_YEAR_TO}
+            />
           </FormField>
           <FormField label="Jumlah (Rp)" required error={err.jumlah}>
             <Input inputMode="numeric" value={String(v.jumlah || "")} onChange={(e) => setV({ ...v, jumlah: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
@@ -222,10 +258,11 @@ export function TagihanModal({ open, onClose, onSubmit }: TagihanModalProps) {
             <SearchableSelect
               value={v.status}
               onChange={(val) => setV({ ...v, status: val as TagihanRow["status"] })}
-              options={["Tertunda","Jatuh Tempo","Cicilan","Lunas"].map((o) => ({ value: o, label: o }))}
+              options={toOptions(["Tertunda", "Jatuh Tempo", "Cicilan", "Lunas"])}
+              placeholder="— pilih —"
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
       </form>
     </Modal>
   );
@@ -265,7 +302,9 @@ export function PembayaranModal({ open, onClose, tagihanList, onSubmit }: Pembay
       open={open}
       onClose={onClose}
       title="Catat Pembayaran"
-      description="Catat pembayaran masuk"
+      description="Catat pembayaran masuk. Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -273,10 +312,10 @@ export function PembayaranModal({ open, onClose, tagihanList, onSubmit }: Pembay
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormGrid cols={2}>
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection title="Detail Pembayaran" description="Tagihan terkait, nominal, dan metode pembayaran.">
           {tagihanList && tagihanList.length > 0 ? (
-            <FormField label="Tagihan" className="sm:col-span-2">
+            <FormField label="Tagihan" className="col-span-2">
               <SearchableSelect
                 value={refTagihan}
                 onChange={(val) => setRefTagihan(val)}
@@ -288,7 +327,13 @@ export function PembayaranModal({ open, onClose, tagihanList, onSubmit }: Pembay
             </FormField>
           ) : null}
           <FormField label="Tanggal" required error={err.tanggal}>
-            <DatePicker value={v.tanggal} onChange={(val) => setV({ ...v, tanggal: val })} />
+            <DatePicker
+              value={v.tanggal}
+              onChange={(val) => setV({ ...v, tanggal: val })}
+              captionLayout="dropdown-buttons"
+              fromYear={TX_YEAR_FROM}
+              toYear={TX_YEAR_TO}
+            />
           </FormField>
           <FormField label="Jumlah (Rp)" required error={err.jumlah}>
             <Input inputMode="numeric" value={String(v.jumlah || "")} onChange={(e) => setV({ ...v, jumlah: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
@@ -297,16 +342,17 @@ export function PembayaranModal({ open, onClose, tagihanList, onSubmit }: Pembay
             <SearchableSelect
               value={v.metode}
               onChange={(val) => setV({ ...v, metode: val as PembayaranRow["metode"] })}
-              options={["Tunai","Transfer","QRIS","Virtual Account"].map((o) => ({ value: o, label: o }))}
+              options={toOptions(["Tunai", "Transfer", "QRIS", "Virtual Account"])}
+              placeholder="— pilih —"
             />
           </FormField>
           <FormField label="Referensi">
             <Input value={v.ref} onChange={(e) => setV({ ...v, ref: e.target.value })} placeholder="No. invoice / VA" />
           </FormField>
-          <FormField label="Penerima" className="sm:col-span-2">
+          <FormField label="Penerima" className="col-span-2">
             <Input value={v.penerima} onChange={(e) => setV({ ...v, penerima: e.target.value })} />
           </FormField>
-        </FormGrid>
+        </FormSection>
       </form>
     </Modal>
   );
@@ -340,7 +386,9 @@ export function MutasiModal({ open, onClose, onSubmit }: MutasiModalProps) {
       open={open}
       onClose={onClose}
       title="Catat Mutasi"
-      description="Perubahan status atau kelas siswa"
+      description="Perubahan status atau kelas siswa. Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -348,16 +396,23 @@ export function MutasiModal({ open, onClose, onSubmit }: MutasiModalProps) {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormGrid cols={2}>
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection title="Detail Mutasi" description="Jenis perpindahan dan kelas asal/tujuan.">
           <FormField label="Tanggal" required error={err.tanggal}>
-            <DatePicker value={v.tanggal} onChange={(val) => setV({ ...v, tanggal: val })} />
+            <DatePicker
+              value={v.tanggal}
+              onChange={(val) => setV({ ...v, tanggal: val })}
+              captionLayout="dropdown-buttons"
+              fromYear={TX_YEAR_FROM}
+              toYear={TX_YEAR_TO}
+            />
           </FormField>
           <FormField label="Jenis" required>
             <SearchableSelect
               value={v.jenis}
               onChange={(val) => setV({ ...v, jenis: val as MutasiRow["jenis"] })}
-              options={["Naik Kelas","Tinggal Kelas","Pindah Keluar","DO","Masuk"].map((o) => ({ value: o, label: o }))}
+              options={toOptions(["Naik Kelas", "Tinggal Kelas", "Pindah Keluar", "DO", "Masuk"])}
+              placeholder="— pilih —"
             />
           </FormField>
           <FormField label="Dari">
@@ -366,10 +421,10 @@ export function MutasiModal({ open, onClose, onSubmit }: MutasiModalProps) {
           <FormField label="Ke">
             <Input value={v.ke ?? ""} onChange={(e) => setV({ ...v, ke: e.target.value })} placeholder="contoh: XI-IPA-1" />
           </FormField>
-          <FormField label="Keterangan" className="sm:col-span-2">
+          <FormField label="Keterangan" className="col-span-2">
             <Textarea rows={3} value={v.keterangan ?? ""} onChange={(e) => setV({ ...v, keterangan: e.target.value })} />
           </FormField>
-        </FormGrid>
+        </FormSection>
       </form>
     </Modal>
   );
@@ -422,7 +477,9 @@ export function DokumenModal({ open, onClose, onSubmit }: DokumenModalProps) {
       open={open}
       onClose={onClose}
       title="Unggah Dokumen"
-      description="Tambahkan dokumen pendukung siswa"
+      description="Tambahkan dokumen pendukung siswa. Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -430,40 +487,49 @@ export function DokumenModal({ open, onClose, onSubmit }: DokumenModalProps) {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormField label="File">
-          <input
-            type="file"
-            onChange={(e) => onFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand file:text-white file:px-3 file:py-2 file:text-sm file:cursor-pointer hover:file:bg-brand/90"
-          />
-        </FormField>
-        <FormGrid cols={2}>
-          <FormField label="Nama Dokumen" required error={err.nama} className="sm:col-span-2">
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection title="Berkas & Metadata" description="Unggah file dan lengkapi keterangan dokumen.">
+          <FormField label="File" className="col-span-2">
+            <input
+              type="file"
+              onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand file:text-white file:px-3 file:py-2 file:text-sm file:cursor-pointer hover:file:bg-brand/90"
+            />
+          </FormField>
+          <FormField label="Nama Dokumen" required error={err.nama} className="col-span-2">
             <Input value={v.nama} onChange={(e) => setV({ ...v, nama: e.target.value })} />
           </FormField>
           <FormField label="Tipe" required>
             <SearchableSelect
               value={v.tipe}
               onChange={(val) => setV({ ...v, tipe: val as DokumenRow["tipe"] })}
-              options={DOKUMEN_TIPE.map((t) => ({ value: t, label: t }))}
+              options={toOptions(DOKUMEN_TIPE)}
+              placeholder="— pilih —"
             />
           </FormField>
           <FormField label="Ukuran">
             <Input value={v.ukuran} onChange={(e) => setV({ ...v, ukuran: e.target.value })} placeholder="otomatis dari file" />
           </FormField>
           <FormField label="Tanggal Unggah">
-            <DatePicker value={v.diunggah} onChange={(val) => setV({ ...v, diunggah: val })} />
+            <DatePicker
+              value={v.diunggah}
+              onChange={(val) => setV({ ...v, diunggah: val })}
+              captionLayout="dropdown-buttons"
+              fromYear={TX_YEAR_FROM}
+              toYear={TX_YEAR_TO}
+            />
           </FormField>
           <FormField label="URL">
             <Input value={v.url ?? ""} onChange={(e) => setV({ ...v, url: e.target.value })} placeholder="https://..." />
           </FormField>
-        </FormGrid>
-        <Checkbox
-          label="Tandai sebagai dokumen wajib"
-          checked={wajib}
-          onChange={(e) => setWajib(e.target.checked)}
-        />
+          <FormField label="Status Wajib" className="col-span-2">
+            <Checkbox
+              label="Tandai sebagai dokumen wajib"
+              checked={wajib}
+              onChange={(e) => setWajib(e.target.checked)}
+            />
+          </FormField>
+        </FormSection>
       </form>
     </Modal>
   );
@@ -535,7 +601,9 @@ export function CatatanModal({ open, onClose, onSubmit }: CatatanModalProps) {
       open={open}
       onClose={onClose}
       title="Tambah Catatan"
-      description="Catatan internal terkait siswa"
+      description="Catatan internal terkait siswa. Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -543,25 +611,26 @@ export function CatatanModal({ open, onClose, onSubmit }: CatatanModalProps) {
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormGrid cols={2}>
-          <FormField label="Judul" required error={err.judul} className="sm:col-span-2">
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection title="Isi Catatan" description="Kategori, visibilitas, dan isi catatan.">
+          <FormField label="Judul" required error={err.judul} className="col-span-2">
             <Input value={v.judul} onChange={(e) => setV({ ...v, judul: e.target.value })} />
           </FormField>
           <FormField label="Kategori" required>
             <SearchableSelect
               value={v.kategori}
               onChange={(val) => setV({ ...v, kategori: val as CatatanPayload["kategori"] })}
-              options={["Umum","Akademik","Disiplin","Kesehatan","Keuangan"].map((o) => ({ value: o, label: o }))}
+              options={toOptions(["Umum", "Akademik", "Disiplin", "Kesehatan", "Keuangan"])}
+              placeholder="— pilih —"
             />
           </FormField>
           <FormField label="Visibilitas">
             <Checkbox label="Hanya untuk staf (pribadi)" checked={v.pribadi} onChange={(e) => setV({ ...v, pribadi: e.target.checked })} />
           </FormField>
-          <FormField label="Isi Catatan" required error={err.isi} className="sm:col-span-2">
+          <FormField label="Isi Catatan" required error={err.isi} className="col-span-2">
             <Textarea rows={5} value={v.isi} onChange={(e) => setV({ ...v, isi: e.target.value })} />
           </FormField>
-        </FormGrid>
+        </FormSection>
       </form>
     </Modal>
   );
@@ -607,7 +676,9 @@ export function PesanModal({ open, onClose, defaultPenerima, defaultKanal, onSub
       open={open}
       onClose={onClose}
       title="Kirim Pesan"
-      description="Pesan ke siswa atau wali"
+      description="Pesan ke siswa atau wali. Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -615,27 +686,28 @@ export function PesanModal({ open, onClose, defaultPenerima, defaultKanal, onSub
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormGrid cols={2}>
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection title="Komposisi Pesan" description="Kanal pengiriman, penerima, dan isi pesan.">
           <FormField label="Kanal" required>
             <SearchableSelect
               value={v.kanal}
               onChange={(val) => setV({ ...v, kanal: val as PesanPayload["kanal"] })}
-              options={["WhatsApp","Email","SMS","In-App"].map((o) => ({ value: o, label: o }))}
+              options={toOptions(["WhatsApp", "Email", "SMS", "In-App"])}
+              placeholder="— pilih —"
             />
           </FormField>
           <FormField label="Penerima" required error={err.penerima}>
             <Input value={v.penerima} onChange={(e) => setV({ ...v, penerima: e.target.value })} placeholder={v.kanal === "Email" ? "alamat@email" : "+62..."} />
           </FormField>
           {v.kanal === "Email" && (
-            <FormField label="Subjek" required error={err.subjek} className="sm:col-span-2">
+            <FormField label="Subjek" required error={err.subjek} className="col-span-2">
               <Input value={v.subjek} onChange={(e) => setV({ ...v, subjek: e.target.value })} />
             </FormField>
           )}
-          <FormField label="Isi Pesan" required error={err.isi} className="sm:col-span-2">
+          <FormField label="Isi Pesan" required error={err.isi} className="col-span-2">
             <Textarea rows={5} value={v.isi} onChange={(e) => setV({ ...v, isi: e.target.value })} />
           </FormField>
-        </FormGrid>
+        </FormSection>
       </form>
     </Modal>
   );
@@ -668,6 +740,9 @@ export function AbsensiModal({ open, onClose, defaultPencatat, onSubmit }: Absen
       open={open}
       onClose={onClose}
       title="Catat Absensi Manual"
+      description="Catat kehadiran siswa secara manual. Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
@@ -675,25 +750,32 @@ export function AbsensiModal({ open, onClose, defaultPencatat, onSubmit }: Absen
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <FormGrid cols={2}>
+      <form onSubmit={submit} className="space-y-5">
+        <FormSection title="Detail Absensi" description="Tanggal, status kehadiran, dan keterangan.">
           <FormField label="Tanggal" required>
-            <DatePicker value={v.tanggal} onChange={(val) => setV({ ...v, tanggal: val })} />
+            <DatePicker
+              value={v.tanggal}
+              onChange={(val) => setV({ ...v, tanggal: val })}
+              captionLayout="dropdown-buttons"
+              fromYear={TX_YEAR_FROM}
+              toYear={TX_YEAR_TO}
+            />
           </FormField>
           <FormField label="Status" required>
             <SearchableSelect
               value={v.status}
               onChange={(val) => setV({ ...v, status: val as AbsensiRow["status"] })}
-              options={["Hadir","Sakit","Izin","Alpa","Terlambat"].map((o) => ({ value: o, label: o }))}
+              options={toOptions(["Hadir", "Sakit", "Izin", "Alpa", "Terlambat"])}
+              placeholder="— pilih —"
             />
           </FormField>
-          <FormField label="Pencatat" className="sm:col-span-2">
+          <FormField label="Pencatat" className="col-span-2">
             <Input value={v.pencatat} onChange={(e) => setV({ ...v, pencatat: e.target.value })} />
           </FormField>
-          <FormField label="Keterangan" className="sm:col-span-2">
+          <FormField label="Keterangan" className="col-span-2">
             <Textarea rows={3} value={v.keterangan ?? ""} onChange={(e) => setV({ ...v, keterangan: e.target.value })} />
           </FormField>
-        </FormGrid>
+        </FormSection>
       </form>
     </Modal>
   );

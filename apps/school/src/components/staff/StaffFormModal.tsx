@@ -5,17 +5,61 @@
  * Required server-side: nama_lengkap, user, nik, tanggal_lahir, jenis_kelamin, status_kepegawaian, sekolah.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
-import { Button, DatePicker, FormField, FormGrid, Input, Modal, SearchableSelect } from "@sekolahpro/ui";
+import { useResourceCreate, listResource } from "@sekolahpro/api-client";
+import {
+  Button,
+  DatePicker,
+  FormField,
+  FormGrid,
+  Input,
+  Modal,
+  SearchableSelect,
+  type SearchableOption,
+} from "@sekolahpro/ui";
 
-type SekolahRow = { name: string; nama_sekolah?: string };
+const SEKOLAH_DOCTYPE = "Sekolah";
+const SEKOLAH_LABEL_FIELD = "nama_sekolah";
 
 const JK_OPTIONS = ["Laki-laki", "Perempuan"] as const;
 const AGAMA_OPTIONS = ["Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Konghucu"] as const;
 const STATUS_KEP_OPTIONS = ["PNS", "PPPK", "GTY", "GTT", "Honorer"] as const;
 const PENDIDIKAN_OPTIONS = ["SMA", "D3", "S1", "S2", "S3"] as const;
+
+// Year range for date pickers. Birth/employment dates can reach back decades,
+// so expose a wide dropdown range for fast year jumping.
+const MIN_YEAR = 1940;
+const MAX_YEAR = new Date().getFullYear() + 1;
+
+/** Map plain string enums to SearchableSelect option objects. */
+function toOptions(values: readonly string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Async option loader for a Frappe link field. */
+async function searchLink(doctype: string, labelField: string, q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`], [labelField, "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({ value: r.name ?? "", label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? "") }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
 
 interface StaffFormModalProps {
   open: boolean;
@@ -65,10 +109,6 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
 
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>("Guru");
-  const sekolahQ = useResourceList<SekolahRow>("Sekolah", {
-    fields: ["name", "nama_sekolah"],
-    limit_page_length: 0,
-  });
 
   const set = <K extends keyof FormState>(k: K, v: string) =>
     setForm((cur) => ({ ...cur, [k]: v }));
@@ -126,15 +166,13 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
     }
   };
 
-  const sekolahOpts = sekolahQ.data ?? [];
-
   return (
     <Modal
       open={open}
       onClose={close}
-      size="lg"
+      size="mega"
       title="Tambah Staff"
-      description="Isi data staff. Tanda * wajib."
+      description="Isi data staff. Tanda * wajib diisi."
       tone="brand"
       footer={
         <div className="flex justify-end gap-2">
@@ -146,20 +184,12 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
       }
     >
       <div className="space-y-5">
-        <FormGrid cols={2}>
-          <FormField label="Nama Lengkap" required>
+        <FormSection title="Identitas Diri" description="Data pribadi sesuai dokumen resmi.">
+          <FormField label="Nama Lengkap" required className="col-span-2">
             <Input
               value={form.nama_lengkap}
               onChange={(e) => set("nama_lengkap", e.target.value)}
               placeholder="Nama lengkap dengan gelar"
-            />
-          </FormField>
-          <FormField label="User" required hint="Email user Frappe (login)">
-            <Input
-              type="email"
-              value={form.user}
-              onChange={(e) => set("user", e.target.value)}
-              placeholder="user@sekolah.sch.id"
             />
           </FormField>
           <FormField label="NIK" required hint="16 digit">
@@ -173,13 +203,16 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
             <DatePicker
               value={form.tanggal_lahir}
               onChange={(v) => set("tanggal_lahir", v)}
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
             />
           </FormField>
           <FormField label="Jenis Kelamin" required>
             <SearchableSelect
               value={form.jenis_kelamin}
               onChange={(v) => set("jenis_kelamin", v)}
-              options={JK_OPTIONS.map((o) => ({ value: o, label: o }))}
+              options={toOptions(JK_OPTIONS)}
               placeholder="— Pilih —"
             />
           </FormField>
@@ -187,8 +220,19 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
             <SearchableSelect
               value={form.agama}
               onChange={(v) => set("agama", v)}
-              options={AGAMA_OPTIONS.map((o) => ({ value: o, label: o }))}
+              options={toOptions(AGAMA_OPTIONS)}
               placeholder="—"
+            />
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Kontak & Akun" description="Login Frappe dan kontak pribadi.">
+          <FormField label="User" required hint="Email user Frappe (login)" className="col-span-2">
+            <Input
+              type="email"
+              value={form.user}
+              onChange={(e) => set("user", e.target.value)}
+              placeholder="user@sekolah.sch.id"
             />
           </FormField>
           <FormField label="No HP">
@@ -205,11 +249,14 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
               onChange={(e) => set("email_pribadi", e.target.value)}
             />
           </FormField>
+        </FormSection>
+
+        <FormSection title="Kepegawaian" description="Status, identitas pegawai, dan penempatan.">
           <FormField label="Status Kepegawaian" required>
             <SearchableSelect
               value={form.status_kepegawaian}
               onChange={(v) => set("status_kepegawaian", v)}
-              options={STATUS_KEP_OPTIONS.map((o) => ({ value: o, label: o }))}
+              options={toOptions(STATUS_KEP_OPTIONS)}
               placeholder="— Pilih —"
             />
           </FormField>
@@ -217,9 +264,8 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
             <SearchableSelect
               value={form.sekolah}
               onChange={(v) => set("sekolah", v)}
-              disabled={sekolahQ.isLoading}
-              options={sekolahOpts.map((s) => ({ value: s.name, label: s.nama_sekolah ?? s.name }))}
-              placeholder={sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
+              loadOptions={(q) => searchLink(SEKOLAH_DOCTYPE, SEKOLAH_LABEL_FIELD, q)}
+              placeholder="Cari sekolah…"
             />
           </FormField>
           <FormField label="NIP" hint="Untuk PNS/PPPK">
@@ -232,7 +278,7 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
             <SearchableSelect
               value={form.pendidikan_terakhir}
               onChange={(v) => set("pendidikan_terakhir", v)}
-              options={PENDIDIKAN_OPTIONS.map((o) => ({ value: o, label: o }))}
+              options={toOptions(PENDIDIKAN_OPTIONS)}
               placeholder="—"
             />
           </FormField>
@@ -247,9 +293,12 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
             <DatePicker
               value={form.tmt_pertama_kerja}
               onChange={(v) => set("tmt_pertama_kerja", v)}
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
 
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">

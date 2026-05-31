@@ -5,12 +5,33 @@
  * inbox dan bisa di-track status (Baru → Dibalas → Selesai).
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, FormField, FormGrid, Input, Modal, SearchableSelect, Textarea } from "@sekolahpro/ui";
 import { useResourceCreate } from "@sekolahpro/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 
 const STATUS_OPTIONS = ["Baru", "Dibalas", "Selesai"] as const;
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid cols={2}>{children}</FormGrid>
+    </section>
+  );
+}
 
 interface Props {
   open: boolean;
@@ -86,9 +107,9 @@ export function PesanComposeModal({ open, onClose, onCreated }: Props) {
     <Modal
       open={open}
       onClose={close}
-      size="lg"
+      size="mega"
       title="Pesan Baru"
-      description="Catat pesan masuk (walk-in / telepon / WA) ke inbox kontak."
+      description="Catat pesan masuk (walk-in / telepon / WA) ke inbox kontak. Tanda * wajib diisi."
       tone="brand"
       footer={
         <div className="flex justify-end gap-2">
@@ -100,7 +121,7 @@ export function PesanComposeModal({ open, onClose, onCreated }: Props) {
       }
     >
       <div className="space-y-5">
-        <FormGrid cols={2}>
+        <FormSection title="Pengirim" description="Identitas dan kontak pengirim pesan.">
           <FormField label="Nama" required>
             <Input
               value={form.nama}
@@ -128,18 +149,21 @@ export function PesanComposeModal({ open, onClose, onCreated }: Props) {
               value={form.status}
               onChange={(v) => set("status", v)}
               options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— pilih —"
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
 
-        <FormField label="Pesan" required>
-          <Textarea
-            rows={6}
-            value={form.pesan}
-            onChange={(e) => set("pesan", e.target.value)}
-            placeholder="Isi pesan..."
-          />
-        </FormField>
+        <FormSection title="Isi Pesan" description="Pertanyaan atau keterangan yang disampaikan.">
+          <FormField label="Pesan" required className="col-span-2">
+            <Textarea
+              rows={6}
+              value={form.pesan}
+              onChange={(e) => set("pesan", e.target.value)}
+              placeholder="Isi pesan..."
+            />
+          </FormField>
+        </FormSection>
 
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">

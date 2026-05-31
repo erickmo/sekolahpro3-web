@@ -5,16 +5,20 @@
  * autoname = format:{tahun_ajaran}-{nama_rombel} (name auto-generated).
  */
 
-import { useState } from "react";
-import { Button, FormField, FormGrid, Input, Modal, SearchableSelect } from "@sekolahpro/ui";
-import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
+import { useState, type ReactNode } from "react";
+import {
+  Button,
+  FormField,
+  FormGrid,
+  Input,
+  Modal,
+  SearchableSelect,
+  type SearchableOption,
+} from "@sekolahpro/ui";
+import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 
-type NameRow = { name: string };
-type SekolahRow = { name: string; nama_sekolah?: string };
-type UserRow = { name: string; full_name?: string };
-type RuanganRow = { name: string; nama?: string };
-
+const ROMBEL_DOCTYPE = "Rombongan Belajar";
 const STATUS_OPTIONS = ["Aktif", "Ditutup"] as const;
 
 interface RombelFormModalProps {
@@ -47,33 +51,41 @@ const INITIAL: FormState = {
   status: "Aktif",
 };
 
+/** Build static enum options for SearchableSelect. */
+function toOptions(values: readonly string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Async option loader for a Frappe link field. */
+async function searchLink(doctype: string, labelField: string, q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`], [labelField, "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({ value: r.name ?? "", label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? "") }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
+
 export function RombelFormModal({ open, onClose, onCreated }: RombelFormModalProps) {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [err, setErr] = useState<string | null>(null);
 
   const qc = useQueryClient();
-  const create = useResourceCreate<{ name: string }>("Rombongan Belajar");
-
-  const tahunAjaranQ = useResourceList<NameRow>("Tahun Ajaran", {
-    fields: ["name"],
-    limit_page_length: 0,
-  });
-  const jenjangQ = useResourceList<NameRow>("Unit Jenjang", {
-    fields: ["name"],
-    limit_page_length: 0,
-  });
-  const sekolahQ = useResourceList<SekolahRow>("Sekolah", {
-    fields: ["name", "nama_sekolah"],
-    limit_page_length: 0,
-  });
-  const userQ = useResourceList<UserRow>("User", {
-    fields: ["name", "full_name"],
-    limit_page_length: 0,
-  });
-  const ruanganQ = useResourceList<RuanganRow>("Ruangan", {
-    fields: ["name", "nama"],
-    limit_page_length: 0,
-  });
+  const create = useResourceCreate<{ name: string }>(ROMBEL_DOCTYPE);
 
   const set = <K extends keyof FormState>(k: K, v: string) =>
     setForm((cur) => ({ ...cur, [k]: v }));
@@ -113,7 +125,7 @@ export function RombelFormModal({ open, onClose, onCreated }: RombelFormModalPro
       if (form.ruangan) payload.ruangan = form.ruangan;
 
       const created = await create.mutateAsync(payload);
-      await qc.invalidateQueries({ queryKey: ["resource:list", "Rombongan Belajar"] });
+      await qc.invalidateQueries({ queryKey: ["resource:list", ROMBEL_DOCTYPE] });
       reset();
       if (onCreated) onCreated(created.name);
       onClose();
@@ -122,31 +134,25 @@ export function RombelFormModal({ open, onClose, onCreated }: RombelFormModalPro
     }
   };
 
-  const tahunAjaranOpts = tahunAjaranQ.data ?? [];
-  const jenjangOpts = jenjangQ.data ?? [];
-  const sekolahOpts = sekolahQ.data ?? [];
-  const userOpts = userQ.data ?? [];
-  const ruanganOpts = ruanganQ.data ?? [];
-
   return (
     <Modal
       open={open}
       onClose={close}
-      size="xl"
-      title="Tambah Rombongan Belajar"
-      description="Isi data rombongan belajar. Tanda * wajib."
+      size="mega"
       tone="brand"
+      title="Tambah Rombongan Belajar"
+      description="Isi data rombongan belajar. Tanda * wajib diisi."
       footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={close}>Batal</Button>
+        <>
+          <Button variant="outline" onClick={close} disabled={create.isPending}>Batal</Button>
           <Button onClick={submit} disabled={!canSubmit}>
-            {create.isPending ? "Menyimpan..." : "Simpan"}
+            {create.isPending ? "Menyimpan…" : "Simpan"}
           </Button>
-        </div>
+        </>
       }
     >
       <div className="space-y-5">
-        <FormGrid cols={2}>
+        <FormSection title="Identitas Rombel" description="Nama dan penempatan akademik rombongan belajar.">
           <FormField label="Nama Rombel" required hint="Dipakai untuk auto-ID: {tahun_ajaran}-{nama_rombel}">
             <Input
               value={form.nama_rombel}
@@ -158,18 +164,16 @@ export function RombelFormModal({ open, onClose, onCreated }: RombelFormModalPro
             <SearchableSelect
               value={form.tahun_ajaran}
               onChange={(v) => set("tahun_ajaran", v)}
-              disabled={tahunAjaranQ.isLoading}
-              options={tahunAjaranOpts.map((t) => ({ value: t.name, label: t.name }))}
-              placeholder={tahunAjaranQ.isLoading ? "Memuat..." : "— Pilih Tahun Ajaran —"}
+              loadOptions={(q) => searchLink("Tahun Ajaran", "name", q)}
+              placeholder="Cari tahun ajaran…"
             />
           </FormField>
           <FormField label="Jenjang" required>
             <SearchableSelect
               value={form.jenjang}
               onChange={(v) => set("jenjang", v)}
-              disabled={jenjangQ.isLoading}
-              options={jenjangOpts.map((j) => ({ value: j.name, label: j.name }))}
-              placeholder={jenjangQ.isLoading ? "Memuat..." : "— Pilih Jenjang —"}
+              loadOptions={(q) => searchLink("Unit Jenjang", "name", q)}
+              placeholder="Cari jenjang…"
             />
           </FormField>
           <FormField label="Tingkat" required>
@@ -185,24 +189,35 @@ export function RombelFormModal({ open, onClose, onCreated }: RombelFormModalPro
             <SearchableSelect
               value={form.sekolah}
               onChange={(v) => set("sekolah", v)}
-              disabled={sekolahQ.isLoading}
-              options={sekolahOpts.map((s) => ({
-                value: s.name,
-                label: s.nama_sekolah ?? s.name,
-              }))}
-              placeholder={sekolahQ.isLoading ? "Memuat..." : "— Pilih Sekolah —"}
+              loadOptions={(q) => searchLink("Sekolah", "nama_sekolah", q)}
+              placeholder="Cari sekolah…"
             />
           </FormField>
+          <FormField label="Status" required>
+            <SearchableSelect
+              value={form.status}
+              onChange={(v) => set("status", v)}
+              options={toOptions(STATUS_OPTIONS)}
+              placeholder="— pilih —"
+            />
+          </FormField>
+        </FormSection>
+
+        <FormSection title="Penempatan & Kapasitas" description="Wali kelas, ruangan, dan daya tampung.">
           <FormField label="Wali Kelas">
             <SearchableSelect
               value={form.wali_kelas}
               onChange={(v) => set("wali_kelas", v)}
-              disabled={userQ.isLoading}
-              options={userOpts.map((u) => ({
-                value: u.name,
-                label: u.full_name ? `${u.full_name} (${u.name})` : u.name,
-              }))}
-              placeholder={userQ.isLoading ? "Memuat..." : "— Pilih Wali Kelas —"}
+              loadOptions={(q) => searchLink("User", "full_name", q)}
+              placeholder="Cari wali kelas…"
+            />
+          </FormField>
+          <FormField label="Ruangan">
+            <SearchableSelect
+              value={form.ruangan}
+              onChange={(v) => set("ruangan", v)}
+              loadOptions={(q) => searchLink("Ruangan", "nama", q)}
+              placeholder="Cari ruangan…"
             />
           </FormField>
           <FormField label="Kapasitas">
@@ -214,26 +229,7 @@ export function RombelFormModal({ open, onClose, onCreated }: RombelFormModalPro
               placeholder="32"
             />
           </FormField>
-          <FormField label="Ruangan">
-            <SearchableSelect
-              value={form.ruangan}
-              onChange={(v) => set("ruangan", v)}
-              disabled={ruanganQ.isLoading}
-              options={ruanganOpts.map((r) => ({
-                value: r.name,
-                label: r.nama ?? r.name,
-              }))}
-              placeholder={ruanganQ.isLoading ? "Memuat..." : "— Pilih Ruangan —"}
-            />
-          </FormField>
-          <FormField label="Status" required>
-            <SearchableSelect
-              value={form.status}
-              onChange={(v) => set("status", v)}
-              options={STATUS_OPTIONS.map((o) => ({ value: o, label: o }))}
-            />
-          </FormField>
-        </FormGrid>
+        </FormSection>
 
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">

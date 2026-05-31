@@ -15,6 +15,11 @@ import { useResourceCreate } from "@sekolahpro/api-client";
 // Reusable create-form modal for absensi sub-domain (P2).
 // Mirrors PerpCreateModal contract.
 
+// Year range for attendance date pickers. Attendance is recorded near "now",
+// so expose a narrow dropdown range for fast year jumping.
+const MIN_YEAR = new Date().getFullYear() - 2;
+const MAX_YEAR = new Date().getFullYear() + 1;
+
 export type AbsFieldType = "text" | "number" | "date" | "time" | "select" | "textarea";
 
 export interface AbsFieldDef {
@@ -35,6 +40,10 @@ export interface AbsensiCreateModalProps {
   description?: string;
   fields: AbsFieldDef[];
   submitLabel?: string;
+  /** Optional heading for the grouped field section. */
+  sectionTitle?: string;
+  /** Optional supporting copy for the grouped field section. */
+  sectionDescription?: string;
   onCreated?: (doc: Record<string, unknown>) => void;
 }
 
@@ -44,8 +53,32 @@ function emptyValues(fields: AbsFieldDef[]): Record<string, string> {
   return out;
 }
 
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
+
 export function AbsensiCreateModal(props: AbsensiCreateModalProps) {
-  const { open, onClose, doctype, title, description, fields, submitLabel = "Simpan", onCreated } = props;
+  const {
+    open,
+    onClose,
+    doctype,
+    title,
+    description,
+    fields,
+    submitLabel = "Simpan",
+    sectionTitle = "Data Absensi",
+    sectionDescription,
+    onCreated,
+  } = props;
   const [values, setValues] = useState<Record<string, string>>(() => emptyValues(fields));
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const qc = useQueryClient();
@@ -115,7 +148,15 @@ export function AbsensiCreateModal(props: AbsensiCreateModalProps) {
       return <Textarea id={id} value={val} onChange={(e) => onChange(e.target.value)} />;
     }
     if (f.type === "date") {
-      return <DatePicker value={val} onChange={(v) => onChange(v)} />;
+      return (
+        <DatePicker
+          value={val}
+          onChange={(v) => onChange(v)}
+          captionLayout="dropdown-buttons"
+          fromYear={MIN_YEAR}
+          toYear={MAX_YEAR}
+        />
+      );
     }
     const inputType =
       f.type === "number" ? "number"
@@ -130,7 +171,8 @@ export function AbsensiCreateModal(props: AbsensiCreateModalProps) {
       onClose={handleClose}
       title={title}
       {...(description ? { description } : {})}
-      size="lg"
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button variant="outline" onClick={handleClose} disabled={mut.isPending}>Batal</Button>
@@ -140,13 +182,13 @@ export function AbsensiCreateModal(props: AbsensiCreateModalProps) {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {errMsg ? (
           <div className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-700">
             {errMsg}
           </div>
         ) : null}
-        <FormGrid cols={2}>
+        <FormSection title={sectionTitle} {...(sectionDescription ? { description: sectionDescription } : {})}>
           {fields.map((f) => (
             <FormField
               key={f.name}
@@ -158,7 +200,7 @@ export function AbsensiCreateModal(props: AbsensiCreateModalProps) {
               {renderField(f)}
             </FormField>
           ))}
-        </FormGrid>
+        </FormSection>
         <button type="submit" hidden />
       </form>
     </Modal>
