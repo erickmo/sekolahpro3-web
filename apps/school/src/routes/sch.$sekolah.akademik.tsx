@@ -1,73 +1,47 @@
 import { useCallback } from "react";
 import {
   createFileRoute,
-  Link,
   Outlet,
   useNavigate,
   useRouterState,
   useSearch,
 } from "@tanstack/react-router";
-import { Tabs, type TabItem } from "@sekolahpro/ui";
 import { AkademikContextProvider } from "../lib/akademikContext";
 import { AkademikContextBar } from "../components/akademik/AkademikContextBar";
+import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
 
 export interface AkademikSearch {
   ta?: string;
   semester?: string;
 }
 
-const NAV_GROUPS: { label: string; items: { to: string; label: string; exact?: boolean }[] }[] = [
+// Akademik = operasional saja. Setup (Tahun Ajaran, Kurikulum, Mapel, KKM,
+// Komponen Nilai, Konfigurasi) pindah ke modul Master Data.
+const NAV_GROUPS: NavTabGroup[] = [
   {
     label: "Ringkasan",
     items: [{ to: "/sch/$sekolah/akademik", label: "Dashboard", exact: true }],
   },
   {
-    label: "Master",
-    items: [
-      { to: "/sch/$sekolah/akademik/tahun-ajaran", label: "Tahun Ajaran" },
-      { to: "/sch/$sekolah/akademik/kurikulum", label: "Kurikulum" },
-      { to: "/sch/$sekolah/akademik/daftar", label: "Mata Pelajaran" },
-      { to: "/sch/$sekolah/akademik/komponen-nilai", label: "Komponen Nilai" },
-      { to: "/sch/$sekolah/akademik/kkm", label: "KKM" },
-      { to: "/sch/$sekolah/akademik/konfigurasi", label: "Konfigurasi" },
-    ],
-  },
-  {
     label: "Penilaian",
     items: [
+      { to: "/sch/$sekolah/akademik/asesmen", label: "Input Nilai Test" },
       { to: "/sch/$sekolah/akademik/entri-nilai", label: "Entri Nilai" },
       { to: "/sch/$sekolah/akademik/raport", label: "Raport" },
     ],
   },
 ];
 
-function NavGroup({
-  label,
-  items,
-  pathname,
-}: {
-  label: string;
-  items: { to: string; label: string; exact?: boolean }[];
-  pathname: string;
-}) {
-  const tabs: TabItem[] = items.map((t) => ({
-    key: t.to,
-    label: t.label,
-    active: t.exact ? pathname === t.to : pathname === t.to || pathname.startsWith(t.to + "/"),
-    render: ({ className, children }) => (
-      <Link to={t.to} className={className}>
-        {children}
-      </Link>
-    ),
-  }));
-  return (
-    <div>
-      <div className="px-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-fg">
-        {label}
-      </div>
-      <Tabs items={tabs} />
-    </div>
-  );
+// Konteks (Tahun Ajaran + Semester) hanya relevan di halaman operasional yang
+// menyaring data per periode. Setup tidak butuh, jadi bar disembunyikan di sana.
+const CONTEXT_BAR_PREFIXES = [
+  "/akademik/asesmen",
+  "/akademik/entri-nilai",
+  "/akademik/raport",
+];
+
+function showContextBar(pathname: string): boolean {
+  return CONTEXT_BAR_PREFIXES.some((p) => pathname.includes(p));
 }
 
 function AkademikLayout() {
@@ -106,12 +80,8 @@ function AkademikLayout() {
       }}
     >
       <div className="space-y-4">
-        <AkademikContextBar />
-        <div className="space-y-3">
-          {NAV_GROUPS.map((g) => (
-            <NavGroup key={g.label} label={g.label} items={g.items} pathname={pathname} />
-          ))}
-        </div>
+        {showContextBar(pathname) ? <AkademikContextBar /> : null}
+        <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} />
         <Outlet />
       </div>
     </AkademikContextProvider>
