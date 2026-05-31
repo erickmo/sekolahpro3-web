@@ -8,10 +8,12 @@ import {
   Pagination,
   SectionCard,
   IconPlus,
+  IconDownload,
   type Column,
   type SelectFilter,
   type SortState,
 } from "@sekolahpro/ui";
+import { downloadCsv } from "../lib/stub";
 
 function SkeletonRows({ count, cols }: { count: number; cols: number }) {
   return (
@@ -30,7 +32,7 @@ function SkeletonRows({ count, cols }: { count: number; cols: number }) {
     </div>
   );
 }
-import { useResourceList, type ListParams, type FilterTuple } from "@sekolahpro/api-client";
+import { useResourceList, listResource, type ListParams, type FilterTuple } from "@sekolahpro/api-client";
 
 export interface ResourceListPageProps<T extends Record<string, unknown>> {
   eyebrow?: string;
@@ -79,6 +81,16 @@ export interface ResourceListPageProps<T extends Record<string, unknown>> {
   addLabel?: string;
   pageSize?: number;
   onRowClick?: (row: T) => void;
+  /**
+   * Enables a server-side CSV export of ALL rows matching the current filters
+   * (search + selectFilters + baseFilters), not just the visible page. Fetches
+   * with pagination disabled, maps each row via `mapRow`, then downloads a CSV.
+   */
+  exportConfig?: {
+    fileName: string;
+    fields: string[];
+    mapRow: (row: T) => Record<string, unknown>;
+  };
 }
 
 export function ResourceListPage<T extends Record<string, unknown>>(props: ResourceListPageProps<T>) {
@@ -100,7 +112,10 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
     addLabel = "Tambah",
     pageSize: defaultPageSize = 25,
     onRowClick,
+    exportConfig,
   } = props;
+
+  const [exporting, setExporting] = useState(false);
 
   const [search, setSearch] = useState("");
   const [filterVals, setFilterVals] = useState<Record<string, string>>(() =>
@@ -181,6 +196,29 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
   }, [q.data, decorateRows]);
   const rows = decorateRows ? (decorated ?? baseRows) : baseRows;
 
+  async function handleExport() {
+    if (!exportConfig || exporting) return;
+    setExporting(true);
+    try {
+      // Re-run the current query with pagination disabled (limit_page_length: 0
+      // = all rows in Frappe) so the export covers every matching row, not just
+      // the visible page.
+      const exportParams: ListParams = {
+        ...params,
+        fields: exportConfig.fields,
+        limit_start: 0,
+        limit_page_length: 0,
+      };
+      const all = await listResource<T>(doctype, exportParams);
+      // downloadCsv shows its own alert when the result set is empty.
+      downloadCsv(exportConfig.fileName, all.map(exportConfig.mapRow));
+    } catch (e) {
+      window.alert((e as Error).message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const filterUI: SelectFilter[] = selectFilters.map((f) => ({
     key: f.key,
     label: f.label,
@@ -206,6 +244,14 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
         actions={
           <>
             {extraActions}
+            {exportConfig ? (
+              <Button variant="outline" onClick={handleExport} disabled={exporting}>
+                <span className="h-4 w-4 mr-1.5">
+                  <IconDownload />
+                </span>
+                {exporting ? "Mengekspor..." : "Export"}
+              </Button>
+            ) : null}
             {onAdd ? (
               <Button onClick={onAdd}>
                 <span className="h-4 w-4 mr-1.5">

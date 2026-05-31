@@ -1,10 +1,13 @@
-import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Avatar,
   Badge,
   type Column,
 } from "@sekolahpro/ui";
+import { useResourceList } from "@sekolahpro/api-client";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { SiswaImportDialog } from "../components/SiswaImportDialog";
 
 type Row = {
   name: string;
@@ -12,8 +15,8 @@ type Row = {
   nis?: string;
   nisn?: string;
   jenjang?: string;
-  sekolah?: string;
   tahun_masuk?: string;
+  tanggal_lahir?: string;
   jenis_kelamin?: string;
   agama?: string;
   status?: string;
@@ -26,6 +29,16 @@ const TONE_BY_STATUS: Record<string, "success" | "brand" | "neutral" | "warning"
   "Pindah Keluar": "warning",
   DO: "danger",
 };
+
+const STATUS = ["Calon", "Aktif", "Alumni", "Pindah Keluar", "DO"];
+const JENIS_KELAMIN = ["Laki-laki", "Perempuan"];
+const AGAMA = ["Islam", "Kristen", "Katolik", "Hindu", "Budha", "Konghucu"];
+
+type Opt = { value: string; label: string };
+const withSemua = (vals: string[]): Opt[] => [
+  { value: "Semua", label: "Semua" },
+  ...vals.map((v) => ({ value: v, label: v })),
+];
 
 const COLUMNS: Column<Row>[] = [
   {
@@ -46,14 +59,9 @@ const COLUMNS: Column<Row>[] = [
   },
   {
     key: "jenjang",
-    header: "Jenjang / Sekolah",
+    header: "Jenjang",
     sortable: true,
-    cell: (s) => (
-      <div>
-        <div className="text-fg">{s.jenjang ?? "—"}</div>
-        <div className="text-xs text-muted-fg">{s.sekolah ?? "—"}</div>
-      </div>
-    ),
+    cell: (s) => <span className="text-fg">{s.jenjang ?? "—"}</span>,
   },
   {
     key: "jenis_kelamin",
@@ -78,19 +86,60 @@ const COLUMNS: Column<Row>[] = [
 
 function SiswaListPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
-
   const navigate = useNavigate();
+
+  // Default to active students; "Semua" clears the filter.
+  const [status, setStatus] = useState("Aktif");
+
+  // Dynamic Link-field options scoped to the active school.
+  const jenjangQ = useResourceList<{ name: string }>("Unit Jenjang", {
+    fields: ["name"],
+    order_by: "`name` asc",
+    limit_page_length: 0,
+  });
+  const tahunQ = useResourceList<{ name: string }>("Tahun Ajaran", {
+    fields: ["name"],
+    order_by: "`name` desc",
+    limit_page_length: 0,
+  });
+
+  const jenjangOpts = withSemua((jenjangQ.data ?? []).map((r) => r.name));
+  const tahunOpts = withSemua((tahunQ.data ?? []).map((r) => r.name));
+
   return (
     <ResourceListPage<Row>
       eyebrow="Direktori"
       title="Siswa"
       description="Kelola data siswa, profil, dan kelas."
       doctype="Siswa"
-      fields={["name", "nama_lengkap", "nis", "nisn", "jenjang", "sekolah", "tahun_masuk", "jenis_kelamin", "agama", "status"]}
+      fields={["name", "nama_lengkap", "nis", "nisn", "jenjang", "tahun_masuk", "jenis_kelamin", "agama", "status"]}
       rowKey={(s) => s.name}
       columns={COLUMNS}
       defaultSort={{ key: "nama_lengkap", dir: "asc" }}
       searchFields={["name", "nama_lengkap", "nis", "nisn"]}
+      selectFilters={[
+        { key: "status", label: "Status", field: "status", value: status, onChange: setStatus, options: withSemua(STATUS) },
+        { key: "jenjang", label: "Jenjang", field: "jenjang", options: jenjangOpts },
+        { key: "jenis_kelamin", label: "JK", field: "jenis_kelamin", options: withSemua(JENIS_KELAMIN) },
+        { key: "tahun_masuk", label: "Tahun Masuk", field: "tahun_masuk", options: tahunOpts },
+        { key: "agama", label: "Agama", field: "agama", options: withSemua(AGAMA) },
+      ]}
+      exportConfig={{
+        fileName: "siswa.csv",
+        fields: ["nama_lengkap", "nis", "nisn", "jenis_kelamin", "tanggal_lahir", "agama", "jenjang", "tahun_masuk", "status"],
+        mapRow: (s) => ({
+          nama_lengkap: s.nama_lengkap ?? "",
+          nis: s.nis ?? "",
+          nisn: s.nisn ?? "",
+          jenis_kelamin: s.jenis_kelamin ?? "",
+          tanggal_lahir: s.tanggal_lahir ?? "",
+          agama: s.agama ?? "",
+          jenjang: s.jenjang ?? "",
+          tahun_masuk: s.tahun_masuk ?? "",
+          status: s.status ?? "",
+        }),
+      }}
+      extraActions={<SiswaImportDialog />}
       addLabel="Tambah Siswa"
       onAdd={() => navigate({ to: "/sch/$sekolah/siswa/new", params: { sekolah } })}
       onRowClick={(s) => navigate({ to: "/sch/$sekolah/siswa/$nis", params: { sekolah, nis: s.name } })}
