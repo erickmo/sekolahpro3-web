@@ -3,18 +3,63 @@
  * Required: guru, nama_berkas, file (Attach URL).
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
-import { Button, DatePicker, FormField, FormGrid, Input, Modal, SearchableSelect, Textarea } from "@sekolahpro/ui";
+import { useResourceCreate, listResource } from "@sekolahpro/api-client";
+import {
+  Button,
+  DatePicker,
+  FormField,
+  FormGrid,
+  Input,
+  Modal,
+  SearchableSelect,
+  Textarea,
+  type SearchableOption,
+} from "@sekolahpro/ui";
+
+const PEGAWAI_DOCTYPE = "Pegawai";
+const PEGAWAI_LABEL_FIELD = "nama_lengkap";
+
+// Berkas dates span historical documents (old certificates) through future
+// expiry dates, so use a generous year range.
+const MIN_YEAR = 1960;
+const MAX_YEAR = new Date().getFullYear() + 30;
+
+/** Map plain string enums to SearchableSelect option objects. */
+function toOptions(values: readonly string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Async option loader for a Frappe link field. */
+async function searchLink(doctype: string, labelField: string, q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`], [labelField, "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({ value: r.name ?? "", label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? "") }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
 
 interface BerkasGuruFormModalProps {
   open: boolean;
   onClose: () => void;
   onCreated?: (name: string) => void;
 }
-
-type GuruRow = { name: string; nama_lengkap?: string; nip?: string };
 
 const JENIS_BERKAS = [
   "Ijazah", "Sertifikat", "KTP", "KK", "NPWP",
@@ -53,10 +98,6 @@ export function BerkasGuruFormModal({ open, onClose, onCreated }: BerkasGuruForm
 
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>("Berkas Guru");
-  const guruQ = useResourceList<GuruRow>("Pegawai", {
-    fields: ["name", "nama_lengkap", "nip"],
-    limit_page_length: 0,
-  });
 
   const set = <K extends keyof FormState>(k: K, v: string) =>
     setForm((cur) => ({ ...cur, [k]: v }));
@@ -99,9 +140,9 @@ export function BerkasGuruFormModal({ open, onClose, onCreated }: BerkasGuruForm
     <Modal
       open={open}
       onClose={close}
-      size="lg"
+      size="mega"
       title="Unggah Berkas Staff"
-      description="Isi data berkas. Tanda * wajib."
+      description="Isi data berkas. Tanda * wajib diisi."
       tone="brand"
       footer={
         <div className="flex justify-end gap-2">
@@ -113,17 +154,13 @@ export function BerkasGuruFormModal({ open, onClose, onCreated }: BerkasGuruForm
       }
     >
       <div className="space-y-5">
-        <FormGrid cols={2}>
-          <FormField label="Staff" required className="sm:col-span-2">
+        <FormSection title="Berkas" description="Identitas dan jenis dokumen.">
+          <FormField label="Staff" required className="col-span-2">
             <SearchableSelect
               value={form.guru}
               onChange={(v) => set("guru", v)}
-              disabled={guruQ.isLoading}
-              options={(guruQ.data ?? []).map((g) => ({
-                value: g.name,
-                label: `${g.nama_lengkap ?? g.name}${g.nip ? ` — NIP ${g.nip}` : ""}`,
-              }))}
-              placeholder={guruQ.isLoading ? "Memuat..." : "— Pilih Staff —"}
+              loadOptions={(q) => searchLink(PEGAWAI_DOCTYPE, PEGAWAI_LABEL_FIELD, q)}
+              placeholder="Cari staff…"
             />
           </FormField>
           <FormField label="Nama Berkas" required>
@@ -137,11 +174,11 @@ export function BerkasGuruFormModal({ open, onClose, onCreated }: BerkasGuruForm
             <SearchableSelect
               value={form.jenis_berkas}
               onChange={(v) => set("jenis_berkas", v)}
-              options={JENIS_BERKAS.map((o) => ({ value: o, label: o }))}
+              options={toOptions(JENIS_BERKAS)}
               placeholder="—"
             />
           </FormField>
-          <FormField label="URL File" required hint="Unggah dulu via Frappe Desk lalu salin URL-nya (/files/...)" className="sm:col-span-2">
+          <FormField label="URL File" required hint="Unggah dulu via Frappe Desk lalu salin URL-nya (/files/...)" className="col-span-2">
             <Input
               value={form.file}
               onChange={(e) => set("file", e.target.value)}
@@ -154,32 +191,44 @@ export function BerkasGuruFormModal({ open, onClose, onCreated }: BerkasGuruForm
               onChange={(e) => set("nomor_dokumen", e.target.value)}
             />
           </FormField>
+        </FormSection>
+
+        <FormSection title="Masa Berlaku" description="Tanggal unggah, berlaku, dan kadaluarsa.">
           <FormField label="Tanggal Upload">
             <DatePicker
               value={form.tanggal_upload}
               onChange={(v) => set("tanggal_upload", v)}
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
             />
           </FormField>
           <FormField label="Tanggal Berlaku">
             <DatePicker
               value={form.tanggal_berlaku}
               onChange={(v) => set("tanggal_berlaku", v)}
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
             />
           </FormField>
           <FormField label="Tanggal Kadaluarsa">
             <DatePicker
               value={form.tanggal_kadaluarsa}
               onChange={(v) => set("tanggal_kadaluarsa", v)}
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
             />
           </FormField>
-          <FormField label="Keterangan" className="sm:col-span-2">
+          <FormField label="Keterangan" className="col-span-2">
             <Textarea
               rows={3}
               value={form.keterangan}
               onChange={(e) => set("keterangan", e.target.value)}
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">
             {err}

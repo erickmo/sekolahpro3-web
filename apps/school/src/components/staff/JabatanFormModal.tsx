@@ -1,7 +1,25 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResourceCreate } from "@sekolahpro/api-client";
 import { Button, FormField, FormGrid, Input, Modal, SearchableSelect, Textarea } from "@sekolahpro/ui";
+
+const AKTIF_OPTIONS = [
+  { value: "1", label: "Aktif" },
+  { value: "0", label: "Tidak Aktif" },
+];
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
 
 interface JabatanFormModalProps {
   open: boolean;
@@ -55,9 +73,9 @@ export function JabatanFormModal({ open, onClose, onCreated }: JabatanFormModalP
     <Modal
       open={open}
       onClose={close}
-      size="md"
+      size="mega"
       title="Tambah Jenis Jabatan"
-      description="Isi data jenis jabatan. Tanda * wajib."
+      description="Isi data jenis jabatan. Tanda * wajib diisi."
       tone="brand"
       footer={
         <div className="flex justify-end gap-2">
@@ -68,9 +86,9 @@ export function JabatanFormModal({ open, onClose, onCreated }: JabatanFormModalP
         </div>
       }
     >
-      <div className="space-y-4">
-        <FormGrid cols={2}>
-          <FormField label="Nama Jabatan" required className="sm:col-span-2">
+      <div className="space-y-5">
+        <FormSection title="Jenis Jabatan" description="Nama dan status jabatan.">
+          <FormField label="Nama Jabatan" required className="col-span-2">
             <Input
               value={form.nama_jabatan}
               onChange={(e) => set("nama_jabatan", e.target.value)}
@@ -81,20 +99,17 @@ export function JabatanFormModal({ open, onClose, onCreated }: JabatanFormModalP
             <SearchableSelect
               value={form.aktif}
               onChange={(v) => set("aktif", v)}
-              options={[
-                { value: "1", label: "Aktif" },
-                { value: "0", label: "Tidak Aktif" },
-              ]}
+              options={AKTIF_OPTIONS}
             />
           </FormField>
-          <FormField label="Keterangan" className="sm:col-span-2">
+          <FormField label="Keterangan" className="col-span-2">
             <Textarea
               rows={3}
               value={form.keterangan}
               onChange={(e) => set("keterangan", e.target.value)}
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">
             {err}

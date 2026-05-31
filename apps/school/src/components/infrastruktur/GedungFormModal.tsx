@@ -7,7 +7,7 @@
  * manual, supaya gedung selalu ter-scope ke tenant yang sedang dibuka.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, FormField, FormGrid, Input, Modal } from "@sekolahpro/ui";
 import { useResourceCreate } from "@sekolahpro/api-client";
 import { useSessionStore } from "@sekolahpro/auth";
@@ -30,6 +30,19 @@ const INITIAL: FormState = {
   kode: "",
   tahun_dibangun: "",
 };
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string | undefined; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
 
 export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalProps) {
   const [form, setForm] = useState<FormState>(INITIAL);
@@ -86,9 +99,9 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
     <Modal
       open={open}
       onClose={close}
-      size="lg"
+      size="mega"
       title="Tambah Gedung"
-      description="Isi data gedung. Tanda * wajib."
+      description="Isi data gedung. Tanda * wajib diisi."
       tone="brand"
       footer={
         <div className="flex justify-end gap-2">
@@ -100,7 +113,7 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
       }
     >
       <div className="space-y-5">
-        <FormGrid cols={2}>
+        <FormSection title="Data Gedung" description="Identitas gedung dalam sekolah aktif.">
           <FormField label="Nama Gedung" required>
             <Input
               value={form.nama}
@@ -124,7 +137,7 @@ export function GedungFormModal({ open, onClose, onCreated }: GedungFormModalPro
               placeholder="2020"
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
 
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">

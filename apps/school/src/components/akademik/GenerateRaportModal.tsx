@@ -1,7 +1,27 @@
-import { useState, type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Modal, SearchableSelect, type SearchableOption } from "@sekolahpro/ui";
+import {
+  Button,
+  FormField,
+  FormGrid,
+  Modal,
+  SearchableSelect,
+  type SearchableOption,
+} from "@sekolahpro/ui";
 import { listResource, useFrappeMutation, FrappeError } from "@sekolahpro/api-client";
+
+/** Heading section + grid untuk satu kelompok logis field. */
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid cols={2}>{children}</FormGrid>
+    </section>
+  );
+}
 
 interface Props {
   open: boolean;
@@ -119,8 +139,8 @@ export function GenerateRaportModal({ open, onClose, initial, onCreated }: Props
       onClose={close}
       title="Generate Raport"
       description="Bangun draft raport dari seluruh Entri Nilai siswa pada semester & tahun ajaran terpilih."
-      size="md"
-      tone="violet"
+      size="mega"
+      tone="brand"
       footer={
         <>
           <Button variant="ghost" onClick={close} disabled={mutation.isPending}>
@@ -132,49 +152,37 @@ export function GenerateRaportModal({ open, onClose, initial, onCreated }: Props
         </>
       }
     >
-      <div className="grid grid-cols-1 gap-4">
-        <Field label="Siswa" required>
+      <FormSection title="Sumber Data Raport" description="Tanda * wajib diisi.">
+        <FormField label="Siswa" required className="col-span-2">
           <SearchableSelect
             value={siswa}
             onChange={setSiswa}
             loadOptions={loadSiswa}
             placeholder="Cari siswa…"
           />
-        </Field>
-        <Field label="Semester" required>
+        </FormField>
+        <FormField label="Semester" required>
           <SearchableSelect
             value={semester}
             onChange={setSemester}
             options={SEMESTER_OPTIONS}
             placeholder="Pilih semester…"
           />
-        </Field>
-        <Field label="Tahun Ajaran" required>
+        </FormField>
+        <FormField label="Tahun Ajaran" required>
           <SearchableSelect
             value={tahunAjaran}
             onChange={setTahunAjaran}
             loadOptions={loadTA}
             placeholder="Cari tahun ajaran…"
           />
-        </Field>
-      </div>
+        </FormField>
+      </FormSection>
       {error ? (
         <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
           {error}
         </div>
       ) : null}
     </Modal>
-  );
-}
-
-function Field({ label, required, children }: { label: string; required?: boolean; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-xs font-medium text-fg">
-        {label}
-        {required ? <span className="text-rose-600 ml-0.5">*</span> : null}
-      </label>
-      {children}
-    </div>
   );
 }

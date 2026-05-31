@@ -10,6 +10,8 @@ vi.mock("@sekolahpro/api-client", () => ({
   useResourceUpdate: () => ({ mutateAsync: updateMut, isPending: false }),
   useResourceDoc: () => ({ data: docData }),
   useResourceList: () => ({ data: [{ name: "GA-L1", nomor_lantai: 1 }] }),
+  listResource: vi.fn().mockResolvedValue([]),
+  humanizeFrappeError: () => null,
 }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 

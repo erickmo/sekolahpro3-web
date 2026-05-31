@@ -21,8 +21,12 @@ export type SiswaFormValues = Omit<Siswa,
   "rataNilai" | "persenKehadiran" | "saldoTagihan"
 >;
 
-const BIRTH_YEAR_FROM = 1990;
+// Tanggal lahir: rentang lebar untuk lompatan tahun cepat (mundur jauh).
+const BIRTH_YEAR_FROM = 1940;
 const CURRENT_YEAR = new Date().getFullYear();
+// Tanggal diterima bersifat akademik/transaksional, jadi rentang sempit.
+const ENROLL_YEAR_FROM = CURRENT_YEAR - 10;
+const ENROLL_YEAR_TO = CURRENT_YEAR + 1;
 
 interface SiswaFormProps {
   initial?: Partial<SiswaFormValues>;
@@ -250,7 +254,14 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
             />
           </FormField>
           <FormField label="Tanggal Diterima">
-            <DatePicker name="tanggalDiterima" value={values.tanggalDiterima ?? ""} onChange={(v) => set("tanggalDiterima", v)} />
+            <DatePicker
+              name="tanggalDiterima"
+              value={values.tanggalDiterima ?? ""}
+              onChange={(v) => set("tanggalDiterima", v)}
+              captionLayout="dropdown-buttons"
+              fromYear={ENROLL_YEAR_FROM}
+              toYear={ENROLL_YEAR_TO}
+            />
           </FormField>
           <FormField label="Asal Sekolah">
             <Input name="asalSekolah" value={values.asalSekolah ?? ""} onChange={(e) => set("asalSekolah", e.target.value)} />

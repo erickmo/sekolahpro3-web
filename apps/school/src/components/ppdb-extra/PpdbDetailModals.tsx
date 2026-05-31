@@ -7,20 +7,68 @@
  * Semua modal: controlled (open/onClose), self-contained mutation + feedback.
  */
 
-import { useEffect, useState } from "react";
-import { Button, Modal, SearchableSelect } from "@sekolahpro/ui";
-import { useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  Button,
+  FormField,
+  FormGrid,
+  Input,
+  Modal,
+  SearchableSelect,
+  type SearchableOption,
+} from "@sekolahpro/ui";
+import { listResource, useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
 
 const inputCls =
   "h-9 w-full rounded-md border border-border bg-bg px-3 text-sm focus:border-brand focus:outline-none";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+const USER_DOCTYPE = "User";
+const USER_LABEL_FIELD = "full_name";
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string | undefined;
+  children: ReactNode;
+}) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium text-muted-fg">{label}</span>
-      {children}
-    </label>
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid cols={2}>{children}</FormGrid>
+    </section>
   );
+}
+
+/** Async option loader for a Frappe link field (OR-search name + label). */
+async function searchLink(
+  doctype: string,
+  labelField: string,
+  q: string,
+): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q
+      ? {
+          or_filters: [
+            ["name", "like", `%${q}%`],
+            [labelField, "like", `%${q}%`],
+          ] as [string, string, unknown][],
+        }
+      : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({
+    value: r.name ?? "",
+    label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? ""),
+  }));
 }
 
 function ErrLine({ msg }: { msg: string | null }) {
@@ -82,7 +130,8 @@ export function UploadDokumenModal({ open, onClose, pendaftaranName, onSaved }: 
       open={open}
       onClose={() => { reset(); onClose(); }}
       title="Unggah Dokumen PPDB"
-      description="Lampirkan berkas dukungan pendaftaran."
+      description="Lampirkan berkas dukungan pendaftaran. Tanda * wajib diisi."
+      size="mega"
       tone="brand"
       footer={
         <div className="flex justify-end gap-2">
@@ -93,26 +142,29 @@ export function UploadDokumenModal({ open, onClose, pendaftaranName, onSaved }: 
         </div>
       }
     >
-      <div className="space-y-3">
-        <Field label="Jenis Dokumen">
-          <SearchableSelect
-            value={jenis}
-            onChange={(v) => setJenis(v)}
-            options={JENIS_DOKUMEN.map((j) => ({ value: j, label: j }))}
-          />
-        </Field>
-        <Field label="Path Berkas (URL atau /files/...)">
-          <input
-            type="text"
-            value={berkas}
-            onChange={(e) => setBerkas(e.target.value)}
-            placeholder="/files/akta-lahir.pdf"
-            className={inputCls}
-          />
-        </Field>
-        <p className="text-xs text-muted-fg">
-          Upload file dulu ke Frappe File doctype, lalu tempel path-nya di sini.
-        </p>
+      <div className="space-y-5">
+        <FormSection title="Dokumen" description="Jenis dan lokasi berkas yang diunggah.">
+          <FormField label="Jenis Dokumen">
+            <SearchableSelect
+              value={jenis}
+              onChange={(v) => setJenis(v)}
+              options={JENIS_DOKUMEN.map((j) => ({ value: j, label: j }))}
+              placeholder="— pilih —"
+            />
+          </FormField>
+          <FormField
+            label="Path Berkas (URL atau /files/...)"
+            required
+            className="col-span-2"
+            hint="Upload file dulu ke Frappe File doctype, lalu tempel path-nya di sini."
+          >
+            <Input
+              value={berkas}
+              onChange={(e) => setBerkas(e.target.value)}
+              placeholder="/files/akta-lahir.pdf"
+            />
+          </FormField>
+        </FormSection>
         <ErrLine msg={err} />
       </div>
     </Modal>
@@ -167,8 +219,9 @@ export function JadwalWawancaraModal({ open, onClose, pendaftaranName, onSaved }
       open={open}
       onClose={() => { reset(); onClose(); }}
       title="Jadwalkan Wawancara"
-      description="Tetapkan waktu dan pewawancara."
-      tone="violet"
+      description="Tetapkan waktu dan pewawancara. Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
       footer={
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => { reset(); onClose(); }}>Batal</Button>
@@ -178,24 +231,28 @@ export function JadwalWawancaraModal({ open, onClose, pendaftaranName, onSaved }
         </div>
       }
     >
-      <div className="space-y-3">
-        <Field label="Tanggal & Waktu *">
-          <input
-            type="datetime-local"
-            value={tanggal}
-            onChange={(e) => setTanggal(e.target.value)}
-            className={inputCls}
-          />
-        </Field>
-        <Field label="Pewawancara (User email)">
-          <input
-            type="text"
-            value={pewawancara}
-            onChange={(e) => setPewawancara(e.target.value)}
-            placeholder="email@sekolah.id"
-            className={inputCls}
-          />
-        </Field>
+      <div className="space-y-5">
+        <FormSection title="Jadwal Wawancara" description="Waktu pelaksanaan dan petugas pewawancara.">
+          {/* Field tanggal_wawancara menyimpan tanggal + jam, sehingga tetap
+              memakai input datetime-local (DatePicker hanya mendukung tanggal). */}
+          <FormField label="Tanggal & Waktu" required htmlFor="ppdb-wawancara-tanggal">
+            <input
+              id="ppdb-wawancara-tanggal"
+              type="datetime-local"
+              value={tanggal}
+              onChange={(e) => setTanggal(e.target.value)}
+              className={inputCls}
+            />
+          </FormField>
+          <FormField label="Pewawancara (User)">
+            <SearchableSelect
+              value={pewawancara}
+              onChange={(v) => setPewawancara(v)}
+              loadOptions={(q) => searchLink(USER_DOCTYPE, USER_LABEL_FIELD, q)}
+              placeholder="Cari pewawancara…"
+            />
+          </FormField>
+        </FormSection>
         <ErrLine msg={err} />
       </div>
     </Modal>
@@ -259,6 +316,7 @@ export function EditWaliModal({ open, onClose, calonName, initial, onSaved }: Wa
       onClose={onClose}
       title="Edit Data Wali"
       description="Wali tersimpan di Calon Siswa (1 wali per calon)."
+      size="mega"
       tone="brand"
       footer={
         <div className="flex justify-end gap-2">
@@ -269,33 +327,35 @@ export function EditWaliModal({ open, onClose, calonName, initial, onSaved }: Wa
         </div>
       }
     >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Nama Wali">
-          <input value={form.nama_wali ?? ""} onChange={(e) => set("nama_wali", e.target.value)} className={inputCls} />
-        </Field>
-        <Field label="Hubungan">
-          <SearchableSelect
-            value={form.hubungan_wali ?? ""}
-            onChange={(v) => set("hubungan_wali", v)}
-            options={[
-              { value: "Ayah", label: "Ayah" },
-              { value: "Ibu", label: "Ibu" },
-              { value: "Wali", label: "Wali" },
-            ]}
-            placeholder="— pilih —"
-          />
-        </Field>
-        <Field label="No HP Wali">
-          <input value={form.no_hp_wali ?? ""} onChange={(e) => set("no_hp_wali", e.target.value)} className={inputCls} />
-        </Field>
-        <Field label="Pekerjaan">
-          <input value={form.pekerjaan_wali ?? ""} onChange={(e) => set("pekerjaan_wali", e.target.value)} className={inputCls} />
-        </Field>
-        <Field label="Penghasilan">
-          <input value={form.penghasilan_wali ?? ""} onChange={(e) => set("penghasilan_wali", e.target.value)} className={inputCls} />
-        </Field>
+      <div className="space-y-5">
+        <FormSection title="Data Wali" description="Identitas dan kontak wali calon siswa.">
+          <FormField label="Nama Wali">
+            <Input value={form.nama_wali ?? ""} onChange={(e) => set("nama_wali", e.target.value)} />
+          </FormField>
+          <FormField label="Hubungan">
+            <SearchableSelect
+              value={form.hubungan_wali ?? ""}
+              onChange={(v) => set("hubungan_wali", v)}
+              options={[
+                { value: "Ayah", label: "Ayah" },
+                { value: "Ibu", label: "Ibu" },
+                { value: "Wali", label: "Wali" },
+              ]}
+              placeholder="— pilih —"
+            />
+          </FormField>
+          <FormField label="No HP Wali">
+            <Input value={form.no_hp_wali ?? ""} onChange={(e) => set("no_hp_wali", e.target.value)} />
+          </FormField>
+          <FormField label="Pekerjaan">
+            <Input value={form.pekerjaan_wali ?? ""} onChange={(e) => set("pekerjaan_wali", e.target.value)} />
+          </FormField>
+          <FormField label="Penghasilan" className="col-span-2">
+            <Input value={form.penghasilan_wali ?? ""} onChange={(e) => set("penghasilan_wali", e.target.value)} />
+          </FormField>
+        </FormSection>
+        <ErrLine msg={err} />
       </div>
-      <div className="mt-3"><ErrLine msg={err} /></div>
     </Modal>
   );
 }

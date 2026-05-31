@@ -1,17 +1,19 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   Alert,
   Button,
   FormField,
+  FormGrid,
   Input,
   Modal,
   SearchableSelect,
   Textarea,
+  type SearchableOption,
 } from "@sekolahpro/ui";
 import {
+  listResource,
   useResourceCreate,
   useResourceUpdate,
-  useResourceList,
 } from "@sekolahpro/api-client";
 import { useSession } from "@sekolahpro/auth";
 import {
@@ -39,6 +41,51 @@ const SHIFTS: Shift[] = ["Pagi", "Siang", "Sore"];
 
 function emptyDenominasi(): DenominasiItem[] {
   return DEFAULT_NOMINAL.map((nominal) => ({ nominal, jumlah: 0 }));
+}
+
+/** Async loader for the supervisor (User) link field. */
+async function searchSupervisor(q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>("User", {
+    fields: ["name", "full_name"],
+    filters: [["enabled", "=", 1]],
+    ...(q
+      ? {
+          or_filters: [
+            ["name", "like", `%${q}%`],
+            ["full_name", "like", `%${q}%`],
+          ] as [string, string, unknown][],
+        }
+      : {}),
+    limit_page_length: 20,
+    order_by: "full_name asc",
+  });
+  return rows.map((u) => ({
+    value: u.name ?? "",
+    label: u.full_name ? `${u.full_name} (${u.name})` : (u.name ?? ""),
+  }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? (
+          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
+        ) : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
 }
 
 interface BukaProps {
@@ -155,28 +202,41 @@ function BukaSesiForm({ onClose, onSuccess }: BukaProps) {
   };
 
   return (
-    <Modal open onClose={onClose} title="Buka Sesi Kas">
-      <div className="space-y-4">
-        <FormField label="Shift" required>
-          <SearchableSelect
-            value={shift}
-            onChange={(v) => setShift(v as Shift)}
-            options={SHIFTS.map((s) => ({ value: s, label: s }))}
-          />
-        </FormField>
-
-        <FormField
-          label="Modal Kas"
-          required
-          hint="Harus sama dengan total denominasi di bawah."
+    <Modal
+      open
+      onClose={onClose}
+      title="Buka Sesi Kas"
+      description="Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
+    >
+      <div className="space-y-5">
+        <FormSection
+          title="Detail Sesi"
+          description="Shift dan modal kas awal teller."
         >
-          <Input
-            type="number"
-            min={0}
-            value={modalKas || ""}
-            onChange={(e) => setModalKas(Number(e.target.value) || 0)}
-          />
-        </FormField>
+          <FormField label="Shift" required>
+            <SearchableSelect
+              value={shift}
+              onChange={(v) => setShift(v as Shift)}
+              options={SHIFTS.map((s) => ({ value: s, label: s }))}
+              placeholder="— pilih —"
+            />
+          </FormField>
+
+          <FormField
+            label="Modal Kas"
+            required
+            hint="Harus sama dengan total denominasi di bawah."
+          >
+            <Input
+              type="number"
+              min={0}
+              value={modalKas || ""}
+              onChange={(e) => setModalKas(Number(e.target.value) || 0)}
+            />
+          </FormField>
+        </FormSection>
 
         <div className="space-y-1.5">
           <div className="text-sm font-medium">Rincian Denominasi Awal</div>
@@ -196,11 +256,6 @@ function BukaSesiForm({ onClose, onSuccess }: BukaProps) {
       </div>
     </Modal>
   );
-}
-
-interface SupervisorOption {
-  name: string;
-  full_name?: string;
 }
 
 function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
@@ -223,12 +278,6 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
   const selisih = computeSelisih({
     totalDenominasiTutup: totalTutup,
     saldoSeharusnya,
-  });
-
-  const supervisorQ = useResourceList<SupervisorOption>("User", {
-    fields: ["name", "full_name"],
-    filters: [["enabled", "=", 1]],
-    limit_page_length: 50,
   });
 
   const handleSubmit = () => {
@@ -267,8 +316,15 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
   };
 
   return (
-    <Modal open onClose={onClose} title={`Tutup Sesi Kas — ${sesi.name}`}>
-      <div className="space-y-4">
+    <Modal
+      open
+      onClose={onClose}
+      title={`Tutup Sesi Kas — ${sesi.name}`}
+      description="Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
+    >
+      <div className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-3 rounded-md border border-border bg-muted/30 p-3 text-sm">
           <div>
             <div className="text-xs text-muted-fg">Modal Kas</div>
@@ -307,30 +363,33 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
           <DenominasiTable rows={denominasi} onChange={setDenominasi} />
         </div>
 
-        <FormField
-          label="Catatan Selisih"
-          {...(selisih !== 0 ? { required: true } : {})}
-          hint={selisih === 0 ? "Opsional." : "Wajib diisi karena selisih ≠ 0."}
+        <FormSection
+          title="Persetujuan & Catatan"
+          description="Supervisor approval dan keterangan selisih."
         >
-          <Textarea
-            value={catatan}
-            onChange={(e) => setCatatan(e.target.value)}
-            rows={3}
-            placeholder="Misal: kelebihan setoran teller, kekurangan uang receh, dll."
-          />
-        </FormField>
+          <FormField
+            label="Catatan Selisih"
+            className="col-span-2"
+            {...(selisih !== 0 ? { required: true } : {})}
+            hint={selisih === 0 ? "Opsional." : "Wajib diisi karena selisih ≠ 0."}
+          >
+            <Textarea
+              value={catatan}
+              onChange={(e) => setCatatan(e.target.value)}
+              rows={3}
+              placeholder="Misal: kelebihan setoran teller, kekurangan uang receh, dll."
+            />
+          </FormField>
 
-        <FormField label="Supervisor untuk Approval" required>
-          <SearchableSelect
-            value={supervisor}
-            onChange={(v) => setSupervisor(v)}
-            placeholder="Pilih supervisor..."
-            options={(supervisorQ.data ?? []).map((u) => ({
-              value: u.name,
-              label: u.full_name ? `${u.full_name} (${u.name})` : u.name,
-            }))}
-          />
-        </FormField>
+          <FormField label="Supervisor untuk Approval" required className="col-span-2">
+            <SearchableSelect
+              value={supervisor}
+              onChange={(v) => setSupervisor(v)}
+              placeholder="Cari supervisor…"
+              loadOptions={searchSupervisor}
+            />
+          </FormField>
+        </FormSection>
 
         {error ? <Alert tone="danger">{error}</Alert> : null}
 

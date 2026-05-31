@@ -5,15 +5,32 @@
  * Source of truth: doctype Absensi Pelajaran (akademik).
  */
 
-import { useState } from "react";
-import { Button, DatePicker, FormField, FormGrid, Modal, SearchableSelect } from "@sekolahpro/ui";
-import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
+import { useState, type ReactNode } from "react";
+import {
+  Button,
+  DatePicker,
+  FormField,
+  FormGrid,
+  Modal,
+  SearchableSelect,
+  type SearchableOption,
+} from "@sekolahpro/ui";
+import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 
-type RombelRow = { name: string; nama_rombel?: string };
-type MapelRow = { name: string; nama_mapel?: string };
-type GuruRow = { name: string; nama_lengkap?: string };
-type SlotRow = { name: string };
+// Year range for attendance date pickers. Attendance is recorded near "now",
+// so expose a narrow dropdown range for fast year jumping.
+const MIN_YEAR = new Date().getFullYear() - 2;
+const MAX_YEAR = new Date().getFullYear() + 1;
+
+const ROMBEL_DOCTYPE = "Rombongan Belajar";
+const ROMBEL_LABEL_FIELD = "nama_rombel";
+const MAPEL_DOCTYPE = "Mata Pelajaran";
+const MAPEL_LABEL_FIELD = "nama_mapel";
+const GURU_DOCTYPE = "Guru";
+const GURU_LABEL_FIELD = "nama_lengkap";
+const SLOT_DOCTYPE = "Slot Jadwal";
+const SLOT_LABEL_FIELD = "name";
 
 const SUMBER_OPTIONS = ["Manual", "FaceRec", "NFC", "QR"] as const;
 
@@ -43,28 +60,41 @@ const initial = (): FormState => ({
   sumber_input: "Manual",
 });
 
+/** Map static enum strings to SearchableSelect options. */
+function toOptions(values: readonly string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Async option loader for a Frappe link field. */
+async function searchLink(doctype: string, labelField: string, q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`], [labelField, "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({ value: r.name ?? "", label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? "") }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
+
 export function AbsensiPelajaranFormModal({ open, onClose, onCreated }: Props) {
   const [form, setForm] = useState<FormState>(initial);
   const [err, setErr] = useState<string | null>(null);
 
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>("Absensi Pelajaran");
-  const rombelQ = useResourceList<RombelRow>("Rombongan Belajar", {
-    fields: ["name", "nama_rombel"],
-    limit_page_length: 0,
-  });
-  const mapelQ = useResourceList<MapelRow>("Mata Pelajaran", {
-    fields: ["name", "nama_mapel"],
-    limit_page_length: 0,
-  });
-  const guruQ = useResourceList<GuruRow>("Guru", {
-    fields: ["name", "nama_lengkap"],
-    limit_page_length: 0,
-  });
-  const slotQ = useResourceList<SlotRow>("Slot Jadwal", {
-    fields: ["name"],
-    limit_page_length: 0,
-  });
 
   const set = <K extends keyof FormState>(k: K, v: string) =>
     setForm((cur) => ({ ...cur, [k]: v }));
@@ -108,16 +138,11 @@ export function AbsensiPelajaranFormModal({ open, onClose, onCreated }: Props) {
     }
   };
 
-  const rombelOpts = rombelQ.data ?? [];
-  const mapelOpts = mapelQ.data ?? [];
-  const guruOpts = guruQ.data ?? [];
-  const slotOpts = slotQ.data ?? [];
-
   return (
     <Modal
       open={open}
       onClose={close}
-      size="lg"
+      size="mega"
       title="Tambah Absensi Pelajaran"
       description="Isi header sesi mengajar. Tanda * wajib."
       tone="brand"
@@ -131,57 +156,60 @@ export function AbsensiPelajaranFormModal({ open, onClose, onCreated }: Props) {
       }
     >
       <div className="space-y-5">
-        <FormGrid cols={2}>
+        <FormSection title="Sesi Mengajar" description="Rombel, mata pelajaran, dan tanggal sesi.">
           <FormField label="Rombongan Belajar" required>
             <SearchableSelect
               value={form.rombel}
               onChange={(v) => set("rombel", v)}
-              disabled={rombelQ.isLoading}
-              options={rombelOpts.map((r) => ({ value: r.name, label: r.nama_rombel ?? r.name }))}
-              placeholder={rombelQ.isLoading ? "Memuat..." : "— Pilih Rombel —"}
+              loadOptions={(q) => searchLink(ROMBEL_DOCTYPE, ROMBEL_LABEL_FIELD, q)}
+              placeholder="Cari rombel…"
             />
           </FormField>
           <FormField label="Mata Pelajaran" required>
             <SearchableSelect
               value={form.mata_pelajaran}
               onChange={(v) => set("mata_pelajaran", v)}
-              disabled={mapelQ.isLoading}
-              options={mapelOpts.map((m) => ({ value: m.name, label: m.nama_mapel ?? m.name }))}
-              placeholder={mapelQ.isLoading ? "Memuat..." : "— Pilih Mapel —"}
+              loadOptions={(q) => searchLink(MAPEL_DOCTYPE, MAPEL_LABEL_FIELD, q)}
+              placeholder="Cari mata pelajaran…"
             />
           </FormField>
           <FormField label="Tanggal" required>
             <DatePicker
               value={form.tanggal}
               onChange={(v) => set("tanggal", v)}
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
             />
           </FormField>
+        </FormSection>
+
+        <FormSection title="Pengampu & Jadwal" description="Guru pengampu, slot jadwal, dan sumber data (opsional).">
           <FormField label="Guru">
             <SearchableSelect
               value={form.guru}
               onChange={(v) => set("guru", v)}
-              disabled={guruQ.isLoading}
-              options={guruOpts.map((g) => ({ value: g.name, label: g.nama_lengkap ?? g.name }))}
-              placeholder={guruQ.isLoading ? "Memuat..." : "— Opsional —"}
+              loadOptions={(q) => searchLink(GURU_DOCTYPE, GURU_LABEL_FIELD, q)}
+              placeholder="Cari guru… (opsional)"
             />
           </FormField>
           <FormField label="Slot Jadwal">
             <SearchableSelect
               value={form.slot}
               onChange={(v) => set("slot", v)}
-              disabled={slotQ.isLoading}
-              options={slotOpts.map((s) => ({ value: s.name, label: s.name }))}
-              placeholder={slotQ.isLoading ? "Memuat..." : "— Opsional —"}
+              loadOptions={(q) => searchLink(SLOT_DOCTYPE, SLOT_LABEL_FIELD, q)}
+              placeholder="Cari slot… (opsional)"
             />
           </FormField>
           <FormField label="Sumber Input">
             <SearchableSelect
               value={form.sumber_input}
               onChange={(v) => set("sumber_input", v)}
-              options={SUMBER_OPTIONS.map((o) => ({ value: o, label: o }))}
+              options={toOptions(SUMBER_OPTIONS)}
+              placeholder="— Pilih Sumber —"
             />
           </FormField>
-        </FormGrid>
+        </FormSection>
 
         {err && (
           <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Modal, SearchableSelect, type SearchableOption } from "@sekolahpro/ui";
+import { Button, DatePicker, FormGrid, Modal, SearchableSelect, type SearchableOption } from "@sekolahpro/ui";
 import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+
+// Rentang tahun DatePicker akademik: satu dekade ke belakang s/d satu tahun ke depan.
+const MIN_YEAR = new Date().getFullYear() - 10;
+const MAX_YEAR = new Date().getFullYear() + 1;
 
 export type FieldKind =
   | "text"
@@ -9,7 +13,8 @@ export type FieldKind =
   | "select"
   | "textarea"
   | "link"
-  | "checkbox";
+  | "checkbox"
+  | "date";
 
 export interface ShowWhen {
   field: string;
@@ -40,6 +45,38 @@ export interface FieldSpec {
   validate?: (val: unknown, all: Record<string, unknown>) => string | null;
   /** Monospace + uppercase coercion for codes. */
   uppercase?: boolean;
+  /** Judul section tempat field ini dikelompokkan. Tanpa ini → section default. */
+  section?: string;
+}
+
+/** Heading section + grid untuk satu kelompok logis field. */
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+      </div>
+      <FormGrid cols={2}>{children}</FormGrid>
+    </section>
+  );
+}
+
+/** Kelompokkan field per `section`; pertahankan urutan kemunculan section. */
+function groupBySection(
+  fields: FieldSpec[],
+  fallbackTitle: string,
+): Array<{ title: string; fields: FieldSpec[] }> {
+  const order: string[] = [];
+  const map = new Map<string, FieldSpec[]>();
+  for (const f of fields) {
+    const key = f.section ?? fallbackTitle;
+    if (!map.has(key)) {
+      map.set(key, []);
+      order.push(key);
+    }
+    map.get(key)!.push(f);
+  }
+  return order.map((title) => ({ title, fields: map.get(title)! }));
 }
 
 interface CreateResourceModalProps {
@@ -199,15 +236,25 @@ export function CreateResourceModal(props: CreateResourceModalProps) {
       onClose={onClose}
       title={title}
       {...(description ? { description } : {})}
-      size="md"
+      size="mega"
+      tone="brand"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <FieldsGrid
-          fields={fields}
-          values={values}
-          errors={errors}
-          setVal={setVal}
-        />
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {groupBySection(fields, "Data").map((group) => (
+          <FormSection key={group.title} title={group.title}>
+            {group.fields.map((f) =>
+              fieldVisible(f, values) ? (
+                <FieldControl
+                  key={f.name}
+                  field={f}
+                  value={values[f.name]}
+                  error={errors[f.name]}
+                  setVal={setVal}
+                />
+              ) : null,
+            )}
+          </FormSection>
+        ))}
         {genericError ? (
           <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {genericError}
@@ -223,31 +270,6 @@ export function CreateResourceModal(props: CreateResourceModalProps) {
         </div>
       </form>
     </Modal>
-  );
-}
-
-interface GridProps {
-  fields: FieldSpec[];
-  values: Record<string, unknown>;
-  errors: Record<string, string>;
-  setVal: (name: string, v: unknown) => void;
-}
-
-function FieldsGrid({ fields, values, errors, setVal }: GridProps): ReactNode {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {fields.map((f) =>
-        fieldVisible(f, values) ? (
-          <FieldControl
-            key={f.name}
-            field={f}
-            value={values[f.name]}
-            error={errors[f.name]}
-            setVal={setVal}
-          />
-        ) : null,
-      )}
-    </div>
   );
 }
 
@@ -323,6 +345,23 @@ function FieldControl({ field, value, error, setVal }: ControlProps): ReactNode 
           onChange={(e) => setVal(field.name, e.target.value)}
           rows={3}
           className={baseInput}
+        />
+        {errorEl ?? helpEl}
+      </div>
+    );
+  }
+
+  if (kind === "date") {
+    return (
+      <div className={`flex flex-col gap-1.5 ${span}`}>
+        {labelEl}
+        <DatePicker
+          id={field.name}
+          value={typeof value === "string" ? value : ""}
+          onChange={(v) => setVal(field.name, v)}
+          captionLayout="dropdown-buttons"
+          fromYear={MIN_YEAR}
+          toYear={MAX_YEAR}
         />
         {errorEl ?? helpEl}
       </div>

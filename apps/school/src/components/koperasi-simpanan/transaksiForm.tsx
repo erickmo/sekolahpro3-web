@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -9,14 +9,72 @@ import {
   Modal,
   SearchableSelect,
   Textarea,
+  type SearchableOption,
 } from "@sekolahpro/ui";
-import { useResourceCreate } from "@sekolahpro/api-client";
+import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 
 export type TransaksiJenis = "Setor" | "Tarik" | "Transfer" | "Bagi Hasil" | "Koreksi";
 
 const JENIS_OPTIONS: TransaksiJenis[] = ["Setor", "Tarik", "Transfer", "Bagi Hasil", "Koreksi"];
 
 const DOCTYPE = "Transaksi Simpanan";
+
+// Transaction dates stay near the present — narrow year range for fast jumping.
+const MIN_YEAR = new Date().getFullYear() - 10;
+const MAX_YEAR = new Date().getFullYear() + 1;
+
+/** Convert plain string values into SearchableSelect options. */
+function toOptions(values: string[]): SearchableOption[] {
+  return values.map((v) => ({ value: v, label: v }));
+}
+
+/** Async option loader for a Frappe link field. */
+async function searchLink(
+  doctype: string,
+  labelField: string,
+  q: string,
+): Promise<SearchableOption[]> {
+  const rows = await listResource<Record<string, string>>(doctype, {
+    fields: ["name", labelField],
+    ...(q
+      ? {
+          or_filters: [
+            ["name", "like", `%${q}%`],
+            [labelField, "like", `%${q}%`],
+          ] as [string, string, unknown][],
+        }
+      : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({
+    value: r.name ?? "",
+    label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? ""),
+  }));
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? (
+          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
+        ) : null}
+      </div>
+      <FormGrid>{children}</FormGrid>
+    </section>
+  );
+}
 
 interface TransaksiModalProps {
   open: boolean;
@@ -48,6 +106,8 @@ export function TransaksiModal(props: TransaksiModalProps) {
   const [jenis, setJenis] = useState<TransaksiJenis>(defaultJenis);
   const today = new Date().toISOString().slice(0, 10);
   const [tanggal, setTanggal] = useState<string>(today);
+  const [rekeningVal, setRekeningVal] = useState<string>(rekening ?? "");
+  const [rekeningTujuan, setRekeningTujuan] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -82,16 +142,21 @@ export function TransaksiModal(props: TransaksiModalProps) {
       open={open}
       onClose={onClose}
       title="Transaksi Simpanan"
-      description="Setor, tarik, transfer, bagi hasil, atau koreksi."
-      size="lg"
+      description="Setor, tarik, transfer, bagi hasil, atau koreksi. Tanda * wajib diisi."
+      size="mega"
+      tone="brand"
     >
-      <form onSubmit={onSubmit} className="space-y-4">
-        <FormGrid cols={2}>
+      <form onSubmit={onSubmit} className="space-y-5">
+        <FormSection
+          title="Detail Transaksi"
+          description="Tentukan jenis, rekening, dan nominal transaksi."
+        >
           <FormField label="Jenis Transaksi" required>
             <SearchableSelect
               value={jenis}
               onChange={(v) => setJenis(v as TransaksiJenis)}
-              options={JENIS_OPTIONS.map((j) => ({ value: j, label: j }))}
+              options={toOptions(JENIS_OPTIONS)}
+              placeholder="— pilih —"
             />
           </FormField>
           <FormField label="Tanggal" required>
@@ -100,28 +165,38 @@ export function TransaksiModal(props: TransaksiModalProps) {
               value={tanggal}
               onChange={(v) => setTanggal(v)}
               required
+              captionLayout="dropdown-buttons"
+              fromYear={MIN_YEAR}
+              toYear={MAX_YEAR}
             />
           </FormField>
           <FormField label="Rekening" required>
-            <Input
-              name="rekening"
-              defaultValue={rekening ?? ""}
-              required
-              placeholder="No. Rekening"
+            <SearchableSelect
+              value={rekeningVal}
+              onChange={(v) => setRekeningVal(v)}
+              loadOptions={(q) => searchLink("Rekening Simpanan", "name", q)}
+              placeholder="Cari rekening…"
             />
+            <input type="hidden" name="rekening" value={rekeningVal} />
           </FormField>
           <FormField label="Nominal (Rp)" required>
             <Input name="nominal" type="number" min={0} step={1} required placeholder="0" />
           </FormField>
           {jenis === "Transfer" ? (
-            <FormField label="Rekening Tujuan" required className="sm:col-span-2">
-              <Input name="rekening_tujuan" required placeholder="No. Rekening tujuan" />
+            <FormField label="Rekening Tujuan" required className="col-span-2">
+              <SearchableSelect
+                value={rekeningTujuan}
+                onChange={(v) => setRekeningTujuan(v)}
+                loadOptions={(q) => searchLink("Rekening Simpanan", "name", q)}
+                placeholder="Cari rekening tujuan…"
+              />
+              <input type="hidden" name="rekening_tujuan" value={rekeningTujuan} />
             </FormField>
           ) : null}
-          <FormField label="Keterangan" className="sm:col-span-2">
+          <FormField label="Keterangan" className="col-span-2">
             <Textarea name="keterangan" placeholder="Catatan tambahan (opsional)" />
           </FormField>
-        </FormGrid>
+        </FormSection>
 
         {error ? (
           <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">

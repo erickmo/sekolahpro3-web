@@ -18,6 +18,11 @@ import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 // Each list route declares a schema; the modal renders fields and POSTs to the DocType.
 // Link fields render a SearchableSelect that queries the target DocType.
 
+// Year range for date pickers. Perpustakaan dates are transactional (loans,
+// returns, acquisitions) so a narrow recent range is enough for fast jumping.
+const MIN_YEAR = new Date().getFullYear() - 10;
+const MAX_YEAR = new Date().getFullYear() + 1;
+
 export type PerpFieldType = "text" | "number" | "date" | "select" | "textarea" | "link";
 
 export interface PerpFieldDef {
@@ -44,6 +49,27 @@ export interface PerpCreateModalProps {
   fields: PerpFieldDef[];
   submitLabel?: string;
   onCreated?: (doc: Record<string, unknown>) => void;
+}
+
+/** Section heading + grid wrapper for one logical group of fields. */
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string | undefined;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
+      <div className="mb-4">
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        {description ? <p className="text-xs text-muted-fg mt-0.5">{description}</p> : null}
+      </div>
+      <FormGrid cols={2}>{children}</FormGrid>
+    </section>
+  );
 }
 
 function emptyValues(fields: PerpFieldDef[]): Record<string, string> {
@@ -185,7 +211,16 @@ export function PerpCreateModal(props: PerpCreateModalProps) {
       return <Textarea id={id} value={val} onChange={(e) => onChange(e.target.value)} />;
     }
     if (f.type === "date") {
-      return <DatePicker id={id} value={val} onChange={(v) => onChange(v)} />;
+      return (
+        <DatePicker
+          id={id}
+          value={val}
+          onChange={(v) => onChange(v)}
+          captionLayout="dropdown-buttons"
+          fromYear={MIN_YEAR}
+          toYear={MAX_YEAR}
+        />
+      );
     }
     const inputType = f.type === "number" ? "number" : "text";
     return <Input id={id} type={inputType} value={val} onChange={(e) => onChange(e.target.value)} />;
@@ -209,13 +244,13 @@ export function PerpCreateModal(props: PerpCreateModalProps) {
         </>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {errMsg ? (
           <div className="rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-700">
             {errMsg}
           </div>
         ) : null}
-        <FormGrid cols={2}>
+        <FormSection title="Data" description="Tanda * wajib diisi.">
           {fields.map((f) => (
             <FormField
               key={f.name}
@@ -227,7 +262,7 @@ export function PerpCreateModal(props: PerpCreateModalProps) {
               {renderField(f)}
             </FormField>
           ))}
-        </FormGrid>
+        </FormSection>
         {/* hidden submit so Enter works */}
         <button type="submit" hidden />
       </form>

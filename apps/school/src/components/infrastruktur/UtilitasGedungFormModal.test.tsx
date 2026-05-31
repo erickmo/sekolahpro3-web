@@ -9,11 +9,19 @@ vi.mock("@sekolahpro/api-client", () => ({
   useResourceCreate: () => ({ mutateAsync: createMut, isPending: false }),
   useResourceUpdate: () => ({ mutateAsync: updateMut, isPending: false }),
   useResourceDoc: () => ({ data: docData }),
-  useResourceList: () => ({ data: [{ name: "SEK-1-GA", nama: "Gedung A" }] }),
+  listResource: vi.fn().mockResolvedValue([{ name: "SEK-1-GA", nama: "Gedung A" }]),
 }));
 vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
 
 import { UtilitasGedungFormModal } from "./UtilitasGedungFormModal";
+
+/** Drive a static SearchableSelect: open via its label, click matching option. */
+function pickOption(label: string, value: string) {
+  fireEvent.focus(screen.getByLabelText(label, { exact: false }));
+  const opt = screen.getAllByRole("option").find((o) => o.textContent === value);
+  if (!opt) throw new Error(`Opsi "${value}" untuk "${label}" tidak ditemukan`);
+  fireEvent.mouseDown(opt);
+}
 
 describe("UtilitasGedungFormModal", () => {
   afterEach(() => cleanup());
@@ -21,7 +29,7 @@ describe("UtilitasGedungFormModal", () => {
 
   it("create dgn defaultGedung + jenis", async () => {
     render(<UtilitasGedungFormModal open defaultGedung="SEK-1-GA" onClose={() => {}} />);
-    fireEvent.change(screen.getByLabelText("Jenis"), { target: { value: "Listrik" } });
+    pickOption("Jenis", "Listrik");
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(createMut).toHaveBeenCalled());
     expect(createMut.mock.calls[0][0]).toMatchObject({ gedung: "SEK-1-GA", jenis: "Listrik", status: "Aktif" });
