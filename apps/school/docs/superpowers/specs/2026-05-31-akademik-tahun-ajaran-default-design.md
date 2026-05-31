@@ -3,7 +3,7 @@
 **Date:** 2026-05-31
 **Module:** Akademik (`/sch/$sekolah/akademik`)
 **Scope:** Full (auto-default + persistence + scope pill + wrong-period safety)
-**Status:** Draft — awaiting user review
+**Status:** Implemented
 
 ## Problem
 
