@@ -15,16 +15,7 @@ import {
   IconSettings,
   IconUsers,
   GlossaryTooltip,
-  ModuleFlow,
-  type ModuleFlowStep,
 } from "@sekolahpro/ui";
-
-const MASTER_FLOW_STEPS: ModuleFlowStep[] = [
-  { key: "unit", label: "Unit Jenjang", hint: "SD/SMP/SMA", href: "/sch/$sekolah/master/unit-jenjang" },
-  { key: "tahun-ajaran", label: "Tahun Ajaran", hint: "Set TA berjalan", href: "/sch/$sekolah/master/tahun-ajaran" },
-  { key: "modul", label: "Modul & Fitur", hint: "Aktifkan modul", href: "/sch/$sekolah/pengaturan/modul" },
-  { key: "pengguna", label: "Pengguna", hint: "Akun & peran", href: "/sch/$sekolah/master/pengguna" },
-];
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
 
@@ -44,9 +35,9 @@ const AKSI_CEPAT: { to: string; label: string; desc: string; icon: React.ReactNo
   { to: "/sch/$sekolah/master/unit-jenjang", label: "Unit Jenjang", desc: "Atur jenjang TK/SD/SMP/SMA", icon: <IconGrad /> },
   { to: "/sch/$sekolah/master/kurikulum", label: "Kurikulum", desc: "Kurikulum & struktur mapel", icon: <IconBook /> },
   { to: "/sch/$sekolah/master/mapel", label: "Mata Pelajaran", desc: "Daftar mapel & kode", icon: <IconBook /> },
-  { to: "/sch/$sekolah/master/kkm", label: "KKM", desc: "Kriteria Ketuntasan Minimal", icon: <IconCheck /> },
-  { to: "/sch/$sekolah/pengaturan/modul", label: "Modul Aktif", desc: "Aktifkan modul per tenant", icon: <IconBook /> },
-  { to: "/sch/$sekolah/pengaturan/feature-flag", label: "Feature Flag", desc: "Toggle eksperimen fitur", icon: <IconSettings /> },
+  { to: "/sch/$sekolah/master/kkm", label: "KKM", desc: "Kriteria Ketuntasan Minimal per mapel", icon: <IconCheck /> },
+  { to: "/sch/$sekolah/master/komponen-nilai", label: "Komponen Nilai", desc: "UH / UTS / UAS / Tugas + bobot", icon: <IconBook /> },
+  { to: "/sch/$sekolah/master/konfigurasi", label: "Konfigurasi Penilaian", desc: "Tipe nilai & rentang per kurikulum", icon: <IconSettings /> },
 ];
 
 const PERLU_PERHATIAN_LIMIT = 5;
@@ -175,17 +166,6 @@ function MasterDashboardPage() {
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
-
-      <ModuleFlow
-        title="Alur Setup Master Data"
-        description="Urutan konfigurasi awal sekolah."
-        steps={MASTER_FLOW_STEPS}
-        renderLink={(href, children) => (
-          <Link to={href as "/sch/$sekolah/master/unit-jenjang"} params={{ sekolah }}>
-            {children}
-          </Link>
-        )}
-      />
 
       <SectionCard
         title="Aksi Cepat"
