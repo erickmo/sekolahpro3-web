@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useFrappeMutation, useResourceDoc } from "@sekolahpro/api-client";
+import { frappeFetch, useFrappeMutation, useResourceDoc } from "@sekolahpro/api-client";
 import { useSessionStore } from "@sekolahpro/auth";
 import {
   Badge,
@@ -110,20 +110,15 @@ function KelulusanDetailPage() {
     if (!doc) return;
     await apply.mutateAsync({ doctype: "Kelulusan Siswa", docname: doc.name, action: "Reject" });
     try {
-      await fetch("/api/method/frappe.client.insert", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          doc: {
-            doctype: "Comment",
-            comment_type: "Workflow",
-            reference_doctype: "Kelulusan Siswa",
-            reference_name: doc.name,
-            comment_email: currentUser ?? "system",
-            content: `Penolakan: ${reason}`,
-          },
-        }),
+      await frappeFetch("frappe.client.insert", {
+        doc: {
+          doctype: "Comment",
+          comment_type: "Workflow",
+          reference_doctype: "Kelulusan Siswa",
+          reference_name: doc.name,
+          comment_email: currentUser ?? "system",
+          content: `Penolakan: ${reason}`,
+        },
       });
     } catch (_) {}
     setRejectOpen(false);

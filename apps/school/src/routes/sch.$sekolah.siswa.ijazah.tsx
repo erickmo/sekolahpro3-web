@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
+import { frappeFetch } from "@sekolahpro/api-client";
 import { ResourceListPage } from "../components/ResourceListPage";
 
 type Row = {
@@ -44,16 +45,12 @@ function RetentionBadge({ retention }: { retention: string }) {
 }
 
 async function downloadIjazah(name: string, reason: string): Promise<void> {
-  const res = await fetch("/api/method/sekolahpro.siswa.arsip_ijazah.download", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, reason }),
-  });
-  if (!res.ok) throw new Error(`Download gagal: ${res.status}`);
-  const json = (await res.json()) as { message?: { url?: string } };
-  if (json.message?.url) {
-    window.open(json.message.url, "_blank", "noopener");
+  const data = await frappeFetch<{ url?: string }>(
+    "sekolahpro.siswa.arsip_ijazah.download",
+    { name, reason },
+  );
+  if (data?.url) {
+    window.open(data.url, "_blank", "noopener");
   }
 }
 

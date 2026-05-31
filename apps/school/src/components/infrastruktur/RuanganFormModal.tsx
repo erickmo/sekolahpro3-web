@@ -48,8 +48,6 @@ const JENIS_OPTIONS = [
   "Lainnya",
 ] as const;
 
-const STATUS_OPTIONS = ["Tersedia", "Dipakai", "Maintenance"] as const;
-
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -156,7 +154,7 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
       if (!Number.isNaN(n)) patch.kapasitas = n;
     }
     if (luasM2.trim()) {
-      const n = parseFloat(luasM2);
+      const n = parseInt(luasM2, 10);
       if (!Number.isNaN(n)) patch.luas_m2 = n;
     }
     // Child table: drop blank-name rows, coerce jumlah to number. Sent whole →
@@ -218,13 +216,14 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
           <FormField label="Kode" required>
             <Input aria-label="Kode" value={kode} onChange={(e) => setKode(e.target.value)} />
           </FormField>
-          <FormField label="Lantai" required>
-            <Select aria-label="Lantai" value={lantai} onChange={(e) => setLantai(e.target.value)}>
-              <option value="">— pilih —</option>
-              {lantaiRows.map((r) => (
-                <option key={r.name} value={r.name}>{r.name}</option>
-              ))}
-            </Select>
+          <FormField label="Lantai" required htmlFor="ruangan-lantai">
+            <SearchableSelect
+              id="ruangan-lantai"
+              value={lantai}
+              onChange={(v) => setLantai(v)}
+              options={lantaiRows.map((r) => ({ value: r.name, label: r.name }))}
+              placeholder="— pilih —"
+            />
           </FormField>
           {!defaultGedung && (
             <FormField label="Gedung">
@@ -249,36 +248,40 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
               />
             </FormField>
           )}
-          <FormField label="Jenis Ruangan" required>
-            <Select aria-label="Jenis Ruangan" value={jenisRuangan} onChange={(e) => setJenisRuangan(e.target.value)}>
-              {JENIS_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+          <FormField label="Jenis Ruangan" required htmlFor="ruangan-jenis">
+            <SearchableSelect
+              id="ruangan-jenis"
+              value={jenisRuangan}
+              onChange={(v) => setJenisRuangan(v)}
+              options={JENIS_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— pilih —"
+            />
           </FormField>
           <FormField label="Kapasitas">
             <Input
               aria-label="Kapasitas"
               type="number"
+              min="0"
               value={kapasitas}
-              onChange={(e) => setKapasitas(e.target.value)}
+              // Kapasitas = jumlah orang → bilangan bulat non-negatif. Buang
+              // minus & desimal di sumber agar nilai negatif tak pernah masuk state.
+              onChange={(e) => setKapasitas(e.target.value.replace(/[^0-9]/g, ""))}
             />
           </FormField>
           <FormField label="Luas (m²)">
             <Input
               aria-label="Luas"
               type="number"
-              step="0.01"
+              min="0"
+              step="1"
               value={luasM2}
-              onChange={(e) => setLuasM2(e.target.value)}
+              // Luas dipakai sebagai bilangan bulat (m²) → strip ke digit saja.
+              onChange={(e) => setLuasM2(e.target.value.replace(/[^0-9]/g, ""))}
             />
           </FormField>
-          <FormField label="Status" required>
-            <Select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o} value={o}>{o}</option>
-              ))}
-            </Select>
+          <FormField label="Status">
+            {/* Status dikelola sistem (default Tersedia / transisi backend) → readonly di form. */}
+            <Input aria-label="Status" value={status} readOnly tabIndex={-1} />
           </FormField>
         </FormGrid>
 

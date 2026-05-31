@@ -15,6 +15,14 @@ vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQue
 
 import { RuanganFormModal } from "./RuanganFormModal";
 
+/** Drive the SearchableSelect Lantai: open via label, click the matching option. */
+function pickLantai(value: string) {
+  fireEvent.focus(screen.getByLabelText("Lantai", { exact: false }));
+  const opt = screen.getAllByRole("option").find((o) => o.textContent === value);
+  if (!opt) throw new Error(`Opsi lantai "${value}" tidak ditemukan`);
+  fireEvent.mouseDown(opt);
+}
+
 describe("RuanganFormModal", () => {
   afterEach(() => cleanup());
   beforeEach(() => { createMut.mockClear(); updateMut.mockClear(); docData = undefined; });
@@ -23,7 +31,7 @@ describe("RuanganFormModal", () => {
     render(<RuanganFormModal open defaultGedung="SEK-1-GA" onClose={() => {}} />);
     fireEvent.change(screen.getByLabelText("Nama"), { target: { value: "Kelas 1A" } });
     fireEvent.change(screen.getByLabelText("Kode"), { target: { value: "R1" } });
-    fireEvent.change(screen.getByLabelText("Lantai"), { target: { value: "GA-L1" } });
+    pickLantai("GA-L1");
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(createMut).toHaveBeenCalled());
     expect(createMut.mock.calls[0][0]).toMatchObject({ nama: "Kelas 1A", kode: "R1", lantai: "GA-L1", jenis_ruangan: "Kelas", status: "Tersedia" });
@@ -47,7 +55,7 @@ describe("RuanganFormModal", () => {
     render(<RuanganFormModal open defaultGedung="SEK-1-GA" onClose={() => {}} />);
     fireEvent.change(screen.getByLabelText("Nama"), { target: { value: "Lab IPA" } });
     fireEvent.change(screen.getByLabelText("Kode"), { target: { value: "R2" } });
-    fireEvent.change(screen.getByLabelText("Lantai"), { target: { value: "GA-L1" } });
+    pickLantai("GA-L1");
     fireEvent.click(screen.getByText("+ Tambah baris"));
     fireEvent.change(screen.getByLabelText("Nama Fasilitas 1"), { target: { value: "Proyektor" } });
     fireEvent.change(screen.getByLabelText("Jumlah 1"), { target: { value: "2" } });
@@ -62,7 +70,7 @@ describe("RuanganFormModal", () => {
     render(<RuanganFormModal open defaultGedung="SEK-1-GA" onClose={() => {}} />);
     fireEvent.change(screen.getByLabelText("Nama"), { target: { value: "Kelas 2A" } });
     fireEvent.change(screen.getByLabelText("Kode"), { target: { value: "R3" } });
-    fireEvent.change(screen.getByLabelText("Lantai"), { target: { value: "GA-L1" } });
+    pickLantai("GA-L1");
     fireEvent.click(screen.getByText("+ Tambah baris"));
     fireEvent.click(screen.getByText("Simpan"));
     await waitFor(() => expect(createMut).toHaveBeenCalled());

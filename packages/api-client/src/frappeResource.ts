@@ -8,6 +8,13 @@ type Config = {
 
 let cfg: Config = { baseUrl: "" };
 
+// Request header carrying the active Sekolah's doc-ID. The backend
+// (`sekolahpro.api.tenant_scope.auto_set_tenant`) reads this header on every
+// write to populate `sekolah`/`organisasi`, and validates it against the
+// user's memberships. Sent on ALL requests so server-side scoping never has
+// to fall back to guessing the tenant from the session.
+export const ACTIVE_SEKOLAH_HEADER = "X-Active-Sekolah";
+
 export function configureResource(next: Partial<Config>) {
   cfg = { ...cfg, ...next };
 }
@@ -43,6 +50,10 @@ const TENANT_BLOCKLIST = new Set<string>([
   "Sekolah",
   "File",
   "Communication",
+  // Child tables tenanted via their parent (istable=1, no own `sekolah` field).
+  // Injecting a `sekolah` filter would target a non-existent column → empty
+  // result. Scope is enforced through the parent doc instead.
+  "Fasilitas Ruangan",
   // Vernon Accounting doctypes — tenanted by `company`, not `sekolah`.
   // Until Sekolah↔Company mapping is wired, callers pass `company`
   // filters explicitly; auto-injection of `sekolah` would break queries.
@@ -93,6 +104,7 @@ function buildHeaders(extra?: Record<string, string>): Record<string, string> {
     "Content-Type": "application/json",
     Accept: "application/json",
     "X-Frappe-CSRF-Token": cfg.csrfToken ?? "",
+    [ACTIVE_SEKOLAH_HEADER]: activeSekolah() ?? "",
     ...(extra ?? {}),
   };
 }

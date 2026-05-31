@@ -81,7 +81,7 @@ function AkademikLayout() {
     >
       <div className="space-y-4">
         {showContextBar(pathname) ? <AkademikContextBar /> : null}
-        <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} />
+        <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="inline" />
         <Outlet />
       </div>
     </AkademikContextProvider>

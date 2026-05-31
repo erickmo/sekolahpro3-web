@@ -29,9 +29,11 @@ import {
   type WorkflowStep,
 } from "@sekolahpro/ui";
 import {
+  frappeFetch,
   useResourceCreate,
   useResourceList,
 } from "@sekolahpro/api-client";
+import { useSessionStore } from "@sekolahpro/auth";
 import {
   useAjukanPendaftaran,
   useCreatePaymentOrder,
@@ -675,14 +677,15 @@ function PpdbBuatPage() {
             // Set hasil pada Seleksi pertama yang terkait — best effort.
             // Endpoint set_hasil_seleksi expects seleksi name, bukan pendaftaran.
             // Cari Seleksi by pendaftaran.
-            const list = await fetch(
-              `/api/method/frappe.client.get_list?doctype=Seleksi PPDB&filters=${encodeURIComponent(
-                JSON.stringify([["pendaftaran_ppdb", "=", result.pendaftaranName]]),
-              )}&fields=${encodeURIComponent(JSON.stringify(["name"]))}&limit_page_length=1`,
-              { credentials: "include" },
-            )
-              .then((r) => r.json())
-              .then((j) => j.message ?? []);
+            const list = await frappeFetch<Array<{ name: string }>>(
+              "frappe.client.get_list",
+              {
+                doctype: "Seleksi PPDB",
+                filters: [["pendaftaran_ppdb", "=", result.pendaftaranName]],
+                fields: ["name"],
+                limit_page_length: 1,
+              },
+            );
             const seleksiName = list[0]?.name;
             if (!seleksiName) {
               alert("Belum ada Seleksi PPDB untuk pendaftaran ini.");

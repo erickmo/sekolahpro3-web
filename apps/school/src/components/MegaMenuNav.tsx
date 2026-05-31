@@ -92,14 +92,14 @@ export function MegaMenuNav({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="true"
         aria-expanded={open}
-        className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted"
+        className="flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium hover:bg-muted"
       >
         <span>{active?.label ?? triggerLabel}</span>
         <Chevron open={open} />
       </button>
 
       {open && (
-        <div className="absolute left-0 z-20 mt-2 grid w-[34rem] max-w-[90vw] grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4 shadow-lg">
+        <div className="absolute left-0 z-20 mt-2 grid w-[34rem] max-w-[90vw] grid-cols-2 gap-4 rounded-xl border border-border bg-white p-4 shadow-lg">
           {groups.map((group) => (
             <div key={group.label}>
               <div className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-fg">

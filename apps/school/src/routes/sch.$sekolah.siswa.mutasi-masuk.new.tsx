@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
-import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+import { frappeFetch, listResource, useResourceCreate } from "@sekolahpro/api-client";
 import {
   Badge,
   Button,
@@ -42,21 +42,14 @@ const NPSN_REGEX = /^\d{8}$/;
 const NISN_REGEX = /^\d{10}$/;
 
 async function verifyDapodik(npsn: string, nisn: string): Promise<DapodikData> {
-  const res = await fetch("/api/method/sekolahpro.integrasi.dapodik.verify_siswa", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ npsn, nisn }),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Dapodik tidak tersedia: ${res.status} ${txt}`);
-  }
-  const json = (await res.json()) as { message?: DapodikData };
-  if (!json.message || !json.message.verified) {
+  const data = await frappeFetch<DapodikData>(
+    "sekolahpro.integrasi.dapodik.verify_siswa",
+    { npsn, nisn },
+  );
+  if (!data || !data.verified) {
     throw new Error("Data tidak ditemukan di Dapodik atau status tidak terverifikasi.");
   }
-  return json.message;
+  return data;
 }
 
 async function loadRombel(query: string): Promise<SearchableOption[]> {
