@@ -71,7 +71,7 @@ function TahunAjaranCardListPage() {
           {rows.map((r) => (
             <Link
               key={r.name}
-              to="/sch/$sekolah/akademik/tahun-ajaran/$name"
+              to="/sch/$sekolah/master/tahun-ajaran/$name"
               params={{ sekolah, name: r.name }}
               className="group flex flex-col gap-3 rounded-lg border border-border bg-bg p-4 hover:border-brand hover:shadow-sm transition"
             >
@@ -120,6 +120,6 @@ function CardGridSkeleton() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/tahun-ajaran")({
+export const Route = createFileRoute("/sch/$sekolah/master/tahun-ajaran")({
   component: TahunAjaranCardListPage,
 });

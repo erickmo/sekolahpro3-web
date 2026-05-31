@@ -313,10 +313,11 @@ const ROLE_MENU_MAP: Record<string, string[]> = {
     "/akuntansi",
     "/laporan",
     "/pickup-verify",
+    "/master",
     "/pengaturan",
   ],
   operator: ["/", "/siswa", "/staff", "/kelas", "/jadwal", "/absensi", "/ppdb", "/pesan", "/pickup-verify"],
-  guru: ["/", "/siswa", "/kelas", "/akademik", "/jadwal", "/absensi", "/pesan"],
+  guru: ["/", "/siswa", "/kelas", "/akademik", "/master", "/jadwal", "/absensi", "/pesan"],
   bendahara: ["/", "/siswa", "/keuangan", "/akuntansi", "/koperasi", "/ppdb", "/laporan", "/pesan"],
   pustakawan: ["/", "/perpustakaan", "/siswa", "/pesan"],
   petugas_koperasi: ["/", "/koperasi", "/siswa", "/pesan"],
@@ -651,7 +652,7 @@ function Layout() {
             title="Tahun Ajaran belum aktif"
             description="Modul absensi, akademik, dan jadwal membutuhkan Tahun Ajaran aktif untuk berfungsi normal."
             actionLabel="Atur Tahun Ajaran"
-            actionHref="/akademik/tahun-ajaran"
+            actionHref="/master/tahun-ajaran"
             renderLink={(href, children) =>
               slug ? (
                 <Link to={scopedTo(slug, href)} params={scopedParams(slug)}>

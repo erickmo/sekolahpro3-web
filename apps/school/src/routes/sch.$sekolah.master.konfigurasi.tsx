@@ -144,4 +144,4 @@ function KonfigPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/konfigurasi")({ component: KonfigPage });
+export const Route = createFileRoute("/sch/$sekolah/master/konfigurasi")({ component: KonfigPage });

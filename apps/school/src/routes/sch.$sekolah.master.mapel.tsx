@@ -104,7 +104,7 @@ function MapelPage() {
         ]}
         addLabel="Tambah Mapel"
         onAdd={() => setOpenCreate(true)}
-        onRowClick={(r) => navigate({ to: "/sch/$sekolah/akademik/mapel/$name", params: { sekolah, name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/sch/$sekolah/master/mapel/$name", params: { sekolah, name: r.name } })}
       />
       <CreateResourceModal
         open={openCreate}
@@ -118,4 +118,4 @@ function MapelPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/daftar")({ component: MapelPage });
+export const Route = createFileRoute("/sch/$sekolah/master/mapel")({ component: MapelPage });

@@ -104,7 +104,7 @@ function KurikulumPage() {
         ]}
         addLabel="Tambah Kurikulum"
         onAdd={() => setOpenCreate(true)}
-        onRowClick={(r) => navigate({ to: "/sch/$sekolah/akademik/kurikulum/$name", params: { sekolah, name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/sch/$sekolah/master/kurikulum/$name", params: { sekolah, name: r.name } })}
       />
       <CreateResourceModal
         open={openCreate}
@@ -118,4 +118,4 @@ function KurikulumPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/kurikulum")({ component: KurikulumPage });
+export const Route = createFileRoute("/sch/$sekolah/master/kurikulum")({ component: KurikulumPage });
