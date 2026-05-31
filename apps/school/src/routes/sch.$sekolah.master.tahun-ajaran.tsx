@@ -5,11 +5,118 @@ import {
   Button,
   EmptyState,
   PageHeader,
+  SectionCard,
+  IconBook,
   IconCalendar,
+  IconCheck,
+  IconSettings,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { MasterCreateModal } from "../components/master/MasterCreateModal";
 import { TAHUN_AJARAN_FIELDS } from "../components/master/schemas";
+
+// ── Relation diagram ────────────────────────────────────────────────────────
+
+type RelChild = {
+  icon: React.ReactNode;
+  label: string;
+  desc: string;
+  href?: string;
+};
+
+function RelTree({
+  root,
+  children,
+}: {
+  root: { icon: React.ReactNode; label: string; desc: string };
+  children: RelChild[];
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-2.5 rounded-lg border-2 border-brand/50 bg-brand/5 px-3 py-2.5">
+        <span className="h-5 w-5 shrink-0 text-brand">{root.icon}</span>
+        <div>
+          <p className="text-sm font-semibold text-fg">{root.label}</p>
+          <p className="text-xs text-muted-fg">{root.desc}</p>
+        </div>
+      </div>
+      <div className="ml-5 mt-1.5 border-l-2 border-border pl-4 space-y-2 pb-1 pt-1">
+        {children.map((c) => {
+          const inner = (
+            <>
+              <span className="h-4 w-4 shrink-0 text-muted-fg group-hover:text-brand">{c.icon}</span>
+              <div>
+                <p className="text-xs font-medium text-fg">{c.label}</p>
+                <p className="text-[11px] text-muted-fg leading-tight">{c.desc}</p>
+              </div>
+            </>
+          );
+          const cls = "flex items-center gap-2.5 rounded-md border border-border bg-bg px-3 py-2 transition";
+          return c.href ? (
+            <Link
+              key={c.label}
+              to={c.href as "/sch/$sekolah/master/kkm"}
+              className={`${cls} group hover:border-brand hover:bg-muted/40`}
+            >
+              {inner}
+            </Link>
+          ) : (
+            <div key={c.label} className={`${cls} opacity-75`}>
+              {inner}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function RelationDiagram() {
+  return (
+    <SectionCard
+      title="Struktur Dokumen Akademik"
+      description="Relasi antara Tahun Ajaran, Kurikulum, dan konfigurasi penilaian turunannya."
+    >
+      <div className="grid gap-6 sm:grid-cols-2">
+        <RelTree
+          root={{ icon: <IconCalendar />, label: "Tahun Ajaran", desc: "Anchor periode akademik" }}
+          children={[
+            {
+              icon: <IconCalendar />,
+              label: "Semester",
+              desc: "Ganjil & Genap — dikelola di dalam kartu TA",
+            },
+            {
+              icon: <IconCheck />,
+              label: "KKM",
+              desc: "Nilai batas tuntas per mapel & tingkat",
+              href: "/sch/$sekolah/master/kkm",
+            },
+          ]}
+        />
+        <RelTree
+          root={{ icon: <IconBook />, label: "Kurikulum", desc: "Anchor struktur akademik" }}
+          children={[
+            {
+              icon: <IconBook />,
+              label: "Komponen Nilai",
+              desc: "UH / UTS / UAS / Tugas + bobot per kurikulum",
+              href: "/sch/$sekolah/master/komponen-nilai",
+            },
+            {
+              icon: <IconSettings />,
+              label: "Konfigurasi Penilaian",
+              desc: "Tipe nilai & rentang per kurikulum / mapel",
+              href: "/sch/$sekolah/master/konfigurasi",
+            },
+          ]}
+        />
+      </div>
+    </SectionCard>
+  );
+}
+
+// ── Card list ────────────────────────────────────────────────────────────────
 
 type Row = {
   name: string;
@@ -50,6 +157,8 @@ function TahunAjaranCardListPage() {
         description="Kelola tahun ajaran. Semester dikelola di dalam tiap tahun ajaran."
         actions={<Button onClick={() => setOpen(true)}>Tambah TA</Button>}
       />
+
+      <RelationDiagram />
 
       {q.isLoading ? (
         <CardGridSkeleton />
