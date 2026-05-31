@@ -175,7 +175,9 @@ export function RuanganFormModal({ open, onClose, onCreated, defaultGedung, edit
         ? (await update.mutateAsync({ name: editName, patch })).name
         : (await create.mutateAsync(patch)).name;
       await qc.invalidateQueries({ queryKey: ["resource:list", "Ruangan"] });
-      await qc.invalidateQueries({ queryKey: ["resource:list", "Fasilitas Ruangan"] });
+      // Refresh the parent Ruangan doc so the read-only fasilitas list in the
+      // gedung-detail expanded row reflects the edited child rows.
+      await qc.invalidateQueries({ queryKey: ["resource:doc", "Ruangan"] });
       onCreated?.(name);
       reset();
       onClose();
