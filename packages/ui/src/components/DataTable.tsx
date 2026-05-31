@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { cn } from "../lib/cn";
 
 export interface Column<T> {
@@ -31,6 +31,12 @@ interface Props<T> {
   sort?: SortState | undefined;
   onSortChange?: ((next: SortState) => void) | undefined;
   footer?: ReactNode | undefined;
+  /**
+   * Render expandable detail for a row. When provided, a chevron toggle cell is
+   * prepended; clicking expands a full-width row beneath rendering this content.
+   * Absent → table behaves exactly as before (no extra column).
+   */
+  renderExpanded?: ((row: T) => ReactNode) | undefined;
 }
 
 const alignMap = {
@@ -53,9 +59,24 @@ export function DataTable<T>({
   sort,
   onSortChange,
   footer,
+  renderExpanded,
 }: Props<T>) {
   const allSelected =
     selectable && data.length > 0 && selected && data.every((r) => selected.has(rowKey(r)));
+
+  // Tracks which rows are expanded (keyed by rowKey). Only used when
+  // renderExpanded is provided.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpanded = (key: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  // Total visible columns = expand chevron + selection checkbox + data columns.
+  const totalCols = columns.length + (selectable ? 1 : 0) + (renderExpanded ? 1 : 0);
 
   const handleSort = (key: string) => {
     if (!onSortChange) return;
@@ -72,6 +93,7 @@ export function DataTable<T>({
       <table className="w-full text-sm">
         <thead className="bg-muted/40">
           <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-fg">
+            {renderExpanded ? <th className="px-2 py-3 w-8" /> : null}
             {selectable ? (
               <th className="px-4 py-3 w-10">
                 <input
@@ -114,7 +136,7 @@ export function DataTable<T>({
           {data.length === 0 ? (
             <tr>
               <td
-                colSpan={columns.length + (selectable ? 1 : 0)}
+                colSpan={totalCols}
                 className="px-4 py-10 text-center text-muted-fg"
               >
                 {empty ?? "Tidak ada data"}
@@ -124,9 +146,10 @@ export function DataTable<T>({
             data.map((row) => {
               const key = rowKey(row);
               const isSel = selected?.has(key);
+              const isExpanded = expanded.has(key);
               return (
+                <Fragment key={key}>
                 <tr
-                  key={key}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={cn(
                     "transition-colors",
@@ -134,6 +157,19 @@ export function DataTable<T>({
                     isSel ? "bg-brand/5" : "",
                   )}
                 >
+                  {renderExpanded ? (
+                    <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        aria-label={isExpanded ? "Tutup detail" : "Lihat detail"}
+                        aria-expanded={isExpanded}
+                        onClick={() => toggleExpanded(key)}
+                        className="grid h-6 w-6 place-items-center rounded text-muted-fg hover:bg-muted hover:text-fg"
+                      >
+                        <span className={cn("transition-transform", isExpanded ? "rotate-90" : "")}>▶</span>
+                      </button>
+                    </td>
+                  ) : null}
                   {selectable ? (
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <input
@@ -157,6 +193,14 @@ export function DataTable<T>({
                     </td>
                   ))}
                 </tr>
+                {renderExpanded && isExpanded ? (
+                  <tr className="bg-muted/20">
+                    <td colSpan={totalCols} className="px-4 py-3">
+                      {renderExpanded(row)}
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               );
             })
           )}
