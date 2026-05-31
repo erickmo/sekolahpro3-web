@@ -27,6 +27,12 @@ export interface DatePickerProps {
   max?: string;
   /** Display format. Default: dd MMM yyyy */
   displayFormat?: string;
+  /** Caption layout. "dropdown" enables month + year dropdowns for fast jumping. */
+  captionLayout?: "buttons" | "dropdown" | "dropdown-buttons";
+  /** Earliest selectable year (enables year dropdown range). */
+  fromYear?: number;
+  /** Latest selectable year (enables year dropdown range). */
+  toYear?: number;
 }
 
 const ISO = "yyyy-MM-dd";
@@ -54,6 +60,9 @@ export function DatePicker(props: DatePickerProps) {
     min,
     max,
     displayFormat = "dd MMM yyyy",
+    captionLayout,
+    fromYear,
+    toYear,
   } = props;
 
   const autoId = useId();
@@ -151,6 +160,9 @@ export function DatePicker(props: DatePickerProps) {
               <DayPicker
                 mode="single"
                 locale={localeId}
+                {...(captionLayout ? { captionLayout } : {})}
+                {...(fromYear ? { fromYear } : {})}
+                {...(toYear ? { toYear } : {})}
                 {...(selected ? { selected, defaultMonth: selected } : {})}
                 {...(minDate || maxDate
                   ? {
@@ -168,6 +180,12 @@ export function DatePicker(props: DatePickerProps) {
                 classNames={{
                   caption: "flex justify-center pt-1 relative items-center text-sm font-medium",
                   caption_label: "text-sm font-medium",
+                  caption_dropdowns: "flex gap-1",
+                  dropdown:
+                    "appearance-none rounded border border-border bg-bg px-1.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand",
+                  dropdown_month: "relative",
+                  dropdown_year: "relative",
+                  vhidden: "sr-only",
                   nav: "space-x-1 flex items-center",
                   nav_button:
                     "h-7 w-7 inline-flex items-center justify-center rounded hover:bg-muted",
