@@ -15,6 +15,7 @@ import {
   useResourceList,
 } from "@sekolahpro/api-client";
 import { Link } from "@tanstack/react-router";
+import { useAkademikContextOptional } from "../../lib/akademikContext";
 
 interface Selection {
   rombel: string;
@@ -301,6 +302,14 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
     return out;
   }, [anggota, grid]);
 
+  const akademik = useAkademikContextOptional();
+  // Lapor status edit-belum-tersimpan ke konteks Akademik agar bar bisa
+  // mengonfirmasi sebelum user mengganti periode.
+  useEffect(() => {
+    akademik?.setDirty(dirtyRows.length > 0);
+    return () => akademik?.setDirty(false);
+  }, [dirtyRows.length, akademik]);
+
   const saveAll = useCallback(async () => {
     if (dirtyRows.length === 0) return;
     setSaving(true);
@@ -455,7 +464,8 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
               : "border-amber-200 bg-amber-50 text-amber-800"
           }`}
         >
-          Simpan selesai: {saveSummary.ok} baris berhasil, {saveSummary.fail} gagal.
+          Simpan selesai: {saveSummary.ok} baris berhasil, {saveSummary.fail} gagal
+          {akademik?.tahunAjaran ? ` · ${akademik.tahunAjaran} ${akademik.semester}` : ""}.
         </div>
       ) : null}
 
