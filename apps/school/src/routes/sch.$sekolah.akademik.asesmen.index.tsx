@@ -59,6 +59,7 @@ function AsesmenListPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const navigate = useNavigate();
   const ctx = useAkademikContextOptional();
+  const periodeSuffix = ctx?.tahunAjaran ? ` · Periode: ${ctx.tahunAjaran} ${ctx.semester}` : "";
   const [rombel, setRombel] = useState("");
   const [mapel, setMapel] = useState("");
   const [openCreate, setOpenCreate] = useState(false);
@@ -85,7 +86,7 @@ function AsesmenListPage() {
       <PageHeader
         eyebrow="Akademik · Input Nilai Test"
         title="Input Nilai Test"
-        description="Pilih kelas & mapel, lalu buka/buat test untuk input nilai cepat satu kelas."
+        description={`Pilih kelas & mapel, lalu buka/buat test untuk input nilai cepat satu kelas.${periodeSuffix}`}
         actions={
           <Button onClick={() => setOpenCreate(true)} disabled={!ready}>
             <span className="h-4 w-4 mr-1.5"><IconPlus /></span>

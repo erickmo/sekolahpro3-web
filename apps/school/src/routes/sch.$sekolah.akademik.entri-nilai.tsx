@@ -48,6 +48,7 @@ function EntriNilaiPage() {
 
   const navigate = useNavigate();
   const ctx = useAkademikContextOptional();
+  const periodeSuffix = ctx?.tahunAjaran ? ` · Periode: ${ctx.tahunAjaran} ${ctx.semester}` : "";
 
   const baseFilters = useMemo(() => {
     const out: Array<[string, string, string]> = [];
@@ -67,7 +68,7 @@ function EntriNilaiPage() {
     <ResourceListPage<Row>
       eyebrow="Akademik"
       title="Entri Nilai"
-      description="Rekap dokumen entri nilai per siswa × mapel × semester. Gunakan editor grid untuk input cepat."
+      description={`Rekap dokumen entri nilai per siswa × mapel × semester. Gunakan editor grid untuk input cepat.${periodeSuffix}`}
       doctype="Entri Nilai"
       fields={[
         "name",
