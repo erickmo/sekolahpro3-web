@@ -2,7 +2,8 @@
  * Operasional › Pengeluaran (school expenses).
  *
  * Bendahara record operational spending with an approval status. Adds a role
- * guide, expense-by-category donut, and approval KPIs. Mock-backed.
+ * guide, expense-by-category donut, and approval KPIs.
+ * Wired to the live `School Expense` doctype via usePengeluaranLive (company-scoped).
  */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -23,7 +24,6 @@ import {
 import { DonutChart, type ChartDatum, type Tone } from "../components/viz";
 import { KeuanganPageGuide } from "../components/keuangan";
 import {
-  listPengeluaranForSekolah,
   FILTER_OPTIONS,
   formatRupiah,
   formatTanggal,
@@ -31,6 +31,7 @@ import {
   type StatusPengeluaran,
   type KategoriPengeluaran,
 } from "../data/keuangan";
+import { usePengeluaranLive } from "../data/keuangan-live";
 
 const TONE_PENGELUARAN: Record<StatusPengeluaran, "success" | "warning" | "danger" | "brand" | "neutral"> = {
   Disetujui: "success",
@@ -61,13 +62,12 @@ function buildOptions(arr: readonly string[]) {
 }
 
 function PengeluaranPage() {
-  const { sekolah } = Route.useParams();
   const [kategori, setKategori] = useState("Semua");
   const [status, setStatus] = useState("Semua");
   const [metode, setMetode] = useState("Semua");
   const [search, setSearch] = useState("");
 
-  const scoped = useMemo(() => listPengeluaranForSekolah(sekolah), [sekolah]);
+  const { rows: scoped, isLoading } = usePengeluaranLive();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -145,7 +145,7 @@ function PengeluaranPage() {
         filters={filters}
       />
 
-      <SectionCard title={`${filtered.length} pengeluaran`} padded={false}>
+      <SectionCard title={isLoading ? "Memuat pengeluaran…" : `${filtered.length} pengeluaran`} padded={false}>
         <DataTable data={filtered} columns={cols} rowKey={(r) => r.id} />
       </SectionCard>
     </div>

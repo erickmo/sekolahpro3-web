@@ -2,8 +2,9 @@
  * Operasional › Tagihan (student billing).
  *
  * Bendahara/Kasir issue & track SPP and other student bills. Adds a role-aware
- * guide, a status distribution bar, and KPI counters over the existing table.
- * Mock-backed (../data/keuangan) until the backend Tagihan doctype lands.
+ * guide, a status distribution bar, and KPI counters over the table.
+ * Wired to the live `School Fee Invoice` doctype (vernon_accounting) via
+ * useTagihanLive, scoped to the active company.
  */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -26,13 +27,13 @@ import {
 import { DistributionBar, type DistributionSegment } from "../components/viz";
 import { KeuanganPageGuide } from "../components/keuangan";
 import {
-  listTagihanForSekolah,
   FILTER_OPTIONS,
   formatRupiah,
   formatTanggal,
   type TagihanRow,
   type StatusTagihan,
 } from "../data/keuangan";
+import { useTagihanLive } from "../data/keuangan-live";
 
 const TONE_TAGIHAN: Record<StatusTagihan, "success" | "warning" | "danger" | "brand" | "neutral"> = {
   Lunas: "success",
@@ -55,24 +56,19 @@ function buildOptions(arr: readonly string[]) {
 }
 
 function TagihanPage() {
-  const { sekolah } = Route.useParams();
   const [status, setStatus] = useState("Semua");
-  const [kelas, setKelas] = useState("Semua");
-  const [tahunAjaran, setTahunAjaran] = useState("Semua");
   const [search, setSearch] = useState("");
 
-  const scoped = useMemo(() => listTagihanForSekolah(sekolah), [sekolah]);
+  const { rows: scoped, isLoading } = useTagihanLive();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return scoped.filter((t) => {
       if (q && !`${t.siswa} ${t.judul} ${t.id}`.toLowerCase().includes(q)) return false;
       if (status !== "Semua" && t.status !== status) return false;
-      if (kelas !== "Semua" && t.kelas !== kelas) return false;
-      if (tahunAjaran !== "Semua" && t.tahunAjaran !== tahunAjaran) return false;
       return true;
     });
-  }, [scoped, search, status, kelas, tahunAjaran]);
+  }, [scoped, search, status]);
 
   const counts = useMemo(() => {
     const c = { Lunas: 0, Tertunda: 0, "Jatuh Tempo": 0, Cicilan: 0 } as Record<string, number>;
@@ -94,8 +90,6 @@ function TagihanPage() {
 
   const filters: SelectFilter[] = [
     { key: "status", label: "Status", value: status, options: buildOptions(FILTER_OPTIONS.statusTagihan), onChange: setStatus },
-    { key: "kelas", label: "Kelas", value: kelas, options: buildOptions(FILTER_OPTIONS.kelas), onChange: setKelas },
-    { key: "ta", label: "Tahun Ajaran", value: tahunAjaran, options: buildOptions(FILTER_OPTIONS.tahunAjaran), onChange: setTahunAjaran },
   ];
 
   const cols: Column<TagihanRow>[] = [
@@ -158,7 +152,7 @@ function TagihanPage() {
         filters={filters}
       />
 
-      <SectionCard title={`${filtered.length} tagihan`} padded={false}>
+      <SectionCard title={isLoading ? "Memuat tagihan…" : `${filtered.length} tagihan`} padded={false}>
         <DataTable data={filtered} columns={cols} rowKey={(r) => r.id} />
       </SectionCard>
     </div>
