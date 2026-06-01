@@ -124,9 +124,21 @@ export function computeNilaiAkhir(
   return totalNilai / totalBobot;
 }
 
-/** Passing threshold (KKM) used to classify a student's final score. */
+/** Fallback passing threshold (KKM) when no KKM is configured for the mapel. */
 export const KKM_DEFAULT = 75;
 const PERCENT_MAX = 100;
+
+/**
+ * Resolve the effective KKM (passing threshold) from queried KKM rows, falling
+ * back to {@link KKM_DEFAULT} when none is configured or the value is invalid.
+ * Honours per-mapel school policy instead of a hard-coded 75.
+ */
+export function resolveKkm(
+  rows: ReadonlyArray<{ nilai_kkm?: number | null }> | undefined,
+): number {
+  const v = rows?.[0]?.nilai_kkm;
+  return typeof v === "number" && !Number.isNaN(v) && v > 0 ? v : KKM_DEFAULT;
+}
 
 /** Aggregated progress / mastery snapshot for the whole class. */
 interface GridSummary {
@@ -160,6 +172,7 @@ export function buildSummary(
   anggota: AnggotaRombel[],
   grid: GridState,
   komponen: KomponenNilai[],
+  kkm: number = KKM_DEFAULT,
 ): GridSummary {
   const totalCells = anggota.length * komponen.length;
   let filledCells = 0;
@@ -171,7 +184,7 @@ export function buildSummary(
     filledCells += countFilledCells(row, komponen);
     const akhir = computeNilaiAkhir(row, komponen);
     if (akhir == null) belumDinilai += 1;
-    else if (akhir >= KKM_DEFAULT) tuntas += 1;
+    else if (akhir >= kkm) tuntas += 1;
     else belumTuntas += 1;
   }
   const fillPercent = totalCells === 0 ? 0 : (filledCells / totalCells) * PERCENT_MAX;
@@ -287,6 +300,18 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
     limit_page_length: 50,
   });
   const komponenList = useMemo(() => komponenQ.data ?? [], [komponenQ.data]);
+
+  // Per-mapel KKM (passing threshold) from Master Data, scoped to the period.
+  // Falls back to KKM_DEFAULT when none is configured (see resolveKkm).
+  const kkmQ = useResourceList<{ name: string; nilai_kkm?: number | null }>("KKM", {
+    fields: ["name", "nilai_kkm"],
+    filters: [
+      ["mata_pelajaran", "=", selection.mapel],
+      ["tahun_ajaran", "=", selection.tahunAjaran],
+    ],
+    limit_page_length: 1,
+  });
+  const kkm = useMemo(() => resolveKkm(kkmQ.data), [kkmQ.data]);
   const totalBobot = useMemo(
     () => komponenList.reduce((acc, k) => acc + Number(k.bobot ?? 0), 0),
     [komponenList],
@@ -367,8 +392,8 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
 
   // Class progress / mastery snapshot for the summary panel (derived data).
   const summary = useMemo(
-    () => buildSummary(anggota, grid, komponenList),
-    [anggota, grid, komponenList],
+    () => buildSummary(anggota, grid, komponenList, kkm),
+    [anggota, grid, komponenList, kkm],
   );
 
   const akademik = useAkademikContextOptional();

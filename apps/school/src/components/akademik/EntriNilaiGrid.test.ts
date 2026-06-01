@@ -22,6 +22,7 @@ import {
   countFilledCells,
   buildSummary,
   pendingSaveRows,
+  resolveKkm,
   KKM_DEFAULT,
   type CellState,
   type KomponenNilai,
@@ -114,10 +115,34 @@ describe("buildSummary", () => {
     expect(buildSummary(anggota, grid, [K1]).tuntas).toBe(1);
   });
 
+  it("honours a custom (per-mapel) KKM threshold", () => {
+    const anggota: AnggotaRombel[] = [{ siswa: "S1" }];
+    const grid: GridState = { S1: { K1: cs("80") } };
+    // 80 passes the default 75 but fails a stricter KKM of 85.
+    expect(buildSummary(anggota, grid, [K1], 85).belumTuntas).toBe(1);
+    expect(buildSummary(anggota, grid, [K1], 75).tuntas).toBe(1);
+  });
+
   it("guards against division by zero when there are no komponen", () => {
     const s = buildSummary([{ siswa: "S1" }], {}, []);
     expect(s.totalCells).toBe(0);
     expect(s.fillPercent).toBe(0);
+  });
+});
+
+describe("resolveKkm", () => {
+  it("uses the configured nilai_kkm when present", () => {
+    expect(resolveKkm([{ nilai_kkm: 80 }])).toBe(80);
+  });
+
+  it("falls back to the default when no KKM row exists", () => {
+    expect(resolveKkm([])).toBe(KKM_DEFAULT);
+    expect(resolveKkm(undefined)).toBe(KKM_DEFAULT);
+  });
+
+  it("falls back to the default for an invalid (null / non-positive) value", () => {
+    expect(resolveKkm([{ nilai_kkm: null }])).toBe(KKM_DEFAULT);
+    expect(resolveKkm([{ nilai_kkm: 0 }])).toBe(KKM_DEFAULT);
   });
 });
 
