@@ -29,6 +29,13 @@ import {
 import { perpToday } from "../components/perpustakaan/perpFormatters";
 import { insertAndSubmit } from "../components/perpustakaan/circulation";
 
+/** Class-loan window in days (longer than the individual terminal's 7). */
+const KOLEKTIF_LOAN_DAYS = 14;
+/** terminal_id stamped on records created from the web UI (not a kiosk). */
+const TERMINAL_WEB = "WEB-UI";
+/** Route param sentinel for an unsaved (new) record. */
+const NEW_RECORD = "new";
+
 type ItemRow = { eksemplar: string; nomor_inventaris?: string; judul_buku?: string };
 
 type Header = {
@@ -49,7 +56,7 @@ function defaultHeader(): Header {
   const today = perpToday();
   const plus14 = (() => {
     const d = new Date(today);
-    d.setDate(d.getDate() + 14);
+    d.setDate(d.getDate() + KOLEKTIF_LOAN_DAYS);
     return d.toISOString().slice(0, 10);
   })();
   return {
@@ -59,7 +66,7 @@ function defaultHeader(): Header {
     tanggal_kembali_rencana: plus14,
     status: "Aktif",
     tujuan: "",
-    terminal_id: "WEB-UI",
+    terminal_id: TERMINAL_WEB,
     catatan: "",
     items: [],
   };
@@ -86,7 +93,7 @@ function KolektifDetailPage() {
 
   const { name } = useParams({ from: "/sch/$sekolah/perpustakaan/kolektif/$name" });
   const navigate = useNavigate();
-  const isNew = name === "new";
+  const isNew = name === NEW_RECORD;
 
   const [doc, setDoc] = useState<Header>(() => defaultHeader());
   const [loading, setLoading] = useState(!isNew);
@@ -391,7 +398,7 @@ function PengembalianKolektifModal({
         rombongan: pinjam.rombongan,
         tanggal_kembali_aktual: tgl,
         jumlah_eksemplar_kembali: pinjam.items.length,
-        terminal_id: "WEB-UI",
+        terminal_id: TERMINAL_WEB,
         catatan,
       });
       // Patch pinjam header → Selesai (idempotent if the submit hook also sets it).

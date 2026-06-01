@@ -29,6 +29,8 @@ import { createResource, getResource, listResource, updateResource } from "@seko
 import { perpToday } from "../components/perpustakaan/perpFormatters";
 import { opnameDetailPath } from "../components/perpustakaan/inventarisNav";
 
+const OPNAME_DOCTYPE = "Stock Opname Perpustakaan";
+
 type ScanRow = {
   eksemplar: string;
   status_temuan: "Hadir" | "Hilang" | "Rusak";
@@ -99,7 +101,7 @@ function OpnameScanPage() {
     let cancelled = false;
     (async () => {
       try {
-        const d = await getResource<Header & { items?: ScanRow[] }>("Stock Opname Perpustakaan", name);
+        const d = await getResource<Header & { items?: ScanRow[] }>(OPNAME_DOCTYPE, name);
         if (!cancelled) {
           setDoc({
             ...defaultHeader(),
@@ -160,7 +162,7 @@ function OpnameScanPage() {
         })),
       };
       if (currentName === "new") {
-        const created = await createResource<{ name: string }>("Stock Opname Perpustakaan", payload);
+        const created = await createResource<{ name: string }>(OPNAME_DOCTYPE, payload);
         setCurrentName(created.name);
         if (typeof window !== "undefined") {
           window.localStorage.removeItem(lsKey("new"));
@@ -169,7 +171,7 @@ function OpnameScanPage() {
         // /sch/<sekolah> scope or the refresh 404s. PERP-GAP-05
         window.history.replaceState(null, "", opnameDetailPath(sekolah, created.name));
       } else {
-        await updateResource("Stock Opname Perpustakaan", currentName, payload);
+        await updateResource(OPNAME_DOCTYPE, currentName, payload);
       }
       setLastSaved(new Date());
       setDirty(false);
@@ -199,8 +201,6 @@ function OpnameScanPage() {
     const rusak = doc.items.filter((i) => i.status_temuan === "Rusak").length;
     return { total, hadir, hilang, rusak };
   }, [doc.items]);
-
-  const recentScans = useMemo(() => doc.items.slice(-10).reverse(), [doc.items]);
 
   const handleScan = async (raw: string) => {
     const eksemplar = raw.trim();
@@ -244,7 +244,7 @@ function OpnameScanPage() {
     setErr(null);
     try {
       if (dirty) await saveDraft();
-      await updateResource("Stock Opname Perpustakaan", currentName, { docstatus: 1 });
+      await updateResource(OPNAME_DOCTYPE, currentName, { docstatus: 1 });
       if (typeof window !== "undefined") window.localStorage.removeItem(lsKey(currentName));
       navigate({ to: "/sch/$sekolah/perpustakaan/inventaris/opname/$name", params: { sekolah, name: currentName } });
     } catch (e) {
@@ -512,10 +512,6 @@ function OpnameScanPage() {
           </div>
         </div>
       ) : null}
-
-      {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
-      {/* placeholder reference to silence unused recentScans */}
-      <span className="hidden">{recentScans.length}</span>
     </div>
   );
 }
