@@ -279,12 +279,14 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
     [cells, asesmenId, qc],
   );
 
-  const focusRow = useCallback((idx: number) => {
+  // Returns true when a row at `idx` exists and was focused; false signals the
+  // caller it has reached the end of the list (used to give Enter feedback).
+  const focusRow = useCallback((idx: number): boolean => {
     const el = inputRefs.current.get(idx);
-    if (el) {
-      el.focus();
-      el.select();
-    }
+    if (!el) return false;
+    el.focus();
+    el.select();
+    return true;
   }, []);
 
   const summary = useMemo(() => deriveSummary(cells), [cells]);
@@ -519,7 +521,7 @@ function NilaiRowItem({
   idx: number;
   onChange: (idx: number, value: string) => void;
   onSave: (idx: number) => void;
-  onEnter: (idx: number) => void;
+  onEnter: (idx: number) => boolean;
   registerRef: (el: HTMLInputElement | null) => void;
 }) {
   return (
@@ -547,7 +549,9 @@ function NilaiRowItem({
             if (e.key === "Enter") {
               e.preventDefault();
               onSave(idx);
-              onEnter(idx + 1);
+              // Advance to the next student; if this was the last row, blur so
+              // the user gets a clear "done" signal instead of a silent no-op.
+              if (!onEnter(idx + 1)) e.currentTarget.blur();
             }
           }}
           className={`w-20 rounded-md border bg-bg px-2 py-1.5 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-brand/40 ${

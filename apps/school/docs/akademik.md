@@ -51,6 +51,7 @@ Input nilai cepat **satu test untuk satu kelas** — alternatif ringan dari Entr
 | `…/akademik/asesmen` | Asesmen | Pilih rombel+mapel, list test, buat test baru |
 | `…/akademik/asesmen/$id` | Asesmen | Input nilai per siswa (autosave) |
 | `…/akademik/entri-nilai` | — | Rekap nilai per siswa × komponen |
+| `…/akademik/entri-nilai/edit` | Entri Nilai | Selector rombel/mapel/semester, lalu grid editor nilai per komponen |
 | `…/akademik/raport` | — | Susun & cetak raport |
 
 ## DocType Asesmen
