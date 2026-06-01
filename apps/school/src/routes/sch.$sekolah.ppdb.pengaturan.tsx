@@ -1,59 +1,98 @@
 /**
- * Pengaturan PPDB — Singleton form (no list).
+ * Pengaturan PPDB — singleton settings page (redesain).
  *
- * Edit Pengaturan PPDB (singleton doctype) langsung: kebijakan minimum
- * pembayaran + konfigurasi gateway. Untuk Item Pembayaran PPDB (child),
- * link ke desk Frappe karena child doctype tidak ditampilkan terpisah.
+ * Edits the singleton "Pengaturan PPDB" doctype. The form itself lives in the
+ * colocated {@link PengaturanPanel} (Formulir / Biaya / Alur sections + a
+ * first-run onboarding checklist); this route owns only data loading, the save
+ * persistence, the page header, feedback, and the in-page tutorial guide.
  */
 
-import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import {
-  Button,
-  PageHeader,
-  SearchableSelect,
-  SectionCard,
-} from "@sekolahpro/ui";
+import { useEffect, useState, type ReactNode } from "react";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { Button, PageHeader, SectionCard } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceUpdate } from "@sekolahpro/api-client";
+import { PageGuide } from "../components/guide/PageGuide";
+import {
+  PengaturanPanel,
+  type PengaturanDoc,
+} from "../components/ppdb/pengaturanPanel";
 
-type PengaturanDoc = {
-  name: string;
-  min_bayar_persen?: number;
-  full_bayar_untuk?: string;
-  wajib_seleksi_default?: number;
-  wajib_daftar_ulang?: number;
-  payment_gateway_provider?: string;
-  payment_gateway_is_sandbox?: number;
-  payment_gateway_api_key?: string;
-  payment_gateway_secret?: string;
-  format_no_pendaftaran?: string;
-};
-
+/** Singleton doctype name (doc name equals doctype for singletons). */
 const SINGLETON = "Pengaturan PPDB";
+/** Parent route id used to read the `sekolah` route param. */
+const SEKOLAH_ROUTE = "/sch/$sekolah";
+/** localStorage namespace for this page's tutorial guide. */
+const GUIDE_STORAGE_ID = "ppdb-pengaturan";
+/** Feedback shown after a successful save. */
+const SAVE_OK_MSG = "Pengaturan tersimpan.";
+/** Fallback feedback when a save fails without a message. */
+const SAVE_ERR_MSG = "Gagal menyimpan.";
 
-function PengaturanPpdbPage() {
+/** Tutorial steps explaining how to configure PPDB. */
+const GUIDE_STEPS = [
+  {
+    title: "Lengkapi langkah setup",
+    detail: "Ikuti checklist di atas hingga seluruh langkah awal selesai.",
+  },
+  {
+    title: "Atur formulir, biaya, dan alur",
+    detail: "Sesuaikan penomoran, minimum bayar, gateway, dan workflow seleksi.",
+  },
+  {
+    title: "Simpan perubahan",
+    detail: "Klik Simpan; pengaturan berlaku global untuk seluruh pendaftaran.",
+  },
+] as const;
+
+/** Tutorial tips for the pengaturan page. */
+const GUIDE_TIPS = [
+  "Item biaya per gelombang dikelola dari halaman Pembayaran.",
+  "Aktifkan Mode Sandbox saat menguji integrasi gateway.",
+] as const;
+
+/** Inline save feedback banner (success or error tone). */
+function FeedbackBanner({
+  feedback,
+}: {
+  feedback: { tone: "ok" | "err"; msg: string } | null;
+}): ReactNode {
+  if (!feedback) return null;
+  // WHY: emerald = success, rose = error — color-codes outcome at a glance.
+  const tone =
+    feedback.tone === "ok"
+      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+      : "border-rose-300 bg-rose-50 text-rose-800";
+  return <div className={`rounded-md border px-3 py-2 text-sm ${tone}`}>{feedback.msg}</div>;
+}
+
+/** Pengaturan PPDB page component. */
+function PengaturanPpdbPage(): ReactNode {
+  const { sekolah } = useParams({ from: SEKOLAH_ROUTE });
   const docQ = useResourceDoc<PengaturanDoc>(SINGLETON, SINGLETON);
   const update = useResourceUpdate<PengaturanDoc>(SINGLETON);
 
   const [draft, setDraft] = useState<Partial<PengaturanDoc>>({});
   const [feedback, setFeedback] = useState<{ tone: "ok" | "err"; msg: string } | null>(null);
 
+  // Hydrate the editable draft once the singleton doc loads.
   useEffect(() => {
     if (docQ.data) setDraft(docQ.data);
   }, [docQ.data]);
 
-  const set = <K extends keyof PengaturanDoc>(k: K, v: PengaturanDoc[K]) => {
-    setDraft((cur) => ({ ...cur, [k]: v }));
+  /** Update a single field in the draft without losing other edits. */
+  const set = <K extends keyof PengaturanDoc>(key: K, value: PengaturanDoc[K]): void => {
+    setDraft((cur) => ({ ...cur, [key]: value }));
   };
 
-  const save = async () => {
+  /** Persist the draft to the singleton doc and surface feedback. */
+  const save = async (): Promise<void> => {
     setFeedback(null);
     try {
       await update.mutateAsync({ name: SINGLETON, patch: draft as Record<string, unknown> });
-      setFeedback({ tone: "ok", msg: "Pengaturan tersimpan." });
+      setFeedback({ tone: "ok", msg: SAVE_OK_MSG });
       docQ.refetch();
     } catch (e) {
-      setFeedback({ tone: "err", msg: (e as Error)?.message ?? "Gagal menyimpan." });
+      setFeedback({ tone: "err", msg: (e as Error)?.message ?? SAVE_ERR_MSG });
     }
   };
 
@@ -61,7 +100,9 @@ function PengaturanPpdbPage() {
     return (
       <div className="space-y-6">
         <PageHeader eyebrow="PPDB" title="Pengaturan PPDB" />
-        <SectionCard><p className="text-sm text-muted-fg">Memuat...</p></SectionCard>
+        <SectionCard>
+          <p className="text-sm text-muted-fg">Memuat...</p>
+        </SectionCard>
       </div>
     );
   }
@@ -71,7 +112,7 @@ function PengaturanPpdbPage() {
       <PageHeader
         eyebrow="PPDB"
         title="Pengaturan PPDB"
-        description="Konfigurasi global modul PPDB: kebijakan pembayaran, format nomor, gateway."
+        description="Konfigurasi global modul PPDB: formulir, biaya, dan alur seleksi."
         actions={
           <Button onClick={save} disabled={update.isPending}>
             {update.isPending ? "Menyimpan..." : "Simpan"}
@@ -79,127 +120,28 @@ function PengaturanPpdbPage() {
         }
       />
 
-      {feedback && (
-        <div
-          className={
-            "rounded-md border px-3 py-2 text-sm " +
-            (feedback.tone === "ok"
-              ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-              : "border-rose-300 bg-rose-50 text-rose-800")
-          }
-        >
-          {feedback.msg}
-        </div>
-      )}
+      <PageGuide
+        storageId={GUIDE_STORAGE_ID}
+        intro="Atur kebijakan PPDB sekali di sini; berlaku untuk seluruh pendaftaran."
+        steps={[...GUIDE_STEPS]}
+        tips={[...GUIDE_TIPS]}
+      />
 
-      <SectionCard title="Kebijakan Pendaftaran" description="Aturan minimum bayar & default workflow.">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Minimum Bayar (%)" hint="Persen pembayaran wajib sebelum bisa diajukan.">
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={draft.min_bayar_persen ?? ""}
-              onChange={(e) => set("min_bayar_persen", e.target.value ? Number(e.target.value) : undefined)}
-              className={inputCls}
-            />
-          </Field>
-          <Field label="Wajib Lunas Saat" hint="Tahapan dimana lunas dipaksakan (mis. Diterima).">
-            <input
-              value={draft.full_bayar_untuk ?? ""}
-              onChange={(e) => set("full_bayar_untuk", e.target.value)}
-              className={inputCls}
-            />
-          </Field>
-          <Field label="Format No. Pendaftaran" hint="Pola naming Pendaftaran PPDB (mis. PPDB-.YYYY.-.####.)">
-            <input
-              value={draft.format_no_pendaftaran ?? ""}
-              onChange={(e) => set("format_no_pendaftaran", e.target.value)}
-              className={inputCls}
-            />
-          </Field>
-          <div className="space-y-2">
-            <Toggle
-              label="Wajib Seleksi (default)"
-              checked={!!draft.wajib_seleksi_default}
-              onChange={(v) => set("wajib_seleksi_default", v ? 1 : 0)}
-            />
-            <Toggle
-              label="Wajib Daftar Ulang"
-              checked={!!draft.wajib_daftar_ulang}
-              onChange={(v) => set("wajib_daftar_ulang", v ? 1 : 0)}
-            />
-          </div>
-        </div>
-      </SectionCard>
+      <FeedbackBanner feedback={feedback} />
 
-      <SectionCard title="Payment Gateway" description="Midtrans atau Xendit. Sandbox aktifkan untuk testing.">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Provider">
-            <SearchableSelect
-              value={draft.payment_gateway_provider ?? ""}
-              onChange={(v) => set("payment_gateway_provider", v)}
-              options={[
-                { value: "Midtrans", label: "Midtrans" },
-                { value: "Xendit", label: "Xendit" },
-              ]}
-              placeholder="— pilih —"
-              className={inputCls}
-            />
-          </Field>
-          <Toggle
-            label="Mode Sandbox"
-            checked={!!draft.payment_gateway_is_sandbox}
-            onChange={(v) => set("payment_gateway_is_sandbox", v ? 1 : 0)}
-          />
-          <Field label="API Key">
-            <input
-              value={draft.payment_gateway_api_key ?? ""}
-              onChange={(e) => set("payment_gateway_api_key", e.target.value)}
-              className={inputCls}
-              autoComplete="off"
-            />
-          </Field>
-          <Field label="API Secret">
-            <input
-              type="password"
-              value={draft.payment_gateway_secret ?? ""}
-              onChange={(e) => set("payment_gateway_secret", e.target.value)}
-              className={inputCls}
-              autoComplete="new-password"
-            />
-          </Field>
-        </div>
-      </SectionCard>
-
-      <p className="text-xs text-muted-fg">
-        Item Pembayaran PPDB adalah <em>child table</em> di Pembayaran PPDB —
-        kelola dari halaman <a href="/sch/$sekolah/ppdb/pembayaran" className="text-brand hover:underline">Pembayaran</a>.
-      </p>
+      <PengaturanPanel
+        draft={draft}
+        set={set}
+        renderLink={(href, children) => (
+          <Link to={href} params={{ sekolah }} className="text-brand hover:underline">
+            {children}
+          </Link>
+        )}
+      />
     </div>
   );
 }
 
-const inputCls =
-  "h-9 w-full rounded-md border border-border bg-bg px-3 text-sm focus:border-brand focus:outline-none";
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium text-muted-fg">{label}</span>
-      {children}
-      {hint ? <span className="mt-1 block text-[11px] text-muted-fg">{hint}</span> : null}
-    </label>
-  );
-}
-
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm cursor-pointer hover:border-brand">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span>{label}</span>
-    </label>
-  );
-}
-
-export const Route = createFileRoute("/sch/$sekolah/ppdb/pengaturan")({ component: PengaturanPpdbPage });
+export const Route = createFileRoute("/sch/$sekolah/ppdb/pengaturan")({
+  component: PengaturanPpdbPage,
+});

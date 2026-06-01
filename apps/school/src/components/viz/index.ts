@@ -3,3 +3,4 @@
  */
 export * from "./charts";
 export * from "./finance-charts";
+export * from "./advanced";

@@ -1,232 +1,218 @@
 /**
- * Daftar Ulang PPDB — pelunasan + finalisasi ke Siswa.
+ * Daftar Ulang PPDB — finalisasi pelamar diterima menjadi Siswa resmi.
  *
- * Setiap row menampilkan status daftar ulang; jika sudah Selesai DU dan
- * pendaftaran terkait masih Diterima/Daftar Ulang, tombol "Finalisasi"
- * memanggil `finalisasi_pendaftaran` untuk membuat record Siswa.
- * Setelah jadi siswa, kolom Siswa menampilkan link ke record baru.
+ * Redesain berbasis tahapan: untuk tiap pelamar yang DITERIMA, halaman
+ * menampilkan WorkflowStepper progres daftar ulang-nya dan satu aksi
+ * konfirmasi "Finalisasi" yang memanggil `finalisasi_pendaftaran` (membuat
+ * record Siswa, idempoten). Sebuah bilah penyelesaian di atas merangkum berapa
+ * pelamar yang sudah selesai daftar ulang vs masih menunggu.
+ *
+ * Sumber data saat ini = fixture mock {@link listPpdbForSekolah}; ganti ke
+ * hook @sekolahpro/api-client ketika backend daftar ulang siap.
  */
 
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useParams} from "@tanstack/react-router";
-import {
-  Badge,
-  Button,
-  DataTable,
-  FilterBar,
-  Modal,
-  PageHeader,
-  Pagination,
-  SectionCard,
-  type Column,
-} from "@sekolahpro/ui";
-import { useResourceList } from "@sekolahpro/api-client";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { Button, EmptyState, Modal, PageHeader, SectionCard } from "@sekolahpro/ui";
+import { DistributionBar, type DistributionSegment } from "../components/viz";
 import { useFinalisasiPendaftaran } from "../lib/ppdbApi";
+import { listPpdbForSekolah, type Pendaftar } from "../data/ppdb";
+import { PageGuide, type PageGuideStep } from "../components/guide/PageGuide";
+import { DaftarUlangApplicantCard } from "../components/ppdb/daftarUlangPanel";
 
-type Row = {
-  name: string;
-  pendaftaran_ppdb?: string;
-  siswa?: string;
-  status?: string;
-  tanggal_daftar_ulang?: string;
-  tahun_ajaran?: string;
-  rombongan_belajar_tujuan?: string;
-  gelombang_ppdb?: string;
-};
+// Status pendaftaran yang dianggap "diterima" → masuk alur daftar ulang.
+const ACCEPTED_STATUSES = new Set<Pendaftar["statusPendaftaran"]>([
+  "Diterima",
+  "Daftar Ulang",
+]);
 
-const STATUS_OPTIONS = ["Semua", "Pending", "Selesai", "Batal"];
-const PAGE_SIZE = 25;
+// Status final yang menandakan daftar ulang sudah tuntas.
+const STATUS_DONE: Pendaftar["statusPendaftaran"] = "Daftar Ulang";
 
-function DaftarUlangPage() {
+// Identitas guide untuk persistensi open/collapse di localStorage.
+const GUIDE_STORAGE_ID = "ppdb-daftar-ulang";
+const GUIDE_INTRO =
+  "Halaman ini menuntun pelamar yang sudah diterima menyelesaikan daftar ulang lalu difinalisasi menjadi Siswa resmi.";
+
+// Langkah panduan — string UI terpusat (no magic strings).
+const GUIDE_STEPS: PageGuideStep[] = [
+  { title: "Tinjau progres tahapan", detail: "Setiap kartu menampilkan stepper tahapan PPDB pelamar diterima." },
+  { title: "Pastikan pelunasan", detail: "Konfirmasi biaya daftar ulang sudah lunas sebelum finalisasi." },
+  { title: "Finalisasi", detail: "Klik Finalisasi untuk membuat record Siswa (aksi idempoten)." },
+];
+
+// Tips ringkas.
+const GUIDE_TIPS: string[] = [
+  "Bilah penyelesaian di atas merangkum berapa pelamar yang sudah selesai daftar ulang.",
+  "Finalisasi aman diulang — record Siswa tidak akan terduplikasi.",
+];
+
+// Segmen bilah penyelesaian — warna konsisten via Tone viz.
+const SEG_DONE_LABEL = "Selesai";
+const SEG_WAIT_LABEL = "Menunggu";
+
+/** Pisahkan pelamar diterima menjadi hitungan selesai vs menunggu. */
+function splitCompletion(list: Pendaftar[]): { done: number; waiting: number } {
+  const done = list.filter((p) => p.statusPendaftaran === STATUS_DONE).length;
+  return { done, waiting: list.length - done };
+}
+
+/** Bangun segmen DistributionBar penyelesaian daftar ulang. */
+function completionSegments(list: Pendaftar[]): DistributionSegment[] {
+  const { done, waiting } = splitCompletion(list);
+  return [
+    { label: SEG_DONE_LABEL, value: done, tone: "emerald" },
+    { label: SEG_WAIT_LABEL, value: waiting, tone: "amber" },
+  ];
+}
+
+interface Feedback {
+  tone: "ok" | "err";
+  msg: string;
+}
+
+/** Banner umpan-balik hasil finalisasi (sukses / gagal). */
+function FeedbackBanner({ feedback }: { feedback: Feedback }) {
+  // Warna mengikuti tone; teks selalu kontras agar mudah dibaca.
+  const className =
+    "rounded-lg border px-4 py-2 text-xs " +
+    (feedback.tone === "ok"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : "border-rose-200 bg-rose-50 text-rose-800");
+  return <div className={className}>{feedback.msg}</div>;
+}
+
+/** Susunan kartu daftar ulang per pelamar diterima. */
+function ApplicantGrid({
+  list,
+  onConfirm,
+  busy,
+}: {
+  list: Pendaftar[];
+  onConfirm: (p: Pendaftar) => void;
+  busy: boolean;
+}) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {list.map((p) => (
+        <DaftarUlangApplicantCard
+          key={p.noPendaftaran}
+          pendaftar={p}
+          onConfirm={onConfirm}
+          busy={busy}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** Isi detail modal konfirmasi finalisasi untuk satu pelamar. */
+function ConfirmDetail({ pendaftar }: { pendaftar: Pendaftar }) {
+  return (
+    <div className="space-y-2 text-sm">
+      <div>
+        <span className="text-muted-fg">Pelamar:</span>{" "}
+        <span className="font-medium">{pendaftar.namaLengkap}</span>
+      </div>
+      <div>
+        <span className="text-muted-fg">No. Pendaftaran:</span>{" "}
+        <span className="font-mono">{pendaftar.noPendaftaran}</span>
+      </div>
+      <div>
+        <span className="text-muted-fg">Tahun ajaran:</span>{" "}
+        <span>{pendaftar.tahunAjaran}</span>
+      </div>
+      <p className="text-xs text-muted-fg">
+        Pastikan pelunasan biaya daftar ulang sudah dikonfirmasi sebelum
+        melanjutkan. Aksi ini membuat record Siswa resmi.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Halaman Daftar Ulang PPDB. Memuat pelamar diterima dari fixture mock,
+ * menampilkan bilah penyelesaian + kartu per-pelamar, dan menjalankan
+ * finalisasi lewat modal konfirmasi.
+ */
+export function DaftarUlangPpdbPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
-
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("Semua");
-  const [page, setPage] = useState(1);
-  const [confirmRow, setConfirmRow] = useState<Row | null>(null);
-  const [feedback, setFeedback] = useState<{ tone: "ok" | "err"; msg: string } | null>(null);
-
   const finalisasi = useFinalisasiPendaftaran();
 
-  const params = useMemo(() => {
-    const filters: Array<[string, string, unknown]> = [];
-    if (status !== "Semua") filters.push(["status", "=", status]);
-    if (search.trim()) filters.push(["name", "like", `%${search.trim()}%`]);
-    return {
-      fields: [
-        "name", "pendaftaran_ppdb", "siswa", "status",
-        "tanggal_daftar_ulang", "tahun_ajaran", "rombongan_belajar_tujuan", "gelombang_ppdb",
-      ],
-      ...(filters.length ? { filters } : {}),
-      order_by: "`tanggal_daftar_ulang` desc",
-      limit_start: (page - 1) * PAGE_SIZE,
-      limit_page_length: PAGE_SIZE + 1,
-    };
-  }, [status, search, page]);
+  const [confirmRow, setConfirmRow] = useState<Pendaftar | null>(null);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
 
-  const q = useResourceList<Row>("Daftar Ulang PPDB", params);
-  const fetched = q.data ?? [];
-  const hasNext = fetched.length > PAGE_SIZE;
-  const rows = hasNext ? fetched.slice(0, PAGE_SIZE) : fetched;
+  // Pelamar diterima ter-scope ke sekolah aktif (memoized agar stabil).
+  const accepted = useMemo(
+    () =>
+      listPpdbForSekolah(sekolah).filter((p) =>
+        ACCEPTED_STATUSES.has(p.statusPendaftaran),
+      ),
+    [sekolah],
+  );
+  const segments = useMemo(() => completionSegments(accepted), [accepted]);
+  const { done, waiting } = useMemo(() => splitCompletion(accepted), [accepted]);
 
-  const onFinalisasi = async (r: Row) => {
-    if (!r.pendaftaran_ppdb) {
-      setFeedback({ tone: "err", msg: "Pendaftaran tidak ditemukan." });
-      return;
-    }
+  /** Jalankan finalisasi pendaftaran terpilih lalu tampilkan umpan-balik. */
+  const onFinalisasi = async (p: Pendaftar) => {
     setFeedback(null);
     try {
-      const res = (await finalisasi.mutateAsync({ pendaftaran_ppdb: r.pendaftaran_ppdb })) as
-        | { siswa?: string }
-        | undefined;
+      const res = (await finalisasi.mutateAsync({
+        pendaftaran_ppdb: p.noPendaftaran,
+      })) as { siswa?: string } | undefined;
       setConfirmRow(null);
       setFeedback({
         tone: "ok",
-        msg: res?.siswa
-          ? `Siswa dibuat: ${res.siswa}.`
-          : "Pendaftaran difinalisasi.",
+        msg: res?.siswa ? `Siswa dibuat: ${res.siswa}.` : "Pendaftaran difinalisasi.",
       });
-      q.refetch();
     } catch (e) {
       setFeedback({ tone: "err", msg: (e as Error)?.message ?? "Gagal finalisasi." });
     }
   };
-
-  const statTone = (s: string | undefined): "success" | "warning" | "danger" | "neutral" => {
-    if (s === "Selesai") return "success";
-    if (s === "Batal") return "danger";
-    if (s === "Pending") return "warning";
-    return "neutral";
-  };
-
-  const COLUMNS: Column<Row>[] = [
-    {
-      key: "name",
-      header: "ID",
-      cell: (r) => <span className="font-mono text-xs">{r.name}</span>,
-    },
-    {
-      key: "pendaftaran_ppdb",
-      header: "Pendaftaran",
-      cell: (r) =>
-        r.pendaftaran_ppdb ? (
-          <Link
-            to="/sch/$sekolah/ppdb/$noPendaftaran"
-            params={{ sekolah, noPendaftaran: r.pendaftaran_ppdb }}
-            className="font-mono text-xs text-brand hover:underline"
-          >
-            {r.pendaftaran_ppdb}
-          </Link>
-        ) : (
-          "—"
-        ),
-    },
-    { key: "tanggal_daftar_ulang", header: "Tanggal DU", cell: (r) => r.tanggal_daftar_ulang ?? "—" },
-    { key: "rombongan_belajar_tujuan", header: "Rombel Tujuan", cell: (r) => r.rombongan_belajar_tujuan ?? "—" },
-    {
-      key: "siswa",
-      header: "Siswa",
-      cell: (r) =>
-        r.siswa ? (
-          <Link to="/sch/$sekolah/siswa" params={{ sekolah }} className="text-xs text-emerald-700 hover:underline">
-            ✓ {r.siswa}
-          </Link>
-        ) : (
-          <span className="text-xs text-muted-fg">— belum difinalisasi</span>
-        ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      cell: (r) => (
-        <Badge tone={statTone(r.status)} dot>
-          {r.status ?? "—"}
-        </Badge>
-      ),
-    },
-    {
-      key: "aksi",
-      header: "Aksi",
-      align: "right",
-      cell: (r) => {
-        const canFinalisasi = r.status === "Selesai" && !r.siswa && !!r.pendaftaran_ppdb;
-        return (
-          <Button
-            size="sm"
-            disabled={!canFinalisasi || finalisasi.isPending}
-            onClick={() => setConfirmRow(r)}
-            className={canFinalisasi ? "!bg-emerald-600 hover:!bg-emerald-700 !text-white" : ""}
-            variant={canFinalisasi ? "default" : "outline"}
-            title={r.siswa ? "Sudah difinalisasi" : "Selesaikan daftar ulang terlebih dahulu"}
-          >
-            {r.siswa ? "Selesai" : "Finalisasi"}
-          </Button>
-        );
-      },
-    },
-  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="PPDB"
         title="Daftar Ulang PPDB"
-        description="Konfirmasi calon diterima → buat record Siswa resmi."
+        description="Selesaikan daftar ulang pelamar diterima → buat record Siswa resmi."
+        actions={
+          <Link
+            to="/sch/$sekolah/ppdb"
+            params={{ sekolah }}
+            className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm font-medium text-fg hover:bg-muted"
+          >
+            Kembali
+          </Link>
+        }
       />
 
-      <SectionCard padded={false}>
-        <div className="p-3">
-          <FilterBar
-            search={{
-              value: search,
-              onChange: (v) => {
-                setSearch(v);
-                setPage(1);
-              },
-              placeholder: "Cari ID daftar ulang...",
-            }}
-            filters={[
-              {
-                key: "status",
-                label: "Status",
-                value: status,
-                options: STATUS_OPTIONS.map((v) => ({ value: v, label: v })),
-                onChange: (v) => {
-                  setStatus(v);
-                  setPage(1);
-                },
-              },
-            ]}
-          />
-        </div>
+      <PageGuide
+        storageId={GUIDE_STORAGE_ID}
+        intro={GUIDE_INTRO}
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
 
-        {feedback && (
-          <div
-            className={
-              "border-b border-border px-4 py-2 text-xs " +
-              (feedback.tone === "ok"
-                ? "bg-emerald-50 text-emerald-800"
-                : "bg-rose-50 text-rose-800")
-            }
-          >
-            {feedback.msg}
-          </div>
-        )}
+      {accepted.length > 0 ? (
+        <SectionCard title="Penyelesaian Daftar Ulang" description={`${done} selesai • ${waiting} menunggu`}>
+          <DistributionBar segments={segments} />
+        </SectionCard>
+      ) : null}
 
-        <DataTable
-          data={rows}
-          columns={COLUMNS}
-          rowKey={(r) => r.name}
-          empty={q.isLoading ? "Memuat..." : q.isError ? "Gagal memuat." : "Belum ada daftar ulang."}
+      {feedback ? <FeedbackBanner feedback={feedback} /> : null}
+
+      {accepted.length === 0 ? (
+        <SectionCard>
+          <EmptyAccepted sekolah={sekolah} />
+        </SectionCard>
+      ) : (
+        <ApplicantGrid
+          list={accepted}
+          onConfirm={setConfirmRow}
+          busy={finalisasi.isPending}
         />
-
-        <Pagination
-          page={page}
-          pageSize={PAGE_SIZE}
-          total={(page - 1) * PAGE_SIZE + rows.length + (hasNext ? 1 : 0)}
-          onPageChange={setPage}
-        />
-      </SectionCard>
+      )}
 
       <Modal
         open={!!confirmRow}
@@ -236,40 +222,43 @@ function DaftarUlangPage() {
         tone="emerald"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setConfirmRow(null)}>Batal</Button>
+            <Button variant="outline" onClick={() => setConfirmRow(null)}>
+              Batal
+            </Button>
             <Button
               disabled={finalisasi.isPending}
               onClick={() => confirmRow && onFinalisasi(confirmRow)}
-              className="!bg-emerald-600 hover:!bg-emerald-700 !text-white"
             >
-              {finalisasi.isPending ? "Memproses..." : "Finalisasi Sekarang"}
+              {finalisasi.isPending ? "Memproses..." : "Finalisasi"}
             </Button>
           </div>
         }
       >
-        {confirmRow && (
-          <div className="space-y-2 text-sm">
-            <div>
-              <span className="text-muted-fg">Pendaftaran:</span>{" "}
-              <span className="font-mono">{confirmRow.pendaftaran_ppdb}</span>
-            </div>
-            <div>
-              <span className="text-muted-fg">Rombel tujuan:</span>{" "}
-              <span>{confirmRow.rombongan_belajar_tujuan ?? "—"}</span>
-            </div>
-            <div>
-              <span className="text-muted-fg">Tahun ajaran:</span>{" "}
-              <span>{confirmRow.tahun_ajaran ?? "—"}</span>
-            </div>
-            <p className="text-xs text-muted-fg">
-              Pastikan pelunasan biaya pendaftaran sudah dikonfirmasi sebelum
-              melanjutkan.
-            </p>
-          </div>
-        )}
+        {confirmRow ? <ConfirmDetail pendaftar={confirmRow} /> : null}
       </Modal>
     </div>
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb/daftar-ulang")({ component: DaftarUlangPage });
+/** Tampilan kosong saat belum ada pelamar diterima di sekolah aktif. */
+function EmptyAccepted({ sekolah }: { sekolah: string }) {
+  return (
+    <EmptyState
+      title="Belum ada pelamar diterima"
+      description="Pelamar akan muncul di sini setelah hasil seleksi diumumkan dan statusnya menjadi Diterima."
+      action={
+        <Link
+          to="/sch/$sekolah/ppdb/seleksi"
+          params={{ sekolah }}
+          className="inline-flex h-9 items-center rounded-md bg-brand px-4 text-sm font-medium text-white hover:bg-brand/90"
+        >
+          Ke halaman Seleksi
+        </Link>
+      }
+    />
+  );
+}
+
+export const Route = createFileRoute("/sch/$sekolah/ppdb/daftar-ulang")({
+  component: DaftarUlangPpdbPage,
+});
