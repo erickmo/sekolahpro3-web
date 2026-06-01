@@ -16,6 +16,12 @@ type Row = {
   berlaku_sampai?: string;
 };
 
+const RESERVASI_TONE: Record<string, "brand" | "success" | "warning" | "neutral"> = {
+  Aktif: "brand",
+  Dipenuhi: "success",
+  Kedaluwarsa: "warning",
+};
+
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "No. Reservasi", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
   { key: "buku", header: "Buku", sortable: true, cell: (r) => r.buku },
@@ -23,7 +29,7 @@ const COLUMNS: Column<Row>[] = [
   { key: "posisi_antrian", header: "Antrian", align: "right", sortable: true,
     cell: (r) => <span className="tabular-nums">#{r.posisi_antrian}</span> },
   { key: "status", header: "Status",
-    cell: (r) => <Badge tone={r.status === "Aktif" ? "brand" : r.status === "Dipenuhi" ? "success" : r.status === "Kedaluwarsa" ? "warning" : "neutral"} dot>{r.status}</Badge> },
+    cell: (r) => <Badge tone={RESERVASI_TONE[r.status] ?? "neutral"} dot>{r.status}</Badge> },
   { key: "tanggal_reservasi", header: "Tgl Reservasi", sortable: true, cell: (r) => r.tanggal_reservasi },
 ];
 

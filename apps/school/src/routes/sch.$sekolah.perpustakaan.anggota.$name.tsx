@@ -36,7 +36,7 @@ function PeminjamanAktifSection({ items, onReturn }: PeminjamanAktifSectionProps
     <section className="mt-6">
       <h3 className="text-sm font-semibold mb-2">Peminjaman Aktif ({items.length})</h3>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Tidak ada peminjaman aktif</p>
+        <p className="text-sm text-muted-fg">Tidak ada peminjaman aktif</p>
       ) : (
         <ul className="divide-y divide-border">
           {items.map((p) => (

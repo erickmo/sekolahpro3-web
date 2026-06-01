@@ -503,7 +503,7 @@ function PerpustakaanDashboardPage() {
           title="Perlu Perhatian"
           description="Peminjaman terlambat, hilang, atau jatuh tempo hari ini."
           action={
-            <Link to="/sch/$sekolah/perpustakaan/denda" params={{ sekolah }} className="text-xs text-brand hover:underline">
+            <Link to="/sch/$sekolah/perpustakaan/peminjaman" params={{ sekolah }} search={{ denda: "ada" }} className="text-xs text-brand hover:underline">
               Lihat semua
             </Link>
           }
