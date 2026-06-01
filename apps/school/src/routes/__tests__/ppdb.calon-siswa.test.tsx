@@ -2,8 +2,10 @@
  * Tests untuk halaman Calon Siswa (direktori kartu pendaftar PPDB).
  *
  * Memverifikasi:
- *  - kartu pendaftar muncul dari sumber data mock listPpdbForSekolah
- *  - memfilter berdasarkan status mengecilkan himpunan kartu yang tampil
+ *  - kartu pendaftar muncul dari sumber LIVE useResourceList("Calon Siswa")
+ *  - ketika query live kosong, jatuh ke mock listPpdbForSekolah (fallback)
+ *  - cincin kelengkapan dokumen di-merge dari useDokumenLive (live override)
+ *  - memfilter berdasarkan status mengecilkan himpunan kartu (mock-fallback)
  *  - EmptyState tampil ketika filter tidak menyisakan kartu apa pun
  *  - PageGuide ("Cara pakai halaman ini") dirender
  */
@@ -27,17 +29,33 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
 }));
 
-// Sumber data: stub mock PPDB agar dataset deterministik di test.
+// Sumber data fallback: stub mock PPDB agar dataset deterministik di test.
 vi.mock("../../data/ppdb", async () => {
   const actual =
     await vi.importActual<typeof import("../../data/ppdb")>("../../data/ppdb");
   return { ...actual, listPpdbForSekolah: vi.fn() };
 });
 
+// Sumber data live: useResourceList (Calon Siswa) di-stub.
+vi.mock("@sekolahpro/api-client", () => ({
+  useResourceList: vi.fn(),
+}));
+
+// Dokumen completeness live: useDokumenLive di-stub agar terpisah dari list.
+vi.mock("../../lib/ppdbLive", async () => {
+  const actual =
+    await vi.importActual<typeof import("../../lib/ppdbLive")>(
+      "../../lib/ppdbLive",
+    );
+  return { ...actual, useDokumenLive: vi.fn() };
+});
+
+import { useResourceList } from "@sekolahpro/api-client";
+import { useDokumenLive } from "../../lib/ppdbLive";
 import { listPpdbForSekolah, type Pendaftar } from "../../data/ppdb";
 import { CalonSiswaPage } from "../sch.$sekolah.ppdb.calon-siswa";
 
-/** Bangun satu Pendaftar minimal untuk fixture test (field non-relevan diisi aman). */
+/** Bangun satu Pendaftar minimal untuk fixture fallback (field non-relevan diisi aman). */
 function makePendaftar(overrides: Partial<Pendaftar>): Pendaftar {
   const base: Pendaftar = {
     noPendaftaran: "PPDB-2026-000001",
@@ -71,7 +89,7 @@ function makePendaftar(overrides: Partial<Pendaftar>): Pendaftar {
   return { ...base, ...overrides };
 }
 
-const FIXTURE: Pendaftar[] = [
+const FALLBACK_FIXTURE: Pendaftar[] = [
   makePendaftar({
     noPendaftaran: "PPDB-2026-000001",
     namaLengkap: "Arka Pradipta",
@@ -95,6 +113,35 @@ const FIXTURE: Pendaftar[] = [
   }),
 ];
 
+/** Dua baris live "Calon Siswa" (whitelisted fields) untuk skenario live. */
+const LIVE_CALON_SISWA = [
+  {
+    name: "CALON-001",
+    nama_lengkap: "Livia Anggraini",
+    nisn: "0098765432",
+    jenis_kelamin: "Perempuan",
+    jenjang: "SD",
+  },
+  {
+    name: "CALON-002",
+    nama_lengkap: "Damar Wicaksono",
+    nisn: "0091234567",
+    jenis_kelamin: "Laki-laki",
+    jenjang: "SMP",
+  },
+];
+
+/** Dokumen live untuk CALON-001: 1 dari 2 diterima → 50%. */
+const LIVE_DOKUMEN = [
+  { name: "DOC-1", pendaftaran_ppdb: "CALON-001", jenis: "KK", status: "Diterima" },
+  { name: "DOC-2", pendaftaran_ppdb: "CALON-001", jenis: "Akta", status: "Belum" },
+];
+
+/** Helper: bentuk minimal useQuery result yang dipakai halaman ({ data }). */
+function asQuery<T>(data: T) {
+  return { data } as unknown as ReturnType<typeof useResourceList>;
+}
+
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
@@ -102,18 +149,41 @@ function wrap(ui: ReactNode) {
 
 describe("CalonSiswaPage", () => {
   beforeEach(() => {
-    vi.mocked(listPpdbForSekolah).mockReturnValue(FIXTURE);
+    vi.mocked(listPpdbForSekolah).mockReturnValue(FALLBACK_FIXTURE);
+    // Default: live Calon Siswa list kosong → halaman pakai mock fallback.
+    vi.mocked(useResourceList).mockReturnValue(asQuery([]));
+    vi.mocked(useDokumenLive).mockReturnValue(asQuery([]) as never);
   });
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
-  it("merender kartu untuk setiap pendaftar dari sumber data", () => {
+  it("merender kartu dari sumber LIVE useResourceList Calon Siswa", () => {
+    vi.mocked(useResourceList).mockReturnValue(asQuery(LIVE_CALON_SISWA));
+    wrap(<CalonSiswaPage />);
+    expect(screen.getByText("Livia Anggraini")).toBeInTheDocument();
+    expect(screen.getByText("Damar Wicaksono")).toBeInTheDocument();
+    // Nama mock TIDAK muncul ketika live menyediakan data.
+    expect(screen.queryByText("Arka Pradipta")).toBeNull();
+  });
+
+  it("jatuh ke mock listPpdbForSekolah ketika live Calon Siswa kosong", () => {
+    vi.mocked(useResourceList).mockReturnValue(asQuery([]));
     wrap(<CalonSiswaPage />);
     expect(screen.getByText("Arka Pradipta")).toBeInTheDocument();
     expect(screen.getByText("Naya Kirana")).toBeInTheDocument();
     expect(screen.getByText("Bima Saputra")).toBeInTheDocument();
+  });
+
+  it("memakai cincin kelengkapan dokumen dari useDokumenLive (live override)", () => {
+    vi.mocked(useResourceList).mockReturnValue(asQuery(LIVE_CALON_SISWA));
+    vi.mocked(useDokumenLive).mockReturnValue(asQuery(LIVE_DOKUMEN) as never);
+    wrap(<CalonSiswaPage />);
+    const card = screen.getByText("Livia Anggraini").closest("article");
+    expect(card).not.toBeNull();
+    // ProgressRing me-render persentase live (50%) untuk CALON-001.
+    expect(within(card as HTMLElement).getByText(/50/)).toBeInTheDocument();
   });
 
   it("merender PageGuide cara pakai halaman", () => {
@@ -121,7 +191,7 @@ describe("CalonSiswaPage", () => {
     expect(screen.getByText(/cara pakai halaman ini/i)).toBeInTheDocument();
   });
 
-  it("memfilter berdasarkan status mengecilkan himpunan kartu", () => {
+  it("memfilter berdasarkan status mengecilkan himpunan kartu (fallback)", () => {
     wrap(<CalonSiswaPage />);
     // Awalnya ketiga nama tampil.
     expect(screen.getByText("Naya Kirana")).toBeInTheDocument();
@@ -155,7 +225,7 @@ describe("CalonSiswaPage", () => {
     expect(screen.queryByText("Arka Pradipta")).toBeNull();
   });
 
-  it("setiap kartu menampilkan badge jenjang & jalur pendaftar", () => {
+  it("setiap kartu menampilkan badge jenjang & jalur pendaftar (fallback)", () => {
     wrap(<CalonSiswaPage />);
     const card = screen.getByText("Naya Kirana").closest("article");
     expect(card).not.toBeNull();

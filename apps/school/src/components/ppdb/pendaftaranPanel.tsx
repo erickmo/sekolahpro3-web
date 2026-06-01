@@ -4,27 +4,21 @@
  * Extracted from the route file so the page stays under the 300-line budget
  * (Vernon). ONLY sch.$sekolah.ppdb.daftar.tsx imports this module.
  *
- * Enrichment rationale: the live backend list is lean (name/status/gelombang/
- * calon/tanggal). To preview the richer redesign (doc-completeness + payment
- * health) before those fields land in the API, we match each row to the mock
- * {@link Pendaftar} fixture by candidate name and derive the extras locally.
+ * Enrichment source (GAP 4): the doc-completeness ring and payment-health dot
+ * are derived from the LIVE Dokumen PPDB + Pembayaran PPDB lists, keyed by
+ * `pendaftaran_ppdb` = row.name. When live has no entry for a given row we fall
+ * back to matching the mock {@link Pendaftar} fixture by candidate name, so the
+ * table never goes blank when the backend returns nothing for that pendaftaran.
  */
 
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Badge, Button, Modal, type Column } from "@sekolahpro/ui";
+import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { DistributionBar, ProgressRing } from "../viz";
 import { docCompleteness, statusDistribution } from "../../lib/ppdbAnalytics";
-import { TONE_BY_STATUS, type VerifikasiStatus } from "../../lib/ppdbApi";
-import type { Pendaftar, PembayaranPpdbRow } from "../../data/ppdb";
-
-// Target statuses offered by the bulk-verifikasi modal (whitelisted endpoint).
-const VERIFIKASI_OPTIONS: VerifikasiStatus[] = [
-  "Diverifikasi",
-  "Seleksi",
-  "Diterima",
-  "Ditolak",
-];
+import { TONE_BY_STATUS } from "../../lib/ppdbApi";
+import type { PembayaranLiveRow } from "../../lib/ppdbLive";
+import type { Pendaftar } from "../../data/ppdb";
 
 /** Lean row shape returned by the Pendaftaran PPDB list endpoint. */
 export interface PendaftaranRow {
@@ -37,6 +31,22 @@ export interface PendaftaranRow {
 
 /** Aggregate payment health derived from a pendaftar's payment rows. */
 type PaymentHealth = "Lunas" | "Cicilan" | "Tertunda" | "—";
+
+/** A resolved doc-completeness ring value (live- or mock-derived). */
+type DocStats = { done: number; total: number; pct: number };
+
+/** Live enrichment maps keyed by pendaftaran_ppdb (= row.name). */
+export interface LiveEnrichment {
+  /** Per-pendaftaran doc completeness from useDokumenLive (empty when none). */
+  docByPendaftaran: Record<string, DocStats>;
+  /** Per-pendaftaran payment health from usePembayaranLive (empty when none). */
+  paymentByPendaftaran: Record<string, PaymentHealth>;
+}
+
+// Payment-status strings shared by mock + live rows (backend vocabulary).
+const STATUS_TERTUNDA = "Tertunda";
+const STATUS_CICILAN = "Cicilan";
+const STATUS_LUNAS = "Lunas";
 
 // Dot color per payment health — Tailwind theme tokens, never raw hex.
 const PAYMENT_DOT_CLASS: Record<PaymentHealth, string> = {
@@ -51,15 +61,37 @@ const RING_SIZE = 40;
 const RING_THICKNESS = 5;
 
 /**
- * Reduce a pendaftar's payment rows to one aggregate health badge.
- * Priority reflects urgency: any Tertunda dominates, then Cicilan, else Lunas.
+ * Reduce payment rows (mock OR live — both carry a `status` field) to one
+ * aggregate health. Priority reflects urgency: any Tertunda dominates, then
+ * Cicilan, else Lunas. Empty input yields the em-dash placeholder.
  */
-export function paymentHealth(rows: PembayaranPpdbRow[]): PaymentHealth {
+export function paymentHealth(rows: { status?: string }[]): PaymentHealth {
   if (rows.length === 0) return EMPTY_DASH;
   // Early returns by descending urgency so the dot surfaces the worst state.
-  if (rows.some((r) => r.status === "Tertunda")) return "Tertunda";
-  if (rows.some((r) => r.status === "Cicilan")) return "Cicilan";
-  return "Lunas";
+  if (rows.some((r) => r.status === STATUS_TERTUNDA)) return STATUS_TERTUNDA;
+  if (rows.some((r) => r.status === STATUS_CICILAN)) return STATUS_CICILAN;
+  return STATUS_LUNAS;
+}
+
+/**
+ * Build a pendaftaran_ppdb → payment-health map from live Pembayaran rows.
+ * Rows are bucketed by their owning pendaftaran, then each bucket reduced via
+ * {@link paymentHealth}. Rows without a pendaftaran_ppdb key are skipped.
+ */
+export function paymentHealthByPendaftaranLive(
+  rows: PembayaranLiveRow[],
+): Record<string, PaymentHealth> {
+  const buckets = new Map<string, PembayaranLiveRow[]>();
+  for (const row of rows) {
+    const key = row.pendaftaran_ppdb;
+    if (!key) continue; // unattributed payment — cannot key a dot.
+    const list = buckets.get(key) ?? [];
+    list.push(row);
+    buckets.set(key, list);
+  }
+  const out: Record<string, PaymentHealth> = {};
+  for (const [key, list] of buckets) out[key] = paymentHealth(list);
+  return out;
 }
 
 /** Build a name → mock Pendaftar lookup so enrichment is O(1) per row. */
@@ -82,10 +114,35 @@ function matchPendaftar(
   return byName.get(key);
 }
 
+/** Doc-completeness for a row: LIVE map (by row.name) first, else mock match. */
+function resolveDocStats(
+  row: PendaftaranRow,
+  live: Record<string, DocStats>,
+  byName: Map<string, Pendaftar>,
+): DocStats | undefined {
+  const liveStats = live[row.name];
+  // Live wins when present (total > 0 means the backend actually returned docs).
+  if (liveStats && liveStats.total > 0) return liveStats;
+  const matched = matchPendaftar(row, byName);
+  return matched ? docCompleteness(matched) : undefined;
+}
+
+/** Payment health for a row: LIVE map (by row.name) first, else mock, else —. */
+function resolvePaymentHealth(
+  row: PendaftaranRow,
+  live: Record<string, PaymentHealth>,
+  byName: Map<string, Pendaftar>,
+): PaymentHealth {
+  const liveHealth = live[row.name];
+  if (liveHealth) return liveHealth;
+  const matched = matchPendaftar(row, byName);
+  return matched ? paymentHealth(matched.pembayaran) : EMPTY_DASH;
+}
+
 /** Doc-completeness mini ring cell — shows pct of accepted documents. */
-function DocCell({ matched }: { matched: Pendaftar | undefined }): ReactNode {
-  if (!matched) return <span className="text-xs text-muted-fg">{EMPTY_DASH}</span>;
-  const { done, total, pct } = docCompleteness(matched);
+function DocCell({ stats }: { stats: DocStats | undefined }): ReactNode {
+  if (!stats) return <span className="text-xs text-muted-fg">{EMPTY_DASH}</span>;
+  const { done, total, pct } = stats;
   return (
     <div className="flex items-center gap-2">
       <ProgressRing value={pct} size={RING_SIZE} thickness={RING_THICKNESS} />
@@ -97,8 +154,7 @@ function DocCell({ matched }: { matched: Pendaftar | undefined }): ReactNode {
 }
 
 /** Payment-health dot cell — single colored dot summarizing payment state. */
-function PaymentCell({ matched }: { matched: Pendaftar | undefined }): ReactNode {
-  const health: PaymentHealth = matched ? paymentHealth(matched.pembayaran) : EMPTY_DASH;
+function PaymentCell({ health }: { health: PaymentHealth }): ReactNode {
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
@@ -112,11 +168,13 @@ function PaymentCell({ matched }: { matched: Pendaftar | undefined }): ReactNode
 
 /**
  * Column set for the enriched Pendaftaran table: base identity columns plus the
- * doc-completeness ring and payment-health dot derived from the mock fixture.
+ * doc-completeness ring and payment-health dot. Enrichment reads the LIVE maps
+ * first (keyed by row.name) and falls back to the mock fixture by candidate name.
  */
 export function buildEnrichedColumns(
   sekolah: string,
   byName: Map<string, Pendaftar>,
+  live: LiveEnrichment,
 ): Column<PendaftaranRow>[] {
   return [
     {
@@ -138,12 +196,14 @@ export function buildEnrichedColumns(
     {
       key: "dokumen",
       header: "Dokumen",
-      cell: (r) => <DocCell matched={matchPendaftar(r, byName)} />,
+      cell: (r) => <DocCell stats={resolveDocStats(r, live.docByPendaftaran, byName)} />,
     },
     {
       key: "pembayaran",
       header: "Pembayaran",
-      cell: (r) => <PaymentCell matched={matchPendaftar(r, byName)} />,
+      cell: (r) => (
+        <PaymentCell health={resolvePaymentHealth(r, live.paymentByPendaftaran, byName)} />
+      ),
     },
     { key: "tanggal_daftar", header: "Tanggal Daftar", sortable: true, cell: (r) => r.tanggal_daftar ?? EMPTY_DASH },
     {
@@ -174,61 +234,54 @@ export function StatusDistributionStrip({ rows }: { rows: PendaftaranRow[] }): R
   );
 }
 
-export interface BulkVerifikasiModalProps {
-  open: boolean;
+export interface BulkActionBarProps {
   count: number;
-  target: VerifikasiStatus;
-  pending: boolean;
-  onSelect: (status: VerifikasiStatus) => void;
-  onConfirm: () => void;
-  onClose: () => void;
+  canAjukan: boolean;
+  ajukanPending: boolean;
+  verifikasiPending: boolean;
+  onAjukan: () => void;
+  onVerifikasi: () => void;
+  onCancel: () => void;
 }
 
-/** Target-status chip — toggled selected styling, no magic class strings. */
-function TargetChip({
-  status, active, onClick,
-}: { status: VerifikasiStatus; active: boolean; onClick: () => void }): ReactNode {
-  const base = "rounded-md border px-3 py-1.5 text-xs font-medium transition ";
-  const variant = active
-    ? "border-brand bg-brand text-white"
-    : "border-border bg-card hover:border-brand";
-  return (
-    <button type="button" onClick={onClick} className={base + variant}>
-      {status}
-    </button>
-  );
-}
+// Tooltip shown when Ajukan Massal is disabled (non-Draft rows in selection).
+const AJUKAN_DISABLED_HINT = "Hanya pendaftaran berstatus Draft yang bisa diajukan";
 
-/** Modal letting a manager pick the target status for a bulk verification. */
-export function BulkVerifikasiModal({
-  open, count, target, pending, onSelect, onConfirm, onClose,
-}: BulkVerifikasiModalProps): ReactNode {
+/** Selection toolbar above the table — bulk Ajukan/Verifikasi/Batal actions. */
+export function BulkActionBar({
+  count, canAjukan, ajukanPending, verifikasiPending, onAjukan, onVerifikasi, onCancel,
+}: BulkActionBarProps): ReactNode {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={`Verifikasi ${count} Pendaftaran`}
-      tone="brand"
-      footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button onClick={onConfirm} disabled={pending}>
-            {pending ? "Memproses..." : "Konfirmasi"}
-          </Button>
-        </div>
-      }
-    >
-      <div>
-        <label className="mb-2 block text-xs font-medium text-muted-fg">Status Tujuan</label>
-        <div className="flex flex-wrap gap-2">
-          {VERIFIKASI_OPTIONS.map((s) => (
-            <TargetChip key={s} status={s} active={target === s} onClick={() => onSelect(s)} />
-          ))}
-        </div>
+    <div className="flex flex-wrap items-center gap-3 border-y border-border bg-brand/5 px-4 py-3">
+      <span className="text-sm text-fg">
+        <strong className="tabular-nums">{count}</strong> dipilih
+      </span>
+      <div className="ml-auto flex flex-wrap gap-2">
+        <Button
+          size="sm" variant="outline"
+          disabled={!canAjukan || ajukanPending}
+          onClick={onAjukan}
+          title={canAjukan ? "" : AJUKAN_DISABLED_HINT}
+        >
+          Ajukan Massal
+        </Button>
+        <Button size="sm" variant="outline" disabled={verifikasiPending} onClick={onVerifikasi}>
+          Verifikasi Massal
+        </Button>
+        <Button size="sm" variant="outline" onClick={onCancel}>
+          Batal
+        </Button>
       </div>
-    </Modal>
+    </div>
   );
 }
+
+// Bulk-verification modal lives in its own file (Vernon 300-line budget);
+// re-exported here so the route imports everything from one panel module.
+export {
+  BulkVerifikasiModal,
+  type BulkVerifikasiModalProps,
+} from "./bulkVerifikasiModal";
 
 // Static guide content — Bahasa Indonesia UI strings, no inline magic strings.
 export const PENDAFTARAN_GUIDE = {

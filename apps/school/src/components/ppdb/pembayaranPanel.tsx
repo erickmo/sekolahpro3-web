@@ -27,7 +27,9 @@ import {
   paymentStatusDistribution,
   paymentAging,
   type AgingRow,
+  type PaymentSummary,
 } from "../../lib/ppdbAnalytics";
+import type { DistributionSegment } from "../viz/charts";
 import { formatRupiah, type Pendaftar } from "../../data/ppdb";
 
 // Ambang umur tunggakan (hari) sebelum dianggap perlu ditindaklanjuti.
@@ -38,10 +40,19 @@ const AGING_PREVIEW_LIMIT = 8;
 const AGING_REGION_LABEL = "Tunggakan pembayaran (aging)";
 
 interface PembayaranPanelProps {
-  /** Daftar pendaftar tersaring per sekolah (sumber agregasi pembayaran). */
+  /** Daftar pendaftar tersaring per sekolah (sumber agregasi pembayaran mock). */
   list: Pendaftar[];
   /** Tanggal hari ini (ISO) untuk perhitungan umur tunggakan. */
   todayIso: string;
+  /**
+   * Ringkasan dana dari data live (Pembayaran PPDB). Bila ada, dipakai
+   * menggantikan agregasi mock; bila undefined, panel jatuh ke mock.
+   */
+  liveSummary?: PaymentSummary;
+  /** Distribusi status dari data live; fallback ke mock saat undefined. */
+  liveDistribution?: DistributionSegment[];
+  /** Daftar aging dari data live; fallback ke mock saat undefined. */
+  liveAging?: AgingRow[];
 }
 
 /** Satu kartu metrik kecil di header panel (label + nilai rupiah). */
@@ -177,12 +188,26 @@ function RecordPaymentModal({
  * Panel analitik pembayaran: gauge terkumpul-vs-tagihan, donut status, dan
  * daftar aging tunggakan dengan modal pencatatan manual.
  */
-export function PembayaranPanel({ list, todayIso }: PembayaranPanelProps): ReactNode {
-  const summary = useMemo(() => paymentSummary(list), [list]);
-  const distribution = useMemo(() => paymentStatusDistribution(list), [list]);
+export function PembayaranPanel({
+  list,
+  todayIso,
+  liveSummary,
+  liveDistribution,
+  liveAging,
+}: PembayaranPanelProps): ReactNode {
+  // Live values win when the backend returns data; otherwise the existing mock
+  // aggregation drives the panel so a blank backend degrades gracefully.
+  const summary = useMemo(
+    () => liveSummary ?? paymentSummary(list),
+    [liveSummary, list],
+  );
+  const distribution = useMemo(
+    () => liveDistribution ?? paymentStatusDistribution(list),
+    [liveDistribution, list],
+  );
   const aging = useMemo(
-    () => paymentAging(list, todayIso, AGING_THRESHOLD_DAYS),
-    [list, todayIso],
+    () => liveAging ?? paymentAging(list, todayIso, AGING_THRESHOLD_DAYS),
+    [liveAging, list, todayIso],
   );
 
   // State modal: tunggakan yang sedang dicatat pembayarannya (null = tertutup).

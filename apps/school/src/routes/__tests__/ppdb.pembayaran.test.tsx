@@ -27,6 +27,12 @@ vi.mock("@sekolahpro/api-client", () => ({
   frappeFetch: vi.fn(),
 }));
 
+// --- Live hooks: usePembayaranLive feeds gauge + donut + aging when non-empty. ---
+vi.mock("../../lib/ppdbLive", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/ppdbLive")>();
+  return { ...actual, usePembayaranLive: vi.fn() };
+});
+
 // --- Mock data source so aging is deterministic, independent of fixtures. ---
 vi.mock("../../data/ppdb", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../data/ppdb")>();
@@ -34,7 +40,18 @@ vi.mock("../../data/ppdb", async (importOriginal) => {
 });
 
 import { listPpdbForSekolah } from "../../data/ppdb";
+import { usePembayaranLive } from "../../lib/ppdbLive";
+import type { PembayaranLiveRow } from "../../lib/ppdbLive";
 import { PembayaranPpdbPage } from "../sch.$sekolah.ppdb.pembayaran";
+
+/** Shape the usePembayaranLive mock return; rows default to empty (fallback). */
+function mockLive(rows: PembayaranLiveRow[]): void {
+  vi.mocked(usePembayaranLive).mockReturnValue({
+    data: rows,
+    isLoading: false,
+    isError: false,
+  } as unknown as ReturnType<typeof usePembayaranLive>);
+}
 
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -75,10 +92,13 @@ function makePendaftar(over: Partial<Pendaftar>): Pendaftar {
 describe("PembayaranPpdbPage (redesain)", () => {
   beforeEach(() => {
     vi.mocked(listPpdbForSekolah).mockReset();
+    vi.mocked(usePembayaranLive).mockReset();
+    // Default: live returns nothing → page must degrade to the mock fallback.
+    mockLive([]);
   });
   afterEach(() => cleanup());
 
-  it("merender GaugeArc terkumpul vs tagihan", () => {
+  it("merender GaugeArc terkumpul vs tagihan dari fallback mock saat live kosong", () => {
     vi.mocked(listPpdbForSekolah).mockReturnValue([
       makePendaftar({ totalBiaya: 1000000, totalDibayar: 600000 }),
     ]);
@@ -89,7 +109,7 @@ describe("PembayaranPpdbPage (redesain)", () => {
     ).toBeInTheDocument();
   });
 
-  it("merender DonutChart distribusi status pembayaran", () => {
+  it("merender DonutChart distribusi status pembayaran dari fallback mock", () => {
     vi.mocked(listPpdbForSekolah).mockReturnValue([
       makePendaftar({
         pembayaran: [
@@ -104,7 +124,7 @@ describe("PembayaranPpdbPage (redesain)", () => {
     ).toBeInTheDocument();
   });
 
-  it("mendaftarkan pendaftar tunggakan yang melewati ambang di bagian aging", () => {
+  it("mendaftarkan pendaftar tunggakan yang melewati ambang di bagian aging (fallback)", () => {
     // tanggal jauh di masa lalu relatif TODAY → pasti > 3 hari → overdue.
     vi.mocked(listPpdbForSekolah).mockReturnValue([
       makePendaftar({
@@ -124,5 +144,31 @@ describe("PembayaranPpdbPage (redesain)", () => {
     vi.mocked(listPpdbForSekolah).mockReturnValue([]);
     wrap(<PembayaranPpdbPage />);
     expect(screen.getByText(/No\. Bayar/i)).toBeInTheDocument();
+  });
+
+  it("memakai usePembayaranLive untuk gauge + donut saat data live tersedia", () => {
+    // Mock kosong → bila gauge/donut tetap render, harus berasal dari live rows.
+    vi.mocked(listPpdbForSekolah).mockReturnValue([]);
+    mockLive([
+      { name: "BYR-1", pendaftaran_ppdb: "PPDB-1", jumlah_tagihan: 1000000, jumlah_terbayar: 1000000, status: "Lunas" },
+      { name: "BYR-2", pendaftaran_ppdb: "PPDB-2", jumlah_tagihan: 1000000, jumlah_terbayar: 0, status: "Tertunda" },
+    ]);
+    wrap(<PembayaranPpdbPage />);
+    // billed=2_000_000 collected=1_000_000 → 50% → gauge aria carries 50 persen.
+    expect(
+      screen.getByRole("img", { name: /pengukur 1000000 dari 2000000, 50 persen/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /diagram donat/i })).toBeInTheDocument();
+  });
+
+  it("mengelompokkan tunggakan live (jumlah_terbayar < jumlah_tagihan) di aging", () => {
+    vi.mocked(listPpdbForSekolah).mockReturnValue([]);
+    mockLive([
+      { name: "BYR-9", pendaftaran_ppdb: "PPDB-OUTSTANDING", jumlah_tagihan: 500000, jumlah_terbayar: 100000, status: "Cicilan" },
+    ]);
+    wrap(<PembayaranPpdbPage />);
+    const aging = screen.getByRole("region", { name: /tunggakan|aging/i });
+    // Live aging memakai pendaftaran_ppdb sebagai identitas baris (nama + nomor).
+    expect(within(aging).getAllByText(/PPDB-OUTSTANDING/).length).toBeGreaterThan(0);
   });
 });
