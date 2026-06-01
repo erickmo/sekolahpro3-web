@@ -1,17 +1,15 @@
 /**
- * Tests untuk halaman Daftar Ulang PPDB (live wiring + fallback mock).
+ * Tests untuk halaman Daftar Ulang PPDB (redesain berbasis tahapan).
  *
  * Fokus:
- *  - Sumber data LIVE: useResourceList("Pendaftaran PPDB") menyaring pelamar
- *    diterima + useResourceList("Daftar Ulang PPDB") menentukan status selesai;
- *    antrian kartu + bilah penyelesaian (DistributionBar) ter-render dari live.
- *  - FALLBACK: ketika live "Pendaftaran PPDB" kosong, halaman jatuh ke fixture
- *    mock {@link listPpdbForSekolah} (antrian + stepper tetap muncul).
- *  - Stepper + tombol konfirmasi finalisasi per-pelamar tetap ada.
- *  - Panduan halaman (PageGuide) hadir; EmptyState saat keduanya kosong.
+ *  - Bilah penyelesaian (DistributionBar) "selesai vs menunggu" ter-render.
+ *  - Tiap pelamar diterima memunculkan WorkflowStepper tahapan + tombol
+ *    konfirmasi finalisasi.
+ *  - Panduan halaman (PageGuide) hadir.
+ *  - EmptyState muncul ketika tidak ada pelamar diterima.
  *
  * Router & api-client di-stub agar komponen dapat dirender tanpa root router /
- * backend; useResourceList di-mock per-doctype, finalisasi memanggil frappeFetch.
+ * backend; finalisasi memanggil frappeFetch yang di-mock.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -31,13 +29,12 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
 }));
 
-// api-client di-stub: frappeFetch (finalisasi) + useResourceList (live rows).
+// api-client di-stub: hanya frappeFetch dipakai (lewat useFinalisasiPendaftaran).
 vi.mock("@sekolahpro/api-client", () => ({
   frappeFetch: vi.fn(),
-  useResourceList: vi.fn(() => ({ data: [] })),
 }));
 
-// data/ppdb di-mock agar tiap test mengontrol daftar pelamar diterima fallback.
+// data/ppdb di-mock agar tiap test mengontrol daftar pelamar diterima.
 vi.mock("../../data/ppdb", async () => {
   const actual = await vi.importActual<typeof import("../../data/ppdb")>(
     "../../data/ppdb",
@@ -47,10 +44,8 @@ vi.mock("../../data/ppdb", async () => {
 
 import { DaftarUlangPpdbPage } from "../sch.$sekolah.ppdb.daftar-ulang";
 import { listPpdbForSekolah } from "../../data/ppdb";
-import { useResourceList } from "@sekolahpro/api-client";
 
 const mockedList = vi.mocked(listPpdbForSekolah);
-const mockedUseResourceList = vi.mocked(useResourceList);
 
 /** Bangun satu Pendaftar diterima minimal dengan tahapan + dokumen lengkap. */
 function makeAccepted(overrides: Partial<Pendaftar> = {}): Pendaftar {
@@ -95,21 +90,6 @@ function makeAccepted(overrides: Partial<Pendaftar> = {}): Pendaftar {
   };
 }
 
-/**
- * Stub useResourceList per-doctype: kembalikan baris Pendaftaran PPDB untuk
- * doctype "Pendaftaran PPDB" dan baris Daftar Ulang PPDB untuk doctype-nya.
- */
-function stubLive(opts: {
-  pendaftaran?: Array<Record<string, unknown>>;
-  daftarUlang?: Array<Record<string, unknown>>;
-}) {
-  mockedUseResourceList.mockImplementation((doctype: string) => {
-    if (doctype === "Pendaftaran PPDB") return { data: opts.pendaftaran ?? [] } as never;
-    if (doctype === "Daftar Ulang PPDB") return { data: opts.daftarUlang ?? [] } as never;
-    return { data: [] } as never;
-  });
-}
-
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
@@ -119,67 +99,30 @@ describe("DaftarUlangPpdbPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedList.mockReturnValue([makeAccepted()]);
-    // Default: tidak ada live → fallback mock dipakai.
-    mockedUseResourceList.mockReturnValue({ data: [] } as never);
   });
   afterEach(() => cleanup());
 
-  it("merender antrian + bilah penyelesaian dari baris LIVE Pendaftaran PPDB", () => {
-    stubLive({
-      pendaftaran: [
-        { name: "PPDB-LIVE-1", status: "Diterima", calon_siswa: "CS-1", gelombang_ppdb: "G-1" },
-        { name: "PPDB-LIVE-2", status: "Daftar Ulang", calon_siswa: "CS-2", gelombang_ppdb: "G-1" },
-      ],
-      daftarUlang: [
-        { name: "DU-1", pendaftaran_ppdb: "PPDB-LIVE-1", status: "Selesai" },
-      ],
-    });
+  it("merender bilah penyelesaian (DistributionBar) selesai vs menunggu", () => {
     wrap(<DaftarUlangPpdbPage />);
-    // Bilah penyelesaian (DistributionBar) → role=img + aria-label "Distribusi".
-    expect(screen.getByRole("img", { name: /distribusi/i })).toBeInTheDocument();
-    // Identitas pelamar LIVE (name pendaftaran) hadir di antrian — id muncul di
-    // judul + subtitle, jadi pakai getAllByText (≥1) bukan getByText.
-    expect(screen.getAllByText("PPDB-LIVE-1").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("PPDB-LIVE-2").length).toBeGreaterThan(0);
-    // Stepper tahapan hadir untuk tiap pelamar LIVE.
-    expect(screen.getAllByLabelText(/status workflow/i).length).toBe(2);
+    // DistributionBar memberi role=img + aria-label diawali "Distribusi".
+    expect(
+      screen.getByRole("img", { name: /distribusi/i }),
+    ).toBeInTheDocument();
   });
 
-  it("menghitung selesai vs menunggu dari join Daftar Ulang PPDB (LIVE)", () => {
-    // 2 diterima; satu punya Daftar Ulang status Selesai, satu lagi statusnya
-    // sendiri "Daftar Ulang" (juga dihitung selesai). Keduanya selesai → 2/0.
-    stubLive({
-      pendaftaran: [
-        { name: "PPDB-LIVE-1", status: "Diterima", calon_siswa: "CS-1", gelombang_ppdb: "G-1" },
-        { name: "PPDB-LIVE-2", status: "Daftar Ulang", calon_siswa: "CS-2", gelombang_ppdb: "G-1" },
-      ],
-      daftarUlang: [{ name: "DU-1", pendaftaran_ppdb: "PPDB-LIVE-1", status: "Selesai" }],
-    });
+  it("merender WorkflowStepper tahapan untuk pelamar diterima", () => {
     wrap(<DaftarUlangPpdbPage />);
-    // Deskripsi SectionCard merangkum "2 selesai • 0 menunggu".
-    expect(screen.getByText(/2 selesai/i)).toBeInTheDocument();
-    expect(screen.getByText(/0 menunggu/i)).toBeInTheDocument();
+    // WorkflowStepper memberi aria-label "Status workflow".
+    expect(screen.getAllByLabelText(/status workflow/i).length).toBeGreaterThan(0);
+    // Nama pelamar diterima hadir di kartu.
+    expect(screen.getByText("Arka Pradipta")).toBeInTheDocument();
   });
 
-  it("menampilkan tombol konfirmasi finalisasi untuk tiap pelamar LIVE", () => {
-    stubLive({
-      pendaftaran: [
-        { name: "PPDB-LIVE-1", status: "Diterima", calon_siswa: "CS-1", gelombang_ppdb: "G-1" },
-      ],
-    });
+  it("menampilkan tombol konfirmasi finalisasi untuk pelamar diterima", () => {
     wrap(<DaftarUlangPpdbPage />);
     expect(
       screen.getAllByRole("button", { name: /finalisasi/i }).length,
     ).toBeGreaterThan(0);
-  });
-
-  it("FALLBACK: live Pendaftaran kosong → pakai fixture mock listPpdbForSekolah", () => {
-    // Live kosong (default beforeEach). Mock mengembalikan satu pelamar diterima.
-    wrap(<DaftarUlangPpdbPage />);
-    expect(screen.getByRole("img", { name: /distribusi/i })).toBeInTheDocument();
-    // Nama pelamar dari fixture mock hadir.
-    expect(screen.getByText("Arka Pradipta")).toBeInTheDocument();
-    expect(screen.getAllByLabelText(/status workflow/i).length).toBeGreaterThan(0);
   });
 
   it("merender panduan halaman (PageGuide) Cara pakai", () => {
@@ -187,10 +130,10 @@ describe("DaftarUlangPpdbPage", () => {
     expect(screen.getByText(/cara pakai halaman ini/i)).toBeInTheDocument();
   });
 
-  it("menampilkan EmptyState ketika tidak ada pelamar (live & mock kosong)", () => {
+  it("menampilkan EmptyState ketika tidak ada pelamar diterima", () => {
     mockedList.mockReturnValue([]);
     wrap(<DaftarUlangPpdbPage />);
-    // Tidak ada stepper ketika antrian kosong.
+    // Tidak ada stepper ketika daftar kosong.
     expect(screen.queryByLabelText(/status workflow/i)).not.toBeInTheDocument();
     // Pesan kosong khas EmptyState muncul.
     expect(screen.getByText(/belum ada pelamar diterima/i)).toBeInTheDocument();

@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, Button, EmptyState, type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { PENUGASAN_GURU_FIELDS } from "../components/guru-extra/sub-fields";
 import { BuatSkMengajarButton } from "../features/pegawai/PegawaiActions";
-import { penugasanSummary } from "../lib/orang/staffListSummary";
 
 type Row = {
   name: string;
@@ -43,15 +42,6 @@ function PenugasanPage() {
         searchFields={["name", "guru"]}
         addLabel="Buat Penugasan"
         onAdd={() => setOpen(true)}
-        summarize={penugasanSummary}
-        summaryFields={["name", "status"]}
-        gettingStarted={
-          <EmptyState
-            title="Belum ada penugasan guru"
-            description="Buat penugasan mengajar per tahun ajaran untuk menghitung beban (JJM) dan menerbitkan SK Mengajar."
-            action={<Button onClick={() => setOpen(true)}>Buat Penugasan</Button>}
-          />
-        }
       />
       <ResourceCreateModal
         open={open}

@@ -25,27 +25,38 @@ import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
 import { listPpdbForSekolah } from "../data/ppdb";
 import { usePpdbRole } from "../lib/ppdbRole";
+import {
+  funnelData,
+  jalurDistribution,
+  paymentStatusDistribution,
+  dailyRegistrationTrend,
+  quotaInfo,
+} from "../lib/ppdbAnalytics";
 import { buildWorkQueue, type WorkQueueGroup } from "../lib/ppdbQueue";
 import type { NextAction } from "../components/ppdb/NextActionCard";
 import { PageGuide } from "../components/guide/PageGuide";
 import {
   RingkasanView,
   AntrianKerjaView,
+  type BerandaKpi,
+  type BerandaViz,
   type RenderLink,
 } from "../components/ppdb/berandaPanel";
-import {
-  useLiveAggregates,
-  useKpi,
-  useViz,
-  PENDAFTARAN_FIELDS,
-  TODAY_ISO,
-  PAYMENT_PENDING,
-  type PendaftaranRow,
-} from "../components/ppdb/berandaLive";
 
-// Jumlah calon dengan riwayat tunggakan di sekolah asal (sinyal lintas modul,
-// belum punya endpoint live — tetap fallback statik).
+// --- Konstanta agregasi (STUB sampai backend wired) ---
+// TODO(api): ganti dengan field `kuota` di doctype Gelombang PPDB.
+const KUOTA_GELOMBANG_AKTIF_STUB = 200;
+// TODO(api): ganti dengan field `tanggal_tutup` di doctype Gelombang PPDB.
+const GELOMBANG_DEADLINE_ISO = "2026-06-30";
+const TODAY_ISO = "2026-05-25";
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const TREND_WINDOW_DAYS = 14;
 const RIWAYAT_TUNGGAKAN_STUB = 3;
+
+// Status pendaftaran yang dihitung sebagai "lolos" pada KPI.
+const LOLOS_STATUSES = new Set(["Lulus", "Daftar Ulang", "Diterima"]);
+// Status pembayaran yang menandakan tagihan belum tertangani.
+const PAYMENT_PENDING = "Tertunda";
 
 // Identitas dua view + label UI (no magic strings).
 const VIEW_RINGKASAN = "ringkasan";
@@ -56,6 +67,66 @@ const VIEW_TABS: { id: BerandaView; label: string }[] = [
   { id: VIEW_ANTRIAN, label: "Antrian Kerja" },
 ];
 const GUIDE_STORAGE_ID = "ppdb-beranda";
+
+// Field "Pendaftaran PPDB" terverifikasi dari doctype JSON.
+type PendaftaranRow = {
+  name: string;
+  status?: string;
+  gelombang_ppdb?: string;
+  calon_siswa?: string;
+  tanggal_daftar?: string;
+};
+const PENDAFTARAN_FIELDS = ["name", "status", "gelombang_ppdb", "calon_siswa", "tanggal_daftar"];
+
+/** Hari tersisa menuju deadline (0 bila tanggal invalid atau sudah lewat). */
+function hariTersisa(deadlineIso: string, todayIso: string): number {
+  const d = new Date(deadlineIso).getTime();
+  const t = new Date(todayIso).getTime();
+  if (Number.isNaN(d) || Number.isNaN(t)) return 0;
+  return Math.max(0, Math.ceil((d - t) / MS_PER_DAY));
+}
+
+/** Hitung jumlah pendaftar unik dengan minimal satu tagihan tertunda. */
+function countPembayaranPending(list: ReturnType<typeof listPpdbForSekolah>): number {
+  return list.filter((p) => p.pembayaran.some((b) => b.status === PAYMENT_PENDING)).length;
+}
+
+/** Bangun KPI agregat dari baris backend + mock pembayaran. */
+function useKpi(
+  rows: PendaftaranRow[],
+  ppdbMockList: ReturnType<typeof listPpdbForSekolah>,
+): BerandaKpi {
+  return useMemo(() => {
+    const total = rows.length;
+    const lolos = rows.filter((p) => p.status && LOLOS_STATUSES.has(p.status)).length;
+    return {
+      total,
+      lolos,
+      pembayaranPending: countPembayaranPending(ppdbMockList),
+      hariTersisa: hariTersisa(GELOMBANG_DEADLINE_ISO, TODAY_ISO),
+    };
+  }, [rows, ppdbMockList]);
+}
+
+/** Rakit bundel data visualisasi dari analytics murni. */
+function useViz(
+  rows: PendaftaranRow[],
+  ppdbMockList: ReturnType<typeof listPpdbForSekolah>,
+): BerandaViz {
+  return useMemo(() => {
+    const trend = dailyRegistrationTrend(rows, TREND_WINDOW_DAYS, TODAY_ISO);
+    const quota = quotaInfo(rows.length, KUOTA_GELOMBANG_AKTIF_STUB);
+    return {
+      funnel: funnelData(rows),
+      trendPoints: trend.points,
+      trendLabels: trend.labels,
+      jalur: jalurDistribution(ppdbMockList),
+      paymentDist: paymentStatusDistribution(ppdbMockList),
+      quotaFilled: quota.filled,
+      quotaTotal: KUOTA_GELOMBANG_AKTIF_STUB,
+    };
+  }, [rows, ppdbMockList]);
+}
 
 /**
  * Blok "Perlu Perhatian" — dipertahankan verbatim dari versi lama agar sinyal
@@ -162,10 +233,8 @@ export function PpdbBerandaPage(): React.ReactNode {
   // Mock PPDB list, scoped ke active school slug.
   const ppdbMockList = useMemo(() => listPpdbForSekolah(sekolah), [sekolah]);
 
-  // Sumber live (gelombang/statistik/pembayaran); tiap KPI/viz fallback sendiri.
-  const live = useLiveAggregates();
-  const kpi = useKpi(rows, ppdbMockList, live);
-  const viz = useViz(rows, ppdbMockList, live);
+  const kpi = useKpi(rows, ppdbMockList);
+  const viz = useViz(rows, ppdbMockList);
   const attention = useAttention(ppdbMockList, kpi.pembayaranPending);
   const queueGroups = useMemo(() => buildWorkQueue(ppdbMockList, TODAY_ISO), [ppdbMockList]);
   const nextAction = useMemo(() => pickNextAction(queueGroups), [queueGroups]);

@@ -2,15 +2,6 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
-import { SiswaGettingStarted } from "../components/siswa/SiswaGettingStarted";
-import { summarizePerubahanData, SISWA_STATE_FIELDS } from "../lib/orang/siswaListSummaries";
-
-// Onboarding steps shown when no data-change request exists yet.
-const ONBOARDING_STEPS = [
-  "Pilih siswa dan field yang ingin diperbaiki (nama, NIK, NISN, dll.)",
-  "Klik Ajukan Perubahan dan isi nilai baru",
-  "Pengajuan menunggu persetujuan Ka-TU lalu Kepsek",
-];
 
 type Row = {
   name: string;
@@ -84,17 +75,6 @@ function PerubahanDataPage() {
       fields={["name", "siswa", "field_diubah", "nilai_lama", "nilai_baru", "workflow_state", "modified"]}
       rowKey={(r) => r.name}
       columns={columns}
-      summarize={summarizePerubahanData}
-      summaryFields={SISWA_STATE_FIELDS}
-      gettingStarted={
-        <SiswaGettingStarted
-          sekolah={sekolah}
-          title="Belum ada pengajuan perubahan data"
-          description="Ajukan koreksi data identitas siswa lewat alur persetujuan berjenjang."
-          steps={ONBOARDING_STEPS}
-          primaryAction={{ label: "Ajukan Perubahan", href: "/sch/$sekolah/siswa/perubahan-data/new" }}
-        />
-      }
       defaultSort={{ key: "modified", dir: "desc" }}
       searchFields={["name", "siswa"]}
       selectFilters={[

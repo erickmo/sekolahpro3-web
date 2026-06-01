@@ -13,17 +13,10 @@ import {
   type Column,
   type SortState,
 } from "@sekolahpro/ui";
-import { EmptyState } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { RoleBadges } from "../features/pegawai/RoleBadges";
 import { PegawaiFormModal } from "../features/pegawai/PegawaiFormModal";
 import { apiRoleBadges, apiIsGuru, apiIsStaff, apiIsDualRole, type PegawaiApi } from "../features/pegawai/roles";
-import { SummaryStrip } from "../components/SummaryStrip";
-import { daftarSummary } from "../lib/orang/staffListSummary";
-import { isFirstRunEmpty } from "../lib/orang/listSummary";
-
-// Sentinel value for the "no role/status filter" choice in this page's filters.
-const FILTER_ALL = "semua";
 
 type RoleFilter = "semua" | "guru" | "staff" | "dual";
 type StatusFilter = "semua" | "aktif" | "nonaktif";
@@ -107,22 +100,7 @@ function DaftarPegawai() {
     limit_page_length: PEGAWAI_LIMIT,
   });
 
-  // Memoised so the array reference is stable while q.data is unchanged; keeps
-  // the dependent useMemo hooks below from recomputing on every render.
-  const list = useMemo(() => q.data ?? [], [q.data]);
-
-  // Summary strip reflects the WHOLE fetched directory, not the filtered page.
-  const summaryItems = useMemo(() => daftarSummary(list), [list]);
-
-  // Greet a first-time user (genuinely empty, no role/status filter or search)
-  // with an onboarding empty-state instead of a bare table.
-  const showGettingStarted = isFirstRunEmpty({
-    isLoading: q.isLoading,
-    isError: q.isError,
-    rowCount: list.length,
-    hasSearch: !!query.trim(),
-    hasActiveFilter: role !== FILTER_ALL || status !== FILTER_ALL,
-  });
+  const list = q.data ?? [];
 
   const filtered = useMemo(() => list.filter((p) => {
     if (role === "guru" && !(apiIsGuru(p) && !apiIsDualRole(p))) return false;
@@ -169,21 +147,6 @@ function DaftarPegawai() {
         }
       />
 
-      <SummaryStrip items={summaryItems} />
-
-      {showGettingStarted ? (
-        <EmptyState
-          title="Belum ada pegawai"
-          description="Daftarkan guru atau staff pertama untuk mulai mengelola role, jabatan, penugasan, dan SK. Data ini menjadi dasar seluruh modul kepegawaian."
-          action={
-            <Button onClick={() => setShowCreate(true)}>
-              <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
-              Tambah Pegawai
-            </Button>
-          }
-        />
-      ) : (
-      <>
       <FilterBar
         search={{
           value: query,
@@ -258,8 +221,6 @@ function DaftarPegawai() {
           }
         />
       </SectionCard>
-      </>
-      )}
 
       <PegawaiFormModal open={showCreate} onClose={() => setShowCreate(false)} mode="create" />
     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Badge,
   Button,
@@ -9,18 +9,89 @@ import {
   SectionCard,
   IconPlus,
   IconDownload,
+  type Column,
   type SelectFilter,
   type SortState,
 } from "@sekolahpro/ui";
 import { downloadCsv } from "../lib/stub";
-import { ListSummary } from "./ListSummary";
-import { ListTableEmpty } from "./ListTableEmpty";
-import { SkeletonRows } from "./SkeletonRows";
-import { isFirstRunEmpty } from "../lib/orang/listSummary";
-import { useResourceList, listResource, type ListParams } from "@sekolahpro/api-client";
-import type { ResourceListPageProps } from "./ResourceListPage.types";
 
-export type { ResourceListPageProps } from "./ResourceListPage.types";
+function SkeletonRows({ count, cols }: { count: number; cols: number }) {
+  return (
+    <div className="divide-y divide-border" aria-hidden>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex gap-4 px-4 py-3 animate-pulse">
+          {Array.from({ length: cols }).map((__, j) => (
+            <div
+              key={j}
+              className="h-3 rounded bg-muted"
+              style={{ width: `${60 + ((i * 7 + j * 13) % 30)}%` }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+import { useResourceList, listResource, type ListParams, type FilterTuple } from "@sekolahpro/api-client";
+
+export interface ResourceListPageProps<T extends Record<string, unknown>> {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  doctype: string;
+  fields: string[];
+  rowKey: (row: T) => string;
+  columns: Column<T>[];
+  defaultSort?: SortState;
+  searchFields?: string[];
+  selectFilters?: Array<{
+    key: string;
+    label: string;
+    field: string;
+    options: Array<{ value: string; label: string }>;
+    /**
+     * Controlled value. When provided, the filter operates in controlled mode and
+     * `onChange` becomes the sole source of state updates (no internal mirror).
+     * See PERP-ADR-0001 — required for URL-synced filters in /perpustakaan/peminjaman.
+     */
+    value?: string;
+    /**
+     * Controlled change handler. Required when `value` is set. Fires with the new
+     * selected value (e.g. "Semua" sentinel) so the parent can sync URL/search state.
+     * See PERP-ADR-0001.
+     */
+    onChange?: (value: string) => void;
+  }>;
+  /**
+   * Extra filter clauses appended unconditionally to the list query (in addition to
+   * `selectFilters` + search). Use for server-side scoping that the user cannot toggle
+   * (e.g. `status in ["Aktif","Terlambat"]` for the default circulation view).
+   * See PERP-ADR-0001.
+   */
+  baseFilters?: FilterTuple[];
+  /**
+   * Async post-processor invoked on each loaded page. Receives the visible rows and
+   * returns a (possibly enriched / filtered) array used for render. Use to fetch
+   * derived data per page (e.g. denda summary) without coupling to the list endpoint.
+   * See PERP-ADR-0001.
+   */
+  decorateRows?: (rows: T[]) => Promise<T[]>;
+  extraActions?: ReactNode;
+  onAdd?: () => void;
+  addLabel?: string;
+  pageSize?: number;
+  onRowClick?: (row: T) => void;
+  /**
+   * Enables a server-side CSV export of ALL rows matching the current filters
+   * (search + selectFilters + baseFilters), not just the visible page. Fetches
+   * with pagination disabled, maps each row via `mapRow`, then downloads a CSV.
+   */
+  exportConfig?: {
+    fileName: string;
+    fields: string[];
+    mapRow: (row: T) => Record<string, unknown>;
+  };
+}
 
 export function ResourceListPage<T extends Record<string, unknown>>(props: ResourceListPageProps<T>) {
   const {
@@ -42,9 +113,6 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
     pageSize: defaultPageSize = 25,
     onRowClick,
     exportConfig,
-    summarize,
-    summaryFields,
-    gettingStarted,
   } = props;
 
   const [exporting, setExporting] = useState(false);
@@ -151,22 +219,6 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
     }
   }
 
-  // True only when a select filter is narrowed away from the "Semua" sentinel.
-  const hasActiveFilter = selectFilters.some(
-    (f) => (f.value ?? filterVals[f.key] ?? "Semua") !== "Semua",
-  );
-  // Greet first-time users (genuinely empty, unfiltered list) with onboarding
-  // guidance instead of a bare table. Filtered/searched empties stay normal.
-  const showGettingStarted =
-    !!gettingStarted &&
-    isFirstRunEmpty({
-      isLoading: q.isLoading,
-      isError: q.isError,
-      rowCount: rows.length,
-      hasSearch: !!search.trim(),
-      hasActiveFilter,
-    });
-
   const filterUI: SelectFilter[] = selectFilters.map((f) => ({
     key: f.key,
     label: f.label,
@@ -212,32 +264,19 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
         }
       />
 
-      {summarize ? (
-        <ListSummary
-          doctype={doctype}
-          summaryFields={summaryFields ?? fields}
-          {...(baseFilters ? { baseFilters } : {})}
-          summarize={summarize}
-        />
-      ) : null}
+      <FilterBar
+        search={{
+          value: search,
+          onChange: (v) => {
+            setSearch(v);
+            setPage(1);
+          },
+          placeholder: "Cari...",
+        }}
+        filters={filterUI}
+      />
 
-      {showGettingStarted ? (
-        gettingStarted
-      ) : (
-        <>
-          <FilterBar
-            search={{
-              value: search,
-              onChange: (v) => {
-                setSearch(v);
-                setPage(1);
-              },
-              placeholder: "Cari...",
-            }}
-            filters={filterUI}
-          />
-
-          <SectionCard
+      <SectionCard
         title={`${rows.length} baris${q.isFetching && rows.length > 0 ? " · memuat..." : ""}`}
         action={
           q.isError ? (
@@ -262,11 +301,23 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
             onSortChange={setSort}
             {...(onRowClick ? { onRowClick } : {})}
             empty={
-              <ListTableEmpty
-                isError={q.isError}
-                {...(q.isError ? { errorMessage: (q.error as Error).message } : {})}
-                onRetry={() => q.refetch()}
-              />
+              <div>
+                <div className="font-medium text-fg">
+                  {q.isError ? "Gagal memuat data" : "Belum ada data"}
+                </div>
+                <div className="text-xs mt-1">
+                  {q.isError
+                    ? (q.error as Error).message
+                    : "Coba ubah filter atau buat data baru."}
+                </div>
+                {q.isError ? (
+                  <div className="mt-3">
+                    <Button variant="outline" onClick={() => q.refetch()}>
+                      Coba lagi
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
             }
             footer={
               <Pagination
@@ -279,9 +330,7 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
             }
           />
         )}
-          </SectionCard>
-        </>
-      )}
+      </SectionCard>
     </div>
   );
 }

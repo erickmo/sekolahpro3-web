@@ -16,11 +16,7 @@ import { docCompleteness } from "../../lib/ppdbAnalytics";
 import {
   TONE_BY_STATUS,
 } from "../../lib/ppdbApi";
-import type {
-  JenisKelamin,
-  JenjangTujuan,
-  Pendaftar,
-} from "../../data/ppdb";
+import type { Pendaftar } from "../../data/ppdb";
 
 // Ambang persentase kelengkapan dokumen untuk pemilihan nada ProgressRing.
 const DOC_PCT_GOOD = 80;
@@ -29,30 +25,6 @@ const DOC_PCT_WARN = 40;
 // Label UI Bahasa Indonesia — tidak boleh tersebar (no magic strings).
 const DOC_RING_LABEL = "Dokumen";
 const VIEW_DETAIL_LABEL = "Lihat detail";
-
-// Nilai default untuk field Pendaftar yang TIDAK tersedia pada doctype
-// "Calon Siswa" (jalur/status/dll). Calon Siswa hanya membawa identitas, jadi
-// kartu live menampilkan jenjang + nama sementara field lain diisi placeholder.
-const LIVE_DEFAULT_JALUR: Pendaftar["jalur"] = "Reguler";
-const LIVE_DEFAULT_STATUS: Pendaftar["statusPendaftaran"] = "Terkirim";
-const LIVE_DEFAULT_JENJANG: JenjangTujuan = "SD";
-const LIVE_DEFAULT_GENDER: JenisKelamin = "Laki-laki";
-
-/** Baris live "Calon Siswa" (whitelisted fields) yang dikonsumsi kartu. */
-export interface CalonSiswaLiveRow {
-  name: string;
-  nama_lengkap?: string;
-  nisn?: string;
-  jenis_kelamin?: string;
-  jenjang?: string;
-}
-
-/** Override kelengkapan dokumen (dari useDokumenLive) per-pendaftaran. */
-export interface DocCompleteness {
-  done: number;
-  total: number;
-  pct: number;
-}
 
 /**
  * Pilih nada ProgressRing dokumen dari persentase kelengkapan:
@@ -64,60 +36,10 @@ function docRingTone(pct: number): "emerald" | "amber" | "rose" {
   return "rose";
 }
 
-/** Cast string backend → union jenjang bila valid, jika tidak pakai default. */
-function asJenjang(value: string | undefined): JenjangTujuan {
-  const valid: JenjangTujuan[] = ["TK", "SD", "SMP", "SMA"];
-  return valid.includes(value as JenjangTujuan)
-    ? (value as JenjangTujuan)
-    : LIVE_DEFAULT_JENJANG;
-}
-
-/**
- * Adaptasi satu baris live "Calon Siswa" → bentuk Pendaftar yang dipahami
- * kartu. Doctype Calon Siswa hanya membawa identitas (nama/nisn/jenis
- * kelamin/jenjang), jadi field PPDB lain (jalur/status/dokumen/biaya) diisi
- * default aman agar kartu tetap valid tanpa crash. `name` dipakai sebagai
- * noPendaftaran sehingga key dokumen live cocok untuk override cincin.
- */
-export function calonSiswaToPendaftar(row: CalonSiswaLiveRow): Pendaftar {
-  return {
-    noPendaftaran: row.name,
-    sekolah: "" as Pendaftar["sekolah"],
-    namaLengkap: row.nama_lengkap ?? row.name,
-    nisn: row.nisn,
-    jenisKelamin: (row.jenis_kelamin as JenisKelamin) ?? LIVE_DEFAULT_GENDER,
-    tempatLahir: "",
-    tanggalLahir: "",
-    agama: "Islam",
-    kewarganegaraan: "WNI",
-    jenjangTujuan: asJenjang(row.jenjang),
-    jalur: LIVE_DEFAULT_JALUR,
-    asalSekolah: "",
-    statusPendaftaran: LIVE_DEFAULT_STATUS,
-    tahunAjaran: "",
-    tanggalDaftar: "",
-    biayaPendaftaran: 0,
-    totalBiaya: 0,
-    totalDibayar: 0,
-    wali: [],
-    dokumen: [],
-    tahapan: [],
-    raporSmp: [],
-    pembayaran: [],
-    wawancara: [],
-    aktivitas: [],
-  };
-}
-
 interface CalonSiswaCardProps {
   pendaftar: Pendaftar;
   /** Pemanggil menyuntik tautan detail (mis. TanStack <Link to=...>). */
   renderDetailLink: (noPendaftaran: string, children: ReactNode) => ReactNode;
-  /**
-   * Kelengkapan dokumen live (per-pendaftaran). Bila ada, MENGGANTIKAN
-   * perhitungan dari mock pendaftar.dokumen — fallback ke mock saat undefined.
-   */
-  docOverride?: DocCompleteness | undefined;
 }
 
 /**
@@ -128,10 +50,8 @@ interface CalonSiswaCardProps {
 export function CalonSiswaCard({
   pendaftar,
   renderDetailLink,
-  docOverride,
 }: CalonSiswaCardProps): ReactNode {
-  // Live override jika tersedia, jika tidak hitung dari dokumen mock.
-  const doc = docOverride ?? docCompleteness(pendaftar);
+  const doc = docCompleteness(pendaftar);
   const statusTone = TONE_BY_STATUS[pendaftar.statusPendaftaran] ?? "neutral";
 
   return (

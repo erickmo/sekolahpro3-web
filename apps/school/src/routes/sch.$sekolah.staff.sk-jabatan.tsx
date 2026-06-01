@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, Button, EmptyState, type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { SkJabatanFormModal } from "../components/staff/SkJabatanFormModal";
-import { skSummary } from "../lib/orang/staffListSummary";
 
 type Row = {
   name: string;
@@ -47,15 +46,6 @@ function StaffSkJabatanPage() {
         searchFields={["name", "guru"]}
         addLabel="Terbitkan SK"
         onAdd={() => setShowCreate(true)}
-        summarize={skSummary}
-        summaryFields={["name", "status"]}
-        gettingStarted={
-          <EmptyState
-            title="Belum ada SK Jabatan"
-            description="Terbitkan SK Jabatan untuk staff yang menempati jenis jabatan tertentu (misalnya Bendahara atau Operator)."
-            action={<Button onClick={() => setShowCreate(true)}>Terbitkan SK</Button>}
-          />
-        }
       />
       <SkJabatanFormModal open={showCreate} onClose={() => setShowCreate(false)} />
     </>

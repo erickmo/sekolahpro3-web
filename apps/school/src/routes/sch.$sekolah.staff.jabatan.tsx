@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, Button, EmptyState, type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { JabatanFormModal } from "../components/staff/JabatanFormModal";
-import { jabatanSummary } from "../lib/orang/staffListSummary";
 
 type Row = { name: string; nama_jabatan: string; keterangan?: string; aktif?: 0 | 1 };
 
@@ -30,15 +29,6 @@ function StaffJabatanPage() {
         searchFields={["name", "nama_jabatan"]}
         addLabel="Tambah Jabatan"
         onAdd={() => setShowCreate(true)}
-        summarize={jabatanSummary}
-        summaryFields={["name", "aktif"]}
-        gettingStarted={
-          <EmptyState
-            title="Belum ada jenis jabatan"
-            description="Tambahkan jenis jabatan staff (misalnya Kepala TU, Bendahara, Operator) agar bisa diterbitkan SK Jabatan."
-            action={<Button onClick={() => setShowCreate(true)}>Tambah Jabatan</Button>}
-          />
-        }
       />
       <JabatanFormModal open={showCreate} onClose={() => setShowCreate(false)} />
     </>

@@ -30,7 +30,6 @@ import {
   useUmumkanHasil,
   useStatistikGelombang,
 } from "../lib/ppdbApi";
-import { useHasilTesLive, scoreHistogramLive } from "../lib/ppdbLive";
 import { listPpdbForSekolah } from "../data/ppdb";
 import { PageGuide, type PageGuideStep } from "../components/guide/PageGuide";
 import {
@@ -93,19 +92,9 @@ export function SeleksiPpdbPage() {
   // (avoids re-running downstream useMemo on every render).
   const rows = useMemo(() => q.data ?? [], [q.data]);
 
-  // Daftar pendaftar (mock) ter-scope sekolah — sumber viz donat/peringkat dan
-  // fallback histogram saat backend kosong.
+  // Daftar pendaftar (mock) ter-scope sekolah — sumber viz histogram/donat/peringkat.
+  // TODO(api): ganti dengan agregasi skor dari backend saat endpoint tersedia.
   const mockList = useMemo(() => listPpdbForSekolah(sekolah), [sekolah]);
-
-  // Histogram skor LIVE dari "Hasil Tes Akademik PPDB"; fallback ke mock
-  // (scoreHistogram di panel) saat backend belum mengembalikan baris tes.
-  const tesQ = useHasilTesLive();
-  const tesRows = useMemo(() => tesQ.data ?? [], [tesQ.data]);
-  const histogramLive = useMemo(
-    // undefined memberi sinyal "tak ada data live" → panel pakai fallback mock.
-    () => (tesRows.length ? scoreHistogramLive(tesRows) : undefined),
-    [tesRows],
-  );
 
   const rankedRows = useMemo(() => {
     return rows
@@ -195,8 +184,8 @@ export function SeleksiPpdbPage() {
         tips={GUIDE_TIPS}
       />
 
-      {/* Papan visual: histogram skor (live, fallback mock), donat hasil, peringkat. */}
-      <SeleksiAnalyticsPanel list={mockList} histogramOverride={histogramLive} />
+      {/* Papan visual: histogram skor, donat hasil, dan peringkat (data mock). */}
+      <SeleksiAnalyticsPanel list={mockList} />
 
       <SectionCard padded={false}>
         <div className="p-3">

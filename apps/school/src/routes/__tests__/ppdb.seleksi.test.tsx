@@ -5,10 +5,6 @@
  * aria-label yang ringkas, dan tabel peringkat memuat data pelamar terurut.
  * Backend di-stub via mock @sekolahpro/api-client; router di-stub agar komponen
  * dapat dirender tanpa root router penuh.
- *
- * GAP 3 (live wiring): histogram skor memprioritaskan baris "Hasil Tes Akademik
- * PPDB" live (useHasilTesLive) lewat scoreHistogramLive, namun JATUH KEMBALI ke
- * histogram mock (scoreHistogram dari listPpdbForSekolah) saat live kosong.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -34,17 +30,8 @@ vi.mock("@sekolahpro/api-client", () => ({
   frappeFetch: vi.fn(),
 }));
 
-// Hook live Hasil Tes di-stub per-test agar bisa menguji jalur live vs fallback.
-// Default (beforeEach): kosong → page memakai histogram mock.
-const hasilTesLiveMock = vi.fn();
-vi.mock("../../lib/ppdbLive", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/ppdbLive")>();
-  return { ...actual, useHasilTesLive: () => hasilTesLiveMock() };
-});
-
 import { SeleksiPpdbPage } from "../sch.$sekolah.ppdb.seleksi";
 import { listPpdbForSekolah } from "../../data/ppdb";
-import { scoreHistogram } from "../../lib/ppdbAnalytics";
 
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -54,8 +41,6 @@ function wrap(ui: ReactNode) {
 describe("SeleksiPpdbPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: live Hasil Tes kosong → histogram jatuh ke data mock.
-    hasilTesLiveMock.mockReturnValue({ data: [], isLoading: false });
   });
   afterEach(() => cleanup());
 
@@ -65,34 +50,6 @@ describe("SeleksiPpdbPage", () => {
     expect(
       screen.getByRole("img", { name: /diagram batang\./i }),
     ).toBeInTheDocument();
-  });
-
-  it("histogram skor memakai data LIVE saat baris Hasil Tes tersedia", () => {
-    // Dua baris live di bucket 90-100; bucket lain nol → BarChart aria-label
-    // (summary "label: value") harus memuat "90-100: 2".
-    hasilTesLiveMock.mockReturnValue({
-      data: [
-        { name: "T1", skor: 95 },
-        { name: "T2", skor: 100 },
-      ],
-      isLoading: false,
-    });
-    wrap(<SeleksiPpdbPage />);
-    const bar = screen.getByRole("img", { name: /diagram batang\./i });
-    expect(bar).toHaveAttribute("aria-label", expect.stringContaining("90-100: 2"));
-    // Bucket bawah kosong dari sumber live (bukan mock yang punya banyak skor).
-    expect(bar).toHaveAttribute("aria-label", expect.stringContaining("0-9: 0"));
-  });
-
-  it("histogram skor JATUH KEMBALI ke data mock saat live kosong", () => {
-    // Live kosong (default beforeEach) → histogram = scoreHistogram(mock list).
-    wrap(<SeleksiPpdbPage />);
-    const mockHisto = scoreHistogram(listPpdbForSekolah(TEST_SEKOLAH));
-    const expectedSummary = mockHisto.map((d) => `${d.label}: ${d.value}`).join(", ");
-    const bar = screen.getByRole("img", { name: /diagram batang\./i });
-    expect(bar).toHaveAttribute("aria-label", `Diagram batang. ${expectedSummary}`);
-    // Sanity: fixture mock punya total skor > 0 (bukan histogram nol).
-    expect(mockHisto.reduce((s, d) => s + d.value, 0)).toBeGreaterThan(0);
   });
 
   it("merender donat lulus/gagal (DonutChart) dengan aria-label diagram donat", () => {

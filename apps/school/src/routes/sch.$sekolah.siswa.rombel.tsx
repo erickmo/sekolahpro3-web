@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Button, EmptyState, type Column } from "@sekolahpro/ui";
+import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { AnggotaRombelFormModal } from "../components/siswa/AnggotaRombelFormModal";
-import { toSummary, countBy } from "../lib/orang/listSummary";
 
 type Row = { name: string; siswa: string; rombongan_belajar?: string; tahun_ajaran?: string; nomor_absen?: number };
-
-// Summary buckets membership by academic year so the strip shows enrolment per TA.
-const SUMMARY_FIELDS = ["name", "tahun_ajaran"];
-const summarizeRombel = (rows: Row[]) => toSummary(countBy(rows, "tahun_ajaran"));
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
@@ -30,15 +25,6 @@ function RombelPage() {
         fields={["name", "siswa"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
-        summarize={summarizeRombel}
-        summaryFields={SUMMARY_FIELDS}
-        gettingStarted={
-          <EmptyState
-            title="Belum ada anggota rombel"
-            description="Tetapkan siswa ke rombongan belajar agar muncul di absensi, nilai, dan jadwal."
-            action={<Button onClick={() => setShowCreate(true)}>Tambah Anggota</Button>}
-          />
-        }
         defaultSort={{ key: "name", dir: "asc" }}
         searchFields={["name", "siswa"]}
         addLabel="Tambah Anggota"

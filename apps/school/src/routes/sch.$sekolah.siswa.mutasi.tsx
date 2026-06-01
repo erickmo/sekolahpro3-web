@@ -2,15 +2,6 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
-import { SiswaGettingStarted } from "../components/siswa/SiswaGettingStarted";
-import { summarizeMutasi, SISWA_STATE_FIELDS } from "../lib/orang/siswaListSummaries";
-
-// Onboarding steps shown when no mutation has been filed yet.
-const ONBOARDING_STEPS = [
-  "Pilih siswa dan jenis mutasi (Naik Kelas, Pindah Keluar, DO, dll.)",
-  "Klik Ajukan Mutasi untuk membuat pengajuan",
-  "Pengajuan menunggu persetujuan Ka-TU lalu Kepsek",
-];
 
 type Row = {
   name: string;
@@ -76,17 +67,6 @@ function MutasiPage() {
       fields={["name", "siswa", "jenis_mutasi", "tanggal_efektif", "workflow_state"]}
       rowKey={(r) => r.name}
       columns={columns}
-      summarize={summarizeMutasi}
-      summaryFields={SISWA_STATE_FIELDS}
-      gettingStarted={
-        <SiswaGettingStarted
-          sekolah={sekolah}
-          title="Belum ada mutasi siswa"
-          description="Catat perpindahan, kenaikan, atau keluarnya siswa di sini."
-          steps={ONBOARDING_STEPS}
-          primaryAction={{ label: "Ajukan Mutasi", href: "/sch/$sekolah/siswa/mutasi/new" }}
-        />
-      }
       defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "siswa"]}
       selectFilters={[

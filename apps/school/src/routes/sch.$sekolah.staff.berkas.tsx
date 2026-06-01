@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, Button, EmptyState, type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { BerkasGuruFormModal } from "../components/staff/BerkasGuruFormModal";
 import { RenewBerkasButton } from "../features/pegawai/PegawaiActions";
-import { berkasSummary } from "../lib/orang/staffListSummary";
 
 type Row = {
   name: string;
@@ -42,15 +41,6 @@ function StaffBerkasPage() {
         searchFields={["name", "guru"]}
         addLabel="Unggah Berkas"
         onAdd={() => setShowCreate(true)}
-        summarize={berkasSummary}
-        summaryFields={["name", "status_expire"]}
-        gettingStarted={
-          <EmptyState
-            title="Belum ada berkas staff"
-            description="Unggah dokumen kepegawaian (ijazah, sertifikat, SK) beserta masa berlakunya agar bisa dipantau saat mendekati kadaluarsa."
-            action={<Button onClick={() => setShowCreate(true)}>Unggah Berkas</Button>}
-          />
-        }
       />
       <BerkasGuruFormModal open={showCreate} onClose={() => setShowCreate(false)} />
     </>

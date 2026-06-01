@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, Button, EmptyState, type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { SK_MENGAJAR_FIELDS } from "../components/guru-extra/sub-fields";
 import { BulkGenerateSkButton } from "../features/pegawai/PegawaiActions";
-import { skSummary } from "../lib/orang/staffListSummary";
 
 type Row = {
   name: string;
@@ -50,15 +49,6 @@ function SkMengajarPage() {
         addLabel="Terbitkan SK"
         onAdd={() => setOpen(true)}
         extraActions={<BulkGenerateSkButton />}
-        summarize={skSummary}
-        summaryFields={["name", "status"]}
-        gettingStarted={
-          <EmptyState
-            title="Belum ada SK Mengajar"
-            description="Terbitkan SK Mengajar dari penugasan guru untuk mendokumentasikan beban mengajar secara resmi."
-            action={<Button onClick={() => setOpen(true)}>Terbitkan SK</Button>}
-          />
-        }
       />
       <ResourceCreateModal
         open={open}

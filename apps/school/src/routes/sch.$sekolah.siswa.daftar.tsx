@@ -8,15 +8,6 @@ import {
 import { useResourceList } from "@sekolahpro/api-client";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { SiswaImportDialog } from "../components/SiswaImportDialog";
-import { SiswaGettingStarted } from "../components/siswa/SiswaGettingStarted";
-import { summarizeDaftar, SISWA_STATUS_FIELDS } from "../lib/orang/siswaListSummaries";
-
-// Onboarding steps shown when the directory is still empty (no siswa yet).
-const ONBOARDING_STEPS = [
-  "Klik Tambah Siswa untuk membuat data satu per satu, atau",
-  "Gunakan Import Siswa untuk mengunggah banyak data sekaligus",
-  "Lengkapi NIS, NISN, jenjang, dan status agar siap dipakai modul lain",
-];
 
 type Row = {
   name: string;
@@ -124,17 +115,6 @@ function SiswaListPage() {
       fields={["name", "nama_lengkap", "nis", "nisn", "jenjang", "tahun_masuk", "jenis_kelamin", "agama", "status"]}
       rowKey={(s) => s.name}
       columns={COLUMNS}
-      summarize={summarizeDaftar}
-      summaryFields={SISWA_STATUS_FIELDS}
-      gettingStarted={
-        <SiswaGettingStarted
-          sekolah={sekolah}
-          title="Belum ada data siswa"
-          description="Mulai isi direktori siswa. Anda bisa menambah satu per satu atau impor massal."
-          steps={ONBOARDING_STEPS}
-          primaryAction={{ label: "Tambah Siswa", href: "/sch/$sekolah/siswa/new" }}
-        />
-      }
       defaultSort={{ key: "nama_lengkap", dir: "asc" }}
       searchFields={["name", "nama_lengkap", "nis", "nisn"]}
       selectFilters={[

@@ -26,13 +26,6 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { useCreatePaymentOrder } from "../lib/ppdbApi";
-import {
-  usePembayaranLive,
-  paymentSummaryLive,
-  paymentStatusDistributionLive,
-  type PembayaranLiveRow,
-} from "../lib/ppdbLive";
-import type { AgingRow } from "../lib/ppdbAnalytics";
 import { listPpdbForSekolah } from "../data/ppdb";
 import { PageGuide } from "../components/guide/PageGuide";
 import { PembayaranPanel } from "../components/ppdb/pembayaranPanel";
@@ -53,8 +46,6 @@ const TODAY_ISO = "2026-05-25";
 const ORDER_DISABLED_STATUSES = new Set(["Lunas", "Refund"]);
 // Persen bilah progres maksimum (hindari magic number 100 inline).
 const PROGRESS_MAX_PCT = 100;
-// Umur tunggakan live tak diketahui (tak ada tanggal di list) → 0 hari.
-const LIVE_AGING_DAYS_UNKNOWN = 0;
 
 // Tutorial per-halaman — langkah ringkas memakai modul pembayaran.
 const GUIDE_STEPS = [
@@ -101,30 +92,6 @@ function buildListParams(status: string, search: string, page: number) {
   };
 }
 
-/**
- * Bangun daftar aging dari baris live: satu baris per pendaftaran_ppdb yang
- * belum lunas (jumlah_terbayar < jumlah_tagihan), dengan sisa tagihan sebagai
- * jumlah. Tanpa tanggal di list, umur (hari) dibiarkan 0. Baris tanpa
- * pendaftaran_ppdb diabaikan agar identitas baris tetap stabil.
- */
-function liveAgingFromRows(rows: PembayaranLiveRow[]): AgingRow[] {
-  const byPendaftaran = new Map<string, number>();
-  for (const row of rows) {
-    const key = row.pendaftaran_ppdb;
-    if (!key) continue; // baris tak terhubung pendaftaran tak bisa diatribusi.
-    const tagihan = row.jumlah_tagihan ?? 0;
-    const terbayar = row.jumlah_terbayar ?? 0;
-    if (terbayar >= tagihan) continue; // lunas/overpaid bukan tunggakan.
-    byPendaftaran.set(key, (byPendaftaran.get(key) ?? 0) + (tagihan - terbayar));
-  }
-  return [...byPendaftaran.entries()].map(([key, jumlah]) => ({
-    noPendaftaran: key,
-    namaLengkap: key,
-    jumlah,
-    hari: LIVE_AGING_DAYS_UNKNOWN,
-  }));
-}
-
 export function PembayaranPpdbPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
 
@@ -135,21 +102,8 @@ export function PembayaranPpdbPage() {
 
   const createOrder = useCreatePaymentOrder();
 
-  // Mock list per sekolah — fallback analitik panel saat live kosong.
+  // Mock list per sekolah — sumber analitik panel sampai endpoint agregat siap.
   const ppdbList = useMemo(() => listPpdbForSekolah(sekolah), [sekolah]);
-
-  // Live rows (Pembayaran PPDB) → ringkasan gauge, donut, dan aging tunggakan.
-  const liveQuery = usePembayaranLive();
-  const liveRows = useMemo(() => liveQuery.data ?? [], [liveQuery.data]);
-  // Hanya wire live saat backend mengembalikan baris; selain itu panel pakai mock.
-  const live = useMemo(() => {
-    if (liveRows.length === 0) return null;
-    return {
-      summary: paymentSummaryLive(liveRows),
-      distribution: paymentStatusDistributionLive(liveRows),
-      aging: liveAgingFromRows(liveRows),
-    };
-  }, [liveRows]);
 
   const params = useMemo(() => buildListParams(status, search, page), [status, search, page]);
 
@@ -268,18 +222,7 @@ export function PembayaranPpdbPage() {
         tips={GUIDE_TIPS}
       />
 
-      <PembayaranPanel
-        list={ppdbList}
-        todayIso={TODAY_ISO}
-        // Spread bersyarat: hanya kirim prop live saat ada (exactOptionalPropertyTypes).
-        {...(live
-          ? {
-              liveSummary: live.summary,
-              liveDistribution: live.distribution,
-              liveAging: live.aging,
-            }
-          : {})}
-      />
+      <PembayaranPanel list={ppdbList} todayIso={TODAY_ISO} />
 
       <SectionCard padded={false}>
         <div className="p-3">

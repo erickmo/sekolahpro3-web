@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Button, EmptyState, type Column } from "@sekolahpro/ui";
+import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import {
   MAPEL_PENGAMPU_BASE_VALUES,
   MAPEL_PENGAMPU_GURU_FIELDS,
 } from "../components/guru-extra/sub-fields";
-import { mapelPengampuSummary } from "../lib/orang/staffListSummary";
 
 type Row = { name: string; guru: string; mata_pelajaran?: string; kelas?: string; tahun_ajaran?: string };
 
@@ -35,15 +34,6 @@ function MapelPengampuPage() {
         searchFields={["name", "mata_pelajaran"]}
         addLabel="Tetapkan Pengampu"
         onAdd={() => setOpen(true)}
-        summarize={mapelPengampuSummary}
-        summaryFields={["name", "mata_pelajaran"]}
-        gettingStarted={
-          <EmptyState
-            title="Belum ada pengampu mapel"
-            description="Petakan guru ke mata pelajaran dan kelas agar penugasan mengajar dan jadwal bisa disusun."
-            action={<Button onClick={() => setOpen(true)}>Tetapkan Pengampu</Button>}
-          />
-        }
       />
       <ResourceCreateModal
         open={open}

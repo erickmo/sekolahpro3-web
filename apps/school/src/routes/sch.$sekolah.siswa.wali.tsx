@@ -1,14 +1,7 @@
 import { useMemo } from "react";
 import { createFileRoute, Link, useParams} from "@tanstack/react-router";
-import { Badge, EmptyState, type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
-import { summarizeWali } from "../lib/orang/siswaListSummaries";
-
-// Summary buckets the directory by relationship (Ayah/Ibu/Wali).
-const SUMMARY_FIELDS = ["name", "hubungan"];
-// Styling for the EmptyState's primary link (mirrors the brand button look).
-const PRIMARY_LINK_CLASS =
-  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-5 bg-brand text-white hover:bg-brand/90";
 
 type Row = {
   name: string;
@@ -72,19 +65,6 @@ function WaliPage() {
         fields={["name", "parent", "nama", "hubungan", "nik", "is_primary", "no_hp"]}
         rowKey={(r) => r.name}
         columns={columns}
-        summarize={summarizeWali}
-        summaryFields={SUMMARY_FIELDS}
-        gettingStarted={
-          <EmptyState
-            title="Belum ada data wali"
-            description="Wali ditambahkan dari detail siswa. Buka direktori siswa, pilih siswa, lalu isi tab Wali."
-            action={
-              <Link to="/sch/$sekolah/siswa/daftar" params={{ sekolah }} className={PRIMARY_LINK_CLASS}>
-                Buka Direktori Siswa
-              </Link>
-            }
-          />
-        }
         defaultSort={{ key: "nama", dir: "asc" }}
         searchFields={["nama", "no_hp"]}
         selectFilters={[

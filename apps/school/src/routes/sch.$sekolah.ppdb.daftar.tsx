@@ -1,12 +1,15 @@
 /**
  * Pendaftaran PPDB list — enriched table (NO Kanban), bulk-action capable.
- *
- * Preserves: multi-select, bulk Ajukan/Verifikasi (whitelisted endpoints), and
- * the "Tambah Pendaftar" wizard. Adds the status-distribution strip, an in-page
- * PageGuide + EmptyState, and the doc-completeness ring + payment-health dot
- * columns. Those enrichment columns read LIVE Dokumen/Pembayaran PPDB (keyed by
- * pendaftaran_ppdb = row.name) and fall back per-row to the mock fixture matched
- * by candidate name — see components/ppdb/pendaftaranPanel.tsx.
+ * Preserves the original behavior:
+ *   - row selection (multi-select via checkbox)
+ *   - bulk Ajukan / Verifikasi via PPDB whitelisted endpoints
+ *   - "Tambah Pendaftar" wizard (Calon Siswa → Gelombang → submit)
+ * Adds (redesign):
+ *   - a status-distribution strip above the table (statusDistribution over rows)
+ *   - doc-completeness ring + payment-health dot columns (enriched from the mock
+ *     fixture by candidate name) — see components/ppdb/pendaftaranPanel.tsx
+ *   - an in-page PageGuide and a friendly EmptyState when there are no rows
+ * Wired to live Pendaftaran PPDB doctype + sekolahpro.ppdb.api.ppdb.*.
  */
 
 import { useMemo, useState } from "react";
@@ -31,15 +34,8 @@ import {
 import { listPpdbForSekolah } from "../data/ppdb";
 import { PageGuide } from "../components/guide/PageGuide";
 import {
-  docCompletenessByPendaftaran,
-  useDokumenLive,
-  usePembayaranLive,
-} from "../lib/ppdbLive";
-import {
   buildEnrichedColumns,
   indexByName,
-  paymentHealthByPendaftaranLive,
-  BulkActionBar,
   StatusDistributionStrip,
   BulkVerifikasiModal,
   PENDAFTARAN_GUIDE,
@@ -80,23 +76,11 @@ export function PpdbDaftarPage() {
   const ajukan = useAjukanPendaftaran();
   const verifikasi = useVerifikasiPendaftaran();
 
-  // Live enrichment source (GAP 4): doc completeness + payment health keyed by
-  // pendaftaran_ppdb = row.name. Falls back to the mock fixture per-row.
-  const dokumenLive = useDokumenLive();
-  const pembayaranLive = usePembayaranLive();
-  const live = useMemo(
-    () => ({
-      docByPendaftaran: docCompletenessByPendaftaran(dokumenLive.data ?? []),
-      paymentByPendaftaran: paymentHealthByPendaftaranLive(pembayaranLive.data ?? []),
-    }),
-    [dokumenLive.data, pembayaranLive.data],
-  );
-
-  // Name → mock Pendaftar lookup: the per-row fallback when live has no entry.
+  // Name → mock Pendaftar lookup powers the doc/payment enrichment columns.
   const byName = useMemo(() => indexByName(listPpdbForSekolah(sekolah)), [sekolah]);
   const columns = useMemo(
-    () => buildEnrichedColumns(sekolah, byName, live),
-    [sekolah, byName, live],
+    () => buildEnrichedColumns(sekolah, byName),
+    [sekolah, byName],
   );
 
   const params: ListParams = useMemo(() => {
@@ -137,30 +121,35 @@ export function PpdbDaftarPage() {
   // Ajukan only valid for Draft rows — guard so the backend never rejects a batch.
   const canBulkAjukan = selectedRows.length > 0 && selectedRows.every((r) => r.status === DRAFT_STATUS);
 
-  /** Run `op` over each selected row, tallying successes vs failures. */
-  const runBulk = async (op: (name: string) => Promise<unknown>) => {
-    let ok = 0, err = 0;
-    // Sequential so one mutation's failure never aborts the rest of the batch.
-    for (const r of selectedRows) {
-      try { await op(r.name); ok++; } catch { err++; }
-    }
-    setSelected(new Set());
-    return { ok, err };
-  };
-
   /** Run bulk Ajukan over the selected Draft rows and report a tally. */
   const onBulkAjukan = async () => {
     setFeedback(null);
-    const { ok, err } = await runBulk((name) => ajukan.mutateAsync({ pendaftaran_ppdb: name }));
+    let ok = 0, err = 0;
+    for (const r of selectedRows) {
+      try {
+        await ajukan.mutateAsync({ pendaftaran_ppdb: r.name });
+        ok++;
+      } catch {
+        err++;
+      }
+    }
+    setSelected(new Set());
     setFeedback(`Ajukan: ${ok} berhasil, ${err} gagal.`);
   };
 
   /** Run bulk Verifikasi to the chosen target status and report a tally. */
   const onBulkVerifikasi = async () => {
     setFeedback(null);
-    const { ok, err } = await runBulk((name) =>
-      verifikasi.mutateAsync({ pendaftaran_ppdb: name, status: bulkTarget }),
-    );
+    let ok = 0, err = 0;
+    for (const r of selectedRows) {
+      try {
+        await verifikasi.mutateAsync({ pendaftaran_ppdb: r.name, status: bulkTarget });
+        ok++;
+      } catch {
+        err++;
+      }
+    }
+    setSelected(new Set());
     setShowBulkVerifikasi(false);
     setFeedback(`Verifikasi → ${bulkTarget}: ${ok} berhasil, ${err} gagal.`);
   };
@@ -218,15 +207,33 @@ export function PpdbDaftarPage() {
         <StatusDistributionStrip rows={rows} />
 
         {selected.size > 0 && (
-          <BulkActionBar
-            count={selected.size}
-            canAjukan={canBulkAjukan}
-            ajukanPending={ajukan.isPending}
-            verifikasiPending={verifikasi.isPending}
-            onAjukan={onBulkAjukan}
-            onVerifikasi={() => setShowBulkVerifikasi(true)}
-            onCancel={() => setSelected(new Set())}
-          />
+          <div className="flex flex-wrap items-center gap-3 border-y border-border bg-brand/5 px-4 py-3">
+            <span className="text-sm text-fg">
+              <strong className="tabular-nums">{selected.size}</strong> dipilih
+            </span>
+            <div className="ml-auto flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!canBulkAjukan || ajukan.isPending}
+                onClick={onBulkAjukan}
+                title={canBulkAjukan ? "" : "Hanya pendaftaran berstatus Draft yang bisa diajukan"}
+              >
+                Ajukan Massal
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={verifikasi.isPending}
+                onClick={() => setShowBulkVerifikasi(true)}
+              >
+                Verifikasi Massal
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setSelected(new Set())}>
+                Batal
+              </Button>
+            </div>
+          </div>
         )}
 
         {feedback && (

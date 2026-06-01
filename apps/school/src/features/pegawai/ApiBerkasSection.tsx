@@ -1,4 +1,4 @@
-import { Badge, EmptyState } from "@sekolahpro/ui";
+import { Badge } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import type { PegawaiApi } from "./roles";
 
@@ -51,12 +51,7 @@ export function ApiBerkasSection({ pegawai }: { pegawai: PegawaiApi }) {
           ))}
         </tbody>
       </table>
-      {!q.isLoading && rows.length === 0 ? (
-        <EmptyState
-          title="Belum ada berkas"
-          description="Tambahkan dokumen kepegawaian seperti ijazah, sertifikat, atau SK untuk guru ini."
-        />
-      ) : null}
+      {!q.isLoading && rows.length === 0 ? <div className="text-sm text-muted-fg">Belum ada berkas.</div> : null}
     </section>
   );
 }

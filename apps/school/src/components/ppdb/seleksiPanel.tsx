@@ -118,13 +118,6 @@ const RANK_COLUMNS: Column<RankRow>[] = [
 interface Props {
   /** Daftar pendaftar (mock) sudah ter-scope ke sekolah aktif. */
   list: Pendaftar[];
-  /**
-   * Histogram skor dari sumber LIVE (Hasil Tes Akademik PPDB). Bila diberikan,
-   * menggantikan histogram mock; bila undefined, panel jatuh kembali ke
-   * scoreHistogram(list). Pemutusan live-vs-mock dilakukan di route (tempat hook
-   * live berada) agar komponen ini tetap murni presentational.
-   */
-  histogramOverride?: ChartDatum[] | undefined;
 }
 
 /**
@@ -132,12 +125,8 @@ interface Props {
  * peringkat. Semua viz degrade mulus saat list kosong (chart kosong + tabel
  * dengan pesan empty).
  */
-export function SeleksiAnalyticsPanel({ list, histogramOverride }: Props): ReactNode {
-  // Prioritaskan histogram live; fallback ke mock saat override tak tersedia.
-  const histogram = useMemo(
-    () => histogramOverride ?? scoreHistogram(list),
-    [histogramOverride, list],
-  );
+export function SeleksiAnalyticsPanel({ list }: Props): ReactNode {
+  const histogram = useMemo(() => scoreHistogram(list), [list]);
   const donutData = useMemo(() => buildResultDonut(list), [list]);
   const ranking = useMemo(() => buildRanking(list), [list]);
   const totalScored = ranking.length;

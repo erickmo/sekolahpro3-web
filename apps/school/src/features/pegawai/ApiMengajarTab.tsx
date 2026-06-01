@@ -1,4 +1,4 @@
-import { Badge, EmptyState } from "@sekolahpro/ui";
+import { Badge } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import type { PegawaiApi } from "./roles";
 
@@ -31,12 +31,7 @@ export function ApiMengajarTab({ pegawai }: { pegawai: PegawaiApi }) {
       <section className="rounded-lg border border-border bg-bg p-4">
         <h2 className="text-sm font-semibold text-fg mb-2">Mata Pelajaran Pengampu</h2>
         {mapelQ.isLoading ? <div className="text-sm text-muted-fg">Memuat...</div> : null}
-        {!mapelQ.isLoading && mapel.length === 0 ? (
-          <EmptyState
-            title="Belum ada mata pelajaran"
-            description="Tetapkan mata pelajaran yang diampu guru ini untuk mulai mengelola pengajaran."
-          />
-        ) : null}
+        {!mapelQ.isLoading && mapel.length === 0 ? <div className="text-sm text-muted-fg">Belum ada data.</div> : null}
         <ul className="text-sm space-y-1">
           {mapel.map((r) => (
             <li key={r.name} className="flex items-center gap-2">
@@ -51,12 +46,7 @@ export function ApiMengajarTab({ pegawai }: { pegawai: PegawaiApi }) {
       <section className="rounded-lg border border-border bg-bg p-4">
         <h2 className="text-sm font-semibold text-fg mb-2">Penugasan Mengajar</h2>
         {penugasanQ.isLoading ? <div className="text-sm text-muted-fg">Memuat...</div> : null}
-        {!penugasanQ.isLoading && penugasan.length === 0 ? (
-          <EmptyState
-            title="Belum ada penugasan"
-            description="Penugasan mengajar per tahun ajaran akan tampil di sini setelah ditetapkan."
-          />
-        ) : null}
+        {!penugasanQ.isLoading && penugasan.length === 0 ? <div className="text-sm text-muted-fg">Belum ada penugasan.</div> : null}
         <table className="w-full text-sm">
           <tbody>
             {penugasan.map((r) => (
