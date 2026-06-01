@@ -25,10 +25,10 @@ const SUMBER_TONE: Record<string, "brand" | "success" | "warning" | "neutral"> =
   Sumbangan: "warning",
 };
 
-const STATUS_TONE: Record<number, "neutral" | "brand" | "success"> = {
+const STATUS_TONE: Record<number, "neutral" | "brand" | "success" | "warning"> = {
   0: "neutral",
   1: "success",
-  2: "warning" as never,
+  2: "warning",
 };
 
 const COLUMNS: Column<Row>[] = [
