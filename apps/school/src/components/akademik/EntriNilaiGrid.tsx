@@ -39,7 +39,7 @@ interface RombelDoc {
   anggota?: AnggotaRombel[];
 }
 
-interface AnggotaRombel {
+export interface AnggotaRombel {
   name?: string;
   siswa: string;
   no_urut?: number;
@@ -52,7 +52,7 @@ interface SiswaInfo {
   nis?: string;
 }
 
-interface KomponenNilai {
+export interface KomponenNilai {
   name: string;
   nama: string;
   bobot?: number;
@@ -77,21 +77,21 @@ interface EntriNilaiDoc {
 
 type CellStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
-interface CellState {
+export interface CellState {
   value: string;
   baseline: string;
   status: CellStatus;
   error?: string;
 }
 
-type GridState = Record<string, Record<string, CellState>>; // [siswa][komponen]
+export type GridState = Record<string, Record<string, CellState>>; // [siswa][komponen]
 
 const ROMBEL_FIELDS_GET = ["name", "nama_rombel", "tingkat"];
 const KOMPONEN_FIELDS = ["name", "nama", "bobot"];
 const SISWA_FIELDS = ["name", "nama_lengkap", "nis"];
 const ENTRI_FIELDS = ["name", "siswa", "mata_pelajaran", "semester", "tahun_ajaran", "tingkat", "nilai_akhir"];
 
-function clampNilai(raw: string): { value: string; error: string | null } {
+export function clampNilai(raw: string): { value: string; error: string | null } {
   const t = raw.trim();
   if (t === "") return { value: "", error: null };
   const n = Number(t);
@@ -100,7 +100,7 @@ function clampNilai(raw: string): { value: string; error: string | null } {
   return { value: t, error: null };
 }
 
-function computeNilaiAkhir(
+export function computeNilaiAkhir(
   cells: Record<string, CellState> | undefined,
   komponen: KomponenNilai[],
 ): number | null {
@@ -124,9 +124,21 @@ function computeNilaiAkhir(
   return totalNilai / totalBobot;
 }
 
-/** Passing threshold (KKM) used to classify a student's final score. */
-const KKM_DEFAULT = 75;
+/** Fallback passing threshold (KKM) when no KKM is configured for the mapel. */
+export const KKM_DEFAULT = 75;
 const PERCENT_MAX = 100;
+
+/**
+ * Resolve the effective KKM (passing threshold) from queried KKM rows, falling
+ * back to {@link KKM_DEFAULT} when none is configured or the value is invalid.
+ * Honours per-mapel school policy instead of a hard-coded 75.
+ */
+export function resolveKkm(
+  rows: ReadonlyArray<{ nilai_kkm?: number | null }> | undefined,
+): number {
+  const v = rows?.[0]?.nilai_kkm;
+  return typeof v === "number" && !Number.isNaN(v) && v > 0 ? v : KKM_DEFAULT;
+}
 
 /** Aggregated progress / mastery snapshot for the whole class. */
 interface GridSummary {
@@ -139,7 +151,7 @@ interface GridSummary {
 }
 
 /** Count how many component cells in a row hold a valid numeric value. */
-function countFilledCells(
+export function countFilledCells(
   row: Record<string, CellState> | undefined,
   komponen: KomponenNilai[],
 ): number {
@@ -156,10 +168,11 @@ function countFilledCells(
  * Build the class summary (fill % + mastery split) from the in-memory grid.
  * Derived purely from already-loaded data — no extra network calls.
  */
-function buildSummary(
+export function buildSummary(
   anggota: AnggotaRombel[],
   grid: GridState,
   komponen: KomponenNilai[],
+  kkm: number = KKM_DEFAULT,
 ): GridSummary {
   const totalCells = anggota.length * komponen.length;
   let filledCells = 0;
@@ -171,11 +184,27 @@ function buildSummary(
     filledCells += countFilledCells(row, komponen);
     const akhir = computeNilaiAkhir(row, komponen);
     if (akhir == null) belumDinilai += 1;
-    else if (akhir >= KKM_DEFAULT) tuntas += 1;
+    else if (akhir >= kkm) tuntas += 1;
     else belumTuntas += 1;
   }
   const fillPercent = totalCells === 0 ? 0 : (filledCells / totalCells) * PERCENT_MAX;
   return { totalCells, filledCells, fillPercent, tuntas, belumTuntas, belumDinilai };
+}
+
+/**
+ * Rows that still need saving: any with an unsaved edit (`dirty`) OR a previous
+ * save failure (`error`). Including `error` keeps failed rows retryable via the
+ * same Simpan button after a partial-save failure (instead of stranding them).
+ */
+export function pendingSaveRows(anggota: AnggotaRombel[], grid: GridState): string[] {
+  const out: string[] = [];
+  for (const a of anggota) {
+    const row = grid[a.siswa];
+    if (!row) continue;
+    const needsSave = Object.values(row).some((c) => c.status === "dirty" || c.status === "error");
+    if (needsSave) out.push(a.siswa);
+  }
+  return out;
 }
 
 async function fetchRombelDoc(name: string): Promise<RombelDoc | null> {
@@ -271,6 +300,18 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
     limit_page_length: 50,
   });
   const komponenList = useMemo(() => komponenQ.data ?? [], [komponenQ.data]);
+
+  // Per-mapel KKM (passing threshold) from Master Data, scoped to the period.
+  // Falls back to KKM_DEFAULT when none is configured (see resolveKkm).
+  const kkmQ = useResourceList<{ name: string; nilai_kkm?: number | null }>("KKM", {
+    fields: ["name", "nilai_kkm"],
+    filters: [
+      ["mata_pelajaran", "=", selection.mapel],
+      ["tahun_ajaran", "=", selection.tahunAjaran],
+    ],
+    limit_page_length: 1,
+  });
+  const kkm = useMemo(() => resolveKkm(kkmQ.data), [kkmQ.data]);
   const totalBobot = useMemo(
     () => komponenList.reduce((acc, k) => acc + Number(k.bobot ?? 0), 0),
     [komponenList],
@@ -347,21 +388,12 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
     });
   }, []);
 
-  const dirtyRows = useMemo(() => {
-    const out: string[] = [];
-    for (const a of anggota) {
-      const row = grid[a.siswa];
-      if (!row) continue;
-      const isDirty = Object.values(row).some((c) => c.status === "dirty");
-      if (isDirty) out.push(a.siswa);
-    }
-    return out;
-  }, [anggota, grid]);
+  const dirtyRows = useMemo(() => pendingSaveRows(anggota, grid), [anggota, grid]);
 
   // Class progress / mastery snapshot for the summary panel (derived data).
   const summary = useMemo(
-    () => buildSummary(anggota, grid, komponenList),
-    [anggota, grid, komponenList],
+    () => buildSummary(anggota, grid, komponenList, kkm),
+    [anggota, grid, komponenList, kkm],
   );
 
   const akademik = useAkademikContextOptional();
@@ -405,11 +437,14 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
       };
       if (tingkat) body.tingkat = tingkat;
 
-      // Mark row cells as saving
+      // Mark row cells as saving (dirty = new edit, error = retry of a prior fail);
+      // rebuild without the error field so a stale message does not linger.
       const updatedRow: Record<string, CellState> = { ...row };
       for (const k of komponenList) {
         const c = updatedRow[k.name];
-        if (c && c.status === "dirty") updatedRow[k.name] = { ...c, status: "saving" };
+        if (c && (c.status === "dirty" || c.status === "error")) {
+          updatedRow[k.name] = { value: c.value, baseline: c.baseline, status: "saving" };
+        }
       }
       nextGrid[siswa] = updatedRow;
       setGrid({ ...nextGrid });

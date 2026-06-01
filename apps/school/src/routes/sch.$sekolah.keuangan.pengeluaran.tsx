@@ -17,6 +17,7 @@ import {
   FilterBar,
   FormField,
   FormGrid,
+  InfoField,
   Input,
   Modal,
   PageHeader,
@@ -29,7 +30,7 @@ import {
   IconAlert,
   IconWallet,
 } from "@sekolahpro/ui";
-import { useResourceCreate } from "@sekolahpro/api-client";
+import { useResourceCreate, useResourceDoc } from "@sekolahpro/api-client";
 import { DonutChart, type ChartDatum, type Tone } from "../components/viz";
 import { KeuanganPageGuide } from "../components/keuangan";
 import {
@@ -42,7 +43,7 @@ import {
 } from "../data/keuangan";
 import { usePengeluaranLive } from "../data/keuangan-live";
 import { useActiveCompany } from "../lib/akuntansi-scope";
-import { submitDoc } from "../data/akuntansi";
+import { submitDoc, cancelDoc, docstatusBadge } from "../data/akuntansi";
 
 const DOCTYPE_EXPENSE = "School Expense";
 
@@ -119,6 +120,34 @@ function PengeluaranPage() {
   const [fExpenseAccount, setFExpenseAccount] = useState("");
   const [fPaidFrom, setFPaidFrom] = useState("");
   const [fStatus, setFStatus] = useState<string>("Draft");
+
+  // Detail/cancel-modal state: open a row's doc, then Submit (Draft) or Batalkan (Submitted).
+  const [detailId, setDetailId] = useState<string | undefined>(undefined);
+  const [busy2, setBusy2] = useState(false);
+  const detail = useResourceDoc<Record<string, unknown>>(DOCTYPE_EXPENSE, detailId);
+  const doc = detail.data;
+  const docstatus = typeof doc?.docstatus === "number" ? doc.docstatus : 0;
+  const docstatusTag = docstatusBadge(docstatus === 1 ? 1 : docstatus === 2 ? 2 : 0);
+
+  // Runs a submit/cancel action against the open doc, then refreshes and closes.
+  const act = async (fn: (dt: string, name: string) => Promise<unknown>) => {
+    if (!detailId) return;
+    setBusy2(true);
+    try {
+      await fn(DOCTYPE_EXPENSE, detailId);
+      refetch();
+      setDetailId(undefined);
+    } finally {
+      setBusy2(false);
+    }
+  };
+
+  // Renders a doc field as a readable string for the detail rows.
+  const fieldText = (key: string): string => {
+    const v = doc?.[key];
+    if (v === null || v === undefined || v === "") return "—";
+    return String(v);
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -208,6 +237,7 @@ function PengeluaranPage() {
     { key: "metode", header: "Metode", cell: (r) => <Badge tone="neutral">{r.metode}</Badge> },
     { key: "status", header: "Status", cell: (r) => <Badge tone={TONE_PENGELUARAN[r.status]} dot>{r.status}</Badge> },
     { key: "approver", header: "Approver", cell: (r) => <span className="text-sm text-muted-fg">{r.approver ?? "—"}</span> },
+    { key: "aksi", header: "", align: "right", cell: (r) => <Button variant="ghost" onClick={() => setDetailId(r.id)}>Detail</Button> },
   ];
 
   return (
@@ -288,6 +318,36 @@ function PengeluaranPage() {
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
           <Button onClick={handleSave} disabled={busy || !canSave}>{busy ? "Menyimpan…" : "Simpan"}</Button>
         </div>
+      </Modal>
+
+      <Modal open={!!detailId} onClose={() => setDetailId(undefined)} title="Detail Pengeluaran">
+        {detail.isLoading ? (
+          <p className="text-sm text-muted-fg">Memuat…</p>
+        ) : doc ? (
+          <div className="space-y-3">
+            <Badge tone={docstatusTag.tone} dot>{docstatusTag.label}</Badge>
+            <FormGrid cols={2}>
+              <InfoField label="Kategori" value={fieldText("kategori")} />
+              <InfoField label="Jumlah" value={formatRupiah(typeof doc.jumlah === "number" ? doc.jumlah : 0)} />
+              <InfoField label="Penerima" value={fieldText("penerima")} />
+              <InfoField label="Metode" value={fieldText("metode")} />
+              <InfoField label="Status" value={fieldText("status")} />
+              <InfoField label="Approver" value={fieldText("approver")} />
+              <InfoField label="Posting Date" value={fieldText("posting_date")} />
+            </FormGrid>
+            <InfoField label="Deskripsi" value={fieldText("deskripsi")} />
+            <div className="flex gap-2 pt-2">
+              {docstatus === 0 ? (
+                <Button onClick={() => act(submitDoc)} disabled={busy2}>{busy2 ? "Memproses…" : "Submit"}</Button>
+              ) : null}
+              {docstatus === 1 ? (
+                <Button variant="destructive" onClick={() => act(cancelDoc)} disabled={busy2}>{busy2 ? "Memproses…" : "Batalkan"}</Button>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-fg">Tidak ditemukan.</p>
+        )}
       </Modal>
     </div>
   );

@@ -16,7 +16,7 @@
  * tidak pernah menyembunyikan atau menonaktifkan fungsi apa pun.
  */
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
   Badge,
   Button,
@@ -346,6 +346,8 @@ function usePeriodFilters(ctx: ReturnType<typeof useAkademikContextOptional>) {
 }
 
 function RaportPage() {
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const navigate = useNavigate();
   const ctx = useAkademikContextOptional();
   const role = useAkademikRole();
   const periodeSuffix = ctx?.tahunAjaran ? ` · Periode: ${ctx.tahunAjaran} ${ctx.semester}` : "";
@@ -441,8 +443,17 @@ function RaportPage() {
         tips={GUIDE_TIPS}
       />
 
-      <SummaryStats summary={summary} />
-      <RaportViz summary={summary} />
+      {summaryQuery.isLoading ? (
+        // Avoid flashing zeroed stats/charts before the aggregate query resolves.
+        <div className="rounded-md border border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-fg">
+          Memuat ringkasan…
+        </div>
+      ) : (
+        <>
+          <SummaryStats summary={summary} />
+          <RaportViz summary={summary} />
+        </>
+      )}
       <StatusLegend />
 
       <FilterBar
@@ -477,6 +488,9 @@ function RaportPage() {
           rowKey={(r) => r.name}
           sort={sort}
           onSortChange={setSort}
+          onRowClick={(r) =>
+            navigate({ to: "/sch/$sekolah/akademik/raport/$id", params: { sekolah, id: r.name } })
+          }
           empty={
             <div>
               <div className="font-medium text-fg">

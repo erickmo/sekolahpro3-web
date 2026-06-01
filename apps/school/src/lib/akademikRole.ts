@@ -38,7 +38,7 @@ export interface AkademikRoleInfo {
 const PRIMARY_PRIORITY: readonly AkademikRole[] = ["kepala", "admin", "guru"];
 
 /** Permissive fallback granting every role (used when nothing matches). */
-const ALL_ROLES: readonly AkademikRole[] = ["admin", "guru", "kepala"];
+export const ALL_AKADEMIK_ROLES: readonly AkademikRole[] = ["admin", "guru", "kepala"];
 
 /** Default primary role when no academic role can be inferred. */
 const DEFAULT_PRIMARY: AkademikRole = "admin";
@@ -71,8 +71,10 @@ function normalizeRole(raw: string): string {
 /**
  * Map a list of raw Frappe role strings to the set of academic buckets they
  * imply. Returns an empty array when none match.
+ *
+ * Exported for unit testing and reuse; mirrors `mapFrappeRolesToKeuangan`.
  */
-function mapRoles(rawRoles: readonly string[]): AkademikRole[] {
+export function mapAkademikRoles(rawRoles: readonly string[]): AkademikRole[] {
   const found = new Set<AkademikRole>();
   for (const raw of rawRoles) {
     const normalized = normalizeRole(raw);
@@ -89,8 +91,10 @@ function mapRoles(rawRoles: readonly string[]): AkademikRole[] {
 /**
  * Pick the single primary role from a set using {@link PRIMARY_PRIORITY}.
  * Falls back to {@link DEFAULT_PRIMARY} when the set is empty.
+ *
+ * Exported for unit testing and reuse; mirrors `pickPrimaryRole` in keuanganRole.
  */
-function pickPrimary(roles: readonly AkademikRole[]): AkademikRole {
+export function pickPrimaryRole(roles: readonly AkademikRole[]): AkademikRole {
   for (const candidate of PRIMARY_PRIORITY) {
     if (roles.includes(candidate)) {
       return candidate;
@@ -105,7 +109,7 @@ function pickPrimary(roles: readonly AkademikRole[]): AkademikRole {
  */
 function permissiveFallback(): AkademikRoleInfo {
   return {
-    roles: [...ALL_ROLES],
+    roles: [...ALL_AKADEMIK_ROLES],
     primary: DEFAULT_PRIMARY,
     isAdmin: true,
     isGuru: true,
@@ -138,14 +142,14 @@ export function useAkademikRole(): AkademikRoleInfo {
     return permissiveFallback();
   }
 
-  const roles = mapRoles(rawRoles);
+  const roles = mapAkademikRoles(rawRoles);
   if (roles.length === 0) {
     return permissiveFallback();
   }
 
   return {
     roles,
-    primary: pickPrimary(roles),
+    primary: pickPrimaryRole(roles),
     isAdmin: roles.includes("admin"),
     isGuru: roles.includes("guru"),
     isKepala: roles.includes("kepala"),

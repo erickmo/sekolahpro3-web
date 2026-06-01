@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { AkademikContextProvider, type AkademikContextValue } from "../../lib/akademikContext";
-import { AkademikContextBar } from "./AkademikContextBar";
+import { AkademikContextBar, resolvePeriodeStatus, STATUS_LABEL } from "./AkademikContextBar";
 
 vi.mock("@sekolahpro/api-client", () => ({
   listResource: vi.fn().mockResolvedValue([]),
@@ -50,5 +50,36 @@ describe("AkademikContextBar", () => {
     expect(confirmSpy).toHaveBeenCalled();
     expect(setSemester).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
+  });
+
+  it("menampilkan badge status periode 'berjalan' untuk periode aktif", () => {
+    renderBar();
+    expect(screen.getByText(STATUS_LABEL.aktif)).toBeTruthy();
+  });
+
+  it("menampilkan badge status 'lampau' saat periode lampau", () => {
+    renderBar({ isPastPeriod: true });
+    expect(screen.getByText(STATUS_LABEL.lampau)).toBeTruthy();
+  });
+
+  it("menampilkan label peran (fallback permisif tanpa SessionProvider)", () => {
+    renderBar();
+    // useAkademikRole falls back to admin when no session is mounted.
+    expect(screen.getByText("Administrator Akademik")).toBeTruthy();
+  });
+});
+
+describe("resolvePeriodeStatus", () => {
+  it("mengembalikan belum-aktif saat tak ada TA aktif (prioritas tertinggi)", () => {
+    expect(resolvePeriodeStatus(true, false)).toBe("belum-aktif");
+    expect(resolvePeriodeStatus(true, true)).toBe("belum-aktif");
+  });
+
+  it("mengembalikan lampau saat periode lewat dan TA aktif ada", () => {
+    expect(resolvePeriodeStatus(false, true)).toBe("lampau");
+  });
+
+  it("mengembalikan aktif saat periode berjalan", () => {
+    expect(resolvePeriodeStatus(false, false)).toBe("aktif");
   });
 });

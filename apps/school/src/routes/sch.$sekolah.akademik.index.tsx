@@ -25,14 +25,16 @@ import {
   cn,
 } from "@sekolahpro/ui";
 import type { AttentionItem, ModuleFlowStep } from "@sekolahpro/ui";
-import { useResourceList } from "@sekolahpro/api-client";
+import { useResourceList, useFrappeMethod } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
 import { useAkademikContextOptional } from "../lib/akademikContext";
+import { buildNilaiTrend } from "../lib/akademikTrend";
 import {
   DonutChart,
   DistributionBar,
   HBarChart,
   ProgressRing,
+  Sparkline,
 } from "../components/viz";
 import type { ChartDatum, DistributionSegment } from "../components/viz/charts";
 import { PageGuide } from "../components/guide";
@@ -64,6 +66,8 @@ const KOMPONEN_FIELDS = ["name", "mata_pelajaran"];
 const TA_FIELDS = ["name", "nama", "is_current", "semester_ganjil_akhir", "semester_genap_akhir"];
 
 const PAGE_LIMIT = 200;
+/** Upper bound of Entri Nilai rows pulled for the cross-period trend. */
+const TREND_QUERY_LIMIT = 1000;
 const RECENT_LIMIT = 5;
 const ATTENTION_CAP = 20;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -270,6 +274,22 @@ function AkademikDashboardPage() {
     limit_page_length: 1,
   });
 
+  // Cross-period Entri Nilai feeding the academic achievement trend (AKA-20).
+  // Read-only aggregate; no period filter so it spans tahun ajaran/semester.
+  const trendQ = useResourceList<{ tahun_ajaran?: string; semester?: string; nilai_akhir?: number }>(
+    "Entri Nilai",
+    { fields: ["tahun_ajaran", "semester", "nilai_akhir"], limit_page_length: TREND_QUERY_LIMIT },
+  );
+  const nilaiTrend = useMemo(() => buildNilaiTrend(trendQ.data ?? []), [trendQ.data]);
+
+  // Grade-entry fill % for the active period (AKA-18/30). Tenant-scoped on the
+  // backend; only queried once a period is selected in the context bar.
+  const progresQ = useFrappeMethod<{ total: number; terisi: number; percent: number }>(
+    "sekolahpro.akademik.doctype.entri_nilai.entri_nilai.progres_entri_nilai",
+    { semester: ctx?.semester ?? "", tahun_ajaran: ctx?.tahunAjaran ?? "", sekolah },
+    { enabled: Boolean(ctx?.semester && ctx?.tahunAjaran) },
+  );
+
   const mapelList = mapelQ.data ?? [];
   const kkmList = kkmQ.data ?? [];
   const kurikulumList = kurikulumQ.data ?? [];
@@ -465,8 +485,20 @@ function AkademikDashboardPage() {
         />
         <StatCard
           label="% Sel Nilai Terisi"
-          value="—"
-          hint="Belum tersedia · butuh endpoint progres entri nilai"
+          value={
+            progresQ.data
+              ? `${progresQ.data.percent}%`
+              : progresQ.isLoading
+                ? "…"
+                : "—"
+          }
+          hint={
+            progresQ.data
+              ? `${progresQ.data.terisi}/${progresQ.data.total} sel terisi periode ini`
+              : ctx?.tahunAjaran
+                ? "Memuat progres…"
+                : "Pilih periode di header"
+          }
           icon={<IconEdit />}
           accent="violet"
           urgency="normal"
@@ -505,6 +537,30 @@ function AkademikDashboardPage() {
                 <div className="text-xs text-muted-fg">Belum ada data mapel.</div>
               )}
             </VizTile>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        title="Tren Capaian Akademik"
+        description="Rata-rata nilai akhir antar periode (tahun ajaran & semester), lama ke terbaru."
+      >
+        {trendQ.isLoading ? (
+          <p className="py-6 text-center text-sm text-muted-fg">Memuat tren…</p>
+        ) : nilaiTrend.points.length < 2 ? (
+          <p className="py-6 text-center text-sm text-muted-fg">
+            Butuh nilai dari minimal dua periode untuk menampilkan tren.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <Sparkline points={nilaiTrend.points} width={480} height={64} className="w-full" />
+            <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-fg">
+              {nilaiTrend.labels.map((label, i) => (
+                <span key={label} className="tabular-nums">
+                  {label}: <strong className="text-fg">{nilaiTrend.points[i]}</strong>
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </SectionCard>

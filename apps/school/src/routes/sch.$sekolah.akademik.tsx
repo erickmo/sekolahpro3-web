@@ -67,11 +67,11 @@ const CONTEXT_BAR_PREFIXES = [
 // "lengket" di localStorage.
 const PERIODE_SELF_MANAGED = "/akademik/entri-nilai/edit";
 
-function isPeriodeSelfManaged(pathname: string): boolean {
+export function isPeriodeSelfManaged(pathname: string): boolean {
   return pathname.includes(PERIODE_SELF_MANAGED);
 }
 
-function showContextBar(pathname: string): boolean {
+export function showContextBar(pathname: string): boolean {
   if (isPeriodeSelfManaged(pathname)) return false;
   return CONTEXT_BAR_PREFIXES.some((p) => pathname.includes(p));
 }

@@ -37,7 +37,9 @@ interface SimpleDetailPageProps {
   sekolah?: string;
 }
 
-const STATUS_TONE: Record<string, "success" | "warning" | "neutral" | "danger" | "brand"> = {
+type DetailTone = "success" | "warning" | "neutral" | "danger" | "brand";
+
+const STATUS_TONE: Record<string, DetailTone> = {
   Aktif: "success",
   Nonaktif: "neutral",
   Draft: "warning",
@@ -46,6 +48,17 @@ const STATUS_TONE: Record<string, "success" | "warning" | "neutral" | "danger" |
   Disetujui: "brand",
   Diterbitkan: "success",
 };
+
+/** Badge tone for a status value; neutral when unknown or absent. */
+export function resolveDetailStatusTone(statusVal: string | undefined): DetailTone {
+  return statusVal ? (STATUS_TONE[statusVal] ?? "neutral") : "neutral";
+}
+
+/** Render a field value: custom formatter wins, else stringify with an em-dash for empty. */
+export function formatDetailValue(raw: unknown, format?: (v: unknown) => ReactNode): ReactNode {
+  if (format) return format(raw);
+  return raw == null || raw === "" ? "—" : String(raw);
+}
 
 export function SimpleDetailPage(props: SimpleDetailPageProps) {
   const {
@@ -79,7 +92,7 @@ export function SimpleDetailPage(props: SimpleDetailPageProps) {
   const doc = q.data;
   const title = (doc[titleField] as string | undefined) ?? name;
   const statusVal = statusField ? (doc[statusField] as string | undefined) : undefined;
-  const tone = statusVal ? (STATUS_TONE[statusVal] ?? "neutral") : "neutral";
+  const tone = resolveDetailStatusTone(statusVal);
 
   return (
     <DetailPageTemplate
@@ -115,11 +128,9 @@ export function SimpleDetailPage(props: SimpleDetailPageProps) {
             action={statusVal ? <Badge tone={tone} dot>{statusVal}</Badge> : null}
           >
             <InfoGrid cols={2}>
-              {fields.map((f) => {
-                const raw = doc[f.field];
-                const rendered = f.format ? f.format(raw) : (raw == null || raw === "" ? "—" : String(raw));
-                return <InfoField key={f.field} label={f.label} value={rendered} />;
-              })}
+              {fields.map((f) => (
+                <InfoField key={f.field} label={f.label} value={formatDetailValue(doc[f.field], f.format)} />
+              ))}
             </InfoGrid>
           </SectionCard>
           {extra}

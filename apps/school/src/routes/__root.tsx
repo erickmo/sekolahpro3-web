@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
   createRootRoute,
   Link,
@@ -139,7 +139,7 @@ function GlobalSearch({ sekolah }: { sekolah: string | undefined }) {
                         to={scopedTo(sekolah, hit.href)}
                         params={scopedParams(sekolah)}
                         onClick={handleSelect}
-                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseDown={(e: ReactMouseEvent) => e.preventDefault()}
                         className={cls}
                       >
                         {body}
@@ -149,7 +149,7 @@ function GlobalSearch({ sekolah }: { sekolah: string | undefined }) {
                         key={hit.id}
                         to="/pilih"
                         onClick={handleSelect}
-                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseDown={(e: ReactMouseEvent) => e.preventDefault()}
                         className={cls}
                       >
                         {body}
