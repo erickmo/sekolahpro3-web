@@ -1,16 +1,19 @@
 /**
- * Pembayaran PPDB — list + create payment order via gateway.
+ * Pembayaran PPDB (redesain) — pelacakan keuangan penerimaan.
  *
- * Each row offers contextual action:
- *   - "Belum Lunas" / "Partial" → "Buat Order" (create_payment_order endpoint)
- *   - "Lunas" → tampilkan status; opsi Tandai Refund (manual)
+ * Tiga lapisan:
+ *  1. PageGuide — tutorial singkat per-halaman (storageId "ppdb-pembayaran").
+ *  2. PembayaranPanel — gauge terkumpul-vs-tagihan, donut status, daftar aging
+ *     tunggakan + modal pencatatan manual (analitik dari mock Pendaftar).
+ *  3. Tabel pembayaran backend — list + aksi "Buat Order" ke payment gateway
+ *     (flow lama dipertahankan; status berubah Lunas otomatis via webhook).
  *
  * Catatan: status mark-paid lunas otomatis lewat payment_webhook backend —
  * panel ini menyediakan trigger order baru, bukan mengubah status manual.
  */
 
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useParams} from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   Badge,
   Button,
@@ -23,6 +26,9 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { useCreatePaymentOrder } from "../lib/ppdbApi";
+import { listPpdbForSekolah } from "../data/ppdb";
+import { PageGuide } from "../components/guide/PageGuide";
+import { PembayaranPanel } from "../components/ppdb/pembayaranPanel";
 
 type Row = {
   name: string;
@@ -34,8 +40,59 @@ type Row = {
 
 const STATUS_OPTIONS = ["Semua", "Belum Bayar", "Partial", "Lunas", "Gagal", "Refund"];
 const PAGE_SIZE = 25;
+// Tanggal acuan agregasi mock — selaras dengan dashboard PPDB sampai backend wired.
+const TODAY_ISO = "2026-05-25";
+// Status pembayaran yang tidak boleh memicu order baru (sudah final).
+const ORDER_DISABLED_STATUSES = new Set(["Lunas", "Refund"]);
+// Persen bilah progres maksimum (hindari magic number 100 inline).
+const PROGRESS_MAX_PCT = 100;
 
-function PembayaranPpdbPage() {
+// Tutorial per-halaman — langkah ringkas memakai modul pembayaran.
+const GUIDE_STEPS = [
+  { title: "Pantau penerimaan dana", detail: "Gauge menunjukkan dana terkumpul terhadap total tagihan." },
+  { title: "Tindak lanjuti tunggakan", detail: "Daftar aging menyorot tagihan tertunda lebih dari 3 hari." },
+  { title: "Buat order pembayaran", detail: "Pada tabel, klik Buat Order untuk mengirim tagihan ke gateway." },
+];
+const GUIDE_TIPS = [
+  "Status berubah menjadi Lunas otomatis saat gateway mengirim webhook settlement.",
+  "Gunakan Catat Pembayaran untuk transaksi tunai/transfer di luar gateway.",
+];
+
+/** Nada Badge per status pembayaran backend. */
+function statusTone(s: string | undefined): "success" | "warning" | "danger" | "brand" | "neutral" {
+  if (s === "Lunas") return "success";
+  if (s === "Partial") return "brand";
+  if (s === "Belum Bayar") return "warning";
+  if (s === "Gagal" || s === "Refund") return "danger";
+  return "neutral";
+}
+
+/** Format angka rupiah ringkas untuk sel tabel. */
+function formatRp(n: number | undefined): string {
+  return `Rp ${(n ?? 0).toLocaleString("id-ID")}`;
+}
+
+/** Persentase terbayar terhadap tagihan, dibatasi 0..100. */
+function paidPercent(terbayar: number, tagihan: number): number {
+  if (tagihan <= 0) return 0;
+  return Math.min(PROGRESS_MAX_PCT, Math.round((terbayar / tagihan) * PROGRESS_MAX_PCT));
+}
+
+/** Bangun parameter resource:list dari filter aktif (fields + filters + paging). */
+function buildListParams(status: string, search: string, page: number) {
+  const filters: Array<[string, string, unknown]> = [];
+  if (status !== "Semua") filters.push(["status", "=", status]);
+  if (search.trim()) filters.push(["name", "like", `%${search.trim()}%`]);
+  return {
+    fields: ["name", "pendaftaran_ppdb", "jumlah_tagihan", "jumlah_terbayar", "status"],
+    ...(filters.length ? { filters } : {}),
+    order_by: "`modified` desc",
+    limit_start: (page - 1) * PAGE_SIZE,
+    limit_page_length: PAGE_SIZE + 1,
+  };
+}
+
+export function PembayaranPpdbPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
 
   const [search, setSearch] = useState("");
@@ -45,25 +102,18 @@ function PembayaranPpdbPage() {
 
   const createOrder = useCreatePaymentOrder();
 
-  const params = useMemo(() => {
-    const filters: Array<[string, string, unknown]> = [];
-    if (status !== "Semua") filters.push(["status", "=", status]);
-    if (search.trim()) filters.push(["name", "like", `%${search.trim()}%`]);
-    return {
-      fields: ["name", "pendaftaran_ppdb", "jumlah_tagihan", "jumlah_terbayar", "status"],
-      ...(filters.length ? { filters } : {}),
-      order_by: "`modified` desc",
-      limit_start: (page - 1) * PAGE_SIZE,
-      limit_page_length: PAGE_SIZE + 1,
-    };
-  }, [status, search, page]);
+  // Mock list per sekolah — sumber analitik panel sampai endpoint agregat siap.
+  const ppdbList = useMemo(() => listPpdbForSekolah(sekolah), [sekolah]);
+
+  const params = useMemo(() => buildListParams(status, search, page), [status, search, page]);
 
   const q = useResourceList<Row>("Pembayaran PPDB", params);
   const fetched = q.data ?? [];
   const hasNext = fetched.length > PAGE_SIZE;
   const rows = hasNext ? fetched.slice(0, PAGE_SIZE) : fetched;
 
-  const onBuatOrder = async (r: Row) => {
+  /** Buat order pembayaran baru lewat gateway; buka link bayar di tab baru. */
+  async function onBuatOrder(r: Row): Promise<void> {
     if (!r.pendaftaran_ppdb) {
       setFeedback({ tone: "err", msg: "Pembayaran tanpa pendaftaran_ppdb." });
       return;
@@ -80,17 +130,7 @@ function PembayaranPpdbPage() {
     } catch (e) {
       setFeedback({ tone: "err", msg: (e as Error)?.message ?? "Gagal membuat order." });
     }
-  };
-
-  const statTone = (s: string | undefined): "success" | "warning" | "danger" | "brand" | "neutral" => {
-    if (s === "Lunas") return "success";
-    if (s === "Partial") return "brand";
-    if (s === "Belum Bayar") return "warning";
-    if (s === "Gagal" || s === "Refund") return "danger";
-    return "neutral";
-  };
-
-  const fmtRp = (n: number | undefined) => `Rp ${(n ?? 0).toLocaleString("id-ID")}`;
+  }
 
   const COLUMNS: Column<Row>[] = [
     {
@@ -118,7 +158,7 @@ function PembayaranPpdbPage() {
       key: "jumlah_tagihan",
       header: "Tagihan",
       align: "right",
-      cell: (r) => <span className="tabular-nums">{fmtRp(r.jumlah_tagihan)}</span>,
+      cell: (r) => <span className="tabular-nums">{formatRp(r.jumlah_tagihan)}</span>,
     },
     {
       key: "jumlah_terbayar",
@@ -126,14 +166,12 @@ function PembayaranPpdbPage() {
       align: "right",
       cell: (r) => (
         <div className="text-right">
-          <div className="tabular-nums">{fmtRp(r.jumlah_terbayar)}</div>
+          <div className="tabular-nums">{formatRp(r.jumlah_terbayar)}</div>
           {(r.jumlah_tagihan ?? 0) > 0 ? (
-            <div className="mt-0.5 h-1 w-24 ml-auto overflow-hidden rounded-full bg-muted">
+            <div className="mt-0.5 ml-auto h-1 w-24 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-brand"
-                style={{
-                  width: `${Math.min(100, Math.round(((r.jumlah_terbayar ?? 0) / (r.jumlah_tagihan ?? 1)) * 100))}%`,
-                }}
+                style={{ width: `${paidPercent(r.jumlah_terbayar ?? 0, r.jumlah_tagihan ?? 0)}%` }}
               />
             </div>
           ) : null}
@@ -144,7 +182,7 @@ function PembayaranPpdbPage() {
       key: "status",
       header: "Status",
       cell: (r) => (
-        <Badge tone={statTone(r.status)} dot>
+        <Badge tone={statusTone(r.status)} dot>
           {r.status ?? "—"}
         </Badge>
       ),
@@ -154,7 +192,7 @@ function PembayaranPpdbPage() {
       header: "Aksi",
       align: "right",
       cell: (r) => {
-        const canOrder = r.status !== "Lunas" && r.status !== "Refund";
+        const canOrder = !ORDER_DISABLED_STATUSES.has(r.status ?? "");
         return (
           <Button
             size="sm"
@@ -174,8 +212,17 @@ function PembayaranPpdbPage() {
       <PageHeader
         eyebrow="PPDB"
         title="Pembayaran PPDB"
-        description="Pantau pembayaran calon siswa; buat order ke payment gateway saat dibutuhkan."
+        description="Pantau penerimaan dana, tindak lanjuti tunggakan, dan buat order ke payment gateway."
       />
+
+      <PageGuide
+        storageId="ppdb-pembayaran"
+        intro="Modul ini melacak keuangan PPDB dari tagihan sampai pelunasan."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+
+      <PembayaranPanel list={ppdbList} todayIso={TODAY_ISO} />
 
       <SectionCard padded={false}>
         <div className="p-3">
@@ -207,9 +254,7 @@ function PembayaranPpdbPage() {
           <div
             className={
               "border-b border-border px-4 py-2 text-xs " +
-              (feedback.tone === "ok"
-                ? "bg-emerald-50 text-emerald-800"
-                : "bg-rose-50 text-rose-800")
+              (feedback.tone === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800")
             }
           >
             {feedback.msg}
@@ -232,8 +277,8 @@ function PembayaranPpdbPage() {
       </SectionCard>
 
       <p className="text-xs text-muted-fg">
-        Tip: status berubah otomatis menjadi <strong>Lunas</strong> saat gateway
-        mengirim webhook settlement. Tidak perlu update manual.
+        Tip: status berubah otomatis menjadi <strong>Lunas</strong> saat gateway mengirim webhook
+        settlement. Tidak perlu update manual.
       </p>
     </div>
   );

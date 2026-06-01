@@ -1,81 +1,47 @@
 /**
- * Pendaftaran PPDB list — bulk-action capable.
- *
- * Replaces the generic ResourceListPage to add:
+ * Pendaftaran PPDB list — enriched table (NO Kanban), bulk-action capable.
+ * Preserves the original behavior:
  *   - row selection (multi-select via checkbox)
  *   - bulk Ajukan / Verifikasi via PPDB whitelisted endpoints
  *   - "Tambah Pendaftar" wizard (Calon Siswa → Gelombang → submit)
- *
+ * Adds (redesign):
+ *   - a status-distribution strip above the table (statusDistribution over rows)
+ *   - doc-completeness ring + payment-health dot columns (enriched from the mock
+ *     fixture by candidate name) — see components/ppdb/pendaftaranPanel.tsx
+ *   - an in-page PageGuide and a friendly EmptyState when there are no rows
  * Wired to live Pendaftaran PPDB doctype + sekolahpro.ppdb.api.ppdb.*.
  */
 
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
-  Badge,
   Button,
   DataTable,
+  EmptyState,
   FilterBar,
-  Modal,
   PageHeader,
   Pagination,
-  SearchableSelect,
   SectionCard,
   IconPlus,
-  type Column,
   type SortState,
 } from "@sekolahpro/ui";
+import { useResourceList, type ListParams } from "@sekolahpro/api-client";
 import {
-  useResourceList,
-  useResourceCreate,
-  type ListParams,
-} from "@sekolahpro/api-client";
-import {
-  TONE_BY_STATUS,
   useAjukanPendaftaran,
   useVerifikasiPendaftaran,
-  useGelombangAktif,
   type VerifikasiStatus,
 } from "../lib/ppdbApi";
-
-type Row = {
-  name: string;
-  status?: string;
-  gelombang_ppdb?: string;
-  calon_siswa?: string;
-  tanggal_daftar?: string;
-};
-
-function makeColumnsBase(sekolah: string): Column<Row>[] {
-  return [
-  {
-    key: "name",
-    header: "No. Pendaftaran",
-    sortable: true,
-    cell: (r) => (
-      <Link
-        to="/sch/$sekolah/ppdb/$noPendaftaran"
-        params={{ sekolah, noPendaftaran: r.name }}
-        className="font-mono text-xs text-brand hover:underline"
-      >
-        {r.name}
-      </Link>
-    ),
-  },
-  { key: "calon_siswa", header: "Calon Siswa", sortable: true, cell: (r) => r.calon_siswa ?? "—" },
-  { key: "gelombang_ppdb", header: "Gelombang", cell: (r) => r.gelombang_ppdb ?? "—" },
-  { key: "tanggal_daftar", header: "Tanggal Daftar", sortable: true, cell: (r) => r.tanggal_daftar ?? "—" },
-  {
-    key: "status",
-    header: "Status",
-    cell: (r) => (
-      <Badge tone={TONE_BY_STATUS[r.status ?? ""] ?? "neutral"} dot>
-        {r.status ?? "—"}
-      </Badge>
-    ),
-  },
-  ];
-}
+import { listPpdbForSekolah } from "../data/ppdb";
+import { PageGuide } from "../components/guide/PageGuide";
+import {
+  buildEnrichedColumns,
+  indexByName,
+  StatusDistributionStrip,
+  BulkVerifikasiModal,
+  PENDAFTARAN_GUIDE,
+  type PendaftaranRow,
+} from "../components/ppdb/pendaftaranPanel";
+import { PendaftaranWizard } from "../components/ppdb/pendaftaranWizard";
 
 const STATUS_OPTIONS = [
   "Semua",
@@ -90,18 +56,12 @@ const STATUS_OPTIONS = [
 ];
 
 const PAGE_SIZE = 25;
+const DRAFT_STATUS = "Draft";
+const LIST_FIELDS = ["name", "status", "gelombang_ppdb", "calon_siswa", "tanggal_daftar"];
 
-const VERIFIKASI_OPTIONS: VerifikasiStatus[] = [
-  "Diverifikasi",
-  "Seleksi",
-  "Diterima",
-  "Ditolak",
-];
-
-function PpdbDaftarPage() {
+/** Pendaftaran PPDB list page — enriched table with bulk actions. */
+export function PpdbDaftarPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
-  const columnsBase = useMemo(() => makeColumnsBase(sekolah), [sekolah]);
-
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Semua");
@@ -116,12 +76,19 @@ function PpdbDaftarPage() {
   const ajukan = useAjukanPendaftaran();
   const verifikasi = useVerifikasiPendaftaran();
 
+  // Name → mock Pendaftar lookup powers the doc/payment enrichment columns.
+  const byName = useMemo(() => indexByName(listPpdbForSekolah(sekolah)), [sekolah]);
+  const columns = useMemo(
+    () => buildEnrichedColumns(sekolah, byName),
+    [sekolah, byName],
+  );
+
   const params: ListParams = useMemo(() => {
     const filters: Array<[string, string, unknown]> = [];
     if (statusFilter !== "Semua") filters.push(["status", "=", statusFilter]);
     if (search.trim()) filters.push(["name", "like", `%${search.trim()}%`]);
     const p: ListParams = {
-      fields: ["name", "status", "gelombang_ppdb", "calon_siswa", "tanggal_daftar"],
+      fields: LIST_FIELDS,
       order_by: `\`${sort.key}\` ${sort.dir}`,
       limit_start: (page - 1) * PAGE_SIZE,
       limit_page_length: PAGE_SIZE + 1,
@@ -130,7 +97,7 @@ function PpdbDaftarPage() {
     return p;
   }, [statusFilter, search, sort, page]);
 
-  const q = useResourceList<Row>("Pendaftaran PPDB", params);
+  const q = useResourceList<PendaftaranRow>("Pendaftaran PPDB", params);
   const fetched = q.data ?? [];
   const hasNext = fetched.length > PAGE_SIZE;
   const rows = hasNext ? fetched.slice(0, PAGE_SIZE) : fetched;
@@ -151,8 +118,10 @@ function PpdbDaftarPage() {
   };
 
   const selectedRows = useMemo(() => rows.filter((r) => selected.has(r.name)), [rows, selected]);
-  const canBulkAjukan = selectedRows.length > 0 && selectedRows.every((r) => r.status === "Draft");
+  // Ajukan only valid for Draft rows — guard so the backend never rejects a batch.
+  const canBulkAjukan = selectedRows.length > 0 && selectedRows.every((r) => r.status === DRAFT_STATUS);
 
+  /** Run bulk Ajukan over the selected Draft rows and report a tally. */
   const onBulkAjukan = async () => {
     setFeedback(null);
     let ok = 0, err = 0;
@@ -168,6 +137,7 @@ function PpdbDaftarPage() {
     setFeedback(`Ajukan: ${ok} berhasil, ${err} gagal.`);
   };
 
+  /** Run bulk Verifikasi to the chosen target status and report a tally. */
   const onBulkVerifikasi = async () => {
     setFeedback(null);
     let ok = 0, err = 0;
@@ -184,6 +154,9 @@ function PpdbDaftarPage() {
     setFeedback(`Verifikasi → ${bulkTarget}: ${ok} berhasil, ${err} gagal.`);
   };
 
+  // Friendly empty state only when the query succeeded with zero rows.
+  const showEmpty = !q.isLoading && !q.isError && rows.length === 0;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -196,6 +169,13 @@ function PpdbDaftarPage() {
             Tambah Pendaftar
           </Button>
         }
+      />
+
+      <PageGuide
+        storageId="ppdb-pendaftaran"
+        intro={PENDAFTARAN_GUIDE.intro}
+        steps={[...PENDAFTARAN_GUIDE.steps]}
+        tips={[...PENDAFTARAN_GUIDE.tips]}
       />
 
       <SectionCard padded={false}>
@@ -223,6 +203,8 @@ function PpdbDaftarPage() {
             ]}
           />
         </div>
+
+        <StatusDistributionStrip rows={rows} />
 
         {selected.size > 0 && (
           <div className="flex flex-wrap items-center gap-3 border-y border-border bg-brand/5 px-4 py-3">
@@ -260,27 +242,34 @@ function PpdbDaftarPage() {
           </div>
         )}
 
-        <DataTable<Row>
-          data={rows}
-          columns={columnsBase}
-          rowKey={(r) => r.name}
-          selectable
-          selected={selected}
-          onToggleRow={toggleRow}
-          onToggleAll={toggleAll}
-          sort={sort}
-          onSortChange={setSort}
-          onRowClick={(r) =>
-            navigate({ to: "/sch/$sekolah/ppdb/$noPendaftaran", params: { sekolah, noPendaftaran: r.name } })
-          }
-          empty={
-            q.isLoading
-              ? "Memuat..."
-              : q.isError
-                ? "Gagal memuat data."
-                : "Belum ada pendaftaran."
-          }
-        />
+        {showEmpty ? (
+          <EmptyState
+            title="Belum ada pendaftaran"
+            description="Mulai dengan menambahkan calon siswa ke gelombang aktif."
+            action={
+              <Button onClick={() => setShowWizard(true)}>
+                <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
+                Tambah Pendaftar
+              </Button>
+            }
+          />
+        ) : (
+          <DataTable<PendaftaranRow>
+            data={rows}
+            columns={columns}
+            rowKey={(r) => r.name}
+            selectable
+            selected={selected}
+            onToggleRow={toggleRow}
+            onToggleAll={toggleAll}
+            sort={sort}
+            onSortChange={setSort}
+            onRowClick={(r) =>
+              navigate({ to: "/sch/$sekolah/ppdb/$noPendaftaran", params: { sekolah, noPendaftaran: r.name } })
+            }
+            empty={q.isLoading ? "Memuat..." : q.isError ? "Gagal memuat data." : "Belum ada pendaftaran."}
+          />
+        )}
 
         <Pagination
           page={page}
@@ -292,179 +281,16 @@ function PpdbDaftarPage() {
 
       <PendaftaranWizard open={showWizard} onClose={() => setShowWizard(false)} onCreated={() => q.refetch()} sekolah={sekolah} />
 
-      <Modal
+      <BulkVerifikasiModal
         open={showBulkVerifikasi}
+        count={selected.size}
+        target={bulkTarget}
+        pending={verifikasi.isPending}
+        onSelect={setBulkTarget}
+        onConfirm={onBulkVerifikasi}
         onClose={() => setShowBulkVerifikasi(false)}
-        title={`Verifikasi ${selected.size} Pendaftaran`}
-        tone="brand"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowBulkVerifikasi(false)}>Batal</Button>
-            <Button onClick={onBulkVerifikasi} disabled={verifikasi.isPending}>
-              {verifikasi.isPending ? "Memproses..." : "Konfirmasi"}
-            </Button>
-          </div>
-        }
-      >
-        <div>
-          <label className="mb-2 block text-xs font-medium text-muted-fg">Status Tujuan</label>
-          <div className="flex flex-wrap gap-2">
-            {VERIFIKASI_OPTIONS.map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setBulkTarget(s)}
-                className={
-                  "rounded-md border px-3 py-1.5 text-xs font-medium transition " +
-                  (bulkTarget === s
-                    ? "border-brand bg-brand text-white"
-                    : "border-border bg-card hover:border-brand")
-                }
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Modal>
+      />
     </div>
-  );
-}
-
-interface WizardProps {
-  open: boolean;
-  onClose: () => void;
-  onCreated: () => void;
-  sekolah: string;
-}
-
-type CalonOpt = { name: string; nama_lengkap?: string };
-
-function PendaftaranWizard({ open, onClose, onCreated, sekolah }: WizardProps) {
-  const [step, setStep] = useState<1 | 2>(1);
-  const [calon, setCalon] = useState<string>("");
-  const [gelombang, setGelombang] = useState<string>("");
-  const [err, setErr] = useState<string | null>(null);
-
-  const calonQ = useResourceList<CalonOpt>("Calon Siswa", {
-    fields: ["name", "nama_lengkap"],
-    order_by: "`modified` desc",
-    limit_page_length: 100,
-  }, { enabled: open });
-
-  const gelombangQ = useGelombangAktif();
-  const create = useResourceCreate<{ name: string }>("Pendaftaran PPDB");
-
-  const reset = () => {
-    setStep(1);
-    setCalon("");
-    setGelombang("");
-    setErr(null);
-  };
-
-  const submit = async () => {
-    setErr(null);
-    try {
-      await create.mutateAsync({
-        calon_siswa: calon,
-        gelombang_ppdb: gelombang,
-      });
-      onCreated();
-      reset();
-      onClose();
-    } catch (e) {
-      setErr((e as Error)?.message ?? "Gagal membuat pendaftaran.");
-    }
-  };
-
-  const calonOpts = (calonQ.data ?? []).map((c) => ({
-    value: c.name,
-    label: `${c.nama_lengkap ?? "—"} (${c.name})`,
-  }));
-  const gelombangOpts = (gelombangQ.data ?? []).map((g) => ({
-    value: g.name,
-    label: `${g.nama}${g.tahun_ajaran ? ` · TA ${g.tahun_ajaran}` : ""}${g.sekolah ? ` · ${g.sekolah}` : ""}`,
-  }));
-
-  return (
-    <Modal
-      open={open}
-      onClose={() => {
-        reset();
-        onClose();
-      }}
-      size="lg"
-      title="Tambah Pendaftaran PPDB"
-      description="Pilih calon siswa dan gelombang aktif."
-      tone="brand"
-      footer={
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-fg">Langkah {step} dari 2</span>
-          <div className="flex gap-2">
-            {step === 2 && (
-              <Button variant="outline" onClick={() => setStep(1)} disabled={create.isPending}>
-                Sebelumnya
-              </Button>
-            )}
-            {step === 1 ? (
-              <Button onClick={() => setStep(2)} disabled={!calon}>
-                Lanjut
-              </Button>
-            ) : (
-              <Button onClick={submit} disabled={!gelombang || create.isPending}>
-                {create.isPending ? "Membuat..." : "Buat Pendaftaran"}
-              </Button>
-            )}
-          </div>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        {step === 1 && (
-          <div>
-            <label className="mb-2 block text-xs font-medium text-muted-fg">Calon Siswa</label>
-            <SearchableSelect
-              value={calon}
-              onChange={setCalon}
-              options={calonOpts}
-              placeholder={calonQ.isLoading ? "Memuat..." : "Cari nama atau ID calon..."}
-            />
-            <p className="mt-2 text-xs text-muted-fg">
-              Calon belum terdaftar?{" "}
-              <Link to="/sch/$sekolah/ppdb/calon-siswa" params={{ sekolah }} className="text-brand hover:underline">
-                Tambah Calon Siswa
-              </Link>
-              .
-            </p>
-          </div>
-        )}
-        {step === 2 && (
-          <div>
-            <label className="mb-2 block text-xs font-medium text-muted-fg">Gelombang Aktif</label>
-            <SearchableSelect
-              value={gelombang}
-              onChange={setGelombang}
-              options={gelombangOpts}
-              placeholder={gelombangQ.isLoading ? "Memuat..." : "Pilih gelombang..."}
-            />
-            {gelombangQ.data?.length === 0 && (
-              <p className="mt-2 text-xs text-amber-700">
-                Belum ada gelombang aktif.{" "}
-                <Link to="/sch/$sekolah/ppdb/gelombang" params={{ sekolah }} className="underline">
-                  Buka pengaturan gelombang
-                </Link>
-                .
-              </p>
-            )}
-          </div>
-        )}
-        {err && (
-          <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-            {err}
-          </div>
-        )}
-      </div>
-    </Modal>
   );
 }
 

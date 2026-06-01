@@ -10,9 +10,8 @@
  */
 
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import {
-  Badge,
   Button,
   DataTable,
   FilterBar,
@@ -20,7 +19,6 @@ import {
   PageHeader,
   SearchableSelect,
   SectionCard,
-  type Column,
 } from "@sekolahpro/ui";
 import {
   useResourceList,
@@ -32,17 +30,39 @@ import {
   useUmumkanHasil,
   useStatistikGelombang,
 } from "../lib/ppdbApi";
+import { listPpdbForSekolah } from "../data/ppdb";
+import { PageGuide, type PageGuideStep } from "../components/guide/PageGuide";
+import {
+  SeleksiAnalyticsPanel,
+  SeleksiMiniStat,
+  buildSeleksiColumns,
+  type SeleksiBoardRow,
+} from "../components/ppdb/seleksiPanel";
 
-type SeleksiRow = {
-  name: string;
-  pendaftaran_ppdb?: string;
-  calon_siswa?: string;
-  gelombang_ppdb?: string;
-  nilai?: number;
-  hasil?: string;
-};
+// Baris board seleksi memakai tipe terpusat dari panel (sumber tunggal).
+type SeleksiRow = SeleksiBoardRow;
 
-function SeleksiPpdbPage() {
+// Identitas guide untuk persistensi open/collapse di localStorage.
+const GUIDE_STORAGE_ID = "ppdb-seleksi";
+const GUIDE_INTRO =
+  "Halaman ini memetakan skor peserta, lalu menetapkan dan mengumumkan kelulusan per gelombang.";
+
+// Langkah panduan papan seleksi — string UI terpusat (no magic strings).
+const GUIDE_STEPS: PageGuideStep[] = [
+  { title: "Pilih gelombang", detail: "Gunakan filter di atas untuk memfokuskan satu gelombang." },
+  { title: "Pantau sebaran skor", detail: "Histogram & donat memperlihatkan distribusi nilai dan komposisi hasil." },
+  { title: "Input & tetapkan hasil", detail: "Edit nilai inline, lalu tandai Lulus / Tidak Lulus tiap peserta." },
+  { title: "Umumkan hasil", detail: "Klik Umumkan Hasil untuk memetakan Lulus → Diterima, Tidak Lulus → Ditolak." },
+];
+
+// Tips ringkas papan seleksi.
+const GUIDE_TIPS: string[] = [
+  "Peringkat skor otomatis mengurutkan peserta dari nilai tertinggi.",
+  "Pastikan semua peserta sudah dinilai sebelum mengumumkan hasil.",
+];
+
+export function SeleksiPpdbPage() {
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const [gelombang, setGelombang] = useState<string>("");
   const [search, setSearch] = useState("");
   const [editingNilai, setEditingNilai] = useState<Record<string, string>>({});
@@ -68,13 +88,19 @@ function SeleksiPpdbPage() {
   }, [gelombang, search]);
 
   const q = useResourceList<SeleksiRow>("Seleksi PPDB", params);
-  const rows = q.data ?? [];
+  // Memoize so the empty-array fallback keeps a stable identity across renders
+  // (avoids re-running downstream useMemo on every render).
+  const rows = useMemo(() => q.data ?? [], [q.data]);
+
+  // Daftar pendaftar (mock) ter-scope sekolah — sumber viz histogram/donat/peringkat.
+  // TODO(api): ganti dengan agregasi skor dari backend saat endpoint tersedia.
+  const mockList = useMemo(() => listPpdbForSekolah(sekolah), [sekolah]);
 
   const rankedRows = useMemo(() => {
     return rows
       .slice()
       .sort((a, b) => (b.nilai ?? -Infinity) - (a.nilai ?? -Infinity))
-      .map((r, i): SeleksiRow & { _rank?: number } => (r.nilai !== undefined ? { ...r, _rank: i + 1 } : { ...r }));
+      .map((r, i): SeleksiRow => (r.nilai !== undefined ? { ...r, _rank: i + 1 } : { ...r }));
   }, [rows]);
 
   const onSaveNilai = async (row: SeleksiRow) => {
@@ -125,95 +151,14 @@ function SeleksiPpdbPage() {
     label: `${g.nama}${g.tahun_ajaran ? ` · TA ${g.tahun_ajaran}` : ""}`,
   }));
 
-  const tooneOf = (hasil: string | undefined): "success" | "danger" | "neutral" => {
-    if (hasil === "Lulus") return "success";
-    if (hasil === "Tidak Lulus") return "danger";
-    return "neutral";
-  };
-
-  const COLUMNS: Column<SeleksiRow & { _rank?: number }>[] = [
-    {
-      key: "_rank",
-      header: "#",
-      align: "right",
-      width: "60px",
-      cell: (r) => (r._rank !== undefined ? <span className="tabular-nums text-muted-fg">{r._rank}</span> : "—"),
-    },
-    {
-      key: "calon_siswa",
-      header: "Calon Siswa",
-      cell: (r) => <span className="font-medium">{r.calon_siswa ?? r.name}</span>,
-    },
-    {
-      key: "pendaftaran_ppdb",
-      header: "Pendaftaran",
-      cell: (r) => <span className="font-mono text-xs text-muted-fg">{r.pendaftaran_ppdb ?? "—"}</span>,
-    },
-    {
-      key: "nilai",
-      header: "Nilai",
-      align: "right",
-      width: "140px",
-      cell: (r) => {
-        const editing = editingNilai[r.name];
-        const isEditing = editing !== undefined;
-        return (
-          <div className="flex items-center justify-end gap-1.5">
-            <input
-              type="number"
-              step="0.01"
-              value={isEditing ? editing : (r.nilai ?? "")}
-              onChange={(e) =>
-                setEditingNilai((cur) => ({ ...cur, [r.name]: e.target.value }))
-              }
-              className="h-7 w-20 rounded-md border border-border bg-bg px-2 text-right text-sm tabular-nums focus:border-brand focus:outline-none"
-            />
-            {isEditing && (
-              <Button size="sm" variant="outline" onClick={() => onSaveNilai(r)}>
-                ✓
-              </Button>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      key: "hasil",
-      header: "Hasil",
-      cell: (r) => (
-        <Badge tone={tooneOf(r.hasil)} dot>
-          {r.hasil ?? "Belum"}
-        </Badge>
-      ),
-    },
-    {
-      key: "aksi",
-      header: "Aksi",
-      align: "right",
-      cell: (r) => (
-        <div className="flex justify-end gap-1.5">
-          <Button
-            size="sm"
-            variant={r.hasil === "Lulus" ? "default" : "outline"}
-            onClick={() => onSetHasil(r, "Lulus")}
-            disabled={setHasil.isPending}
-            className={r.hasil === "Lulus" ? "!bg-emerald-600 !text-white" : ""}
-          >
-            Lulus
-          </Button>
-          <Button
-            size="sm"
-            variant={r.hasil === "Tidak Lulus" ? "default" : "outline"}
-            onClick={() => onSetHasil(r, "Tidak Lulus")}
-            disabled={setHasil.isPending}
-            className={r.hasil === "Tidak Lulus" ? "!bg-rose-600 !text-white" : ""}
-          >
-            Tidak Lulus
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  // Kolom board disuntik handler/state agar logika mutasi tetap di route.
+  const columns = buildSeleksiColumns({
+    editingNilai,
+    setEditingNilai,
+    onSaveNilai,
+    onSetHasil,
+    isPending: setHasil.isPending,
+  });
 
   return (
     <div className="space-y-6">
@@ -231,6 +176,16 @@ function SeleksiPpdbPage() {
           </Button>
         }
       />
+
+      <PageGuide
+        storageId={GUIDE_STORAGE_ID}
+        intro={GUIDE_INTRO}
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+
+      {/* Papan visual: histogram skor, donat hasil, dan peringkat (data mock). */}
+      <SeleksiAnalyticsPanel list={mockList} />
 
       <SectionCard padded={false}>
         <div className="p-3">
@@ -258,10 +213,10 @@ function SeleksiPpdbPage() {
 
         {gelombang && stat.data && (
           <div className="grid gap-3 border-y border-border bg-muted/30 p-4 sm:grid-cols-4">
-            <Mini label="Total" value={stat.data.total_pendaftar} />
-            <Mini label="Diterima" value={stat.data.diterima} tone="success" />
-            <Mini label="Ditolak" value={stat.data.ditolak} tone="danger" />
-            <Mini label="Sisa Kuota" value={stat.data.sisa_kuota} tone="brand" />
+            <SeleksiMiniStat label="Total" value={stat.data.total_pendaftar} />
+            <SeleksiMiniStat label="Diterima" value={stat.data.diterima} tone="success" />
+            <SeleksiMiniStat label="Ditolak" value={stat.data.ditolak} tone="danger" />
+            <SeleksiMiniStat label="Sisa Kuota" value={stat.data.sisa_kuota} tone="brand" />
           </div>
         )}
 
@@ -273,7 +228,7 @@ function SeleksiPpdbPage() {
 
         <DataTable
           data={rankedRows}
-          columns={COLUMNS}
+          columns={columns}
           rowKey={(r) => r.name}
           empty={
             q.isLoading
@@ -310,23 +265,6 @@ function SeleksiPpdbPage() {
           yang masih berstatus <strong>Seleksi</strong>.
         </p>
       </Modal>
-    </div>
-  );
-}
-
-function Mini({ label, value, tone = "neutral" }: { label: string; value: number; tone?: "success" | "danger" | "brand" | "neutral" }) {
-  const cls =
-    tone === "success"
-      ? "text-emerald-700"
-      : tone === "danger"
-        ? "text-rose-700"
-        : tone === "brand"
-          ? "text-brand"
-          : "text-fg";
-  return (
-    <div>
-      <div className="text-xs text-muted-fg">{label}</div>
-      <div className={`text-2xl font-bold tabular-nums ${cls}`}>{value.toLocaleString("id-ID")}</div>
     </div>
   );
 }

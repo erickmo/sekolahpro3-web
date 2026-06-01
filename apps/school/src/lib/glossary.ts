@@ -8,6 +8,11 @@ const GLOSSARY_RAW = {
   NIS: "Nomor Induk Siswa.",
   NIP: "Nomor Induk Pegawai.",
   TA: "Tahun Ajaran.",
+  Gelombang: "Periode pendaftaran PPDB yang dibuka secara bertahap dengan kuota dan jadwal tersendiri.",
+  Jalur: "Kategori penerimaan siswa baru, misalnya zonasi, prestasi, afirmasi, atau perpindahan orang tua.",
+  Seleksi: "Proses penilaian dan pemeringkatan calon siswa untuk menentukan yang diterima.",
+  Verifikasi: "Pemeriksaan keabsahan berkas dan data calon siswa sebelum dinyatakan lolos.",
+  "Daftar Ulang": "Konfirmasi kehadiran siswa yang diterima dengan melengkapi berkas dan pembayaran agar resmi menjadi siswa.",
 } as const;
 
 export type GlossaryTerm = keyof typeof GLOSSARY_RAW;

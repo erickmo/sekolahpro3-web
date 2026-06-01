@@ -1,315 +1,190 @@
 /**
- * Calon Siswa — list + form CRUD lengkap untuk biodata pendaftar.
+ * Calon Siswa — direktori kartu pendaftar PPDB yang dapat difilter.
  *
- * Source of truth (fields): doctype Calon Siswa di backend Frappe.
+ * Menggantikan tabel CRUD lama dengan grid kartu yang lebih mudah dipindai:
+ * tiap kartu menampilkan avatar, nama, badge jenjang/jalur, dan cincin
+ * kelengkapan dokumen. Filter status/jalur/jenjang + pencarian nama mempersempit
+ * himpunan secara langsung.
+ *
+ * Sumber data: mock listPpdbForSekolah(sekolah) (shape Pendaftar) — diganti
+ * dengan @sekolahpro/api-client ketika backend Calon Siswa siap.
  */
 
-import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import {
-  Badge,
-  Button,
-  DataTable,
-  DatePicker,
-  FilterBar,
-  Modal,
-  PageHeader,
-  Pagination,
-  SearchableSelect,
-  SectionCard,
-  IconPlus,
-  type Column,
-} from "@sekolahpro/ui";
-import { useResourceList, useResourceCreate } from "@sekolahpro/api-client";
+import { useMemo, useState, type ReactNode } from "react";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { EmptyState, FilterBar, PageHeader, SectionCard } from "@sekolahpro/ui";
+import { PageGuide } from "../components/guide/PageGuide";
+import { CalonSiswaCard } from "../components/ppdb/calon-siswaPanel";
+import { listPpdbForSekolah, FILTER_OPTIONS, type Pendaftar } from "../data/ppdb";
 
-type Row = {
-  name: string;
-  nama_lengkap?: string;
-  nisn?: string;
-  nik?: string;
-  jenis_kelamin?: string;
-  asal_sekolah?: string;
-  no_hp?: string;
-  siswa?: string;
+// Nilai sentinel "semua" pada dropdown filter (tidak menyaring apa pun).
+const ALL = "Semua";
+// storageId tutorial halaman — stabil agar preferensi buka/tutup tersimpan.
+const GUIDE_STORAGE_ID = "ppdb-calon-siswa";
+
+// Label UI Bahasa Indonesia terpusat (no magic strings).
+const SEARCH_PLACEHOLDER = "Cari nama atau nomor pendaftaran...";
+const EMPTY_TITLE = "Tidak ada calon siswa";
+const EMPTY_DESC =
+  "Tidak ada pendaftar yang cocok dengan filter saat ini. Setel ulang filter atau ubah kata kunci pencarian.";
+
+// Langkah tutorial PageGuide — dipisah dari JSX agar fungsi komponen ringkas.
+const GUIDE_STEPS = [
+  {
+    title: "Telusuri kartu pendaftar",
+    detail: "Tiap kartu memuat identitas, jenjang/jalur, dan kelengkapan dokumen.",
+  },
+  {
+    title: "Saring dengan filter",
+    detail: "Gunakan filter status, jalur, dan jenjang untuk mempersempit daftar.",
+  },
+  {
+    title: "Buka detail",
+    detail: "Klik \"Lihat detail\" pada kartu untuk membuka biodata lengkap pendaftar.",
+  },
+];
+
+const GUIDE_TIPS = [
+  "Cincin dokumen berwarna hijau berarti berkas hampir lengkap.",
+  "Pencarian mencocokkan nama maupun nomor pendaftaran.",
+];
+
+/** State filter aktif untuk direktori calon siswa. */
+interface FilterState {
+  search: string;
+  status: string;
+  jalur: string;
+  jenjang: string;
+}
+
+const INITIAL_FILTER: FilterState = {
+  search: "",
+  status: ALL,
+  jalur: ALL,
+  jenjang: ALL,
 };
 
-const PAGE_SIZE = 25;
+/** True bila `value` sentinel ALL atau cocok dengan field pendaftar. */
+function matchesOption(field: string, value: string): boolean {
+  return value === ALL || field === value;
+}
 
-function CalonSiswaPage() {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [showCreate, setShowCreate] = useState(false);
+/** True bila kata kunci kosong atau cocok (case-insensitive) nama/no. */
+function matchesSearch(p: Pendaftar, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    p.namaLengkap.toLowerCase().includes(q) ||
+    p.noPendaftaran.toLowerCase().includes(q)
+  );
+}
 
-  const params = useMemo(() => {
-    const filters: Array<[string, string, unknown]> = [];
-    if (search.trim()) {
-      filters.push(["nama_lengkap", "like", `%${search.trim()}%`]);
-    }
-    return {
-      fields: ["name", "nama_lengkap", "nisn", "nik", "jenis_kelamin", "asal_sekolah", "no_hp", "siswa"],
-      ...(filters.length ? { filters } : {}),
-      order_by: "`nama_lengkap` asc",
-      limit_start: (page - 1) * PAGE_SIZE,
-      limit_page_length: PAGE_SIZE + 1,
-    };
-  }, [search, page]);
+/** Terapkan seluruh kriteria filter ke daftar pendaftar (pure, mudah diuji). */
+function applyFilter(list: Pendaftar[], f: FilterState): Pendaftar[] {
+  return list.filter(
+    (p) =>
+      matchesSearch(p, f.search) &&
+      matchesOption(p.statusPendaftaran, f.status) &&
+      matchesOption(p.jalur, f.jalur) &&
+      matchesOption(p.jenjangTujuan, f.jenjang),
+  );
+}
 
-  const q = useResourceList<Row>("Calon Siswa", params);
-  const fetched = q.data ?? [];
-  const hasNext = fetched.length > PAGE_SIZE;
-  const rows = hasNext ? fetched.slice(0, PAGE_SIZE) : fetched;
+/** Bangun opsi dropdown {value,label} dari daftar opsi FILTER_OPTIONS. */
+function toSelectOptions(values: readonly string[]) {
+  return values.map((v) => ({ value: v, label: v }));
+}
 
-  const COLUMNS: Column<Row>[] = [
-    { key: "name", header: "ID", cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-    {
-      key: "nama_lengkap",
-      header: "Nama Lengkap",
-      cell: (r) => <span className="font-medium">{r.nama_lengkap ?? "—"}</span>,
-    },
-    { key: "nisn", header: "NISN", cell: (r) => <span className="font-mono text-xs">{r.nisn ?? "—"}</span> },
-    { key: "jenis_kelamin", header: "JK", cell: (r) => r.jenis_kelamin ?? "—" },
-    { key: "asal_sekolah", header: "Asal Sekolah", cell: (r) => r.asal_sekolah ?? "—" },
-    { key: "no_hp", header: "No HP", cell: (r) => r.no_hp ?? "—" },
-    {
-      key: "siswa",
-      header: "Status",
-      cell: (r) =>
-        r.siswa ? (
-          <Badge tone="success" dot>
-            Sudah jadi Siswa
-          </Badge>
-        ) : (
-          <Badge tone="neutral" dot>
-            Calon
-          </Badge>
-        ),
-    },
-  ];
+/**
+ * Halaman direktori Calon Siswa. Diekspor terpisah dari Route agar dapat diuji
+ * langsung tanpa <RouterProvider> (lihat ppdb.calon-siswa.test.tsx).
+ */
+export function CalonSiswaPage(): ReactNode {
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const [filter, setFilter] = useState<FilterState>(INITIAL_FILTER);
+
+  // Sumber data mock di-scope ke sekolah aktif; memo agar stabil per render.
+  const all = useMemo(() => listPpdbForSekolah(sekolah), [sekolah]);
+  const visible = useMemo(() => applyFilter(all, filter), [all, filter]);
+
+  /** Patch sebagian state filter sambil menjaga field lain tetap. */
+  const patch = (next: Partial<FilterState>) =>
+    setFilter((cur) => ({ ...cur, ...next }));
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="PPDB"
         title="Calon Siswa"
-        description="Biodata pendaftar — sumber data Siswa setelah finalisasi."
-        actions={
-          <Button onClick={() => setShowCreate(true)}>
-            <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
-            Tambah Calon
-          </Button>
-        }
+        description="Direktori biodata pendaftar — telusuri, saring, dan buka detail calon."
+      />
+
+      <PageGuide
+        storageId={GUIDE_STORAGE_ID}
+        intro="Halaman ini menampilkan seluruh calon siswa sebagai kartu yang dapat disaring."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
       />
 
       <SectionCard padded={false}>
         <div className="p-3">
           <FilterBar
             search={{
-              value: search,
-              onChange: (v) => {
-                setSearch(v);
-                setPage(1);
-              },
-              placeholder: "Cari nama lengkap...",
+              value: filter.search,
+              onChange: (v) => patch({ search: v }),
+              placeholder: SEARCH_PLACEHOLDER,
             }}
+            filters={[
+              {
+                key: "status",
+                label: "Status",
+                value: filter.status,
+                options: toSelectOptions(FILTER_OPTIONS.statusPendaftaran),
+                onChange: (v) => patch({ status: v }),
+              },
+              {
+                key: "jalur",
+                label: "Jalur",
+                value: filter.jalur,
+                options: toSelectOptions(FILTER_OPTIONS.jalur),
+                onChange: (v) => patch({ jalur: v }),
+              },
+              {
+                key: "jenjang",
+                label: "Jenjang",
+                value: filter.jenjang,
+                options: toSelectOptions(FILTER_OPTIONS.jenjangTujuan),
+                onChange: (v) => patch({ jenjang: v }),
+              },
+            ]}
           />
         </div>
-
-        <DataTable
-          data={rows}
-          columns={COLUMNS}
-          rowKey={(r) => r.name}
-          empty={q.isLoading ? "Memuat..." : q.isError ? "Gagal memuat." : "Belum ada calon siswa."}
-        />
-
-        <Pagination
-          page={page}
-          pageSize={PAGE_SIZE}
-          total={(page - 1) * PAGE_SIZE + rows.length + (hasNext ? 1 : 0)}
-          onPageChange={setPage}
-        />
       </SectionCard>
 
-      <CalonCreateModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => q.refetch()} />
+      {visible.length === 0 ? (
+        <EmptyState title={EMPTY_TITLE} description={EMPTY_DESC} />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {visible.map((p) => (
+            <CalonSiswaCard
+              key={p.noPendaftaran}
+              pendaftar={p}
+              renderDetailLink={(noPendaftaran, children) => (
+                <Link
+                  to="/sch/$sekolah/ppdb/$noPendaftaran"
+                  params={{ sekolah, noPendaftaran }}
+                >
+                  {children}
+                </Link>
+              )}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function CalonCreateModal({
-  open,
-  onClose,
-  onCreated,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onCreated: () => void;
-}) {
-  const [form, setForm] = useState<Record<string, string>>({});
-  const [err, setErr] = useState<string | null>(null);
-  const create = useResourceCreate("Calon Siswa");
-
-  const set = (k: string, v: string) => setForm((cur) => ({ ...cur, [k]: v }));
-
-  const reset = () => {
-    setForm({});
-    setErr(null);
-  };
-
-  const submit = async () => {
-    setErr(null);
-    try {
-      await create.mutateAsync({
-        nama_lengkap: form.nama_lengkap,
-        nama_panggilan: form.nama_panggilan || undefined,
-        jenis_kelamin: form.jenis_kelamin || undefined,
-        tempat_lahir: form.tempat_lahir || undefined,
-        tanggal_lahir: form.tanggal_lahir || undefined,
-        agama: form.agama || undefined,
-        kewarganegaraan: form.kewarganegaraan || "WNI",
-        nik: form.nik || undefined,
-        nisn: form.nisn || undefined,
-        asal_sekolah: form.asal_sekolah || undefined,
-        tahun_lulus_asal: form.tahun_lulus_asal || undefined,
-        alamat: form.alamat || undefined,
-        no_hp: form.no_hp || undefined,
-        email: form.email || undefined,
-        nama_wali: form.nama_wali || undefined,
-        hubungan_wali: form.hubungan_wali || undefined,
-        no_hp_wali: form.no_hp_wali || undefined,
-        pekerjaan_wali: form.pekerjaan_wali || undefined,
-        penghasilan_wali: form.penghasilan_wali || undefined,
-      });
-      reset();
-      onCreated();
-      onClose();
-    } catch (e) {
-      setErr((e as Error)?.message ?? "Gagal membuat calon siswa.");
-    }
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={() => { reset(); onClose(); }}
-      size="xl"
-      title="Tambah Calon Siswa"
-      description="Isi biodata pendaftar. Tanda * wajib."
-      tone="brand"
-      footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => { reset(); onClose(); }}>Batal</Button>
-          <Button onClick={submit} disabled={!form.nama_lengkap || create.isPending}>
-            {create.isPending ? "Menyimpan..." : "Simpan"}
-          </Button>
-        </div>
-      }
-    >
-      <div className="space-y-5">
-        <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-fg">Identitas</h3>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Nama Lengkap *"><Input value={form.nama_lengkap} onChange={(v) => set("nama_lengkap", v)} /></Field>
-            <Field label="Nama Panggilan"><Input value={form.nama_panggilan} onChange={(v) => set("nama_panggilan", v)} /></Field>
-            <Field label="Jenis Kelamin">
-              <Select value={form.jenis_kelamin} onChange={(v) => set("jenis_kelamin", v)} options={["", "Laki-laki", "Perempuan"]} />
-            </Field>
-            <Field label="Tempat Lahir"><Input value={form.tempat_lahir} onChange={(v) => set("tempat_lahir", v)} /></Field>
-            <Field label="Tanggal Lahir"><DatePicker value={form.tanggal_lahir ?? ""} onChange={(v) => set("tanggal_lahir", v)} /></Field>
-            <Field label="Agama">
-              <Select value={form.agama} onChange={(v) => set("agama", v)} options={["", "Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Konghucu"]} />
-            </Field>
-            <Field label="NIK"><Input value={form.nik} onChange={(v) => set("nik", v)} /></Field>
-            <Field label="NISN"><Input value={form.nisn} onChange={(v) => set("nisn", v)} /></Field>
-            <Field label="Kewarganegaraan"><Input value={form.kewarganegaraan} onChange={(v) => set("kewarganegaraan", v)} placeholder="WNI" /></Field>
-          </div>
-        </section>
-        <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-fg">Sekolah Asal</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Asal Sekolah"><Input value={form.asal_sekolah} onChange={(v) => set("asal_sekolah", v)} /></Field>
-            <Field label="Tahun Lulus Asal"><Input value={form.tahun_lulus_asal} onChange={(v) => set("tahun_lulus_asal", v)} /></Field>
-          </div>
-        </section>
-        <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-fg">Kontak</h3>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="No HP"><Input value={form.no_hp} onChange={(v) => set("no_hp", v)} /></Field>
-            <Field label="Email"><Input type="email" value={form.email} onChange={(v) => set("email", v)} /></Field>
-            <Field label="Alamat" cols={2}><Input value={form.alamat} onChange={(v) => set("alamat", v)} /></Field>
-          </div>
-        </section>
-        <section>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-fg">Wali / Orangtua</h3>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Nama Wali"><Input value={form.nama_wali} onChange={(v) => set("nama_wali", v)} /></Field>
-            <Field label="Hubungan">
-              <Select value={form.hubungan_wali} onChange={(v) => set("hubungan_wali", v)} options={["", "Ayah", "Ibu", "Wali"]} />
-            </Field>
-            <Field label="No HP Wali"><Input value={form.no_hp_wali} onChange={(v) => set("no_hp_wali", v)} /></Field>
-            <Field label="Pekerjaan"><Input value={form.pekerjaan_wali} onChange={(v) => set("pekerjaan_wali", v)} /></Field>
-            <Field label="Penghasilan"><Input value={form.penghasilan_wali} onChange={(v) => set("penghasilan_wali", v)} /></Field>
-          </div>
-        </section>
-        {err && (
-          <div className="rounded-md border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-            {err}
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
-}
-
-const inputCls =
-  "h-9 w-full rounded-md border border-border bg-bg px-3 text-sm focus:border-brand focus:outline-none";
-
-function Field({ label, children, cols = 1 }: { label: string; children: React.ReactNode; cols?: 1 | 2 }) {
-  return (
-    <label className={`block ${cols === 2 ? "sm:col-span-2" : ""}`}>
-      <span className="mb-1 block text-xs font-medium text-muted-fg">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function Input({
-  value,
-  onChange,
-  type = "text",
-  placeholder,
-}: {
-  value: string | undefined;
-  onChange: (v: string) => void;
-  type?: string;
-  placeholder?: string | undefined;
-}) {
-  return (
-    <input
-      type={type}
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className={inputCls}
-    />
-  );
-}
-
-function Select({
-  value,
-  onChange,
-  options,
-}: {
-  value: string | undefined;
-  onChange: (v: string) => void;
-  options: string[];
-}) {
-  return (
-    <SearchableSelect
-      value={value ?? ""}
-      onChange={onChange}
-      options={options.filter((o) => o !== "").map((o) => ({ value: o, label: o }))}
-      placeholder="— pilih —"
-    />
-  );
-}
-
-export const Route = createFileRoute("/sch/$sekolah/ppdb/calon-siswa")({ component: CalonSiswaPage });
+export const Route = createFileRoute("/sch/$sekolah/ppdb/calon-siswa")({
+  component: CalonSiswaPage,
+});
