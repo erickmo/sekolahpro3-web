@@ -1,3 +1,11 @@
+/**
+ * Cost Center management page — Keuangan hub.
+ *
+ * CRUD over cost centers (pusat biaya) via an inline modal. Presentation-only
+ * redesign: adds a page guide, an active/disabled distribution viz, and a
+ * glossary tooltip on the "Cost Center" term. All CRUD/modal/data logic
+ * (useResourceList/Create/Update, DOCTYPE, handleSave) is preserved verbatim.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -12,11 +20,17 @@ import {
   PageHeader,
   SectionCard,
   Select,
+  GlossaryTooltip,
   type Column,
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, type CostCenter } from "../data/akuntansi";
 import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { defOf } from "../lib/glossary";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { DistributionBar } from "../components/viz";
+
+const COST_CENTER_DEF = "Cost Center (pusat biaya) — unit organisasi untuk mengelompokkan dan melacak biaya, disusun sebagai struktur pohon (group dan anak).";
 
 function CostCenterPage() {
   const [q, setQ] = useState("");
@@ -41,6 +55,21 @@ function CostCenterPage() {
     const n = q.toLowerCase();
     return all.filter((r) => r.cost_center_name?.toLowerCase().includes(n) || r.name.toLowerCase().includes(n));
   }, [list.data, q]);
+
+  // Distribusi aktif vs disabled, dihitung dari data yang sudah diambil (read-only).
+  const statusDist = useMemo(() => {
+    const all = list.data ?? [];
+    let aktif = 0;
+    let disabled = 0;
+    for (const r of all) {
+      if (r.disabled) disabled += 1;
+      else aktif += 1;
+    }
+    return [
+      { label: "Aktif", value: aktif, tone: "emerald" as const },
+      { label: "Disabled", value: disabled, tone: "rose" as const },
+    ];
+  }, [list.data]);
 
   const cols: Column<CostCenter>[] = [
     { key: "name", header: "Nama", cell: (r) => r.cost_center_name },
@@ -71,7 +100,34 @@ function CostCenterPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Cost Center" description="Pusat biaya — struktur pohon." actions={<Button onClick={() => openModal(null)}>+ Cost Center</Button>} />
+      <PageHeader
+        title="Cost Center"
+        description={
+          <span className="inline-flex items-center gap-1">
+            <GlossaryTooltip term="Cost Center" definition={defOf("Cost Center") ?? COST_CENTER_DEF} />
+            {" "}— pusat biaya, struktur pohon.
+          </span>
+        }
+        actions={<Button onClick={() => openModal(null)}>+ Cost Center</Button>}
+      />
+
+      <KeuanganPageGuide
+        storageId="anggaran-cost-center"
+        intro="Cost center mengelompokkan biaya sesuai struktur organisasi sekolah sehingga belanja dan anggaran bisa dilacak per unit."
+        steps={[
+          { title: "Buat struktur pohon", detail: "Buat node Group sebagai induk (mis. 'Operasional'), lalu cost center di bawahnya untuk unit yang menanggung biaya." },
+          { title: "Pakai pada anggaran & transaksi", detail: "Cost center dipilih saat membuat budget dan saat mencatat transaksi agar realisasi terbaca per unit.", roles: ["akuntan"] },
+          { title: "Nonaktifkan, jangan hapus", detail: "Unit yang tidak dipakai lagi cukup di-set Disabled supaya riwayat transaksinya tetap utuh." },
+        ]}
+        tips={["Node bertipe Group hanya untuk pengelompokan — transaksi dicatat pada cost center non-group di bawahnya."]}
+      />
+
+      {list.data && list.data.length > 0 && (
+        <SectionCard title="Status Cost Center">
+          <DistributionBar segments={statusDist} />
+        </SectionCard>
+      )}
+
       <FilterBar search={{ value: q, placeholder: "Cari…", onChange: setQ }} />
       <SectionCard padded={false}>
         <DataTable<CostCenter>

@@ -1,9 +1,16 @@
+/**
+ * Detail Pembayaran — tampilan satu Payment Entry vernon_accounting.
+ *
+ * Tambahan presentasi: panduan singkat aksi submit/cancel dan glossary pada
+ * tabel referensi. Aksi submit/cancel dan pemuatan dokumen dipertahankan apa adanya.
+ */
 import { useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
   Alert,
   Badge,
   Button,
+  GlossaryTooltip,
   InfoField,
   PageHeader,
   SectionCard,
@@ -18,6 +25,14 @@ import {
   submitDoc,
   type PaymentEntry,
 } from "../data/akuntansi";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { defOf } from "../lib/glossary";
+
+const GUIDE_STEPS = [
+  { title: "Periksa detail pembayaran", detail: "Pastikan tipe, akun asal/tujuan, dan nominal sudah sesuai sebelum mengubah status." },
+  { title: "Submit jika masih draft", detail: "Tombol Submit memposting pembayaran ke buku besar dan memengaruhi saldo kas/bank.", roles: ["kasir", "bendahara"] },
+  { title: "Cancel bila perlu", detail: "Pembayaran submitted bisa di-Cancel; pembatalan membalik dampaknya di GL.", roles: ["bendahara"] },
+];
 
 function PembayaranDetailPage() {
   const { sekolah, name } = useParams({ from: "/sch/$sekolah/akuntansi/buku-besar/pembayaran/$name" });
@@ -55,6 +70,12 @@ function PembayaranDetailPage() {
 
       {err && <Alert tone="danger" title="Error">{err}</Alert>}
 
+      <KeuanganPageGuide
+        storageId="pembayaran-detail"
+        intro="Tinjau dan ubah status pembayaran di sini. Aksi yang tersedia menyesuaikan status dokumen."
+        steps={GUIDE_STEPS}
+      />
+
       <SectionCard title="Informasi">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <InfoField label="Payment Type" value={p.payment_type} />
@@ -77,7 +98,9 @@ function PembayaranDetailPage() {
                 <th className="px-4 py-2 text-left">Reference Doctype</th>
                 <th className="px-4 py-2 text-left">Reference</th>
                 <th className="px-4 py-2 text-right">Total</th>
-                <th className="px-4 py-2 text-right">Outstanding</th>
+                <th className="px-4 py-2 text-right">
+                  <GlossaryTooltip term="Outstanding" definition={defOf("Outstanding") ?? "Sisa tagihan yang belum lunas atas dokumen referensi."} />
+                </th>
                 <th className="px-4 py-2 text-right">Allocated</th>
               </tr>
             </thead>

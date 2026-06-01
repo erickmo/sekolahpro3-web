@@ -5,12 +5,20 @@
  * an intro, a numbered list of steps (each optionally scoped to roles), and a
  * block of tips. Its open/collapsed state is remembered per `storageId` in
  * localStorage so users only see the full guide until they dismiss it.
+ *
+ * Role labels are module-agnostic: a caller may pass either a `roleLabels` map
+ * (Akademik, Perpustakaan, ...) or a `roleLabel` resolver function (Keuangan).
+ * Both fall back to the academic labels, then the raw key, so existing call
+ * sites keep working without passing anything.
  */
 import { useState, type ReactNode } from "react";
 import { Badge, SectionCard, IconBook, cn } from "@sekolahpro/ui";
 import { ROLE_LABEL as AKADEMIK_ROLE_LABEL } from "../../lib/akademikRole";
 
-/** A single step in the guide. */
+/** Resolve a role key to its display label. */
+export type RoleLabelFn = (role: string) => string;
+
+/** A single step in the guide. `roles` are raw role keys, resolved to labels. */
 export interface PageGuideStep {
   title: ReactNode;
   detail?: ReactNode;
@@ -26,17 +34,33 @@ export interface PageGuideProps {
   tips?: ReactNode[];
   defaultOpen?: boolean;
   className?: string;
-  /**
-   * Maps a step's role key to a human label. Module-agnostic so each module
-   * passes its own labels (Akademik, Perpustakaan, ...). Falls back to the
-   * academic labels, then the raw key, so existing call sites keep working
-   * without passing this prop.
-   */
+  /** Maps a role key to its label (map form). Falls back to akademik, then raw. */
   roleLabels?: Record<string, string>;
+  /** Maps a role key to its label (function form). Takes precedence over roleLabels. */
+  roleLabel?: RoleLabelFn;
+  /** localStorage namespace prefix; lets modules avoid key collisions. */
+  storageNamespace?: string;
 }
 
-/** Resolve a role key to its display label across the fallback chain. */
-function resolveRoleLabel(role: string, roleLabels?: Record<string, string>): string {
+const DEFAULT_STORAGE_PREFIX = "akademik-guide:";
+const DEFAULT_TITLE = "Cara pakai halaman ini";
+const DEFAULT_OPEN = true;
+/** Muted hint shown next to the chevron to signal the collapse action. */
+const HINT_WHEN_OPEN = "Sembunyikan";
+/** Muted hint shown next to the chevron to signal the expand action. */
+const HINT_WHEN_COLLAPSED = "Tampilkan";
+
+/**
+ * Resolve a role key to its display label across the fallback chain:
+ * the `roleLabel` function, then the `roleLabels` map, then the academic
+ * labels, then the raw key.
+ */
+function resolveRoleLabel(
+  role: string,
+  roleLabel: RoleLabelFn | undefined,
+  roleLabels: Record<string, string> | undefined,
+): string {
+  if (roleLabel) return roleLabel(role);
   return (
     roleLabels?.[role] ??
     AKADEMIK_ROLE_LABEL[role as keyof typeof AKADEMIK_ROLE_LABEL] ??
@@ -44,28 +68,19 @@ function resolveRoleLabel(role: string, roleLabels?: Record<string, string>): st
   );
 }
 
-const STORAGE_PREFIX = "akademik-guide:";
-const DEFAULT_TITLE = "Cara pakai halaman ini";
-const DEFAULT_OPEN = true;
-
-/** Muted hint shown next to the chevron to signal the collapse action. */
-const HINT_WHEN_OPEN = "Sembunyikan";
-/** Muted hint shown next to the chevron to signal the expand action. */
-const HINT_WHEN_COLLAPSED = "Tampilkan";
-
 /** Build the namespaced localStorage key for a guide instance. */
-function storageKey(storageId: string): string {
-  return STORAGE_PREFIX + storageId;
+function storageKey(prefix: string, storageId: string): string {
+  return prefix + storageId;
 }
 
 /**
  * Read the persisted open state for a guide, guarding SSR (no window).
  * Falls back to `fallback` when nothing is stored or storage is unavailable.
  */
-function readStored(storageId: string, fallback: boolean): boolean {
+function readStored(prefix: string, storageId: string, fallback: boolean): boolean {
   if (typeof window === "undefined") return fallback;
   try {
-    const raw = window.localStorage.getItem(storageKey(storageId));
+    const raw = window.localStorage.getItem(storageKey(prefix, storageId));
     if (raw === null) return fallback;
     return raw === "1";
   } catch {
@@ -74,10 +89,10 @@ function readStored(storageId: string, fallback: boolean): boolean {
 }
 
 /** Persist the open state for a guide, guarding SSR and storage errors. */
-function writeStored(storageId: string, open: boolean): void {
+function writeStored(prefix: string, storageId: string, open: boolean): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(storageKey(storageId), open ? "1" : "0");
+    window.localStorage.setItem(storageKey(prefix, storageId), open ? "1" : "0");
   } catch {
     // Ignore storage failures (private mode, quota); state stays in memory.
   }
@@ -106,18 +121,12 @@ function Chevron({ open }: { open: boolean }): ReactNode {
 }
 
 /** Role badges rendered for a step that is scoped to specific roles. */
-function StepRoles({
-  roles,
-  roleLabels,
-}: {
-  roles: string[];
-  roleLabels: Record<string, string> | undefined;
-}): ReactNode {
+function StepRoles({ roles, resolve }: { roles: string[]; resolve: RoleLabelFn }): ReactNode {
   return (
     <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
       {roles.map((role) => (
         <Badge key={role} tone="brand">
-          {resolveRoleLabel(role, roleLabels)}
+          {resolve(role)}
         </Badge>
       ))}
     </span>
@@ -125,13 +134,7 @@ function StepRoles({
 }
 
 /** The ordered list of numbered steps. */
-function StepList({
-  steps,
-  roleLabels,
-}: {
-  steps: PageGuideStep[];
-  roleLabels: Record<string, string> | undefined;
-}): ReactNode {
+function StepList({ steps, resolve }: { steps: PageGuideStep[]; resolve: RoleLabelFn }): ReactNode {
   return (
     <ol className="mt-3 space-y-2">
       {steps.map((step, index) => (
@@ -142,7 +145,7 @@ function StepList({
           <div className="min-w-0 text-sm">
             <span className="font-semibold text-fg">{step.title}</span>
             {step.roles && step.roles.length > 0 ? (
-              <StepRoles roles={step.roles} roleLabels={roleLabels} />
+              <StepRoles roles={step.roles} resolve={resolve} />
             ) : null}
             {step.detail ? (
               <p className="mt-0.5 text-xs text-muted-fg">{step.detail}</p>
@@ -183,17 +186,20 @@ export function PageGuide({
   defaultOpen,
   className,
   roleLabels,
+  roleLabel,
+  storageNamespace = DEFAULT_STORAGE_PREFIX,
 }: PageGuideProps): ReactNode {
   const initialFallback = defaultOpen ?? DEFAULT_OPEN;
   const [open, setOpen] = useState<boolean>(() =>
-    readStored(storageId, initialFallback),
+    readStored(storageNamespace, storageId, initialFallback),
   );
+  const resolve: RoleLabelFn = (role) => resolveRoleLabel(role, roleLabel, roleLabels);
 
   /** Toggle the panel and persist the new state. */
   function toggle(): void {
     setOpen((prev) => {
       const next = !prev;
-      writeStored(storageId, next);
+      writeStored(storageNamespace, storageId, next);
       return next;
     });
   }
@@ -223,7 +229,7 @@ export function PageGuide({
       {open ? (
         <div className="mt-3">
           {intro ? <p className="text-sm text-muted-fg">{intro}</p> : null}
-          {hasSteps ? <StepList steps={steps} roleLabels={roleLabels} /> : null}
+          {hasSteps ? <StepList steps={steps} resolve={resolve} /> : null}
           {hasTips ? <TipsBlock tips={tips} /> : null}
         </div>
       ) : null}

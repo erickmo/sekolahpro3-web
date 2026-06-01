@@ -1,3 +1,9 @@
+/**
+ * Pembayaran — daftar Payment Entry vernon_accounting (Receive / Pay / Transfer).
+ *
+ * Tambahan presentasi: panduan halaman dan distribusi tipe pembayaran di atas
+ * tabel. Hook list, filter, dan order_by dipertahankan apa adanya.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
@@ -19,8 +25,24 @@ import {
   type PaymentEntry,
 } from "../data/akuntansi";
 import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { DistributionBar, type DistributionSegment, type Tone } from "../components/viz";
+import { KeuanganPageGuide } from "../components/keuangan";
 
 const ALL = "Semua";
+
+const PAYMENT_TYPE_TONE: Record<string, Tone> = {
+  Receive: "emerald",
+  Pay: "amber",
+  "Internal Transfer": "sky",
+};
+
+const GUIDE_STEPS = [
+  { title: "Pahami jenis pembayaran", detail: "Receive = uang masuk, Pay = uang keluar, Internal Transfer = pindah antar kas/bank." },
+  { title: "Buat pembayaran baru", detail: "Klik '+ Pembayaran Baru', pilih tipe, isi akun asal/tujuan dan nominal.", roles: ["kasir", "bendahara"] },
+  { title: "Saring & telusuri", detail: "Gunakan filter Tipe/Status atau distribusi di atas untuk meninjau arus kas.", roles: ["kepala", "bendahara"] },
+];
+
+const GUIDE_TIPS = ["Hanya pembayaran berstatus Submitted yang dihitung ke saldo kas/bank."];
 
 function PembayaranListPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
@@ -49,6 +71,20 @@ function PembayaranListPage() {
     });
   }, [list.data, q, type, status]);
 
+  /** Payment-type composition across all loaded payments. */
+  const typeDistribution = useMemo<DistributionSegment[]>(() => {
+    const counts = new Map<string, number>();
+    for (const r of list.data ?? []) {
+      const t = r.payment_type ?? "Lainnya";
+      counts.set(t, (counts.get(t) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([label, value]) => ({
+      label,
+      value,
+      tone: PAYMENT_TYPE_TONE[label] ?? "neutral",
+    }));
+  }, [list.data]);
+
   const cols: Column<PaymentEntry>[] = [
     { key: "name", header: "No.", cell: (r) => (
         <Link to="/sch/$sekolah/akuntansi/buku-besar/pembayaran/$name" params={{ sekolah, name: r.name }} className="font-mono text-xs text-brand hover:underline">{r.name}</Link>
@@ -71,6 +107,17 @@ function PembayaranListPage() {
           </Link>
         }
       />
+      <KeuanganPageGuide
+        storageId="pembayaran-list"
+        intro="Pembayaran mencatat arus uang masuk dan keluar. Kenali tipenya untuk membaca arus kas."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+      {typeDistribution.length > 0 && (
+        <SectionCard title="Distribusi Tipe Pembayaran" description={`Total ${list.data?.length ?? 0} transaksi`}>
+          <DistributionBar segments={typeDistribution} />
+        </SectionCard>
+      )}
       <FilterBar
         search={{ value: q, placeholder: "Cari nomor / pihak…", onChange: setQ }}
         filters={[

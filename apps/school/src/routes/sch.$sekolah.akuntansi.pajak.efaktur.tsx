@@ -1,3 +1,10 @@
+/**
+ * Daftar e-Faktur Export (generate Coretax XML untuk DJP).
+ *
+ * Presentation-only redesign: adds a workflow guide, a status-distribution bar,
+ * and glossary tooltips on tax jargon. List query, create mutation, columns, and
+ * the export form are unchanged.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -8,6 +15,7 @@ import {
   FilterBar,
   FormField,
   FormGrid,
+  GlossaryTooltip,
   Input,
   Modal,
   PageHeader,
@@ -21,6 +29,9 @@ import {
   formatTanggal,
   type EfakturExport,
 } from "../data/akuntansi";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { DistributionBar, type DistributionSegment } from "../components/viz";
+import { defOf } from "../lib/glossary";
 
 function EfakturPage() {
   const [q, setQ] = useState("");
@@ -44,6 +55,20 @@ function EfakturPage() {
     const n = q.toLowerCase();
     return all.filter((r) => r.name.toLowerCase().includes(n) || r.tax_period?.toLowerCase().includes(n));
   }, [list.data, q]);
+
+  // Distribusi status export untuk visualisasi ringkas di atas tabel.
+  const statusDist = useMemo<DistributionSegment[]>(() => {
+    const all = list.data ?? [];
+    const exported = all.filter((r) => r.status === "Exported").length;
+    const submitted = all.filter((r) => r.status === "Submitted").length;
+    const draft = all.length - exported - submitted;
+    return [
+      { label: "Draft", value: Math.max(0, draft), tone: "amber" },
+      { label: "Exported", value: exported, tone: "sky" },
+      { label: "Submitted", value: submitted, tone: "emerald" },
+    ];
+  }, [list.data]);
+  const hasExport = (list.data ?? []).length > 0;
 
   const cols: Column<EfakturExport>[] = [
     { key: "name", header: "No.", cell: (r) => <span className="font-mono text-xs">{r.name}</span>, width: "180px" },
@@ -73,7 +98,26 @@ function EfakturPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="e-Faktur Export" description="Generate Coretax XML untuk submit ke DJP." actions={<Button onClick={() => { setErr(null); setOpen(true); }}>+ Export Baru</Button>} />
+      <PageHeader
+        title="e-Faktur Export"
+        description={<>Generate <GlossaryTooltip term="Coretax" definition={defOf("Coretax") ?? "Sistem inti administrasi perpajakan DJP terbaru."} /> XML untuk submit ke DJP.</>}
+        actions={<Button onClick={() => { setErr(null); setOpen(true); }}>+ Export Baru</Button>}
+      />
+      <KeuanganPageGuide
+        storageId="efaktur-list"
+        intro={<>Hasilkan berkas Coretax XML dari rentang <GlossaryTooltip term="NSFP" definition={defOf("NSFP") ?? "Nomor Seri Faktur Pajak yang dijatah DJP untuk penomoran faktur pajak."} /> untuk diunggah ke aplikasi e-Faktur/Coretax DJP.</>}
+        steps={[
+          { title: "Buat export", detail: "Klik + Export Baru, isi Tax Period, tanggal export, dan rentang NSFP." },
+          { title: "Unduh & unggah", detail: "Export menghasilkan format Coretax XML siap diunggah ke sistem DJP." },
+          { title: "Tandai submitted", detail: "Setelah berkas diterima DJP, status berpindah dari Exported ke Submitted." },
+        ]}
+        tips={["Pastikan rentang NSFP tidak tumpang tindih dengan export periode lain."]}
+      />
+      {hasExport ? (
+        <SectionCard title="Distribusi Status Export" description="Sebaran export menurut tahap pengiriman.">
+          <DistributionBar segments={statusDist} />
+        </SectionCard>
+      ) : null}
       <FilterBar search={{ value: q, placeholder: "Cari…", onChange: setQ }} />
       <SectionCard padded={false}>
         <DataTable<EfakturExport>

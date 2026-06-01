@@ -1,3 +1,13 @@
+/**
+ * Accounting Period reference list — Keuangan hub.
+ *
+ * Splits a fiscal year into bookkeeping periods (monthly/quarterly) whose
+ * Open/Closed flag locks transactions for tutup buku. Presentation-only
+ * redesign: adds a concise page guide and an Open/Closed status-distribution
+ * visualization computed from the already fetched list. All data wiring
+ * (useResourceList/Create/Update, DOCTYPE, filters, order_by) and the modal
+ * CRUD logic are preserved verbatim.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -17,6 +27,8 @@ import {
 import { useResourceCreate, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, formatTanggal, type AccountingPeriod } from "../data/akuntansi";
 import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { DistributionBar, type DistributionSegment } from "../components/viz";
 
 function PeriodPage() {
   const [q, setQ] = useState("");
@@ -41,6 +53,21 @@ function PeriodPage() {
     const n = q.toLowerCase();
     return all.filter((r) => r.period_name?.toLowerCase().includes(n));
   }, [list.data, q]);
+
+  // Distribusi status Open/Closed dihitung dari data yang sudah diambil (read-only).
+  const statusDist = useMemo<DistributionSegment[]>(() => {
+    const all = list.data ?? [];
+    let open = 0;
+    let closed = 0;
+    for (const r of all) {
+      if (r.is_closed) closed += 1;
+      else open += 1;
+    }
+    const segments: DistributionSegment[] = [];
+    if (open > 0) segments.push({ label: "Open", value: open, tone: "emerald" });
+    if (closed > 0) segments.push({ label: "Closed", value: closed, tone: "rose" });
+    return segments;
+  }, [list.data]);
 
   const cols: Column<AccountingPeriod>[] = [
     { key: "period_name", header: "Nama", cell: (r) => r.period_name },
@@ -73,6 +100,24 @@ function PeriodPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Accounting Period" description="Periode akuntansi (bulan/quarter)." actions={<Button onClick={() => openModal(null)}>+ Period</Button>} />
+
+      <KeuanganPageGuide
+        storageId="referensi-period"
+        intro="Accounting Period membagi satu tahun fiskal menjadi periode lebih kecil (bulanan atau kuartalan) sebagai batas pencatatan dan tutup buku."
+        steps={[
+          { title: "Buat periode", detail: "Klik + Period, isi nama periode, pilih Fiscal Year induk, lalu tetapkan tanggal mulai dan selesai." },
+          { title: "Tutup periode setelah rekonsiliasi", detail: "Ubah status menjadi Closed agar transaksi pada periode itu tidak bisa diubah — menjaga integritas laporan." },
+          { title: "Edit lewat baris tabel", detail: "Klik baris periode untuk membuka kembali datanya bila perlu koreksi." },
+        ]}
+        tips={["Pastikan rentang tanggal periode berada di dalam tahun fiskal induknya dan tidak tumpang tindih."]}
+      />
+
+      {statusDist.length > 0 && (
+        <SectionCard title="Distribusi Status Periode">
+          <DistributionBar segments={statusDist} />
+        </SectionCard>
+      )}
+
       <FilterBar search={{ value: q, placeholder: "Cari…", onChange: setQ }} />
       <SectionCard padded={false}>
         <DataTable<AccountingPeriod>

@@ -1,3 +1,9 @@
+/**
+ * Pembayaran Baru — form pembuatan Payment Entry vernon_accounting.
+ *
+ * Tambahan presentasi: panduan singkat pengisian dan glossary Withholding.
+ * Logika form, validasi, dan submit handler tidak diubah.
+ */
 import { useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
@@ -6,6 +12,7 @@ import {
   DatePicker,
   FormField,
   FormGrid,
+  GlossaryTooltip,
   Input,
   PageHeader,
   SectionCard,
@@ -21,6 +28,16 @@ import {
   type PaymentType,
 } from "../data/akuntansi";
 import { useActiveCompany } from "../lib/akuntansi-scope";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { defOf } from "../lib/glossary";
+
+const GUIDE_STEPS = [
+  { title: "Pilih tipe & tanggal", detail: "Receive untuk uang masuk, Pay untuk uang keluar. Company terisi otomatis." },
+  { title: "Tentukan akun asal & tujuan", detail: "Paid From = sumber dana (Kas/Bank), Paid To = akun lawan (Receivable/Payable)." },
+  { title: "Isi nominal lalu simpan", detail: "'Simpan Draft' menyimpan tanpa posting; 'Simpan & Submit' memposting pembayaran." },
+];
+
+const GUIDE_TIPS = ["Field Party opsional, dipakai bila pembayaran terkait pelanggan/pemasok/pegawai tertentu."];
 
 function PembayaranNewPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
@@ -71,9 +88,28 @@ function PembayaranNewPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Pembayaran Baru" description="Buat entri Payment Entry (Receive / Pay / Internal Transfer)." />
+      <PageHeader
+        title="Pembayaran Baru"
+        description={
+          <span className="inline-flex flex-wrap items-center gap-1">
+            Buat entri Payment Entry (Receive / Pay /{" "}
+            <GlossaryTooltip
+              term="Internal Transfer"
+              definition={defOf("Internal Transfer") ?? "Pemindahan dana antar akun kas/bank milik sendiri, tanpa pihak eksternal."}
+            />
+            ).
+          </span>
+        }
+      />
 
       {err && <Alert tone="danger" title="Error">{err}</Alert>}
+
+      <KeuanganPageGuide
+        storageId="pembayaran-new"
+        intro="Catat pembayaran dalam tiga langkah. Pastikan akun asal dan tujuan sudah benar sebelum submit."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
 
       <SectionCard title="Detail Pembayaran">
         <FormGrid cols={3}>

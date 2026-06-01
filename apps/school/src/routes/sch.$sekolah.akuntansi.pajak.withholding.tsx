@@ -1,3 +1,10 @@
+/**
+ * Daftar Withholding Tax Entry (potongan PPh 21/22/23/4(2)).
+ *
+ * Presentation-only redesign: adds a workflow guide, a per-jenis distribution
+ * bar over the fetched entries, and glossary tooltips. The list query, create
+ * mutation, columns, computed tax, and submit flow are unchanged.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -8,6 +15,7 @@ import {
   FilterBar,
   FormField,
   FormGrid,
+  GlossaryTooltip,
   Input,
   Modal,
   PageHeader,
@@ -27,6 +35,12 @@ import {
   type WithholdingTaxEntry,
 } from "../data/akuntansi";
 import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { DistributionBar, type DistributionSegment, type Tone } from "../components/viz";
+import { defOf } from "../lib/glossary";
+
+/** Stable tone per WHT jenis so the distribution bar colors are consistent. */
+const WHT_TONES: readonly Tone[] = ["brand", "emerald", "amber", "violet", "sky", "rose"];
 
 const ALL = "Semua";
 
@@ -77,6 +91,17 @@ function WithholdingPage() {
     { key: "status", header: "Status", cell: (r) => { const b = whtStatusBadge(r.status); return <Badge tone={b.tone}>{b.label}</Badge>; }, align: "center" },
   ];
 
+  // Distribusi nilai PPh dipotong per jenis (PPh21/22/23/4(2)) untuk visualisasi.
+  const typeDist = useMemo<DistributionSegment[]>(() => {
+    const all = list.data ?? [];
+    return WHT_TAX_TYPES.map((t, i) => ({
+      label: t,
+      value: all.filter((r) => r.tax_type === t).reduce((a, r) => a + (r.tax_amount ?? 0), 0),
+      tone: WHT_TONES[i % WHT_TONES.length] ?? "neutral",
+    }));
+  }, [list.data]);
+  const hasEntries = (list.data ?? []).length > 0;
+
   const computedTax = (form.base_amount ?? 0) * (form.tax_rate ?? 0) / 100;
 
   const handleCreate = async (submit: boolean) => {
@@ -97,7 +122,26 @@ function WithholdingPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Withholding Tax Entry" description="Posting PPh 21/22/23/4(2) yang dipotong." actions={<Button onClick={() => { setErr(null); setOpen(true); }}>+ Entry Baru</Button>} />
+      <PageHeader
+        title="Withholding Tax Entry"
+        description={<><GlossaryTooltip term="Withholding" definition={defOf("Withholding") ?? "Pajak yang dipotong oleh pemberi penghasilan saat pembayaran (PPh potong-pungut)."} />: posting PPh 21/22/23/4(2) yang dipotong.</>}
+        actions={<Button onClick={() => { setErr(null); setOpen(true); }}>+ Entry Baru</Button>}
+      />
+      <KeuanganPageGuide
+        storageId="withholding-list"
+        intro={<>Catat setiap potongan PPh atas pembayaran ke pegawai/vendor; rekam dasar pengenaan, tarif, dan <GlossaryTooltip term="NPWP" definition={defOf("NPWP") ?? "Nomor Pokok Wajib Pajak pihak yang dipotong."} /> pihak terkait.</>}
+        steps={[
+          { title: "Buat entry", detail: "Klik + Entry Baru, pilih jenis PPh, isi base amount dan tarif; tax amount dihitung otomatis." },
+          { title: "Lengkapi pihak", detail: "Isi Party Type, Party, dan NPWP agar bukti potong dapat diterbitkan." },
+          { title: "Submit", detail: "Simpan draft untuk koreksi, atau Simpan & Submit untuk mengunci potongan." },
+        ]}
+        tips={["Gunakan filter Jenis untuk merekap PPh per kategori sebelum pelaporan masa."]}
+      />
+      {hasEntries ? (
+        <SectionCard title="Distribusi PPh Dipotong per Jenis" description="Proporsi nilai potongan menurut jenis PPh.">
+          <DistributionBar segments={typeDist} />
+        </SectionCard>
+      ) : null}
       <FilterBar
         search={{ value: q, placeholder: "Cari nomor / pihak / NPWP…", onChange: setQ }}
         filters={[

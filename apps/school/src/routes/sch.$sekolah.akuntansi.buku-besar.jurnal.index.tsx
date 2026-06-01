@@ -1,3 +1,9 @@
+/**
+ * Jurnal Umum — daftar Journal Entry vernon_accounting.
+ *
+ * Tambahan presentasi: panduan workflow draft → submit dan distribusi status
+ * dokumen di atas tabel. Hook list, filter, dan order_by dipertahankan apa adanya.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
@@ -18,6 +24,8 @@ import {
   type JournalEntry,
 } from "../data/akuntansi";
 import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { DistributionBar, type DistributionSegment, type Tone } from "../components/viz";
+import { KeuanganPageGuide } from "../components/keuangan";
 
 const STATUS_OPTIONS = [
   { value: "Semua", label: "Semua" },
@@ -25,6 +33,17 @@ const STATUS_OPTIONS = [
   { value: "1", label: "Submitted" },
   { value: "2", label: "Cancelled" },
 ];
+
+const STATUS_LABELS: Record<number, string> = { 0: "Draft", 1: "Submitted", 2: "Cancelled" };
+const STATUS_TONES: Record<number, Tone> = { 0: "amber", 1: "emerald", 2: "rose" };
+
+const GUIDE_STEPS = [
+  { title: "Pahami alur dokumen", detail: "Jurnal dibuat sebagai Draft, lalu di-Submit agar mengalir ke GL. Cancelled berarti dibatalkan." },
+  { title: "Buat jurnal baru", detail: "Klik '+ Jurnal Baru', isi baris debit/kredit yang seimbang, lalu simpan atau submit.", roles: ["akuntan"] },
+  { title: "Pantau status", detail: "Gunakan filter Status atau distribusi di atas untuk melihat berapa banyak jurnal yang masih draft.", roles: ["kepala", "akuntan"] },
+];
+
+const GUIDE_TIPS = ["Hanya jurnal Submitted yang berpengaruh ke saldo buku besar."];
 
 function JurnalListPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
@@ -50,6 +69,22 @@ function JurnalListPage() {
       return true;
     });
   }, [list.data, q, status]);
+
+  /** Document-status distribution across all loaded journals. */
+  const statusDistribution = useMemo<DistributionSegment[]>(() => {
+    const counts = new Map<number, number>();
+    for (const r of list.data ?? []) {
+      const ds = r.docstatus ?? 0;
+      counts.set(ds, (counts.get(ds) ?? 0) + 1);
+    }
+    return [0, 1, 2]
+      .filter((ds) => (counts.get(ds) ?? 0) > 0)
+      .map((ds) => ({
+        label: STATUS_LABELS[ds] ?? String(ds),
+        value: counts.get(ds) ?? 0,
+        tone: STATUS_TONES[ds] ?? "neutral",
+      }));
+  }, [list.data]);
 
   const cols: Column<JournalEntry>[] = [
     { key: "name", header: "No. Jurnal", cell: (r) => (
@@ -77,6 +112,17 @@ function JurnalListPage() {
           </Link>
         }
       />
+      <KeuanganPageGuide
+        storageId="jurnal-list"
+        intro="Jurnal Umum mencatat posting manual debit/kredit. Pahami statusnya sebelum membuat yang baru."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+      {statusDistribution.length > 0 && (
+        <SectionCard title="Distribusi Status Jurnal" description={`Total ${list.data?.length ?? 0} jurnal`}>
+          <DistributionBar segments={statusDistribution} />
+        </SectionCard>
+      )}
       <FilterBar
         search={{ value: q, placeholder: "Cari nomor / keterangan…", onChange: setQ }}
         filters={[{ key: "status", label: "Status", value: status, options: STATUS_OPTIONS, onChange: setStatus }]}

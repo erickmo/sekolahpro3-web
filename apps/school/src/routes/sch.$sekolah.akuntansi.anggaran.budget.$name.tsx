@@ -1,9 +1,19 @@
+/**
+ * Budget detail page — Keuangan hub.
+ *
+ * Shows a single budget header plus its per-month allocation table, with
+ * submit/cancel actions driven by docstatus. Presentation-only redesign: adds a
+ * short page guide and glossary tooltips on jargon. The doc fetch
+ * (useResourceDoc), action handlers (submitDoc/cancelDoc), and DOCTYPE wiring
+ * are preserved verbatim.
+ */
 import { useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
   Alert,
   Badge,
   Button,
+  GlossaryTooltip,
   InfoField,
   PageHeader,
   SectionCard,
@@ -19,6 +29,10 @@ import {
   type Budget,
   type Month12,
 } from "../data/akuntansi";
+import { KeuanganPageGuide } from "../components/keuangan";
+
+const FISCAL_YEAR_DEF = "Fiscal Year (tahun anggaran) — periode 12 bulan dasar penyusunan dan pelaporan anggaran.";
+const OVERSPEND_DEF = "Overspend Action — perilaku saat realisasi melebihi anggaran: None (abaikan), Warn (peringatan), Stop (blokir transaksi).";
 
 function BudgetDetailPage() {
   const { sekolah, name } = useParams({ from: "/sch/$sekolah/akuntansi/anggaran/budget/$name" });
@@ -55,7 +69,23 @@ function BudgetDetailPage() {
       />
       {err && <Alert tone="danger" title="Error">{err}</Alert>}
 
-      <SectionCard title="Header">
+      <KeuanganPageGuide
+        storageId="anggaran-budget-detail"
+        intro="Halaman ini menampilkan detail satu budget beserta alokasi per bulan. Aksi yang tersedia mengikuti status dokumen."
+        steps={[
+          { title: "Tinjau alokasi", detail: "Periksa header (fiscal year, cost center) dan rincian alokasi tiap akun per bulan beserta totalnya." },
+          { title: "Submit jika masih Draft", detail: "Budget berstatus Draft dapat di-Submit untuk mengaktifkan kontrol anggaran pada transaksi." },
+          { title: "Cancel jika perlu", detail: "Budget yang sudah Submitted bisa di-Cancel; gunakan menu Amandemen untuk merevisi alokasinya." },
+        ]}
+      />
+
+      <SectionCard
+        title={
+          <span className="inline-flex items-center gap-1">
+            Header <GlossaryTooltip term="Fiscal Year" definition={FISCAL_YEAR_DEF} />
+          </span>
+        }
+      >
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <InfoField label="Fiscal Year" value={b.fiscal_year} />
           <InfoField label="Company" value={b.company} />
@@ -70,7 +100,11 @@ function BudgetDetailPage() {
             <thead className="bg-muted/40 text-muted-fg uppercase">
               <tr>
                 <th className="px-4 py-2 text-left">Account</th>
-                <th className="px-4 py-2 text-left">Overspend</th>
+                <th className="px-4 py-2 text-left">
+                  <span className="inline-flex items-center gap-1">
+                    Overspend <GlossaryTooltip term="Overspend Action" definition={OVERSPEND_DEF} />
+                  </span>
+                </th>
                 {MONTH12.map((m) => <th key={m} className="px-3 py-2 text-right">{m}</th>)}
                 <th className="px-4 py-2 text-right">Total</th>
               </tr>

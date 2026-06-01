@@ -1,9 +1,16 @@
+/**
+ * Detail SPT Masa PPN: ringkasan PPN keluaran/masukan dan aksi submit/cancel.
+ *
+ * Presentation-only redesign: adds a short page guide and glossary tooltips on
+ * the PPN summary heading. The doc query and submit/cancel actions are untouched.
+ */
 import { useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
   Alert,
   Badge,
   Button,
+  GlossaryTooltip,
   InfoField,
   PageHeader,
   SectionCard,
@@ -17,6 +24,8 @@ import {
   submitDoc,
   type SptMasaPPN,
 } from "../data/akuntansi";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { defOf } from "../lib/glossary";
 
 function SptPpnDetailPage() {
   const { sekolah, name } = useParams({ from: "/sch/$sekolah/akuntansi/pajak/spt-ppn/$name" });
@@ -52,7 +61,16 @@ function SptPpnDetailPage() {
         }
       />
       {err && <Alert tone="danger" title="Error">{err}</Alert>}
-      <SectionCard title="Ringkasan PPN">
+      <KeuanganPageGuide
+        storageId="spt-ppn-detail"
+        intro="Periksa angka SPT sebelum melapor: kurang bayar adalah selisih PPN keluaran dikurangi PPN masukan yang harus disetor."
+        steps={[
+          { title: "Cek ringkasan", detail: "Bandingkan PPN keluaran dan PPN masukan; nilai kurang bayar muncul otomatis." },
+          { title: "Submit jika sesuai", detail: "Saat status masih Draft, tekan Submit untuk mengunci SPT sebelum lapor." },
+          { title: "Cancel bila keliru", detail: "SPT yang sudah submit bisa di-Cancel jika ada koreksi data." },
+        ]}
+      />
+      <SectionCard title={<>Ringkasan <GlossaryTooltip term="PPN" definition={defOf("PPN") ?? "Pajak Pertambahan Nilai."} /></>}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <InfoField label="Tax Period" value={s.tax_period} />
           <InfoField label="Company" value={s.company} />

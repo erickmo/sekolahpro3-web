@@ -1,3 +1,12 @@
+/**
+ * Vernon Accounting Settings — Keuangan hub.
+ *
+ * Single-doctype configuration form for company identity, default tax rates,
+ * NSFP counters, and budget overspend behaviour used across the accounting
+ * module. Presentation-only redesign: adds a short page guide and glossary
+ * tooltips on tax/e-Faktur jargon. The form state, useResourceDoc/Update wiring,
+ * and submit handler are preserved verbatim.
+ */
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -5,6 +14,7 @@ import {
   Button,
   FormField,
   FormGrid,
+  GlossaryTooltip,
   Input,
   PageHeader,
   SectionCard,
@@ -12,6 +22,8 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, type VernonAccountingSettings } from "../data/akuntansi";
+import { defOf } from "../lib/glossary";
+import { KeuanganPageGuide } from "../components/keuangan";
 
 // Single doctype — name field is the same as doctype.
 const SINGLE_NAME = DOCTYPE.VERNON_ACCOUNTING_SETTINGS;
@@ -46,6 +58,17 @@ function SettingsPage() {
       <PageHeader title="Pengaturan Modul Akuntansi" description="Vernon Accounting Settings — NPWP, NSFP, tarif default, akun output." />
       {msg && <Alert tone={msg.tone}>{msg.text}</Alert>}
 
+      <KeuanganPageGuide
+        storageId="referensi-settings"
+        intro="Halaman ini berisi pengaturan inti modul akuntansi: identitas perusahaan, tarif pajak default, nomor seri faktur pajak, dan kebijakan budget. Nilai di sini dipakai otomatis oleh seluruh transaksi."
+        steps={[
+          { title: "Lengkapi identitas & akun", detail: "Isi Default Company, Default Currency, NPWP perusahaan, dan PPN Output Account agar jurnal pajak tercatat ke akun yang benar." },
+          { title: "Atur tarif & NSFP", detail: "Tetapkan tarif PPN serta PPh, lalu isi prefix, tahun, dan counter NSFP sebagai dasar penomoran faktur pajak." },
+          { title: "Simpan pengaturan", detail: "Klik Simpan Pengaturan. Perubahan langsung berlaku untuk transaksi berikutnya — pengaturan lama tidak memengaruhi transaksi yang sudah dibuat." },
+        ]}
+        tips={["Perbarui tarif pajak hanya saat ada perubahan regulasi; counter NSFP akan bertambah otomatis seiring penerbitan faktur."]}
+      />
+
       <SectionCard title="Identitas Perusahaan">
         <FormGrid cols={2}>
           <FormField label="Default Company">
@@ -63,7 +86,16 @@ function SettingsPage() {
         </FormGrid>
       </SectionCard>
 
-      <SectionCard title="Tarif Pajak Default (%)">
+      <SectionCard
+        title={
+          <span className="inline-flex items-center gap-1">
+            Tarif Pajak Default (%) —{" "}
+            <GlossaryTooltip term="PPN" definition={defOf("PPN") ?? "Pajak Pertambahan Nilai — pajak atas penyerahan barang/jasa kena pajak."} />
+            {" / "}
+            <GlossaryTooltip term="PPh" definition={defOf("PPh") ?? "Pajak Penghasilan — pajak yang dipotong/dipungut atas penghasilan (mis. PPh 22, PPh 23)."} />
+          </span>
+        }
+      >
         <FormGrid cols={3}>
           <FormField label="PPN">
             <Input type="number" step="0.01" value={form.ppn_rate ?? ""} onChange={(e) => setForm({ ...form, ppn_rate: Number(e.target.value) || 0 })} />
@@ -83,7 +115,14 @@ function SettingsPage() {
         </FormGrid>
       </SectionCard>
 
-      <SectionCard title="NSFP (Nomor Seri Faktur Pajak)">
+      <SectionCard
+        title={
+          <span className="inline-flex items-center gap-1">
+            <GlossaryTooltip term="NSFP" definition={defOf("NSFP") ?? "Nomor Seri Faktur Pajak — rentang nomor resmi dari DJP untuk menerbitkan e-Faktur."} />
+            {" (Nomor Seri Faktur Pajak)"}
+          </span>
+        }
+      >
         <FormGrid cols={3}>
           <FormField label="Prefix">
             <Input value={form.nsfp_prefix ?? ""} onChange={(e) => setForm({ ...form, nsfp_prefix: e.target.value })} />
