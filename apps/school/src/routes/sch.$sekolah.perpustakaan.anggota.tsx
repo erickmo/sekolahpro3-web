@@ -55,7 +55,7 @@ function AnggotaPage() {
         eyebrow="Perpustakaan"
         title="Anggota Perpustakaan"
         doctype="Anggota Perpustakaan"
-        fields={["name", "nama_lengkap", "tipe_anggota", "status"]}
+        fields={["name", "nama_lengkap", "tipe_anggota", "nis_nip", "kelas", "status", "saldo_denda"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "nama_lengkap", dir: "asc" }}

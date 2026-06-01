@@ -63,7 +63,7 @@ function ReservasiPage() {
         title="Reservasi Buku"
         description="Antrian reservasi FIFO per judul buku."
         doctype="Reservasi Buku"
-        fields={["name", "buku", "anggota", "status", "tanggal_reservasi"]}
+        fields={["name", "buku", "anggota", "posisi_antrian", "status", "tanggal_reservasi"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "tanggal_reservasi", dir: "desc" }}
