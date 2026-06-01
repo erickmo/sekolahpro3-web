@@ -5,9 +5,19 @@ export function perpFormatRupiah(value: number | undefined | null): string {
   return `Rp ${Number(value).toLocaleString("id-ID")}`;
 }
 
+/**
+ * Format an ISO date as a localized id-ID date (e.g. `25 Mei 2026`). PERP-GAP-09
+ *
+ * Mirrors `formatTanggal` in data/perpustakaan so dates render consistently across
+ * the domain. Empty input → em-dash; unparseable input → returned unchanged.
+ *
+ * @param value an ISO date string, or null/undefined
+ */
 export function perpFormatDate(value: string | undefined | null): string {
   if (!value) return "—";
-  return value;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 export function perpToday(): string {

@@ -1,6 +1,24 @@
 // PERP-GAP-08 | PERP-GAP-09 | PERP-GAP-16
 import { describe, it, expect } from "vitest";
-import { perpMonthRange } from "../perpFormatters";
+import { perpMonthRange, perpFormatDate } from "../perpFormatters";
+
+describe("perpFormatDate", () => {
+  it("returns an em-dash for empty input", () => {
+    expect(perpFormatDate(undefined)).toBe("—");
+    expect(perpFormatDate(null)).toBe("—");
+    expect(perpFormatDate("")).toBe("—");
+  });
+
+  it("formats a valid ISO date instead of echoing the raw value (PERP-GAP-09)", () => {
+    const out = perpFormatDate("2026-05-25");
+    expect(out).not.toBe("2026-05-25");
+    expect(out).toContain("2026");
+  });
+
+  it("returns unparseable input unchanged", () => {
+    expect(perpFormatDate("bukan-tanggal")).toBe("bukan-tanggal");
+  });
+});
 
 describe("perpMonthRange", () => {
   it("returns the month start and the next month's start", () => {

@@ -12,7 +12,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceList, updateResource } from "@sekolahpro/api-client";
 import { PerpDetailScaffold } from "../components/perpustakaan/PerpDetailScaffold";
-import { perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
+import { perpFormatRupiah, perpFormatDate } from "../components/perpustakaan/perpFormatters";
 import { ReturnModal } from "../components/perpustakaan/ReturnModal";
 
 const DOCTYPE = "Anggota Perpustakaan";
@@ -42,7 +42,7 @@ function PeminjamanAktifSection({ items, onReturn }: PeminjamanAktifSectionProps
           {items.map((p) => (
             <li key={p.name} className="py-2 flex items-center justify-between">
               <span className="font-mono text-xs">
-                {p.name} — rencana {p.tanggal_kembali_rencana ?? "—"} ({p.status})
+                {p.name} — rencana {perpFormatDate(p.tanggal_kembali_rencana)} ({p.status})
               </span>
               <Button size="sm" onClick={() => onReturn(p.name)}>Kembalikan</Button>
             </li>
@@ -127,7 +127,7 @@ function AnggotaDetailPage() {
         { label: "Kelas", value: doc?.kelas ?? "—" },
         { label: "Email", value: doc?.email ?? "—" },
         { label: "No HP", value: doc?.no_hp ?? "—" },
-        { label: "Tgl Daftar", value: doc?.tanggal_daftar ?? "—" },
+        { label: "Tgl Daftar", value: perpFormatDate(doc?.tanggal_daftar) },
         { label: "Saldo Denda", value: <span className="tabular-nums">{perpFormatRupiah(doc?.saldo_denda)}</span> },
       ]}
       secondaryInfo={doc?.catatan ? [{ label: "Catatan", value: doc.catatan }] : undefined}
