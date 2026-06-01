@@ -31,6 +31,7 @@ import {
   updateResource,
 } from "@sekolahpro/api-client";
 import { perpToday, perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
+import { computePengadaanTotals, buildPreviewInventaris } from "../components/perpustakaan/pengadaanCompute";
 
 type ItemRow = {
   buku: string;
@@ -129,30 +130,8 @@ function PengadaanDetailPage() {
     };
   }, [isNew, name]);
 
-  const totals = useMemo(() => {
-    let totalEksemplar = 0;
-    let totalBiaya = 0;
-    for (const it of doc.items) {
-      const qty = Number(it.jumlah_eksemplar) || 0;
-      const harga = Number(it.harga_satuan) || 0;
-      totalEksemplar += qty;
-      totalBiaya += qty * harga;
-    }
-    return { totalEksemplar, totalBiaya };
-  }, [doc.items]);
-
-  const previewInventaris = useMemo(() => {
-    const out: string[] = [];
-    for (const it of doc.items) {
-      const qty = Number(it.jumlah_eksemplar) || 0;
-      if (!it.buku || qty === 0) continue;
-      const prefix = it.prefix_inventaris?.trim() || it.buku.substring(0, 8);
-      const first = `${prefix}-001`;
-      const last = `${prefix}-${String(qty).padStart(3, "0")}`;
-      out.push(`${it.buku_label ?? it.buku} → ${first} … ${last} (${qty} eksemplar)`);
-    }
-    return out;
-  }, [doc.items]);
+  const totals = useMemo(() => computePengadaanTotals(doc.items), [doc.items]);
+  const previewInventaris = useMemo(() => buildPreviewInventaris(doc.items), [doc.items]);
 
   const isReadonly = (doc.docstatus ?? 0) >= 1;
 
