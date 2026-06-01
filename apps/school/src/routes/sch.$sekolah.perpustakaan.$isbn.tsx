@@ -54,6 +54,16 @@ import {
 } from "../data/perpustakaan";
 import { bukuEnrichIsbn } from "../components/perpustakaan/bukuIdentity";
 import { perpFormatRupiah, perpFormatDate } from "../components/perpustakaan/perpFormatters";
+import {
+  type BukuDoc,
+  type EksemplarDoc,
+  type PeminjamanDoc,
+  mapEksemplarToKopi,
+  mapPeminjamanRows,
+  normalizeKategori,
+  bukuFromBackend,
+  isActivePinjaman,
+} from "../components/perpustakaan/bukuDetail";
 
 type TabKey = "ringkasan" | "detail" | "kopi" | "peminjaman" | "review" | "stok" | "aktivitas";
 
@@ -424,140 +434,8 @@ const VALID_TABS = new Set<TabKey>([
   "ringkasan","detail","kopi","peminjaman","review","stok","aktivitas",
 ]);
 
-// Backend Buku doctype shape; nested arrays (kopi, peminjaman, review,
-// aktivitas) stay on mock until each gets its own resource query.
-type BukuDoc = {
-  name: string;
-  judul?: string;
-  isbn?: string;
-  pengarang?: string;
-  penerbit?: string;
-  tahun_terbit?: number;
-  kategori?: string;
-  deskripsi?: string;
-};
-
-type EksemplarDoc = {
-  name: string;
-  buku?: string;
-  nomor_inventaris?: string;
-  kondisi?: "Baik" | "Rusak" | "Hilang";
-  status?: "Tersedia" | "Dipinjam" | "Dipesan" | "Tidak Aktif";
-};
-
-type PeminjamanDoc = {
-  name: string;
-  anggota?: string;
-  tanggal_pinjam?: string;
-  tanggal_kembali_rencana?: string;
-  status?: "Aktif" | "Selesai" | "Terlambat";
-};
-
-const KONDISI_MAP: Record<NonNullable<EksemplarDoc["kondisi"]>, KopiRow["kondisi"]> = {
-  Baik: "Baik",
-  Rusak: "Rusak Ringan",
-  Hilang: "Hilang",
-};
-
-const EKS_STATUS_MAP: Record<NonNullable<EksemplarDoc["status"]>, StatusBuku> = {
-  Tersedia: "Tersedia",
-  Dipinjam: "Dipinjam",
-  Dipesan: "Dipesan",
-  "Tidak Aktif": "Arsip",
-};
-
-const PINJ_STATUS_MAP: Record<NonNullable<PeminjamanDoc["status"]>, PeminjamanRow["status"]> = {
-  Aktif: "Aktif",
-  Selesai: "Dikembalikan",
-  Terlambat: "Terlambat",
-};
-
-function mapEksemplarToKopi(rows: EksemplarDoc[], fallbackLokasi: KopiRow["lokasi"]): KopiRow[] {
-  return rows.map((r) => ({
-    kodeKopi: r.nomor_inventaris ?? r.name,
-    kondisi: r.kondisi ? KONDISI_MAP[r.kondisi] : "Baik",
-    lokasi: fallbackLokasi,
-    status: r.status ? EKS_STATUS_MAP[r.status] : "Tersedia",
-  }));
-}
-
-function mapPeminjamanRows(rows: PeminjamanDoc[]): PeminjamanRow[] {
-  return rows.map((r) => {
-    const row: PeminjamanRow = {
-      id: r.name,
-      peminjam: r.anggota ?? "—",
-      tanggalPinjam: r.tanggal_pinjam ?? "",
-      tanggalKembali: r.tanggal_kembali_rencana ?? "",
-      status: r.status ? PINJ_STATUS_MAP[r.status] : "Aktif",
-      petugas: "—",
-    };
-    return row;
-  });
-}
-
-const KATEGORI_SET = new Set<Buku["kategori"]>([
-  "Fiksi", "Non-Fiksi", "Pelajaran", "Referensi", "Majalah",
-  "Komik", "Biografi", "Sejarah", "Sains", "Agama",
-]);
-const KATEGORI_FALLBACK: Buku["kategori"] = "Referensi";
-
-/**
- * Coerce a raw backend `kategori` string into the Buku kategori union, so a value
- * outside the union can never leak into a Buku (PERP-GAP-14). The lone `as` is the
- * unavoidable Set.has membership test, scoped to this guard.
- */
-function normalizeKategori(raw: string | undefined): Buku["kategori"] {
-  return raw && KATEGORI_SET.has(raw as Buku["kategori"]) ? (raw as Buku["kategori"]) : KATEGORI_FALLBACK;
-}
-
-function deriveStatus(kopi: KopiRow[]): StatusBuku {
-  if (kopi.length === 0) return "Arsip";
-  if (kopi.some((k) => k.status === "Tersedia")) return "Tersedia";
-  if (kopi.some((k) => k.status === "Dipinjam")) return "Dipinjam";
-  if (kopi.some((k) => k.status === "Dipesan")) return "Dipesan";
-  return "Arsip";
-}
-
-// Build a Buku purely from backend data when no mock fixture exists for this
-// ISBN (e.g. records freshly created via the daftar modal).
-function bukuFromBackend(d: BukuDoc, kopi: KopiRow[], peminjaman: PeminjamanRow[], sekolah: Buku["sekolah"]): Buku {
-  const kategori = normalizeKategori(d.kategori);
-  const tersedia = kopi.filter((k) => k.status === "Tersedia").length;
-  const dipinjam = kopi.filter((k) => k.status === "Dipinjam").length;
-  return {
-    sekolah,
-    isbn: d.isbn ?? d.name,
-    kodeBuku: d.name,
-    judul: d.judul ?? d.name,
-    penulis: d.pengarang ? d.pengarang.split(",").map((s) => s.trim()).filter(Boolean) : [],
-    penerbit: d.penerbit ?? "—",
-    tahunTerbit: d.tahun_terbit ?? 0,
-    kategori,
-    bahasa: "Indonesia",
-    jumlahHalaman: 0,
-    deskripsi: d.deskripsi ?? "—",
-    jumlahKopi: kopi.length,
-    kopiTersedia: tersedia,
-    kopiDipinjam: dipinjam,
-    lokasi: "—",
-    ratingRata: 0,
-    jumlahReview: 0,
-    jumlahDipinjam: peminjaman.length,
-    ditambahkan: "",
-    status: deriveStatus(kopi),
-    kopi,
-    peminjaman,
-    review: [],
-    stokTransaksi: [],
-    aktivitas: [],
-  };
-}
-
-type ActivePinjaman = Pick<PeminjamanDoc, "name" | "anggota" | "tanggal_kembali_rencana" | "status">;
-
-function isActivePinjaman(p: PeminjamanDoc): p is ActivePinjaman & PeminjamanDoc {
-  return p.status === "Aktif" || p.status === "Terlambat";
-}
+// Backend↔view mappers, doctype shapes, and the kategori guard live in
+// components/perpustakaan/bukuDetail.ts (pure + unit-tested). See PERP-GAP-13.
 
 function SedangDipinjamSection({
   rows,
