@@ -101,7 +101,10 @@ async function compressImage(file: File): Promise<File> {
   const ctx = canvas.getContext("2d");
   if (!ctx) return file;
   ctx.drawImage(bitmap, 0, 0, w, h);
-  const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), "image/jpeg", 0.8));
+  // toBlob may yield null (e.g. canvas too large); fall back to the original
+  // file rather than uploading a corrupt empty blob. PERP-GAP-21
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.8));
+  if (!blob) return file;
   return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
 }
 

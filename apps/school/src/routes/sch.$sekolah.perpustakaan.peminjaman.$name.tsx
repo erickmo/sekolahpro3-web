@@ -79,14 +79,14 @@ function PeminjamanDetailPage() {
     qc.invalidateQueries({ queryKey: ["resource:list", DOCTYPE] });
   };
 
-  const workflowMut = useMutation<Doc, Error, { patch: Record<string, unknown>; label: string }>({
+  const workflowMut = useMutation<Doc, Error, { patch: Record<string, unknown> }>({
     mutationFn: ({ patch }) => updateResource<Doc>(DOCTYPE, name, patch),
     onSuccess: () => invalidate(),
   });
 
   const handleBatalkan = () => {
     if (!confirm("Batalkan peminjaman ini?")) return;
-    workflowMut.mutate({ patch: { status: "Batal" }, label: "Batalkan" });
+    workflowMut.mutate({ patch: { status: "Batal" } });
   };
 
   const handlePerpanjangSubmit = () => {
@@ -98,7 +98,7 @@ function PeminjamanDetailPage() {
     // Close/reset only after the PATCH resolves, and surface failures instead of
     // hiding the modal on a silent reject. PERP-GAP-07
     workflowMut.mutate(
-      { patch: { tanggal_rencana_kembali: perpanjangDate }, label: "Perpanjang" },
+      { patch: { tanggal_rencana_kembali: perpanjangDate } },
       {
         onSuccess: () => {
           setPerpanjangOpen(false);
