@@ -25,7 +25,7 @@ import {
   cn,
 } from "@sekolahpro/ui";
 import type { AttentionItem, ModuleFlowStep } from "@sekolahpro/ui";
-import { useResourceList } from "@sekolahpro/api-client";
+import { useResourceList, useFrappeMethod } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
 import { useAkademikContextOptional } from "../lib/akademikContext";
 import { buildNilaiTrend } from "../lib/akademikTrend";
@@ -282,6 +282,14 @@ function AkademikDashboardPage() {
   );
   const nilaiTrend = useMemo(() => buildNilaiTrend(trendQ.data ?? []), [trendQ.data]);
 
+  // Grade-entry fill % for the active period (AKA-18/30). Tenant-scoped on the
+  // backend; only queried once a period is selected in the context bar.
+  const progresQ = useFrappeMethod<{ total: number; terisi: number; percent: number }>(
+    "sekolahpro.akademik.doctype.entri_nilai.entri_nilai.progres_entri_nilai",
+    { semester: ctx?.semester ?? "", tahun_ajaran: ctx?.tahunAjaran ?? "", sekolah },
+    { enabled: Boolean(ctx?.semester && ctx?.tahunAjaran) },
+  );
+
   const mapelList = mapelQ.data ?? [];
   const kkmList = kkmQ.data ?? [];
   const kurikulumList = kurikulumQ.data ?? [];
@@ -477,8 +485,20 @@ function AkademikDashboardPage() {
         />
         <StatCard
           label="% Sel Nilai Terisi"
-          value="—"
-          hint="Belum tersedia · butuh endpoint progres entri nilai"
+          value={
+            progresQ.data
+              ? `${progresQ.data.percent}%`
+              : progresQ.isLoading
+                ? "…"
+                : "—"
+          }
+          hint={
+            progresQ.data
+              ? `${progresQ.data.terisi}/${progresQ.data.total} sel terisi periode ini`
+              : ctx?.tahunAjaran
+                ? "Memuat progres…"
+                : "Pilih periode di header"
+          }
           icon={<IconEdit />}
           accent="violet"
           urgency="normal"
