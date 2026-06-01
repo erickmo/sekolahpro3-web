@@ -112,6 +112,40 @@ async function searchLink(
   });
 }
 
+/** Result of validating + building a create payload. */
+export type BuildPayloadResult =
+  | { ok: true; payload: Record<string, unknown> }
+  | { ok: false; error: string };
+
+/**
+ * Validate required fields and coerce numbers, returning the payload or the first
+ * error (PERP-GAP-23). Empty values are omitted; numeric fields reject NaN. Pure
+ * so it is unit-testable without rendering the modal.
+ */
+export function buildPerpPayload(
+  fields: PerpFieldDef[],
+  values: Record<string, string>,
+): BuildPayloadResult {
+  for (const f of fields) {
+    if (f.required && !values[f.name]?.toString().trim()) {
+      return { ok: false, error: `Field "${f.label}" wajib diisi.` };
+    }
+  }
+  const payload: Record<string, unknown> = {};
+  for (const f of fields) {
+    const raw = values[f.name];
+    if (raw === undefined || raw === "") continue;
+    if (f.type === "number") {
+      const n = Number(raw);
+      if (Number.isNaN(n)) return { ok: false, error: `Field "${f.label}" harus berupa angka.` };
+      payload[f.name] = n;
+    } else {
+      payload[f.name] = raw;
+    }
+  }
+  return { ok: true, payload };
+}
+
 export function PerpCreateModal(props: PerpCreateModalProps) {
   const { open, onClose, doctype, title, description, fields, submitLabel = "Simpan", onCreated } = props;
   const [values, setValues] = useState<Record<string, string>>(() => emptyValues(fields));
@@ -134,31 +168,14 @@ export function PerpCreateModal(props: PerpCreateModalProps) {
     e.preventDefault();
     setErrMsg(null);
 
-    for (const f of fields) {
-      if (f.required && !values[f.name]?.toString().trim()) {
-        setErrMsg(`Field "${f.label}" wajib diisi.`);
-        return;
-      }
-    }
-
-    const payload: Record<string, unknown> = {};
-    for (const f of fields) {
-      const raw = values[f.name];
-      if (raw === undefined || raw === "") continue;
-      if (f.type === "number") {
-        const n = Number(raw);
-        if (Number.isNaN(n)) {
-          setErrMsg(`Field "${f.label}" harus berupa angka.`);
-          return;
-        }
-        payload[f.name] = n;
-      } else {
-        payload[f.name] = raw;
-      }
+    const built = buildPerpPayload(fields, values);
+    if (!built.ok) {
+      setErrMsg(built.error);
+      return;
     }
 
     try {
-      const doc = await mut.mutateAsync(payload);
+      const doc = await mut.mutateAsync(built.payload);
       qc.invalidateQueries({ queryKey: ["resource:list", doctype] });
       onCreated?.(doc as Record<string, unknown>);
       reset();
