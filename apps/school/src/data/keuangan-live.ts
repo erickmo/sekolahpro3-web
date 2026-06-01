@@ -12,7 +12,10 @@ import { useResourceList } from "@sekolahpro/api-client";
 import { useActiveCompany } from "../lib/akuntansi-scope";
 import type {
   TagihanRow,
+  PembayaranRow,
   PengeluaranRow,
+  KasRow,
+  RingkasanBulan,
   StatusTagihan,
   StatusPengeluaran,
   KategoriPengeluaran,
@@ -21,8 +24,29 @@ import type {
 
 export const KEUANGAN_DOCTYPE = {
   SCHOOL_FEE_INVOICE: "School Fee Invoice",
+  SCHOOL_FEE_PAYMENT: "School Fee Payment",
   SCHOOL_EXPENSE: "School Expense",
 } as const;
+
+/** Indonesian short month names, indexed 1..12. */
+const BULAN_SINGKAT = [
+  "",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Agu",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+] as const;
+
+/** A paid expense is one whose status marks cash actually leaving. */
+const CASH_OUT_STATUS = "Dibayar";
 
 /** Raw School Fee Invoice document as returned by the Frappe REST API. */
 export interface FeeInvoiceDoc {
@@ -168,5 +192,155 @@ export function usePengeluaranLive(): LiveListResult<PengeluaranRow> {
     rows: (q.data ?? []).map(mapExpenseToPengeluaran),
     isLoading: q.isLoading,
     isError: q.isError,
+  };
+}
+
+/** Raw School Fee Payment document as returned by the Frappe REST API. */
+export interface PaymentDoc {
+  name: string;
+  posting_date: string;
+  company: string;
+  student: string;
+  student_name?: string;
+  judul?: string;
+  invoice?: string;
+  metode?: MetodeBayar;
+  jumlah: number;
+  ref?: string;
+  penerima?: string;
+  kelas?: string;
+}
+
+/** Map a School Fee Payment doc onto the UI PembayaranRow shape. */
+export function mapPaymentToPembayaran(doc: PaymentDoc): PembayaranRow {
+  return {
+    id: doc.name,
+    tanggal: doc.posting_date,
+    siswa: doc.student_name || doc.student,
+    kelas: doc.kelas ?? "—",
+    judul: doc.judul ?? "—",
+    metode: doc.metode ?? "Tunai",
+    jumlah: doc.jumlah,
+    ref: doc.ref ?? "—",
+    penerima: doc.penerima ?? "—",
+    tagihanId: doc.invoice ?? "",
+    sekolah: doc.company as PembayaranRow["sekolah"],
+  };
+}
+
+const PAYMENT_FIELDS = [
+  "name",
+  "posting_date",
+  "company",
+  "student",
+  "student_name",
+  "judul",
+  "invoice",
+  "metode",
+  "jumlah",
+  "ref",
+  "penerima",
+];
+
+/** Live Pembayaran list, scoped to the active company. */
+export function usePembayaranLive(): LiveListResult<PembayaranRow> {
+  const company = useActiveCompany();
+  const q = useResourceList<PaymentDoc>(KEUANGAN_DOCTYPE.SCHOOL_FEE_PAYMENT, {
+    fields: PAYMENT_FIELDS,
+    filters: company ? [["company", "=", company]] : [],
+    order_by: "posting_date desc, creation desc",
+    limit_page_length: 0,
+  });
+  return {
+    rows: (q.data ?? []).map(mapPaymentToPembayaran),
+    isLoading: q.isLoading,
+    isError: q.isError,
+  };
+}
+
+/** Minimal shape needed to roll up a day of cash / a month of activity. */
+interface DatedAmount {
+  tanggal: string;
+  jumlah: number;
+}
+interface DatedExpense extends DatedAmount {
+  status: string;
+}
+
+/** Sum amounts by ISO date into a map. */
+function sumByDate(rows: ReadonlyArray<DatedAmount>): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const r of rows) m.set(r.tanggal, (m.get(r.tanggal) ?? 0) + r.jumlah);
+  return m;
+}
+
+/**
+ * Derive a daily cash book from payments (cash in) and PAID expenses (cash out),
+ * carrying a running balance. Days with no activity are omitted.
+ */
+export function deriveKasRows(
+  payments: ReadonlyArray<DatedAmount>,
+  expenses: ReadonlyArray<DatedExpense>,
+): KasRow[] {
+  const masukByDate = sumByDate(payments);
+  const keluarByDate = sumByDate(expenses.filter((e) => e.status === CASH_OUT_STATUS));
+  const dates = [...new Set([...masukByDate.keys(), ...keluarByDate.keys()])].sort();
+
+  let saldo = 0;
+  return dates.map((tanggal) => {
+    const masuk = masukByDate.get(tanggal) ?? 0;
+    const keluar = keluarByDate.get(tanggal) ?? 0;
+    const saldoAwal = saldo;
+    const saldoAkhir = saldoAwal + masuk - keluar;
+    saldo = saldoAkhir;
+    return {
+      tanggal,
+      saldoAwal,
+      masuk,
+      keluar,
+      saldoAkhir,
+      sekolah: "" as KasRow["sekolah"],
+    };
+  });
+}
+
+/** Roll up payments (income) and paid expenses by month, chronologically. */
+export function aggregateMonthly(
+  payments: ReadonlyArray<DatedAmount>,
+  expenses: ReadonlyArray<DatedExpense>,
+): RingkasanBulan[] {
+  const months = new Map<string, { pemasukan: number; pengeluaran: number }>();
+  const bucket = (key: string) => {
+    const existing = months.get(key);
+    if (existing) return existing;
+    const created = { pemasukan: 0, pengeluaran: 0 };
+    months.set(key, created);
+    return created;
+  };
+  for (const p of payments) bucket(p.tanggal.slice(0, 7)).pemasukan += p.jumlah;
+  for (const e of expenses) {
+    if (e.status === CASH_OUT_STATUS) bucket(e.tanggal.slice(0, 7)).pengeluaran += e.jumlah;
+  }
+  return [...months.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, v]) => {
+      const monthIndex = Number(key.slice(5, 7));
+      return {
+        bulan: BULAN_SINGKAT[monthIndex] ?? key,
+        pemasukan: v.pemasukan,
+        pengeluaran: v.pengeluaran,
+        saldo: v.pemasukan - v.pengeluaran,
+      };
+    });
+}
+
+/** Live daily cash book, derived from live payments + paid expenses. */
+export function useKasLive(): LiveListResult<KasRow> {
+  const pay = usePembayaranLive();
+  const exp = usePengeluaranLive();
+  return {
+    rows: deriveKasRows(pay.rows, exp.rows),
+    isLoading: pay.isLoading || exp.isLoading,
+    isError: pay.isError || exp.isError,
   };
 }
