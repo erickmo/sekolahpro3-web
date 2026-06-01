@@ -138,6 +138,13 @@ function RaportDetailPage() {
   }
 
   const actions = availableRaportActions(doc.status);
+  // Frappe PDF endpoint using the "Raport Siswa" print format. Same base URL the
+  // api-client is configured with (empty = same origin in dev). (AKA-02)
+  const pdfBase = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
+  const pdfUrl =
+    `${pdfBase}/api/method/frappe.utils.print_format.download_pdf` +
+    `?doctype=Raport&name=${encodeURIComponent(id)}` +
+    `&format=${encodeURIComponent("Raport Siswa")}&no_letterhead=1`;
 
   return (
     <div className="space-y-4">
@@ -156,7 +163,14 @@ function RaportDetailPage() {
         eyebrow="Akademik · Raport"
         title={doc.siswa ?? doc.name}
         description={`${doc.semester ?? "—"} · ${doc.tahun_ajaran ?? "—"}`}
-        actions={<Badge tone={STATUS_TONE[doc.status ?? ""] ?? "neutral"}>{doc.status ?? "—"}</Badge>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Badge tone={STATUS_TONE[doc.status ?? ""] ?? "neutral"}>{doc.status ?? "—"}</Badge>
+            <Button variant="outline" onClick={() => window.open(pdfUrl, "_blank", "noopener,noreferrer")}>
+              Cetak PDF
+            </Button>
+          </div>
+        }
       />
 
       <SectionCard title="Ringkasan" description="Detail dokumen raport.">
