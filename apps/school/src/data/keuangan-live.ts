@@ -133,6 +133,8 @@ export interface LiveListResult<T> {
   rows: T[];
   isLoading: boolean;
   isError: boolean;
+  /** Re-fetch the underlying list (e.g. after a create). */
+  refetch: () => void;
 }
 
 const INVOICE_FIELDS = [
@@ -176,6 +178,7 @@ export function useTagihanLive(): LiveListResult<TagihanRow> {
     rows: (q.data ?? []).map(mapFeeInvoiceToTagihan),
     isLoading: q.isLoading,
     isError: q.isError,
+    refetch: () => void q.refetch(),
   };
 }
 
@@ -192,6 +195,7 @@ export function usePengeluaranLive(): LiveListResult<PengeluaranRow> {
     rows: (q.data ?? []).map(mapExpenseToPengeluaran),
     isLoading: q.isLoading,
     isError: q.isError,
+    refetch: () => void q.refetch(),
   };
 }
 
@@ -255,6 +259,7 @@ export function usePembayaranLive(): LiveListResult<PembayaranRow> {
     rows: (q.data ?? []).map(mapPaymentToPembayaran),
     isLoading: q.isLoading,
     isError: q.isError,
+    refetch: () => void q.refetch(),
   };
 }
 
@@ -342,5 +347,6 @@ export function useKasLive(): LiveListResult<KasRow> {
     rows: deriveKasRows(pay.rows, exp.rows),
     isLoading: pay.isLoading || exp.isLoading,
     isError: pay.isError || exp.isError,
+    refetch: () => { pay.refetch(); exp.refetch(); },
   };
 }
