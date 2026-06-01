@@ -22,12 +22,12 @@ import {
   type SearchableOption,
 } from "@sekolahpro/ui";
 import {
-  createResource,
   getResource,
   listResource,
   updateResource,
 } from "@sekolahpro/api-client";
 import { perpToday } from "../components/perpustakaan/perpFormatters";
+import { insertAndSubmit } from "../components/perpustakaan/circulation";
 
 type ItemRow = { eksemplar: string; nomor_inventaris?: string; judul_buku?: string };
 
@@ -183,7 +183,9 @@ function KolektifDetailPage() {
       };
       let savedName = name;
       if (isNew) {
-        const c = await createResource<{ name: string }>("Pinjam Kolektif Kelas", payload);
+        // Finalize on save via insert→submit so the loan's on_submit checkout
+        // side-effects run and the "Tersubmit" state is reachable. PERP-GAP-26
+        const c = await insertAndSubmit<{ name: string }>("Pinjam Kolektif Kelas", payload);
         savedName = c.name;
       } else {
         await updateResource("Pinjam Kolektif Kelas", name, payload);
@@ -382,7 +384,8 @@ function PengembalianKolektifModal({
     setSaving(true);
     setErr(null);
     try {
-      await createResource("Pengembalian Kolektif Kelas", {
+      // insert→submit so on_submit runs (denda/eksemplar/reservasi). PERP-GAP-25
+      await insertAndSubmit("Pengembalian Kolektif Kelas", {
         pinjam_kolektif: pinjam.name,
         guru_penanggung_jawab: pinjam.guru_penanggung_jawab,
         rombongan: pinjam.rombongan,
@@ -390,9 +393,8 @@ function PengembalianKolektifModal({
         jumlah_eksemplar_kembali: pinjam.items.length,
         terminal_id: "WEB-UI",
         catatan,
-        docstatus: 1,
       });
-      // Update status pinjam → Selesai
+      // Patch pinjam header → Selesai (idempotent if the submit hook also sets it).
       await updateResource("Pinjam Kolektif Kelas", pinjam.name!, { status: "Selesai" });
       onDone();
     } catch (e) {

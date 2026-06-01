@@ -4,8 +4,8 @@
 import { useState, type ReactNode } from "react";
 import { Button, DatePicker, FormField, FormGrid, Modal, Textarea } from "@sekolahpro/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { frappeFetch } from "@sekolahpro/api-client";
 import { perpToday } from "./perpFormatters";
+import { insertAndSubmit } from "./circulation";
 
 const DOCTYPE = "Pengembalian Buku";
 const PEMINJAMAN_DOCTYPE = "Peminjaman Buku";
@@ -69,21 +69,11 @@ export function ReturnModal({ open, peminjaman, onClose, onSuccess }: Props) {
   const mutation = useMutation<ReturnDoc, Error>({
     mutationFn: async () => {
       setError(null);
-      const inserted = await frappeFetch<{ name: string }>(
-        "frappe.client.insert",
-        {
-          doc: {
-            doctype: DOCTYPE,
-            peminjaman,
-            tanggal_kembali_aktual: tanggal,
-            catatan: catatan || undefined,
-          },
-        },
-      );
-      const submitted = await frappeFetch<ReturnDoc>("frappe.client.submit", {
-        doc: { doctype: DOCTYPE, name: inserted.name },
+      return insertAndSubmit<ReturnDoc>(DOCTYPE, {
+        peminjaman,
+        tanggal_kembali_aktual: tanggal,
+        catatan: catatan || undefined,
       });
-      return submitted;
     },
     onSuccess: (doc) => {
       qc.invalidateQueries({ queryKey: ["resource:list", PEMINJAMAN_DOCTYPE] });

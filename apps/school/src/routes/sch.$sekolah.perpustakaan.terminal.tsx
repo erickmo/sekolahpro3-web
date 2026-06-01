@@ -17,7 +17,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, Button, IconBook, IconCheck, IconAlert } from "@sekolahpro/ui";
-import { createResource, listResource } from "@sekolahpro/api-client";
+import { listResource } from "@sekolahpro/api-client";
+import { insertAndSubmit } from "../components/perpustakaan/circulation";
 import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 type Mode = "idle" | "anggota_resolved" | "processing";
@@ -174,11 +175,11 @@ function TerminalPage() {
         limit_page_length: 1,
       });
       if (aktif.length > 0) {
-        await createResource("Pengembalian Buku", {
+        // insert→submit so on_submit runs (denda/eksemplar/reservasi). PERP-GAP-02
+        await insertAndSubmit("Pengembalian Buku", {
           peminjaman: aktif[0]!.name,
           tanggal_kembali_aktual: new Date().toISOString().slice(0, 10),
           terminal_id: "RFID-TERM",
-          docstatus: 1,
         });
         flashEvent("success", `Kembali: ${ek.nomor_inventaris ?? ek.name}`);
         pushLog("success", `Kembali ${ek.name} oleh ${anggota.name}`);
@@ -193,14 +194,14 @@ function TerminalPage() {
       const today = new Date();
       const due = new Date(today);
       due.setDate(due.getDate() + 7);
-      await createResource("Peminjaman Buku", {
+      // insert→submit so the loan's on_submit checkout side-effects run. PERP-GAP-02
+      await insertAndSubmit("Peminjaman Buku", {
         anggota: anggota.name,
         tanggal_pinjam: today.toISOString().slice(0, 10),
         tanggal_kembali_rencana: due.toISOString().slice(0, 10),
         status: "Aktif",
         terminal_id: "RFID-TERM",
         items: [{ eksemplar: ek.name, nomor_inventaris: ek.nomor_inventaris ?? "", judul_buku: ek.buku ?? "" }],
-        docstatus: 1,
       });
       flashEvent("success", `Pinjam: ${ek.nomor_inventaris ?? ek.name}`);
       pushLog("success", `Pinjam ${ek.name} oleh ${anggota.name}`);
