@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Badge } from "@sekolahpro/ui";
+import { Badge, EmptyState } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import type { PegawaiApi } from "./roles";
 
@@ -61,7 +61,12 @@ export function ApiKehadiranSection({ pegawai }: { pegawai: PegawaiApi }) {
           ))}
         </tbody>
       </table>
-      {!q.isLoading && rows.length === 0 ? <div className="text-sm text-muted-fg">Belum ada catatan kehadiran.</div> : null}
+      {!q.isLoading && rows.length === 0 ? (
+        <EmptyState
+          title="Belum ada catatan kehadiran"
+          description="Rekap absensi guru akan muncul di sini setelah data kehadiran diinput."
+        />
+      ) : null}
     </section>
   );
 }

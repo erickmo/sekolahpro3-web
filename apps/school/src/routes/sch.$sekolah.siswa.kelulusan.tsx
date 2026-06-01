@@ -2,6 +2,15 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { SiswaGettingStarted } from "../components/siswa/SiswaGettingStarted";
+import { summarizeKelulusan, SISWA_STATE_FIELDS } from "../lib/orang/siswaListSummaries";
+
+// Onboarding steps shown when no kelulusan record exists yet.
+const ONBOARDING_STEPS = [
+  "Pastikan data nilai akhir dan rombel kelas akhir sudah lengkap",
+  "Klik Proses Kelulusan untuk membuat keputusan per siswa",
+  "Ajukan ke Ka-TU lalu Kepsek untuk pengesahan",
+];
 
 type Row = {
   name: string;
@@ -69,6 +78,17 @@ function KelulusanPage() {
       fields={["name", "siswa", "tahun_ajaran", "status_kelulusan", "tanggal_pengesahan", "workflow_state"]}
       rowKey={(r) => r.name}
       columns={columns}
+      summarize={summarizeKelulusan}
+      summaryFields={SISWA_STATE_FIELDS}
+      gettingStarted={
+        <SiswaGettingStarted
+          sekolah={sekolah}
+          title="Belum ada proses kelulusan"
+          description="Mulai keputusan kelulusan siswa tingkat akhir tahun ajaran ini."
+          steps={ONBOARDING_STEPS}
+          primaryAction={{ label: "Proses Kelulusan", href: "/sch/$sekolah/siswa/kelulusan/new" }}
+        />
+      }
       defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "siswa"]}
       selectFilters={[

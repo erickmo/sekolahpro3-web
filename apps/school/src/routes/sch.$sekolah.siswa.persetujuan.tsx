@@ -2,6 +2,15 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { SiswaGettingStarted } from "../components/siswa/SiswaGettingStarted";
+import { summarizePersetujuan, SISWA_STATUS_FIELDS } from "../lib/orang/siswaListSummaries";
+
+// Onboarding steps shown when no consent record exists yet.
+const ONBOARDING_STEPS = [
+  "Pilih siswa dan tujuan pemrosesan data (foto, Dapodik, mitra, medis)",
+  "Klik Minta Persetujuan untuk merekam izin wali",
+  "Status berubah otomatis bila izin dicabut atau kedaluwarsa",
+];
 
 type ConsentStatus = "Granted" | "Withdrawn" | "Expired" | "Pending";
 type Purpose = "Publikasi Foto" | "Data Dapodik" | "Sharing Mitra" | "Medis Darurat";
@@ -80,6 +89,17 @@ function PersetujuanPage() {
       fields={["name", "siswa", "purpose", "status", "granted_at", "withdrawn_at", "granted_method"]}
       rowKey={(r) => r.name}
       columns={columns}
+      summarize={summarizePersetujuan}
+      summaryFields={SISWA_STATUS_FIELDS}
+      gettingStarted={
+        <SiswaGettingStarted
+          sekolah={sekolah}
+          title="Belum ada persetujuan wali"
+          description="Catat izin wali atas pemrosesan data siswa sesuai UU PDP."
+          steps={ONBOARDING_STEPS}
+          primaryAction={{ label: "Minta Persetujuan", href: "/sch/$sekolah/siswa/persetujuan/new" }}
+        />
+      }
       defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "siswa"]}
       selectFilters={[

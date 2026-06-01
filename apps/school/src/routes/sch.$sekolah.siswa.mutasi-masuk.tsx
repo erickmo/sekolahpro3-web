@@ -1,6 +1,15 @@
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { SiswaGettingStarted } from "../components/siswa/SiswaGettingStarted";
+import { summarizeMutasiMasuk, SISWA_STATUS_FIELDS } from "../lib/orang/siswaListSummaries";
+
+// Onboarding steps shown when no incoming transfer has been recorded yet.
+const ONBOARDING_STEPS = [
+  "Siapkan NISN dan data sekolah asal calon siswa pindahan",
+  "Klik Terima Pindahan untuk membuat pengajuan masuk",
+  "Verifikasi Dapodik lalu tetapkan rombel tujuan",
+];
 
 type Row = {
   name: string;
@@ -55,6 +64,17 @@ function MutasiMasukPage() {
       fields={["name", "siswa_baru", "nisn", "npsn_asal", "nama_sekolah_asal", "tanggal_masuk", "rombel_tujuan", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
+      summarize={summarizeMutasiMasuk}
+      summaryFields={SISWA_STATUS_FIELDS}
+      gettingStarted={
+        <SiswaGettingStarted
+          sekolah={sekolah}
+          title="Belum ada mutasi masuk"
+          description="Terima siswa pindahan dari sekolah lain dan tempatkan ke rombel."
+          steps={ONBOARDING_STEPS}
+          primaryAction={{ label: "Terima Pindahan", href: "/sch/$sekolah/siswa/mutasi-masuk/new" }}
+        />
+      }
       defaultSort={{ key: "name", dir: "desc" }}
       searchFields={["name", "siswa_baru", "nisn"]}
       selectFilters={[
