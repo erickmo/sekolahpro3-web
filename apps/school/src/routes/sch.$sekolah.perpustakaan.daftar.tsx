@@ -4,6 +4,7 @@ import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { PerpCreateModal, type PerpFieldDef } from "../components/perpustakaan/PerpCreateModal";
 import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
+import { bukuRouteParam } from "../components/perpustakaan/bukuIdentity";
 
 // Verified fields on `Buku` doctype:
 // judul (Data), isbn (Data), pengarang (Data), penerbit (Data),
@@ -96,7 +97,7 @@ function PerpustakaanListPage() {
         searchFields={["name", "judul", "isbn", "pengarang"]}
         addLabel="Tambah Buku"
         onAdd={() => setOpen(true)}
-        onRowClick={(r) => navigate({ to: "/sch/$sekolah/perpustakaan/$isbn", params: { sekolah, isbn: r.isbn ?? r.name } })}
+        onRowClick={(r) => navigate({ to: "/sch/$sekolah/perpustakaan/$isbn", params: { sekolah, isbn: bukuRouteParam(r) } })}
       />
       <PerpCreateModal
         open={open}
@@ -107,10 +108,9 @@ function PerpustakaanListPage() {
         fields={CREATE_FIELDS}
         submitLabel="Simpan"
         onCreated={(doc) => {
-          const isbn = (doc as { isbn?: string; name?: string }).isbn;
+          // Route by docname (PERP-GAP-01): the detail page resolves "Buku" by name.
           const name = (doc as { name?: string }).name;
-          const target = isbn ?? name;
-          if (target) navigate({ to: "/sch/$sekolah/perpustakaan/$isbn", params: { sekolah, isbn: target } });
+          if (name) navigate({ to: "/sch/$sekolah/perpustakaan/$isbn", params: { sekolah, isbn: name } });
         }}
       />
     </>

@@ -54,6 +54,7 @@ import {
   type StatusBuku,
   type StokTransaksiRow,
 } from "../data/perpustakaan";
+import { bukuEnrichIsbn } from "../components/perpustakaan/bukuIdentity";
 
 type TabKey = "ringkasan" | "detail" | "kopi" | "peminjaman" | "review" | "stok" | "aktivitas";
 
@@ -603,7 +604,10 @@ function BukuDetailPage() {
     filters: [["Item Peminjaman", "eksemplar", "in", eksemplarNames]],
     limit_page_length: 200,
   }, { enabled: eksemplarNames.length > 0 });
-  const mock = findBuku(isbn, sekolah);
+  // Enrich the demo fixture by the resolved doc's own isbn (PERP-GAP-01): the
+  // route param is a docname, so matching the fixture needs the doc's isbn,
+  // falling back to the param for direct ISBN deep-links with no backend.
+  const mock = findBuku(bukuEnrichIsbn(isbn, docQ.data), sekolah);
   const buku: Buku | undefined = (() => {
     const d = docQ.data;
     // Backend-only path: no mock fixture but doc exists → render from backend.
