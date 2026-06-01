@@ -65,8 +65,14 @@ function PeminjamanDetailPage() {
 
   const [perpanjangOpen, setPerpanjangOpen] = useState(false);
   const [perpanjangDate, setPerpanjangDate] = useState("");
+  const [perpanjangError, setPerpanjangError] = useState<string | null>(null);
   const [returnOpen, setReturnOpen] = useState(false);
   const [dendaOpen, setDendaOpen] = useState(false);
+
+  const closePerpanjang = () => {
+    setPerpanjangOpen(false);
+    setPerpanjangError(null);
+  };
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["resource:doc", DOCTYPE, name] });
@@ -85,15 +91,22 @@ function PeminjamanDetailPage() {
 
   const handlePerpanjangSubmit = () => {
     if (!perpanjangDate) {
-      alert("Tanggal rencana kembali baru wajib diisi.");
+      setPerpanjangError("Tanggal rencana kembali baru wajib diisi.");
       return;
     }
-    workflowMut.mutate({
-      patch: { tanggal_rencana_kembali: perpanjangDate },
-      label: "Perpanjang",
-    });
-    setPerpanjangOpen(false);
-    setPerpanjangDate("");
+    setPerpanjangError(null);
+    // Close/reset only after the PATCH resolves, and surface failures instead of
+    // hiding the modal on a silent reject. PERP-GAP-07
+    workflowMut.mutate(
+      { patch: { tanggal_rencana_kembali: perpanjangDate }, label: "Perpanjang" },
+      {
+        onSuccess: () => {
+          setPerpanjangOpen(false);
+          setPerpanjangDate("");
+        },
+        onError: (e) => setPerpanjangError(e.message),
+      },
+    );
   };
 
   const doc = data;
@@ -140,17 +153,20 @@ function PeminjamanDetailPage() {
       />
       <Modal
         open={perpanjangOpen}
-        onClose={() => setPerpanjangOpen(false)}
+        onClose={closePerpanjang}
         title="Perpanjang Peminjaman"
         description="Tentukan tanggal rencana kembali yang baru."
         size="sm"
         footer={
           <>
-            <Button variant="outline" onClick={() => setPerpanjangOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={closePerpanjang}>Batal</Button>
             <Button onClick={handlePerpanjangSubmit} disabled={workflowMut.isPending}>Simpan</Button>
           </>
         }
       >
+        {perpanjangError && (
+          <div role="alert" className="mb-3 text-sm text-danger">{perpanjangError}</div>
+        )}
         <FormField label="Tanggal Rencana Kembali Baru" required htmlFor="perpanjang-date">
           <DatePicker id="perpanjang-date" value={perpanjangDate} onChange={setPerpanjangDate} />
         </FormField>
