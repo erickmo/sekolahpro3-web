@@ -36,7 +36,7 @@ type PeriodeStatus = "aktif" | "lampau" | "belum-aktif";
 type BarBadgeTone = "success" | "warning" | "neutral";
 
 /** Tentukan status periode dari flag konteks (tanpa memanggil data baru). */
-function resolvePeriodeStatus(noActiveTa: boolean, isPastPeriod: boolean): PeriodeStatus {
+export function resolvePeriodeStatus(noActiveTa: boolean, isPastPeriod: boolean): PeriodeStatus {
   if (noActiveTa) return "belum-aktif";
   if (isPastPeriod) return "lampau";
   return "aktif";
@@ -52,7 +52,7 @@ const STATUS_TONE: Record<PeriodeStatus, BarBadgeTone> = {
   "belum-aktif": "neutral",
 };
 
-const STATUS_LABEL: Record<PeriodeStatus, string> = {
+export const STATUS_LABEL: Record<PeriodeStatus, string> = {
   aktif: "Periode berjalan",
   lampau: "Periode lampau",
   "belum-aktif": "Belum ada TA aktif",

@@ -459,6 +459,7 @@ function AsesmenListPage() {
         mapel={mapel}
         defaultTa={ctx?.tahunAjaran ?? ""}
         roleLabel={ROLE_LABEL[primary]}
+        sekolah={sekolah}
         onCreated={(id) => {
           setOpenCreate(false);
           navigate({ to: "/sch/$sekolah/akademik/asesmen/$id", params: { sekolah, id } });
@@ -475,7 +476,22 @@ interface CreateProps {
   mapel: string;
   defaultTa: string;
   roleLabel: string;
+  /** Tenant scope from the route (`/sch/$sekolah`); always present. */
+  sekolah: string;
   onCreated: (id: string) => void;
+}
+
+/**
+ * Resolve the tenant (sekolah) for a new Asesmen. The field is mandatory on the
+ * doctype, so prefer the explicit session school but fall back to the route
+ * param (guaranteed on `/sch/$sekolah`) instead of silently omitting it.
+ * Returns null only when neither source is available.
+ */
+export function resolveAsesmenTenant(
+  activeSekolahName: string | undefined,
+  urlSekolah: string,
+): string | null {
+  return activeSekolahName || urlSekolah || null;
 }
 
 /** Labelled field wrapper for the create form (keeps the modal markup tidy). */
@@ -491,7 +507,7 @@ function FormRow({ label, required, children }: { label: string; required?: bool
   );
 }
 
-function CreateTestModal({ open, onClose, rombel, mapel, defaultTa, roleLabel, onCreated }: CreateProps) {
+function CreateTestModal({ open, onClose, rombel, mapel, defaultTa, roleLabel, sekolah, onCreated }: CreateProps) {
   const qc = useQueryClient();
   const activeSekolah = useSessionStore((s) => s.activeSekolah);
   const [judul, setJudul] = useState("");
@@ -545,6 +561,13 @@ function CreateTestModal({ open, onClose, rombel, mapel, defaultTa, roleLabel, o
       setError("Lengkapi judul, tanggal, komponen, semester, dan tahun ajaran.");
       return;
     }
+    // Asesmen.sekolah is mandatory (multi-tenant). Never POST without it: if the
+    // session store has not hydrated yet, fall back to the route tenant param.
+    const tenant = resolveAsesmenTenant(activeSekolah?.name, sekolah);
+    if (!tenant) {
+      setError("Sekolah tidak diketahui pada sesi ini. Muat ulang halaman lalu coba lagi.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -556,8 +579,8 @@ function CreateTestModal({ open, onClose, rombel, mapel, defaultTa, roleLabel, o
         rombel,
         semester,
         tahun_ajaran: ta,
+        sekolah: tenant,
       };
-      if (activeSekolah?.name) body.sekolah = activeSekolah.name;
       const created = await createResource<{ name: string }>("Asesmen", body);
       await qc.invalidateQueries({ queryKey: ["resource:list", "Asesmen"] });
       onCreated(created.name);

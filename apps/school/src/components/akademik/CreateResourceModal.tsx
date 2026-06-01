@@ -62,7 +62,7 @@ function FormSection({ title, children }: { title: string; children: ReactNode }
 }
 
 /** Kelompokkan field per `section`; pertahankan urutan kemunculan section. */
-function groupBySection(
+export function groupBySection(
   fields: FieldSpec[],
   fallbackTitle: string,
 ): Array<{ title: string; fields: FieldSpec[] }> {
@@ -99,7 +99,7 @@ interface FrappeErrorPayload {
   exc_type?: string;
 }
 
-function parseFrappeError(err: unknown): { generic: string; perField: Record<string, string> } {
+export function parseFrappeError(err: unknown): { generic: string; perField: Record<string, string> } {
   const perField: Record<string, string> = {};
   let generic = "Gagal menyimpan";
   if (err instanceof Error) generic = err.message;
@@ -111,7 +111,7 @@ function parseFrappeError(err: unknown): { generic: string; perField: Record<str
   return { generic, perField };
 }
 
-function fieldVisible(field: FieldSpec, values: Record<string, unknown>): boolean {
+export function fieldVisible(field: FieldSpec, values: Record<string, unknown>): boolean {
   if (!field.showWhen) return true;
   return values[field.showWhen.field] === field.showWhen.equals;
 }
@@ -122,7 +122,7 @@ function defaultFor(field: FieldSpec): unknown {
   return "";
 }
 
-function buildInitial(
+export function buildInitial(
   fields: FieldSpec[],
   overrides: Record<string, unknown> | undefined,
 ): Record<string, unknown> {

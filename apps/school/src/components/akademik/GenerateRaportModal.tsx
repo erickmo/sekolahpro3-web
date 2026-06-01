@@ -84,13 +84,14 @@ export function GenerateRaportModal({ open, onClose, initial, onCreated }: Props
   const [semester, setSemester] = useState(initial?.semester ?? "");
   const [tahunAjaran, setTahunAjaran] = useState(initial?.tahunAjaran ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
 
   const mutation = useFrappeMutation<
     { siswa: string; semester: string; tahun_ajaran: string },
     { name: string }
   >(METHOD);
 
-  const ready = siswa && semester && tahunAjaran && !mutation.isPending;
+  const ready = !!(siswa && semester && tahunAjaran && !mutation.isPending && !checking);
 
   const reset = () => {
     setSiswa("");
@@ -110,6 +111,30 @@ export function GenerateRaportModal({ open, onClose, initial, onCreated }: Props
     if (!ready) {
       setError("Lengkapi siswa, semester, dan tahun ajaran.");
       return;
+    }
+    // Pre-flight: a raport is built from Entri Nilai. Warn up-front when the
+    // student has none for this period instead of surfacing a backend error
+    // (RAPORT_NOT_READY) only after the generate call.
+    setChecking(true);
+    try {
+      const existing = await listResource<{ name: string }>("Entri Nilai", {
+        fields: ["name"],
+        filters: [
+          ["siswa", "=", siswa],
+          ["semester", "=", semester],
+          ["tahun_ajaran", "=", tahunAjaran],
+        ],
+        limit_page_length: 1,
+      });
+      if (existing.length === 0) {
+        setError("Siswa ini belum punya Entri Nilai untuk semester & tahun ajaran tersebut. Isi Entri Nilai dulu sebelum generate raport.");
+        return;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memeriksa Entri Nilai.");
+      return;
+    } finally {
+      setChecking(false);
     }
     try {
       const result = await mutation.mutateAsync({
@@ -147,7 +172,7 @@ export function GenerateRaportModal({ open, onClose, initial, onCreated }: Props
             Batal
           </Button>
           <Button onClick={submit} disabled={!ready}>
-            {mutation.isPending ? "Memproses…" : "Generate"}
+            {checking ? "Memeriksa…" : mutation.isPending ? "Memproses…" : "Generate"}
           </Button>
         </>
       }

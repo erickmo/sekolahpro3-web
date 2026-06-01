@@ -18,10 +18,11 @@
  */
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { Badge, Button, SectionCard, cn, type Column } from "@sekolahpro/ui";
+import { useResourceList, type ListParams } from "@sekolahpro/api-client";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { useAkademikContextOptional } from "../lib/akademikContext";
 import { PageGuide, type PageGuideStep } from "../components/guide";
-import { DistributionBar, type DistributionSegment } from "../components/viz";
+import { DistributionBar, HBarChart, type DistributionSegment, type ChartDatum } from "../components/viz";
 import { useAkademikRole, ROLE_LABEL, type AkademikRole } from "../lib/akademikRole";
 import { useMemo, type ReactNode } from "react";
 
@@ -181,6 +182,62 @@ function buildPredikatSegments(): DistributionSegment[] {
   }));
 }
 
+/** Max mata pelajaran bars shown in the comparison chart (keeps it readable). */
+const MAX_COMPARISON_BARS = 8;
+const ROUND_FACTOR = 10;
+/** Upper bound of rows pulled for the aggregate comparison query. */
+const COMPARISON_QUERY_LIMIT = 2000;
+
+/**
+ * Average `nilai_akhir` per mata pelajaran, highest first, for the comparison
+ * chart. Only rows with a numeric nilai_akhir contribute; mapel with no graded
+ * rows are dropped. Result is capped at {@link MAX_COMPARISON_BARS}.
+ */
+export function buildMapelAverages(
+  rows: ReadonlyArray<Pick<Row, "mata_pelajaran" | "nilai_akhir">>,
+): ChartDatum[] {
+  const acc = new Map<string, { sum: number; n: number }>();
+  for (const r of rows) {
+    if (r.nilai_akhir == null || Number.isNaN(r.nilai_akhir)) continue;
+    const key = r.mata_pelajaran || "—";
+    const cur = acc.get(key) ?? { sum: 0, n: 0 };
+    cur.sum += r.nilai_akhir;
+    cur.n += 1;
+    acc.set(key, cur);
+  }
+  return [...acc.entries()]
+    .map(([label, { sum, n }]): ChartDatum => ({
+      label,
+      value: Math.round((sum / n) * ROUND_FACTOR) / ROUND_FACTOR,
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, MAX_COMPARISON_BARS);
+}
+
+/**
+ * Comparison card: average final score per mata pelajaran for the active
+ * period, so a kepala sekolah / admin can compare subjects at a glance.
+ * Derived from a read-only aggregate query (no mutation, no extra writes).
+ */
+function MapelComparisonCard({ rows, loading }: { rows: ChartDatum[]; loading: boolean }): ReactNode {
+  return (
+    <SectionCard
+      title="Perbandingan Rata-rata Nilai per Mata Pelajaran"
+      description="Rata-rata nilai akhir siswa pada periode aktif, tertinggi di atas."
+    >
+      {loading ? (
+        <p className="py-6 text-center text-sm text-muted-fg">Memuat perbandingan…</p>
+      ) : rows.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-fg">
+          Belum ada nilai akhir untuk dibandingkan pada periode ini.
+        </p>
+      ) : (
+        <HBarChart data={rows} max={100} valueFormatter={(v) => v.toFixed(1)} />
+      )}
+    </SectionCard>
+  );
+}
+
 /**
  * Predikat scale card. A foundation DistributionBar used as a colour legend so
  * teachers read the table's predikat badges consistently. Built only from local
@@ -232,6 +289,19 @@ function EntriNilaiPage() {
     return out.length > 0 ? out : undefined;
   }, [ctx?.tahunAjaran, ctx?.semester]);
 
+  // Read-only aggregate (all rows for the period, no search/paging) feeding the
+  // per-mapel comparison chart. Separate from the paginated table below.
+  const aggParams: ListParams = useMemo(() => {
+    const p: ListParams = {
+      fields: ["name", "mata_pelajaran", "nilai_akhir"],
+      limit_page_length: COMPARISON_QUERY_LIMIT,
+    };
+    if (baseFilters) p.filters = baseFilters;
+    return p;
+  }, [baseFilters]);
+  const aggQuery = useResourceList<Row>("Entri Nilai", aggParams);
+  const mapelAverages = useMemo(() => buildMapelAverages(aggQuery.data ?? []), [aggQuery.data]);
+
   const openEditor = () => {
     const search: Record<string, string> = {};
     if (ctx?.semester) search.semester = ctx.semester;
@@ -254,6 +324,8 @@ function EntriNilaiPage() {
         <WorkflowCard />
         <PredikatScaleCard />
       </div>
+
+      <MapelComparisonCard rows={mapelAverages} loading={aggQuery.isLoading} />
 
       <ResourceListPage<Row>
         eyebrow="Akademik"

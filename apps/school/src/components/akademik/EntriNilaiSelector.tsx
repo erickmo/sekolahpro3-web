@@ -77,15 +77,35 @@ export function EntriNilaiSelector({ initial, onStart }: Props) {
   const [semester, setSemester] = useState(initial?.semester ?? "");
   const [tahunAjaran, setTahunAjaran] = useState(initial?.tahunAjaran ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
 
   const ready = rombel && mapel && semester && tahunAjaran;
 
-  const submit = () => {
+  // Pre-flight: a mapel with no Komponen Nilai would open an empty grid, so
+  // verify at least one component exists before navigating into the editor.
+  const submit = async () => {
     if (!ready) {
       setError("Lengkapi semua pilihan untuk memulai entri nilai.");
       return;
     }
-    onStart({ rombel, mapel, semester, tahunAjaran });
+    setError(null);
+    setChecking(true);
+    try {
+      const komponen = await listResource<{ name: string }>("Komponen Nilai", {
+        fields: ["name"],
+        filters: [["mata_pelajaran", "=", mapel]],
+        limit_page_length: 1,
+      });
+      if (komponen.length === 0) {
+        setError("Mata pelajaran ini belum punya Komponen Nilai. Tambahkan dulu di Master Data sebelum mengisi nilai.");
+        return;
+      }
+      onStart({ rombel, mapel, semester, tahunAjaran });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memeriksa komponen nilai.");
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (
@@ -119,8 +139,8 @@ export function EntriNilaiSelector({ initial, onStart }: Props) {
           </div>
         ) : null}
         <div className="mt-4 flex justify-end">
-          <Button onClick={submit} disabled={!ready}>
-            Buka Editor Nilai
+          <Button onClick={submit} disabled={!ready || checking}>
+            {checking ? "Memeriksa…" : "Buka Editor Nilai"}
           </Button>
         </div>
       </SectionCard>
