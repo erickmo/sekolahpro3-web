@@ -16,6 +16,7 @@ import {
   DataTable,
   FilterBar,
   FormField,
+  InfoField,
   Input,
   Modal,
   PageHeader,
@@ -35,9 +36,9 @@ import {
   type MetodeBayar,
 } from "../data/keuangan";
 import { usePembayaranLive } from "../data/keuangan-live";
-import { useResourceCreate } from "@sekolahpro/api-client";
+import { useResourceCreate, useResourceDoc } from "@sekolahpro/api-client";
 import { useActiveCompany } from "../lib/akuntansi-scope";
-import { submitDoc } from "../data/akuntansi";
+import { cancelDoc, docstatusBadge, submitDoc } from "../data/akuntansi";
 
 const PAYMENT_DOCTYPE = "School Fee Payment";
 
@@ -86,6 +87,34 @@ function PembayaranPage() {
   const [penerima, setPenerima] = useState("");
   const [paidTo, setPaidTo] = useState("");
   const [receivableAccount, setReceivableAccount] = useState("");
+
+  // Detail / submit-cancel modal state.
+  const [detailId, setDetailId] = useState<string | undefined>(undefined);
+  const [busy2, setBusy2] = useState(false);
+  const detail = useResourceDoc<Record<string, unknown>>(PAYMENT_DOCTYPE, detailId);
+  const doc = detail.data;
+  const docstatus = typeof doc?.docstatus === "number" ? doc.docstatus : 0;
+  const docTone = docstatusBadge(docstatus === 0 || docstatus === 1 || docstatus === 2 ? docstatus : 0);
+
+  // Runs submit/cancel on the open doc, then refreshes the list and closes.
+  const act = async (fn: (dt: string, name: string) => Promise<unknown>) => {
+    if (!detailId) return;
+    setBusy2(true);
+    try {
+      await fn(PAYMENT_DOCTYPE, detailId);
+      refetch();
+      setDetailId(undefined);
+    } finally {
+      setBusy2(false);
+    }
+  };
+
+  // Reads a string-ish field off the loaded doc for display.
+  const fieldText = (key: string): string => {
+    const v = doc?.[key];
+    if (v === undefined || v === null || v === "") return "—";
+    return typeof v === "number" ? String(v) : String(v);
+  };
 
   const canSave = Boolean(postingDate && company && student && jumlah > 0 && paidTo && receivableAccount);
 
@@ -165,6 +194,16 @@ function PembayaranPage() {
     { key: "jml", header: "Jumlah", align: "right", cell: (r) => <span className="tabular-nums font-medium">{formatRupiah(r.jumlah)}</span> },
     { key: "ref", header: "Ref", cell: (r) => <span className="tabular-nums text-xs text-muted-fg">{r.ref}</span> },
     { key: "penerima", header: "Penerima", cell: (r) => <span className="text-sm">{r.penerima}</span> },
+    {
+      key: "aksi",
+      header: "",
+      align: "right",
+      cell: (r) => (
+        <Button variant="ghost" onClick={() => setDetailId(r.id)}>
+          Detail
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -254,6 +293,42 @@ function PembayaranPage() {
             <Button onClick={handleSave} disabled={!canSave || busy}>{busy ? "Menyimpan…" : "Simpan"}</Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal open={!!detailId} onClose={() => setDetailId(undefined)} title="Detail Pembayaran">
+        {detail.isLoading ? (
+          <p className="text-sm text-muted-fg">Memuat…</p>
+        ) : doc ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-fg">{detailId}</span>
+              <Badge tone={docTone.tone}>{docTone.label}</Badge>
+            </div>
+            <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              <InfoField label="Nama Siswa" value={fieldText("student_name")} />
+              <InfoField label="Judul" value={fieldText("judul")} />
+              <InfoField label="Metode" value={fieldText("metode")} />
+              <InfoField label="Jumlah" value={formatRupiah(typeof doc.jumlah === "number" ? doc.jumlah : 0)} />
+              <InfoField label="Referensi" value={fieldText("ref")} />
+              <InfoField label="Penerima" value={fieldText("penerima")} />
+              <InfoField label="Tanggal" value={fieldText("posting_date")} />
+            </div>
+            <div className="flex gap-2 pt-2">
+              {docstatus === 0 ? (
+                <Button onClick={() => act(submitDoc)} disabled={busy2}>
+                  {busy2 ? "Memproses…" : "Submit"}
+                </Button>
+              ) : null}
+              {docstatus === 1 ? (
+                <Button variant="destructive" onClick={() => act(cancelDoc)} disabled={busy2}>
+                  {busy2 ? "Memproses…" : "Batalkan"}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-fg">Tidak ditemukan.</p>
+        )}
       </Modal>
     </div>
   );
