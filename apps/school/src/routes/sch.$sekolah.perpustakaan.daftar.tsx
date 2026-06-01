@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { PerpCreateModal, type PerpFieldDef } from "../components/perpustakaan/PerpCreateModal";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 // Verified fields on `Buku` doctype:
 // judul (Data), isbn (Data), pengarang (Data), penerbit (Data),
@@ -82,6 +83,7 @@ function PerpustakaanListPage() {
   const [open, setOpen] = useState(false);
   return (
     <>
+      <PerpPageGuide id="daftar" />
       <ResourceListPage<Row>
         eyebrow="Layanan"
         title="Perpustakaan"

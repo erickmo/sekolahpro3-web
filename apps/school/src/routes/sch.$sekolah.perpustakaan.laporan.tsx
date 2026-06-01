@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, SectionCard, StatCard, IconBook, IconWallet, IconAlert, IconCheck } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 function LaporanPage() {
   const peminjaman = useResourceList("Peminjaman Buku", { fields: ["name", "status"], limit_page_length: 0 });
@@ -17,6 +18,7 @@ function LaporanPage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Perpustakaan" title="Laporan" description="Ringkasan sirkulasi & denda." />
+      <PerpPageGuide id="laporan" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Peminjaman Aktif" value={aktif.toLocaleString("id-ID")} icon={<IconBook />} accent="brand" />
         <StatCard label="Terlambat" value={terlambat.toLocaleString("id-ID")} icon={<IconAlert />} accent="rose" />

@@ -18,6 +18,7 @@ import { ReturnModal } from "../components/perpustakaan/ReturnModal";
 import { DendaDrawer } from "../components/perpustakaan/DendaDrawer";
 import { fetchDendaSummary, type DendaSummary } from "../components/perpustakaan/dendaSummary";
 import { perpToday } from "../components/perpustakaan/perpFormatters";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 type Row = {
   name: string;
@@ -178,6 +179,7 @@ function PeminjamanPage() {
 
   return (
     <>
+      <PerpPageGuide id="peminjaman" />
       <div className="mb-3 inline-flex rounded-md border border-border bg-card p-1">
         <span className="rounded bg-brand px-3 py-1.5 text-sm text-white">Individu</span>
         <Link to="/sch/$sekolah/perpustakaan/kolektif" params={{ sekolah }} className="rounded px-3 py-1.5 text-sm text-muted-fg hover:text-fg">

@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, Button, IconBook, IconCheck, IconAlert } from "@sekolahpro/ui";
 import { createResource, listResource } from "@sekolahpro/api-client";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 type Mode = "idle" | "anggota_resolved" | "processing";
 
@@ -236,6 +237,7 @@ function TerminalPage() {
 
   return (
     <div className="space-y-4">
+      <PerpPageGuide id="terminal" />
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { PerpCreateModal, type PerpFieldDef } from "../components/perpustakaan/PerpCreateModal";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 // Backend DocType: `Kategori Buku`. Minimal taxonomy used as Link target on
 // `Buku.kategori`. Detail view is not yet wired — only list + create here.
@@ -41,6 +42,7 @@ function KategoriPage() {
   const [open, setOpen] = useState(false);
   return (
     <>
+      <PerpPageGuide id="kategori" />
       <ResourceListPage<Row>
         eyebrow="Perpustakaan"
         title="Kategori Buku"
