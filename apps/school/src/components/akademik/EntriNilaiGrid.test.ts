@@ -21,6 +21,7 @@ import {
   computeNilaiAkhir,
   countFilledCells,
   buildSummary,
+  pendingSaveRows,
   KKM_DEFAULT,
   type CellState,
   type KomponenNilai,
@@ -31,6 +32,11 @@ import {
 /** Build a cell holding the given raw value. */
 function cs(value: string): CellState {
   return { value, baseline: value, status: "saved" };
+}
+
+/** Build a cell with an explicit save status. */
+function csStatus(value: string, status: CellState["status"]): CellState {
+  return { value, baseline: value, status };
 }
 
 const K1: KomponenNilai = { name: "K1", nama: "UH", bobot: 2 };
@@ -112,5 +118,35 @@ describe("buildSummary", () => {
     const s = buildSummary([{ siswa: "S1" }], {}, []);
     expect(s.totalCells).toBe(0);
     expect(s.fillPercent).toBe(0);
+  });
+});
+
+describe("pendingSaveRows", () => {
+  const anggota: AnggotaRombel[] = [{ siswa: "S1" }, { siswa: "S2" }, { siswa: "S3" }];
+
+  it("includes rows with an unsaved (dirty) cell", () => {
+    const grid: GridState = { S1: { K1: csStatus("80", "dirty") } };
+    expect(pendingSaveRows(anggota, grid)).toEqual(["S1"]);
+  });
+
+  it("includes rows whose previous save failed (error) so they stay retryable", () => {
+    const grid: GridState = { S2: { K1: csStatus("80", "error") } };
+    expect(pendingSaveRows(anggota, grid)).toEqual(["S2"]);
+  });
+
+  it("excludes rows that are fully saved or untouched", () => {
+    const grid: GridState = {
+      S1: { K1: csStatus("80", "saved") },
+      S2: { K1: csStatus("", "idle") },
+    };
+    expect(pendingSaveRows(anggota, grid)).toEqual([]);
+  });
+
+  it("preserves anggota order across a mix of dirty and error rows", () => {
+    const grid: GridState = {
+      S3: { K1: csStatus("90", "error") },
+      S1: { K1: csStatus("70", "dirty") },
+    };
+    expect(pendingSaveRows(anggota, grid)).toEqual(["S1", "S3"]);
   });
 });

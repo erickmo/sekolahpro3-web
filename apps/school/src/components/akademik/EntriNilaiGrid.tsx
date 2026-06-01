@@ -178,6 +178,22 @@ export function buildSummary(
   return { totalCells, filledCells, fillPercent, tuntas, belumTuntas, belumDinilai };
 }
 
+/**
+ * Rows that still need saving: any with an unsaved edit (`dirty`) OR a previous
+ * save failure (`error`). Including `error` keeps failed rows retryable via the
+ * same Simpan button after a partial-save failure (instead of stranding them).
+ */
+export function pendingSaveRows(anggota: AnggotaRombel[], grid: GridState): string[] {
+  const out: string[] = [];
+  for (const a of anggota) {
+    const row = grid[a.siswa];
+    if (!row) continue;
+    const needsSave = Object.values(row).some((c) => c.status === "dirty" || c.status === "error");
+    if (needsSave) out.push(a.siswa);
+  }
+  return out;
+}
+
 async function fetchRombelDoc(name: string): Promise<RombelDoc | null> {
   if (!name) return null;
   const rows = await listResource<RombelDoc>("Rombongan Belajar", {
@@ -347,16 +363,7 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
     });
   }, []);
 
-  const dirtyRows = useMemo(() => {
-    const out: string[] = [];
-    for (const a of anggota) {
-      const row = grid[a.siswa];
-      if (!row) continue;
-      const isDirty = Object.values(row).some((c) => c.status === "dirty");
-      if (isDirty) out.push(a.siswa);
-    }
-    return out;
-  }, [anggota, grid]);
+  const dirtyRows = useMemo(() => pendingSaveRows(anggota, grid), [anggota, grid]);
 
   // Class progress / mastery snapshot for the summary panel (derived data).
   const summary = useMemo(
@@ -405,11 +412,14 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
       };
       if (tingkat) body.tingkat = tingkat;
 
-      // Mark row cells as saving
+      // Mark row cells as saving (dirty = new edit, error = retry of a prior fail);
+      // rebuild without the error field so a stale message does not linger.
       const updatedRow: Record<string, CellState> = { ...row };
       for (const k of komponenList) {
         const c = updatedRow[k.name];
-        if (c && c.status === "dirty") updatedRow[k.name] = { ...c, status: "saving" };
+        if (c && (c.status === "dirty" || c.status === "error")) {
+          updatedRow[k.name] = { value: c.value, baseline: c.baseline, status: "saving" };
+        }
       }
       nextGrid[siswa] = updatedRow;
       setGrid({ ...nextGrid });
