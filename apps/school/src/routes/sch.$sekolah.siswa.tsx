@@ -1,26 +1,17 @@
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Tabs, type TabItem } from "@sekolahpro/ui";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import { GroupedNavTabs } from "../components/GroupedNavTabs";
+import { SISWA_NAV_GROUPS } from "../lib/orang/nav";
 
-const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/sch/$sekolah/siswa", label: "Dashboard", exact: true },
-  { to: "/sch/$sekolah/siswa/daftar", label: "Daftar Siswa" },
-  { to: "/sch/$sekolah/siswa/wali", label: "Wali Siswa" },
-  { to: "/sch/$sekolah/siswa/rombel", label: "Anggota Rombel" },
-  { to: "/sch/$sekolah/siswa/mutasi", label: "Mutasi" },
-  { to: "/sch/$sekolah/siswa/kelulusan", label: "Kelulusan" },
-];
-
+/**
+ * Siswa module layout: grouped sub-navigation (stacked, role-oriented groups)
+ * above the nested route outlet. Replaces the previous flat single-row Tabs so
+ * the many Siswa sub-pages stay discoverable for new operators.
+ */
 function SiswaLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items: TabItem[] = TABS.map((t) => ({
-    key: t.to,
-    label: t.label,
-    active: t.exact ? pathname === t.to : pathname === t.to || pathname.startsWith(t.to + "/"),
-    render: ({ className, children }) => <Link to={t.to} className={className}>{children}</Link>,
-  }));
   return (
     <div className="space-y-4">
-      <Tabs items={items} />
+      <GroupedNavTabs groups={SISWA_NAV_GROUPS} pathname={pathname} variant="stacked" />
       <Outlet />
     </div>
   );

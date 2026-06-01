@@ -1,28 +1,17 @@
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Tabs, type TabItem } from "@sekolahpro/ui";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import { GroupedNavTabs } from "../components/GroupedNavTabs";
+import { STAFF_NAV_GROUPS } from "../lib/orang/nav";
 
-const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/sch/$sekolah/staff", label: "Dashboard", exact: true },
-  { to: "/sch/$sekolah/staff/daftar", label: "Daftar Pegawai" },
-  { to: "/sch/$sekolah/staff/mapel-pengampu", label: "Mapel Pengampu" },
-  { to: "/sch/$sekolah/staff/penugasan", label: "Penugasan" },
-  { to: "/sch/$sekolah/staff/sk-mengajar", label: "SK Mengajar" },
-  { to: "/sch/$sekolah/staff/sk-jabatan", label: "SK Jabatan" },
-  { to: "/sch/$sekolah/staff/jabatan", label: "Jabatan" },
-  { to: "/sch/$sekolah/staff/berkas", label: "Berkas" },
-];
-
+/**
+ * Staff (Kepegawaian) module layout. Renders the grouped sub-navigation above
+ * the nested route outlet. Navigation data lives in lib/orang/nav so the menu
+ * stays single-sourced and every target is a verified existing route file.
+ */
 function StaffLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items: TabItem[] = TABS.map((t) => ({
-    key: t.to,
-    label: t.label,
-    active: t.exact ? pathname === t.to : pathname === t.to || pathname.startsWith(t.to + "/"),
-    render: ({ className, children }) => <Link to={t.to} className={className}>{children}</Link>,
-  }));
   return (
     <div className="space-y-4">
-      <Tabs items={items} />
+      <GroupedNavTabs groups={STAFF_NAV_GROUPS} pathname={pathname} variant="stacked" />
       <Outlet />
     </div>
   );
