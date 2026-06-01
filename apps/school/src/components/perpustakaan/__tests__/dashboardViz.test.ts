@@ -4,7 +4,38 @@ import {
   buildSirkulasiSegments,
   buildTrenPeminjaman,
   computeKesehatanSirkulasi,
+  buildTopPeminjam,
+  buildBukuTerpopuler,
 } from "../dashboardViz";
+
+describe("buildTopPeminjam / buildBukuTerpopuler (PERP-GAP-15)", () => {
+  const loans = [
+    { anggota: "A", buku: "X" },
+    { anggota: "A", buku: "Y" },
+    { anggota: "B", buku: "X" },
+    { anggota: "A", buku: "X" },
+    { anggota: "", buku: undefined },
+  ];
+
+  it("ranks borrowers by loan count, descending", () => {
+    const out = buildTopPeminjam(loans);
+    expect(out.map((d) => [d.label, d.value])).toEqual([["A", 3], ["B", 1]]);
+  });
+
+  it("ranks titles by loan count and skips empty keys", () => {
+    const out = buildBukuTerpopuler(loans);
+    expect(out.map((d) => [d.label, d.value])).toEqual([["X", 3], ["Y", 1]]);
+  });
+
+  it("honors topN", () => {
+    expect(buildTopPeminjam(loans, 1)).toHaveLength(1);
+  });
+
+  it("returns empty for empty input", () => {
+    expect(buildTopPeminjam([])).toEqual([]);
+    expect(buildBukuTerpopuler([])).toEqual([]);
+  });
+});
 
 describe("buildKategoriBars", () => {
   it("returns empty array for empty input", () => {

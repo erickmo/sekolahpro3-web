@@ -28,6 +28,7 @@ export interface KesehatanSirkulasi {
 }
 
 const DEFAULT_KATEGORI_TOP_N = 8;
+const DEFAULT_RANKING_TOP_N = 5;
 const KATEGORI_FALLBACK_LABEL = "Tanpa Kategori";
 const DEFAULT_TREN_DAYS = 7;
 const PERCENT_MAX = 100;
@@ -166,4 +167,51 @@ export function computeKesehatanSirkulasi(
   const total = aktif + terlambat;
   const percentTepatWaktu = total === 0 ? 0 : Math.round((aktif / total) * PERCENT_MAX);
   return { total, aktif, terlambat, percentTepatWaktu };
+}
+
+/** Loan row fields needed to rank members and titles (PERP-GAP-15). */
+export interface RankingPinjamRow {
+  anggota?: string | undefined;
+  buku?: string | undefined;
+}
+
+/**
+ * Count rows by a chosen key, returning the top-`topN` toned bars in descending
+ * order. Rows whose key is empty/whitespace are skipped.
+ */
+function buildRanking(
+  rows: ReadonlyArray<RankingPinjamRow>,
+  pick: (row: RankingPinjamRow) => string | undefined,
+  topN: number,
+): ChartDatum[] {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const key = pick(row)?.trim();
+    if (!key) continue;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([label, value], index) => ({
+      label,
+      value,
+      tone: KATEGORI_TONES[index % KATEGORI_TONES.length]!,
+    }));
+}
+
+/** Top borrowers ranked by number of loans (PERP-GAP-15). */
+export function buildTopPeminjam(
+  pinjam: ReadonlyArray<RankingPinjamRow>,
+  topN: number = DEFAULT_RANKING_TOP_N,
+): ChartDatum[] {
+  return buildRanking(pinjam, (r) => r.anggota, topN);
+}
+
+/** Most-borrowed titles ranked by number of loans (PERP-GAP-15). */
+export function buildBukuTerpopuler(
+  pinjam: ReadonlyArray<RankingPinjamRow>,
+  topN: number = DEFAULT_RANKING_TOP_N,
+): ChartDatum[] {
+  return buildRanking(pinjam, (r) => r.buku, topN);
 }
