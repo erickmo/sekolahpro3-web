@@ -4,22 +4,20 @@
  * Bulk-add eksemplar via paste newline-delimited (per UX rec).
  * Pengembalian kolektif sebagai counter-transaction terpisah (button "Kembalikan Kolektif").
  * Lihat PERP-ADR-0007.
+ *
+ * Layer: route. Owns fetch + mutations (insertAndSubmit) + compose. Presentational
+ * pieces live in KolektifMemberPanel / KolektifItemsTable; pure scan/dedup logic
+ * in kolektifCompute.
  */
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
   Badge,
   Button,
-  FormField,
-  FormGrid,
   IconCheck,
-  Input,
   PageHeader,
   SectionCard,
   Textarea,
-  DatePicker,
-  SearchableSelect,
-  type SearchableOption,
 } from "@sekolahpro/ui";
 import {
   getResource,
@@ -28,6 +26,17 @@ import {
 } from "@sekolahpro/api-client";
 import { perpToday } from "../components/perpustakaan/perpFormatters";
 import { insertAndSubmit } from "../components/perpustakaan/circulation";
+import {
+  parseScanCodes,
+  isDuplicateItem,
+  resolveItem,
+  bulkAdd,
+  type ItemRow,
+  type EksemplarRow,
+} from "../components/perpustakaan/kolektifCompute";
+import { KolektifMemberPanel } from "../components/perpustakaan/KolektifMemberPanel";
+import { KolektifItemsTable } from "../components/perpustakaan/KolektifItemsTable";
+import { KolektifReturnModal } from "../components/perpustakaan/KolektifReturnModal";
 
 /** Class-loan window in days (longer than the individual terminal's 7). */
 const KOLEKTIF_LOAN_DAYS = 14;
@@ -35,8 +44,8 @@ const KOLEKTIF_LOAN_DAYS = 14;
 const TERMINAL_WEB = "WEB-UI";
 /** Route param sentinel for an unsaved (new) record. */
 const NEW_RECORD = "new";
-
-type ItemRow = { eksemplar: string; nomor_inventaris?: string; judul_buku?: string };
+/** Max number of per-code errors surfaced in the bulk-add summary. */
+const ERROR_PREVIEW_MAX = 5;
 
 type Header = {
   name?: string;
@@ -72,20 +81,14 @@ function defaultHeader(): Header {
   };
 }
 
-async function searchGuru(q: string): Promise<SearchableOption[]> {
-  const f = q ? { or_filters: [["name", "like", `%${q}%`], ["nama_lengkap", "like", `%${q}%`]] as [string, string, unknown][] } : {};
-  const rows = await listResource<{ name: string; nama_lengkap?: string }>("Guru", {
-    fields: ["name", "nama_lengkap"], ...f, limit_page_length: 20,
+/** Look up one eksemplar by id or nomor_inventaris (I/O for the bulk add). */
+async function lookupEksemplar(code: string): Promise<EksemplarRow | undefined> {
+  const rows = await listResource<EksemplarRow>("Eksemplar Buku", {
+    fields: ["name", "nomor_inventaris", "buku", "status"],
+    or_filters: [["name", "=", code], ["nomor_inventaris", "=", code]] as [string, string, unknown][],
+    limit_page_length: 1,
   });
-  return rows.map((r) => ({ value: r.name, label: r.nama_lengkap ?? r.name }));
-}
-
-async function searchRombel(q: string): Promise<SearchableOption[]> {
-  const f = q ? { or_filters: [["name", "like", `%${q}%`], ["nama_rombel", "like", `%${q}%`]] as [string, string, unknown][] } : {};
-  const rows = await listResource<{ name: string; nama_rombel?: string }>("Rombongan Belajar", {
-    fields: ["name", "nama_rombel"], ...f, limit_page_length: 20,
-  });
-  return rows.map((r) => ({ value: r.name, label: r.nama_rombel ?? r.name }));
+  return rows[0];
 }
 
 function KolektifDetailPage() {
@@ -121,46 +124,28 @@ function KolektifDetailPage() {
 
   const isReadonly = (doc.docstatus ?? 0) >= 1 || doc.status === "Selesai" || doc.status === "Batal";
 
-  const resolveItem = async (code: string): Promise<ItemRow | { error: string }> => {
-    const c = code.trim();
-    if (!c) return { error: "kosong" };
-    const rows = await listResource<{ name: string; nomor_inventaris?: string; buku?: string; status?: string }>(
-      "Eksemplar Buku",
-      {
-        fields: ["name", "nomor_inventaris", "buku", "status"],
-        or_filters: [["name", "=", c], ["nomor_inventaris", "=", c]] as [string, string, unknown][],
-        limit_page_length: 1,
-      },
-    );
-    const ek = rows[0];
-    if (!ek) return { error: `${c}: tidak ditemukan` };
-    if (ek.status && ek.status !== "Tersedia") return { error: `${c}: status ${ek.status}` };
-    return { eksemplar: ek.name, nomor_inventaris: ek.nomor_inventaris ?? "", judul_buku: ek.buku ?? "" };
-  };
+  const patchHeader = (patch: Partial<Header>) => setDoc((p) => ({ ...p, ...patch }));
 
   const handleBulkAdd = async () => {
-    const codes = bulkInput
-      .split(/[\n,]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
+    const codes = parseScanCodes(bulkInput);
     if (codes.length === 0) return;
     setBulkBusy(true);
     setErr(null);
-    const added: ItemRow[] = [];
+    let added: ItemRow[] = [];
     const errors: string[] = [];
     for (const c of codes) {
-      if (doc.items.some((i) => i.eksemplar === c || i.nomor_inventaris === c)) {
+      if (isDuplicateItem(doc.items, c)) {
         errors.push(`${c}: duplikat`);
         continue;
       }
-      const r = await resolveItem(c);
+      const r = resolveItem(c, await lookupEksemplar(c.trim()));
       if ("error" in r) errors.push(r.error);
-      else if (!added.some((a) => a.eksemplar === r.eksemplar)) added.push(r);
+      else added = bulkAdd(added, r);
     }
     setDoc((p) => ({ ...p, items: [...p.items, ...added] }));
     setBulkInput("");
     setBulkBusy(false);
-    if (errors.length > 0) setErr(`${added.length} ditambah, ${errors.length} gagal: ${errors.slice(0, 5).join("; ")}${errors.length > 5 ? "…" : ""}`);
+    if (errors.length > 0) setErr(`${added.length} ditambah, ${errors.length} gagal: ${errors.slice(0, ERROR_PREVIEW_MAX).join("; ")}${errors.length > ERROR_PREVIEW_MAX ? "…" : ""}`);
   };
 
   const removeItem = (idx: number) =>
@@ -226,111 +211,22 @@ function KolektifDetailPage() {
       ) : null}
 
       <SectionCard title="Header Pinjam">
-        <FormGrid cols={3}>
-          <FormField label="Guru PJ" htmlFor="guru" required>
-            <SearchableSelect
-              value={doc.guru_penanggung_jawab}
-              disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, guru_penanggung_jawab: v }))}
-              loadOptions={searchGuru}
-              resolveLabel={async (v) => v}
-              placeholder="Cari guru…"
-            />
-          </FormField>
-          <FormField label="Rombel" htmlFor="rombel" required>
-            <SearchableSelect
-              value={doc.rombongan}
-              disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, rombongan: v }))}
-              loadOptions={searchRombel}
-              resolveLabel={async (v) => v}
-              placeholder="Cari rombel…"
-            />
-          </FormField>
-          <FormField label="Tujuan / Topik" htmlFor="tujuan">
-            <Input id="tujuan" value={doc.tujuan} disabled={isReadonly}
-              placeholder="Paket bacaan literasi Sept..."
-              onChange={(e) => setDoc((p) => ({ ...p, tujuan: e.target.value }))} />
-          </FormField>
-          <FormField label="Tanggal Pinjam" htmlFor="tp" required>
-            <DatePicker id="tp" value={doc.tanggal_pinjam} disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, tanggal_pinjam: v }))} />
-          </FormField>
-          <FormField label="Rencana Kembali" htmlFor="tkr" required>
-            <DatePicker id="tkr" value={doc.tanggal_kembali_rencana} disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, tanggal_kembali_rencana: v }))} />
-          </FormField>
-          <FormField label="Status" htmlFor="st">
-            <SearchableSelect
-              id="st"
-              value={doc.status ?? "Aktif"}
-              disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, status: v }))}
-              options={[
-                { value: "Aktif", label: "Aktif" },
-                { value: "Selesai", label: "Selesai" },
-                { value: "Terlambat", label: "Terlambat" },
-                { value: "Batal", label: "Batal" },
-              ]}
-            />
-          </FormField>
-        </FormGrid>
+        <KolektifMemberPanel doc={doc} isReadonly={isReadonly} onPatch={patchHeader} />
       </SectionCard>
 
       <SectionCard
         title={`Eksemplar (${stats.totalEks})`}
         description="Paste kode/nomor inventaris (newline atau koma) untuk bulk add."
       >
-        {!isReadonly ? (
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end">
-            <Textarea
-              value={bulkInput}
-              onChange={(e) => setBulkInput(e.target.value)}
-              rows={3}
-              placeholder={"INV-001\nINV-002\nINV-003"}
-              className="flex-1 font-mono text-xs"
-            />
-            <Button onClick={handleBulkAdd} disabled={bulkBusy || !bulkInput.trim()}>
-              {bulkBusy ? "Validasi..." : "Tambahkan"}
-            </Button>
-          </div>
-        ) : null}
-        {doc.items.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-fg">
-            Belum ada eksemplar.
-          </div>
-        ) : (
-          <div className="max-h-[320px] overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-card">
-                <tr className="border-b border-border text-left text-xs text-muted-fg">
-                  <th className="px-2 py-2 w-8">#</th>
-                  <th className="px-2 py-2">Eksemplar</th>
-                  <th className="px-2 py-2">Nomor Inventaris</th>
-                  <th className="px-2 py-2">Judul / Buku</th>
-                  <th className="px-2 py-2 w-12"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {doc.items.map((it, idx) => (
-                  <tr key={`${it.eksemplar}-${idx}`} className="border-b border-border/50">
-                    <td className="px-2 py-1.5 text-xs text-muted-fg tabular-nums">{idx + 1}</td>
-                    <td className="px-2 py-1.5 font-mono text-xs">{it.eksemplar}</td>
-                    <td className="px-2 py-1.5 font-mono text-xs">{it.nomor_inventaris ?? "—"}</td>
-                    <td className="px-2 py-1.5">{it.judul_buku ?? "—"}</td>
-                    <td className="px-2 py-1.5">
-                      {!isReadonly ? (
-                        <button type="button" onClick={() => removeItem(idx)} className="text-xs text-rose-600 hover:underline">
-                          Hapus
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <KolektifItemsTable
+          items={doc.items}
+          isReadonly={isReadonly}
+          bulkInput={bulkInput}
+          bulkBusy={bulkBusy}
+          onBulkInputChange={setBulkInput}
+          onBulkAdd={handleBulkAdd}
+          onRemove={removeItem}
+        />
       </SectionCard>
 
       <SectionCard title="Catatan">
@@ -354,7 +250,7 @@ function KolektifDetailPage() {
       </div>
 
       {pengembalianOpen ? (
-        <PengembalianKolektifModal
+        <KolektifReturnModal
           pinjam={doc}
           onClose={() => setPengembalianOpen(false)}
           onDone={() => {
@@ -369,69 +265,6 @@ function KolektifDetailPage() {
           <Badge tone="success" dot>Tersubmit</Badge> Pinjam kolektif resmi.
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function PengembalianKolektifModal({
-  pinjam,
-  onClose,
-  onDone,
-}: {
-  pinjam: Header;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [tgl, setTgl] = useState(perpToday());
-  const [catatan, setCatatan] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const submit = async () => {
-    setSaving(true);
-    setErr(null);
-    try {
-      // insert→submit so on_submit runs (denda/eksemplar/reservasi). PERP-GAP-25
-      await insertAndSubmit("Pengembalian Kolektif Kelas", {
-        pinjam_kolektif: pinjam.name,
-        guru_penanggung_jawab: pinjam.guru_penanggung_jawab,
-        rombongan: pinjam.rombongan,
-        tanggal_kembali_aktual: tgl,
-        jumlah_eksemplar_kembali: pinjam.items.length,
-        terminal_id: TERMINAL_WEB,
-        catatan,
-      });
-      // Patch pinjam header → Selesai (idempotent if the submit hook also sets it).
-      await updateResource("Pinjam Kolektif Kelas", pinjam.name!, { status: "Selesai" });
-      onDone();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Gagal proses pengembalian.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-fg">Pengembalian Kolektif</h3>
-        <p className="mt-1 text-sm text-muted-fg">
-          {pinjam.items.length} eksemplar akan dicatat kembali dari rombel <b>{pinjam.rombongan}</b>.
-        </p>
-        {err ? <div className="mt-3 rounded-md border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs text-rose-700">{err}</div> : null}
-        <div className="mt-4 space-y-3">
-          <FormField label="Tanggal Kembali Aktual" htmlFor="tk" required>
-            <DatePicker id="tk" value={tgl} onChange={setTgl} />
-          </FormField>
-          <FormField label="Catatan" htmlFor="ck">
-            <Textarea id="ck" value={catatan} onChange={(e) => setCatatan(e.target.value)} rows={2} />
-          </FormField>
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} disabled={saving}>Batal</Button>
-          <Button onClick={submit} disabled={saving}>{saving ? "Memproses..." : "Submit Pengembalian"}</Button>
-        </div>
-      </div>
     </div>
   );
 }

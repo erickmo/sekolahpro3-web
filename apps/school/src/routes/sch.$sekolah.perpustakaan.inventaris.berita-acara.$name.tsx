@@ -7,108 +7,22 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import {
-  Badge,
-  Button,
-  FormField,
-  FormGrid,
-  IconCheck,
-  Input,
-  PageHeader,
-  SectionCard,
-  Textarea,
-  DatePicker,
-  SearchableSelect,
-  type SearchableOption,
-} from "@sekolahpro/ui";
+import { Badge, Button, IconCheck, PageHeader } from "@sekolahpro/ui";
 import {
   createResource,
   getResource,
   listResource,
   updateResource,
 } from "@sekolahpro/api-client";
-import { perpToday, perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
+import {
+  BeritaAcaraForm,
+  defaultBA,
+  type BA,
+} from "../components/perpustakaan/BeritaAcaraForm";
 
-type BA = {
-  name?: string;
-  tanggal_kejadian: string;
-  eksemplar: string;
-  pelapor: string;
-  jenis_kerusakan: "" | "Rusak Ringan" | "Rusak Berat" | "Hilang";
-  keputusan: "" | "Diperbaiki" | "Hapus" | "Ganti Rugi";
-  nilai_ganti_rugi: number;
-  deskripsi: string;
-  foto: string;
-  catatan_keputusan: string;
-  docstatus?: number;
-};
-
-const MAX_FOTO_BYTES = 1024 * 1024;
-/** JPEG quality used when re-encoding oversized incident photos. */
-const FOTO_JPEG_QUALITY = 0.8;
-
-function defaultBA(): BA {
-  return {
-    tanggal_kejadian: perpToday(),
-    eksemplar: "",
-    pelapor: "",
-    jenis_kerusakan: "",
-    keputusan: "",
-    nilai_ganti_rugi: 0,
-    deskripsi: "",
-    foto: "",
-    catatan_keputusan: "",
-  };
-}
-
-async function searchEksemplar(q: string): Promise<SearchableOption[]> {
-  const filters = q
-    ? { or_filters: [["name", "like", `%${q}%`], ["nomor_inventaris", "like", `%${q}%`]] as [string, string, unknown][] }
-    : {};
-  const rows = await listResource<{ name: string; nomor_inventaris?: string; buku?: string }>("Eksemplar Buku", {
-    fields: ["name", "nomor_inventaris", "buku"],
-    ...filters,
-    limit_page_length: 20,
-    order_by: "modified desc",
-  });
-  return rows.map((r) => {
-    const opt: SearchableOption = { value: r.name, label: r.nomor_inventaris ?? r.name };
-    if (r.buku) opt.hint = r.buku;
-    return opt;
-  });
-}
-
-async function uploadFoto(file: File): Promise<string> {
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("is_private", "0");
-  fd.append("folder", "Home/Attachments");
-  const res = await fetch("/api/method/upload_file", { method: "POST", body: fd, credentials: "include" });
-  if (!res.ok) throw new Error(`Upload gagal (${res.status})`);
-  const json = (await res.json()) as { message?: { file_url?: string } };
-  const url = json?.message?.file_url;
-  if (!url) throw new Error("Upload gagal: respons tidak valid.");
-  return url;
-}
-
-async function compressImage(file: File): Promise<File> {
-  if (file.size <= MAX_FOTO_BYTES) return file;
-  const bitmap = await createImageBitmap(file);
-  const ratio = Math.sqrt(MAX_FOTO_BYTES / file.size);
-  const w = Math.round(bitmap.width * ratio);
-  const h = Math.round(bitmap.height * ratio);
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  // toBlob may yield null (e.g. canvas too large); fall back to the original
-  // file rather than uploading a corrupt empty blob. PERP-GAP-21
-  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", FOTO_JPEG_QUALITY));
-  if (!blob) return file;
-  return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
-}
+const BA_DOCTYPE = "Berita Acara Kerusakan Buku";
+/** docstatus value Frappe assigns to a submitted (locked) document. */
+const DOCSTATUS_SUBMITTED = 1;
 
 function BADetailPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
@@ -120,7 +34,6 @@ function BADetailPage() {
   const [doc, setDoc] = useState<BA>(() => defaultBA());
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [bukuHarga, setBukuHarga] = useState<number | null>(null);
 
@@ -129,7 +42,7 @@ function BADetailPage() {
     let cancelled = false;
     (async () => {
       try {
-        const d = await getResource<BA>("Berita Acara Kerusakan Buku", name);
+        const d = await getResource<BA>(BA_DOCTYPE, name);
         if (!cancelled) setDoc({ ...defaultBA(), ...d });
       } catch (e) {
         if (!cancelled) setErr(e instanceof Error ? e.message : "Gagal memuat.");
@@ -170,23 +83,8 @@ function BADetailPage() {
     };
   }, [doc.eksemplar]);
 
-  const isReadonly = (doc.docstatus ?? 0) >= 1;
+  const isReadonly = (doc.docstatus ?? 0) >= DOCSTATUS_SUBMITTED;
   const photoRequired = doc.jenis_kerusakan === "Rusak Berat" || doc.jenis_kerusakan === "Hilang";
-
-  const handleFile = async (file: File | null) => {
-    if (!file) return;
-    setErr(null);
-    setUploading(true);
-    try {
-      const compressed = await compressImage(file);
-      const url = await uploadFoto(compressed);
-      setDoc((p) => ({ ...p, foto: url }));
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Upload gagal.");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const save = async (submit: boolean) => {
     if (!doc.tanggal_kejadian) return setErr("Tanggal wajib.");
@@ -208,13 +106,13 @@ function BADetailPage() {
         foto: doc.foto,
         catatan_keputusan: doc.catatan_keputusan,
       };
-      if (submit) payload.docstatus = 1;
+      if (submit) payload.docstatus = DOCSTATUS_SUBMITTED;
       let savedName = name;
       if (isNew) {
-        const c = await createResource<{ name: string }>("Berita Acara Kerusakan Buku", payload);
+        const c = await createResource<{ name: string }>(BA_DOCTYPE, payload);
         savedName = c.name;
       } else {
-        await updateResource("Berita Acara Kerusakan Buku", name, payload);
+        await updateResource(BA_DOCTYPE, name, payload);
       }
       navigate({ to: "/sch/$sekolah/perpustakaan/inventaris/berita-acara/$name", params: { sekolah, name: savedName } });
     } catch (e) {
@@ -246,117 +144,14 @@ function BADetailPage() {
         </div>
       ) : null}
 
-      <SectionCard title="Identitas Insiden">
-        <FormGrid cols={3}>
-          <FormField label="Tanggal Kejadian" htmlFor="tgl" required>
-            <DatePicker id="tgl" value={doc.tanggal_kejadian} disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, tanggal_kejadian: v }))} />
-          </FormField>
-          <FormField label="Eksemplar" htmlFor="eks" required>
-            <SearchableSelect
-              value={doc.eksemplar}
-              disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, eksemplar: v }))}
-              loadOptions={searchEksemplar}
-              resolveLabel={async (v) => v}
-              placeholder="Cari nomor inventaris…"
-            />
-          </FormField>
-          <FormField label="Pelapor" htmlFor="pelapor">
-            <SearchableSelect
-              value={doc.pelapor}
-              disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, pelapor: v }))}
-              loadOptions={async (q) => {
-                const f = q ? { or_filters: [["name", "like", `%${q}%`], ["full_name", "like", `%${q}%`]] as [string, string, unknown][] } : {};
-                const rows = await listResource<{ name: string; full_name?: string }>("User", {
-                  fields: ["name", "full_name"], ...f, limit_page_length: 20,
-                });
-                return rows.map((r) => ({ value: r.name, label: r.full_name ?? r.name }));
-              }}
-              resolveLabel={async (v) => v}
-              placeholder="Cari user…"
-            />
-          </FormField>
-          <FormField label="Jenis Kerusakan" htmlFor="jenis" required>
-            <SearchableSelect
-              id="jenis"
-              value={doc.jenis_kerusakan}
-              disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, jenis_kerusakan: v as BA["jenis_kerusakan"] }))}
-              options={[
-                { value: "Rusak Ringan", label: "Rusak Ringan" },
-                { value: "Rusak Berat", label: "Rusak Berat" },
-                { value: "Hilang", label: "Hilang" },
-              ]}
-              placeholder="— Pilih —"
-            />
-          </FormField>
-        </FormGrid>
-      </SectionCard>
-
-      <SectionCard title="Detail Kejadian">
-        <FormField label="Deskripsi Kerusakan" htmlFor="desk">
-          <Textarea id="desk" value={doc.deskripsi} disabled={isReadonly} rows={4}
-            onChange={(e) => setDoc((p) => ({ ...p, deskripsi: e.target.value }))} />
-        </FormField>
-        <div className="mt-4">
-          <label className="mb-1 block text-xs text-muted-fg">
-            Foto Bukti {photoRequired ? <span className="text-rose-600">*</span> : null}
-          </label>
-          {doc.foto ? (
-            <div className="flex items-start gap-3">
-              <img src={doc.foto} alt="Bukti" className="h-32 w-32 rounded-md border border-border object-cover" />
-              {!isReadonly ? (
-                <button type="button" onClick={() => setDoc((p) => ({ ...p, foto: "" }))}
-                  className="text-xs text-rose-600 hover:underline">
-                  Hapus foto
-                </button>
-              ) : null}
-            </div>
-          ) : !isReadonly ? (
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => void handleFile(e.target.files?.[0] ?? null)}
-              disabled={uploading}
-              className="block w-full text-sm text-fg file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-3 file:py-2 file:text-white"
-            />
-          ) : (
-            <span className="text-xs text-muted-fg">— tidak ada foto —</span>
-          )}
-          {uploading ? <div className="mt-1 text-xs text-muted-fg">Mengunggah...</div> : null}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Keputusan" description="Diputuskan oleh Kepala Perpustakaan saat approve.">
-        <FormGrid cols={2}>
-          <FormField label="Keputusan" htmlFor="keputusan">
-            <SearchableSelect
-              id="keputusan"
-              value={doc.keputusan}
-              disabled={isReadonly}
-              onChange={(v) => setDoc((p) => ({ ...p, keputusan: v as BA["keputusan"] }))}
-              options={[
-                { value: "Diperbaiki", label: "Diperbaiki" },
-                { value: "Hapus", label: "Hapus (eksemplar arsip)" },
-                { value: "Ganti Rugi", label: "Ganti Rugi" },
-              ]}
-              placeholder="— Belum diputuskan —"
-            />
-          </FormField>
-          <FormField label="Nilai Ganti Rugi (Rp)" htmlFor="rugi"
-            hint={suggestedRugi > 0 ? `Saran (harga buku): ${perpFormatRupiah(suggestedRugi)}` : undefined}>
-            <Input id="rugi" type="number" min={0} value={String(doc.nilai_ganti_rugi)}
-              disabled={isReadonly || doc.keputusan !== "Ganti Rugi"}
-              onChange={(e) => setDoc((p) => ({ ...p, nilai_ganti_rugi: Number(e.target.value) }))} />
-          </FormField>
-        </FormGrid>
-        <FormField label="Catatan Keputusan" htmlFor="catkep">
-          <Textarea id="catkep" value={doc.catatan_keputusan} disabled={isReadonly} rows={2}
-            onChange={(e) => setDoc((p) => ({ ...p, catatan_keputusan: e.target.value }))} />
-        </FormField>
-      </SectionCard>
+      <BeritaAcaraForm
+        doc={doc}
+        set_doc={setDoc}
+        is_readonly={isReadonly}
+        photo_required={photoRequired}
+        suggested_rugi={suggestedRugi}
+        on_photo_error={(message) => setErr(message || null)}
+      />
 
       {isReadonly ? (
         <div className="flex items-center justify-between rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">

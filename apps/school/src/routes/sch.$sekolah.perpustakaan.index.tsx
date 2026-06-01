@@ -3,39 +3,19 @@
  * Surfaces urgent counts (due today, overdue, denda) and pure-data visualizations
  * (sirkulasi status, on-time health, kategori, 7-day trend) plus a needs-attention
  * queue. All metrics derive from already-fetched lists — no extra backend calls.
+ *
+ * Route layer: owns data fetching + derivation, then composes the presentational
+ * dashboard sub-components (Stats / Activity / Attention / Health). Role framing
+ * lives in the Perpustakaan layout ContextBar — not here.
  */
 import { useMemo, type ReactNode } from "react";
-import { createFileRoute, Link, useParams} from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
-  AttentionList,
-  Badge,
   GettingStartedCard,
   PageHeader,
-  SectionCard,
-  StatCard,
   IconBook,
-  IconWallet,
-  IconAlert,
-  IconCheck,
-  IconUsers,
-  IconChart,
-  IconClock,
-  IconArrowLeft,
-  ModuleFlow,
 } from "@sekolahpro/ui";
-import type { AttentionItem, ModuleFlowStep } from "@sekolahpro/ui";
-
-const PERPUS_FLOW_STEPS: ModuleFlowStep[] = [
-  { key: "kategori", label: "Kategori", hint: "Setup kategori koleksi", href: "/sch/$sekolah/perpustakaan/kategori" },
-  { key: "pengadaan", label: "Pengadaan", hint: "Beli koleksi baru", href: "/sch/$sekolah/perpustakaan/pengadaan" },
-  { key: "inventaris", label: "Inventaris", hint: "Catat & opname stok", href: "/sch/$sekolah/perpustakaan/inventaris" },
-  { key: "anggota", label: "Anggota", hint: "Daftar peminjam", href: "/sch/$sekolah/perpustakaan/anggota" },
-  { key: "peminjaman", label: "Peminjaman", hint: "Transaksi pinjam", href: "/sch/$sekolah/perpustakaan/peminjaman" },
-  { key: "pengembalian", label: "Pengembalian", hint: "Terima kembali", href: "/sch/$sekolah/perpustakaan/pengembalian" },
-  { key: "denda", label: "Denda", hint: "Tagih keterlambatan", href: "/sch/$sekolah/perpustakaan/denda" },
-];
 import { useResourceList } from "@sekolahpro/api-client";
-import { BarChart, DonutChart, HBarChart, ProgressRing } from "../components/viz";
 import { PageGuide, type PageGuideStep } from "../components/guide";
 import { ROLE_LABEL as PERPUS_ROLE_LABELS } from "../lib/perpustakaanRole";
 import {
@@ -44,7 +24,15 @@ import {
   buildTrenPeminjaman,
   computeKesehatanSirkulasi,
 } from "../components/perpustakaan/dashboardViz";
-import { perpToday, perpMonthRange, perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
+import {
+  buildDashboardStats,
+  buildPerluPerhatianItems,
+} from "../components/perpustakaan/perpDashboardData";
+import { perpToday, perpMonthRange } from "../components/perpustakaan/perpFormatters";
+import { PerpDashboardStats } from "../components/perpustakaan/PerpDashboardStats";
+import { PerpDashboardActivity } from "../components/perpustakaan/PerpDashboardActivity";
+import { PerpDashboardAttention } from "../components/perpustakaan/PerpDashboardAttention";
+import { PerpDashboardHealth } from "../components/perpustakaan/PerpDashboardHealth";
 
 // Onboarding guide for the dashboard, role-tagged so a new petugas, a pustakawan
 // reviewing, and an admin all see which steps speak to them — without hiding any.
@@ -78,12 +66,8 @@ const DASHBOARD_GUIDE_TIPS = [
 
 // Window length (days) for the loan-trend bar chart on the dashboard.
 const TREN_HARI = 7;
-/** Rows shown in the "recent activity" and "needs attention" lists. */
+/** Rows shown in the "recent activity" list. */
 const RECENT_LIMIT = 5;
-const ATTENTION_LIMIT = 5;
-/** On-time circulation health thresholds (percent) for the dashboard ring tone. */
-const HEALTH_GOOD_PCT = 80;
-const HEALTH_WARN_PCT = 50;
 
 type BukuRow = {
   name: string;
@@ -110,25 +94,6 @@ type DendaRow = {
 type BARow = { name: string; docstatus?: number; tanggal_kejadian?: string };
 type OpnameRow = { name: string; docstatus?: number; tanggal?: string };
 type PengadaanRow = { name: string; tanggal_pengadaan?: string; total_eksemplar?: number };
-
-const QUICK_ACTIONS: { to: string; label: string; description: string; icon: React.ReactNode }[] = [
-  { to: "/sch/$sekolah/perpustakaan/terminal", label: "Terminal RFID", description: "Mode kios scan kartu + eksemplar.", icon: <IconBook className="h-5 w-5" /> },
-  { to: "/sch/$sekolah/perpustakaan/peminjaman", label: "Peminjaman", description: "Catat peminjaman individu / kolektif.", icon: <IconCheck className="h-5 w-5" /> },
-  { to: "/sch/$sekolah/perpustakaan/reservasi", label: "Reservasi", description: "Kelola antrian reservasi buku.", icon: <IconClock className="h-5 w-5" /> },
-  { to: "/sch/$sekolah/perpustakaan/pengadaan", label: "Pengadaan", description: "Pembelian / hibah / sumbangan koleksi.", icon: <IconWallet className="h-5 w-5" /> },
-  { to: "/sch/$sekolah/perpustakaan/inventaris/opname", label: "Stock Opname", description: "Audit inventaris via scan.", icon: <IconChart className="h-5 w-5" /> },
-  { to: "/sch/$sekolah/perpustakaan/inventaris/berita-acara", label: "BA Kerusakan", description: "Insiden rusak / hilang per eksemplar.", icon: <IconAlert className="h-5 w-5" /> },
-  { to: "/sch/$sekolah/perpustakaan/anggota", label: "Anggota", description: "Kelola data anggota perpustakaan.", icon: <IconUsers className="h-5 w-5" /> },
-  { to: "/sch/$sekolah/perpustakaan/laporan", label: "Laporan", description: "Ringkasan sirkulasi & koleksi.", icon: <IconChart className="h-5 w-5" /> },
-];
-
-const PINJAM_TONE: Record<string, "brand" | "success" | "warning" | "danger" | "neutral"> = {
-  Aktif: "brand",
-  Selesai: "success",
-  Terlambat: "warning",
-  Hilang: "danger",
-  Batal: "neutral",
-};
 
 function PerpustakaanDashboardPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
@@ -196,84 +161,17 @@ function PerpustakaanDashboardPage() {
   const opnameDrafts = useMemo(() => opnameDraftQ.data ?? [], [opnameDraftQ.data]);
   const pengadaanBulanIni = useMemo(() => pengadaanBulanIniQ.data ?? [], [pengadaanBulanIniQ.data]);
 
-  const stats = useMemo(() => {
-    const totalJudul = buku.length;
-    const aktif = pinjam.filter((p) => p.status === "Aktif").length;
-    const terlambat = pinjam.filter((p) => p.status === "Terlambat").length;
-    // Actionable: buku jatuh tempo hari ini (dueDate == today) — masih Aktif.
-    const jatuhTempoHariIni = pinjam.filter(
-      (p) => p.status === "Aktif" && p.tanggal_kembali_rencana === today,
-    ).length;
-    const dendaOutstanding = denda.reduce((s, d) => s + (d.nominal ?? 0), 0);
-    const dendaCount = denda.length;
-    const baPendingCount = baPending.length;
-    const opnameDraftCount = opnameDrafts.length;
-    const pengadaanEksBulanIni = pengadaanBulanIni.reduce((s, p) => s + (p.total_eksemplar ?? 0), 0);
-    return {
-      totalJudul, aktif, terlambat, jatuhTempoHariIni, dendaOutstanding, dendaCount,
-      baPendingCount, opnameDraftCount, pengadaanEksBulanIni,
-    };
-  }, [buku, pinjam, denda, baPending, opnameDrafts, pengadaanBulanIni, today]);
+  // Counters & attention queue are pure derivations of the fetched lists; the
+  // logic lives in dashboardViz.ts (unit-tested) so the route stays thin.
+  const stats = useMemo(
+    () => buildDashboardStats({ buku, pinjam, denda, baPending, opnameDrafts, pengadaanBulanIni, today }),
+    [buku, pinjam, denda, baPending, opnameDrafts, pengadaanBulanIni, today],
+  );
 
-  const perluPerhatianItems = useMemo<AttentionItem[]>(() => {
-    const items: AttentionItem[] = [];
-
-    for (const op of opnameDrafts) {
-      items.push({
-        id: `opname-${op.name}`,
-        label: `Opname ${op.name}`,
-        description: `Draft sesi ${op.tanggal ?? "—"} belum disubmit — lanjutkan scan`,
-        tone: "neutral",
-        badge: "Draft",
-        actionLabel: "Resume",
-        actionHref: `/sch/$sekolah/perpustakaan/inventaris/opname/${op.name}`,
-      });
-    }
-    for (const ba of baPending) {
-      items.push({
-        id: `ba-${ba.name}`,
-        label: `BA ${ba.name}`,
-        description: `Insiden ${ba.tanggal_kejadian ?? "—"} menunggu approval Kepala Perpustakaan`,
-        tone: "warning",
-        badge: "Approval",
-        actionLabel: "Review",
-        actionHref: `/sch/$sekolah/perpustakaan/inventaris/berita-acara/${ba.name}`,
-      });
-    }
-    for (const p of pinjam) {
-      if (p.status === "Terlambat") {
-        items.push({
-          id: `terlambat-${p.name}`,
-          label: p.name,
-          description: `${p.anggota ?? "—"} · jatuh tempo ${p.tanggal_kembali_rencana ?? "—"}`,
-          tone: "warning",
-          badge: "Terlambat",
-          actionLabel: "Kirim Pengingat",
-          actionHref: "/sch/$sekolah/perpustakaan/peminjaman",
-        });
-      } else if (p.status === "Hilang") {
-        items.push({
-          id: `hilang-${p.name}`,
-          label: p.name,
-          description: `${p.anggota ?? "—"} · buku hilang — butuh penggantian`,
-          tone: "danger",
-          badge: "Hilang",
-          actionLabel: "Buat Denda",
-          actionHref: "/sch/$sekolah/perpustakaan/denda",
-        });
-      } else if (p.status === "Aktif" && p.tanggal_kembali_rencana === today) {
-        items.push({
-          id: `due-${p.name}`,
-          label: p.name,
-          description: `${p.anggota ?? "—"} · jatuh tempo hari ini`,
-          tone: "neutral",
-          actionLabel: "Cek Peminjaman",
-          actionHref: "/sch/$sekolah/perpustakaan/peminjaman",
-        });
-      }
-    }
-    return items;
-  }, [pinjam, baPending, opnameDrafts, today]);
+  const perluPerhatianItems = useMemo(
+    () => buildPerluPerhatianItems({ pinjam, baPending, opnameDrafts, today }),
+    [pinjam, baPending, opnameDrafts, today],
+  );
 
   const aktivitasTerbaru = useMemo(() => pinjam.slice(0, RECENT_LIMIT), [pinjam]);
 
@@ -324,257 +222,38 @@ function PerpustakaanDashboardPage() {
         />
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label="Buku Jatuh Tempo Hari Ini"
-          value={stats.jatuhTempoHariIni.toLocaleString("id-ID")}
-          hint={pinjamQ.isLoading ? "memuat..." : "hubungi peminjam"}
-          icon={<IconBook />}
-          accent="amber"
-          urgency="warn"
-          actionHref="/sch/$sekolah/perpustakaan/peminjaman"
-          renderLink={renderLink}
-        />
-        <StatCard
-          label="Peminjaman Aktif"
-          value={stats.aktif.toLocaleString("id-ID")}
-          hint="sedang berjalan"
-          icon={<IconWallet />}
-          accent="violet"
-          urgency="normal"
-        />
-        <StatCard
-          label="Terlambat"
-          value={stats.terlambat.toLocaleString("id-ID")}
-          hint="perlu tindak lanjut"
-          icon={<IconAlert />}
-          accent="rose"
-          urgency="critical"
-          actionHref="/sch/$sekolah/perpustakaan/peminjaman"
-          renderLink={renderLink}
-        />
-        <StatCard
-          label="Denda Belum Dibayar"
-          value={dendaQ.isLoading ? "…" : perpFormatRupiah(stats.dendaOutstanding)}
-          hint={dendaQ.isLoading ? "memuat..." : `${stats.dendaCount.toLocaleString("id-ID")} tagihan terbuka`}
-          icon={<IconCheck />}
-          accent="amber"
-          urgency={stats.dendaOutstanding > 0 ? "warn" : "normal"}
-          actionHref="/sch/$sekolah/perpustakaan/peminjaman"
-          renderLink={renderLink}
-        />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          label="BA Kerusakan Menunggu Approval"
-          value={baQ.isLoading ? "…" : stats.baPendingCount.toLocaleString("id-ID")}
-          hint="Kepala Perpustakaan perlu review"
-          icon={<IconAlert />}
-          accent="rose"
-          urgency={stats.baPendingCount > 0 ? "warn" : "normal"}
-          actionHref="/sch/$sekolah/perpustakaan/inventaris/berita-acara"
-          renderLink={renderLink}
-        />
-        <StatCard
-          label="Opname Draft Tertinggal"
-          value={opnameDraftQ.isLoading ? "…" : stats.opnameDraftCount.toLocaleString("id-ID")}
-          hint="Sesi audit belum disubmit"
-          icon={<IconChart />}
-          accent="violet"
-          urgency={stats.opnameDraftCount > 0 ? "warn" : "normal"}
-          actionHref="/sch/$sekolah/perpustakaan/inventaris/opname"
-          renderLink={renderLink}
-        />
-        <StatCard
-          label="Eksemplar Baru Bulan Ini"
-          value={pengadaanBulanIniQ.isLoading ? "…" : stats.pengadaanEksBulanIni.toLocaleString("id-ID")}
-          hint={`${pengadaanBulanIni.length} pengadaan tercatat`}
-          icon={<IconBook />}
-          accent="emerald"
-          urgency="normal"
-          actionHref="/sch/$sekolah/perpustakaan/pengadaan"
-          renderLink={renderLink}
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <SectionCard
-          title="Status Sirkulasi"
-          description="Sebaran status seluruh transaksi peminjaman."
-          className="lg:col-span-2"
-        >
-          {pinjamQ.isLoading ? (
-            <div className="text-sm text-muted-fg">Memuat...</div>
-          ) : totalSirkulasi === 0 ? (
-            <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-fg">
-              Belum ada transaksi peminjaman.
-            </div>
-          ) : (
-            <div className="flex flex-wrap items-center gap-6">
-              <DonutChart
-                data={sirkulasiDonut}
-                centerTop={<span className="text-2xl font-semibold text-fg tabular-nums">{totalSirkulasi}</span>}
-                centerBottom={<span className="text-xs text-muted-fg">transaksi</span>}
-              />
-              <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
-                {sirkulasiSegments.map((s) => (
-                  <li key={s.label} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="flex items-center gap-2 text-muted-fg">
-                      <Badge tone={s.label === "Terlambat" || s.label === "Hilang" ? "warning" : "neutral"} dot>
-                        {s.label}
-                      </Badge>
-                    </span>
-                    <span className="font-medium text-fg tabular-nums">{s.value.toLocaleString("id-ID")}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Kesehatan Sirkulasi"
-          description="Peminjaman aktif yang masih tepat waktu vs terlambat."
-        >
-          {pinjamQ.isLoading ? (
-            <div className="text-sm text-muted-fg">Memuat...</div>
-          ) : kesehatan.total === 0 ? (
-            <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-fg">
-              Tidak ada peminjaman aktif.
-            </div>
-          ) : (
-            <div className="flex flex-col items-center">
-              <ProgressRing
-                value={kesehatan.percentTepatWaktu}
-                tone={kesehatan.percentTepatWaktu >= HEALTH_GOOD_PCT ? "emerald" : kesehatan.percentTepatWaktu >= HEALTH_WARN_PCT ? "amber" : "rose"}
-                label={`${kesehatan.aktif.toLocaleString("id-ID")} tepat waktu · ${kesehatan.terlambat.toLocaleString("id-ID")} terlambat`}
-              />
-            </div>
-          )}
-        </SectionCard>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SectionCard
-          title="Koleksi per Kategori"
-          description="Jumlah judul tiap kategori (8 terbanyak)."
-        >
-          {bukuQ.isLoading ? (
-            <div className="text-sm text-muted-fg">Memuat...</div>
-          ) : (
-            <HBarChart data={kategoriBars} valueFormatter={(v) => v.toLocaleString("id-ID")} />
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Tren Peminjaman 7 Hari"
-          description="Jumlah transaksi pinjam per hari, hingga hari ini."
-        >
-          {pinjamQ.isLoading ? (
-            <div className="text-sm text-muted-fg">Memuat...</div>
-          ) : (
-            <BarChart data={trenPeminjaman} valueFormatter={(v) => v.toLocaleString("id-ID")} />
-          )}
-        </SectionCard>
-      </div>
-
-      <ModuleFlow
-        title="Alur Operasi Perpustakaan"
-        description="Langkah dari pengadaan koleksi sampai sirkulasi pinjam."
-        steps={PERPUS_FLOW_STEPS}
-        renderLink={(href, children) => (
-          <Link to={href as "/sch/$sekolah/perpustakaan/kategori"} params={{ sekolah }}>
-            {children}
-          </Link>
-        )}
+      <PerpDashboardStats
+        stats={stats}
+        loading={{
+          pinjam: pinjamQ.isLoading,
+          denda: dendaQ.isLoading,
+          ba: baQ.isLoading,
+          opname: opnameDraftQ.isLoading,
+          pengadaan: pengadaanBulanIniQ.isLoading,
+        }}
+        pengadaanCount={pengadaanBulanIni.length}
+        renderLink={renderLink}
       />
 
-      <SectionCard title="Aksi Cepat" description="Lompat ke modul yang sering digunakan.">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {QUICK_ACTIONS.map((a) => (
-            <Link
-              key={a.to}
-              to={a.to}
-              className="group flex items-start gap-3 rounded-lg border border-border bg-card p-3 transition hover:border-brand hover:bg-muted/40"
-            >
-              <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-md bg-muted text-fg group-hover:text-brand">
-                {a.icon}
-              </span>
-              <div className="min-w-0">
-                <div className="font-medium text-fg">{a.label}</div>
-                <div className="text-xs text-muted-fg">{a.description}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </SectionCard>
+      <PerpDashboardActivity
+        sirkulasiSegments={sirkulasiSegments}
+        sirkulasiDonut={sirkulasiDonut}
+        totalSirkulasi={totalSirkulasi}
+        kesehatan={kesehatan}
+        kategoriBars={kategoriBars}
+        trenPeminjaman={trenPeminjaman}
+        loading={{ buku: bukuQ.isLoading, pinjam: pinjamQ.isLoading }}
+      />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SectionCard
-          title="Perlu Perhatian"
-          description="Peminjaman terlambat, hilang, atau jatuh tempo hari ini."
-          action={
-            <Link to="/sch/$sekolah/perpustakaan/peminjaman" params={{ sekolah }} search={{ denda: "ada" }} className="text-xs text-brand hover:underline">
-              Lihat semua
-            </Link>
-          }
-        >
-          {pinjamQ.isLoading ? (
-            <div className="text-sm text-muted-fg">Memuat...</div>
-          ) : (
-            <AttentionList
-              items={perluPerhatianItems}
-              maxItems={ATTENTION_LIMIT}
-              renderLink={renderLink}
-            />
-          )}
-        </SectionCard>
+      <PerpDashboardHealth sekolah={sekolah} />
 
-        <SectionCard
-          title="Aktivitas Terbaru"
-          description="5 peminjaman terakhir tercatat."
-          action={
-            <Link to="/sch/$sekolah/perpustakaan/peminjaman" params={{ sekolah }} className="text-xs text-brand hover:underline">
-              Lihat semua
-            </Link>
-          }
-        >
-          {pinjamQ.isLoading ? (
-            <div className="text-sm text-muted-fg">Memuat...</div>
-          ) : aktivitasTerbaru.length === 0 ? (
-            <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-fg">
-              Belum ada aktivitas peminjaman.
-            </div>
-          ) : (
-            <ul className="divide-y divide-border">
-              {aktivitasTerbaru.map((p) => (
-                <li key={p.name} className="flex items-start justify-between gap-3 py-2.5">
-                  <div className="min-w-0">
-                    <div className="font-medium text-fg truncate">{p.name}</div>
-                    <div className="text-xs text-muted-fg truncate">{p.anggota ?? "—"}</div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-xs tabular-nums text-muted-fg">{p.tanggal_pinjam ?? "—"}</span>
-                    <Badge tone={PINJAM_TONE[p.status ?? ""] ?? "neutral"} dot>
-                      {p.status ?? "—"}
-                    </Badge>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </SectionCard>
-      </div>
-
-      <p className="text-xs text-muted-fg">
-        Tip: buka{" "}
-        <Link to="/sch/$sekolah/perpustakaan/daftar" params={{ sekolah }} className="text-brand hover:underline inline-flex items-center gap-1">
-          <IconArrowLeft className="h-3 w-3 shrink-0" />
-          katalog buku lengkap
-        </Link>
-        {" "}untuk mencari atau menambahkan koleksi baru.
-      </p>
+      <PerpDashboardAttention
+        sekolah={sekolah}
+        perluPerhatianItems={perluPerhatianItems}
+        aktivitasTerbaru={aktivitasTerbaru}
+        loading={pinjamQ.isLoading}
+        renderLink={renderLink}
+      />
     </div>
   );
 }
