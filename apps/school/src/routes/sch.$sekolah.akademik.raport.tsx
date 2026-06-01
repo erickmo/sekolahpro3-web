@@ -441,8 +441,17 @@ function RaportPage() {
         tips={GUIDE_TIPS}
       />
 
-      <SummaryStats summary={summary} />
-      <RaportViz summary={summary} />
+      {summaryQuery.isLoading ? (
+        // Avoid flashing zeroed stats/charts before the aggregate query resolves.
+        <div className="rounded-md border border-border bg-muted/30 px-4 py-6 text-center text-sm text-muted-fg">
+          Memuat ringkasan…
+        </div>
+      ) : (
+        <>
+          <SummaryStats summary={summary} />
+          <RaportViz summary={summary} />
+        </>
+      )}
       <StatusLegend />
 
       <FilterBar
