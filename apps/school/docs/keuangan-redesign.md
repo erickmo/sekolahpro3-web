@@ -1,6 +1,21 @@
 # Redesain Modul Keuangan & Akuntansi — Hub Terpadu
 
-Status: in-progress · Branch: `feat/keuangan-accounting-redesign` · POV: staf operasional harian
+Status: selesai (frontend + backend) · Branch: `feat/keuangan-accounting-redesign` · POV: staf operasional harian
+
+## Hasil
+
+- **Fondasi (TDD):** `lib/keuanganRole.ts` (13 test), `lib/keuanganHub.ts` (11 test),
+  `components/viz/finance-charts.tsx` LineChart/GaugeChart/WaterfallChart/StackedBarChart (10 test),
+  `components/guide/PageGuide.tsx` digeneralisasi (reusable lintas modul, 3 test),
+  `components/keuangan/*` HubNav/RoleChips/PageGuide (5 test). Total 42 test baru, hijau.
+- **Hub:** satu entri sidebar "Keuangan & Akuntansi"; nav hub dipakai layout `/keuangan` & `/akuntansi`.
+- **Operasional:** dashboard viz berat + 4 halaman (tagihan/pembayaran/pengeluaran/kas), role chips + guide.
+- **Akuntansi:** dashboard + 28 halaman diredesain — guide per-halaman (29 total), glossary jargon (19),
+  visualisasi (20). Semua wiring Frappe (`useResourceList`/`useResourceCreate`/`useActiveCompany`) utuh.
+- **Backend (vernon_accounting, branch `feat/keuangan-doctypes`):** doctype `School Fee Invoice` (Tagihan)
+  & `School Expense` (Pengeluaran) + controller GL (Dr/Cr seimbang), 17 stub-test pytest hijau.
+- **Verifikasi:** `tsc --noEmit` 0 error; vitest 197 lulus (2 gagal pra-ada, tak terkait); `vite build`
+  1615 modul tertransform 0 error. 2 kegagalan pra-ada: PinFallbackForm, AkademikContextBar (ada di `main`).
 
 ## 1. Tujuan
 
