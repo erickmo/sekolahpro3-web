@@ -22,9 +22,25 @@ interface ProviderProps {
 }
 
 export function AkademikContextProvider({ value, children }: ProviderProps) {
+  // Deliberately memoise on the individual fields, not on `value` itself: the
+  // layout passes a fresh object literal every render, so depending on `value`
+  // (what exhaustive-deps wants) would defeat the memo and re-render consumers
+  // on every parent render.
   const memo = useMemo(
     () => value,
-    [value.tahunAjaran, value.semester, value.isPastPeriod, value.noActiveTa, value.dirty],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      value.tahunAjaran,
+      value.semester,
+      value.isPastPeriod,
+      value.noActiveTa,
+      value.dirty,
+      // Setters are useCallback-stable in the layout, but listing them keeps the
+      // memo honest (exhaustive-deps) so a recreated setter never goes stale.
+      value.setTahunAjaran,
+      value.setSemester,
+      value.setDirty,
+    ],
   );
   return <Ctx.Provider value={memo}>{children}</Ctx.Provider>;
 }

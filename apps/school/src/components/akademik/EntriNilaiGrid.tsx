@@ -39,7 +39,7 @@ interface RombelDoc {
   anggota?: AnggotaRombel[];
 }
 
-interface AnggotaRombel {
+export interface AnggotaRombel {
   name?: string;
   siswa: string;
   no_urut?: number;
@@ -52,7 +52,7 @@ interface SiswaInfo {
   nis?: string;
 }
 
-interface KomponenNilai {
+export interface KomponenNilai {
   name: string;
   nama: string;
   bobot?: number;
@@ -77,21 +77,21 @@ interface EntriNilaiDoc {
 
 type CellStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
-interface CellState {
+export interface CellState {
   value: string;
   baseline: string;
   status: CellStatus;
   error?: string;
 }
 
-type GridState = Record<string, Record<string, CellState>>; // [siswa][komponen]
+export type GridState = Record<string, Record<string, CellState>>; // [siswa][komponen]
 
 const ROMBEL_FIELDS_GET = ["name", "nama_rombel", "tingkat"];
 const KOMPONEN_FIELDS = ["name", "nama", "bobot"];
 const SISWA_FIELDS = ["name", "nama_lengkap", "nis"];
 const ENTRI_FIELDS = ["name", "siswa", "mata_pelajaran", "semester", "tahun_ajaran", "tingkat", "nilai_akhir"];
 
-function clampNilai(raw: string): { value: string; error: string | null } {
+export function clampNilai(raw: string): { value: string; error: string | null } {
   const t = raw.trim();
   if (t === "") return { value: "", error: null };
   const n = Number(t);
@@ -100,7 +100,7 @@ function clampNilai(raw: string): { value: string; error: string | null } {
   return { value: t, error: null };
 }
 
-function computeNilaiAkhir(
+export function computeNilaiAkhir(
   cells: Record<string, CellState> | undefined,
   komponen: KomponenNilai[],
 ): number | null {
@@ -125,7 +125,7 @@ function computeNilaiAkhir(
 }
 
 /** Passing threshold (KKM) used to classify a student's final score. */
-const KKM_DEFAULT = 75;
+export const KKM_DEFAULT = 75;
 const PERCENT_MAX = 100;
 
 /** Aggregated progress / mastery snapshot for the whole class. */
@@ -139,7 +139,7 @@ interface GridSummary {
 }
 
 /** Count how many component cells in a row hold a valid numeric value. */
-function countFilledCells(
+export function countFilledCells(
   row: Record<string, CellState> | undefined,
   komponen: KomponenNilai[],
 ): number {
@@ -156,7 +156,7 @@ function countFilledCells(
  * Build the class summary (fill % + mastery split) from the in-memory grid.
  * Derived purely from already-loaded data — no extra network calls.
  */
-function buildSummary(
+export function buildSummary(
   anggota: AnggotaRombel[],
   grid: GridState,
   komponen: KomponenNilai[],

@@ -37,7 +37,7 @@ import { getResource, listResource, updateResource } from "@sekolahpro/api-clien
 import { DistributionBar, ProgressRing, type Tone } from "../viz";
 import { PageGuide, type PageGuideStep } from "../guide";
 
-interface NilaiRow {
+export interface NilaiRow {
   siswa: string;
   nilai?: number | null;
   catatan?: string;
@@ -60,19 +60,19 @@ interface AsesmenDoc {
   nilai?: NilaiRow[];
 }
 
-interface AnggotaRow {
+export interface AnggotaRow {
   siswa: string;
   no_urut?: number;
 }
-interface SiswaInfo {
+export interface SiswaInfo {
   name: string;
   nama_lengkap?: string;
   nis?: string;
 }
 
-type RowStatus = "idle" | "dirty" | "saving" | "saved" | "error";
+export type RowStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
-interface SiswaCell {
+export interface SiswaCell {
   siswa: string;
   nama: string;
   nis?: string;
@@ -98,7 +98,7 @@ const GRADE_BANDS: { label: string; min: number; tone: Tone }[] = [
 ];
 
 /** Validasi input nilai mentah: kosong = boleh, selain itu harus angka 0–100. */
-function clampNilai(raw: string): { ok: boolean; error: string | null } {
+export function clampNilai(raw: string): { ok: boolean; error: string | null } {
   const t = raw.trim();
   if (t === "") return { ok: true, error: null };
   const n = Number(t);
@@ -137,7 +137,7 @@ async function loadSiswa(names: string[]): Promise<Map<string, SiswaInfo>> {
 }
 
 /** Susun baris sel siswa dari anggota + info siswa + nilai tersimpan. */
-function buildCells(
+export function buildCells(
   anggota: AnggotaRow[],
   siswaMap: Map<string, SiswaInfo>,
   nilaiBySiswa: Map<string, NilaiRow>,
@@ -406,9 +406,14 @@ interface AsesmenSummary {
 }
 
 /** Hitung ringkasan & segmen distribusi predikat dari sel saat ini. */
-function deriveSummary(cells: SiswaCell[]): AsesmenSummary {
+export function deriveSummary(cells: SiswaCell[]): AsesmenSummary {
+  // Exclude empty (belum dinilai) cells BEFORE the numeric coercion: Number("")
+  // is 0, not NaN, so an unscored student would otherwise be averaged in as a 0
+  // and counted in the lowest grade band.
   const vals = cells
-    .map((c) => Number(c.value.trim()))
+    .map((c) => c.value.trim())
+    .filter((t) => t !== "")
+    .map((t) => Number(t))
     .filter((n) => !Number.isNaN(n) && inRange(n));
   const filled = cells.filter((c) => c.value.trim() !== "").length;
   const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
