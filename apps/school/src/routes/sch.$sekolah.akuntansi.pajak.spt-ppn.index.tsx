@@ -1,3 +1,10 @@
+/**
+ * Daftar SPT Masa PPN (pelaporan PPN bulanan).
+ *
+ * Presentation-only redesign: adds a workflow guide, a status-distribution bar,
+ * and glossary tooltips. The list query, create mutation, columns, and submit
+ * flow are unchanged.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
@@ -8,6 +15,7 @@ import {
   FilterBar,
   FormField,
   FormGrid,
+  GlossaryTooltip,
   Input,
   Modal,
   PageHeader,
@@ -23,6 +31,9 @@ import {
   type SptMasaPPN,
 } from "../data/akuntansi";
 import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { DistributionBar, type DistributionSegment } from "../components/viz";
+import { defOf } from "../lib/glossary";
 
 function SptPpnPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
@@ -47,6 +58,17 @@ function SptPpnPage() {
     const n = q.toLowerCase();
     return all.filter((r) => r.name.toLowerCase().includes(n) || r.tax_period?.toLowerCase().includes(n));
   }, [list.data, q]);
+
+  // Distribusi status SPT (Draft / Filed) untuk visualisasi ringkas.
+  const statusDist = useMemo<DistributionSegment[]>(() => {
+    const all = list.data ?? [];
+    const filed = all.filter((r) => r.status === "Filed").length;
+    return [
+      { label: "Draft", value: all.length - filed, tone: "amber" },
+      { label: "Filed", value: filed, tone: "emerald" },
+    ];
+  }, [list.data]);
+  const hasSpt = (list.data ?? []).length > 0;
 
   const cols: Column<SptMasaPPN>[] = [
     { key: "name", header: "No.", cell: (r) => (
@@ -74,7 +96,26 @@ function SptPpnPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="SPT Masa PPN" description="Pelaporan PPN bulanan." actions={<Button onClick={() => { setTaxPeriod(""); setErr(null); setOpen(true); }}>+ SPT Baru</Button>} />
+      <PageHeader
+        title="SPT Masa PPN"
+        description={<>Pelaporan <GlossaryTooltip term="PPN" definition={defOf("PPN") ?? "Pajak Pertambahan Nilai."} /> bulanan (<GlossaryTooltip term="SPT" definition={defOf("SPT") ?? "Surat Pemberitahuan masa pelaporan pajak."} />).</>}
+        actions={<Button onClick={() => { setTaxPeriod(""); setErr(null); setOpen(true); }}>+ SPT Baru</Button>}
+      />
+      <KeuanganPageGuide
+        storageId="spt-ppn-list"
+        intro="Susun SPT Masa PPN tiap bulan: sistem menghitung PPN keluaran dikurangi PPN masukan menjadi kurang/lebih bayar."
+        steps={[
+          { title: "Buat SPT baru", detail: "Klik + SPT Baru, isi Tax Period (mis. PPN-2026-01), lalu simpan draft atau langsung submit." },
+          { title: "Tinjau perhitungan", detail: "Buka nomor SPT untuk melihat PPN keluaran, masukan, dan kurang bayar." },
+          { title: "Submit & lapor", detail: "Setelah dicek, submit SPT lalu lapor ke DJP sebelum jatuh tempo." },
+        ]}
+        tips={["Pastikan e-Faktur periode tersebut sudah selesai sebelum menyusun SPT."]}
+      />
+      {hasSpt ? (
+        <SectionCard title="Distribusi Status SPT" description="Sebaran SPT menurut tahap pelaporan.">
+          <DistributionBar segments={statusDist} />
+        </SectionCard>
+      ) : null}
       <FilterBar search={{ value: q, placeholder: "Cari…", onChange: setQ }} />
       <SectionCard padded={false}>
         <DataTable<SptMasaPPN>

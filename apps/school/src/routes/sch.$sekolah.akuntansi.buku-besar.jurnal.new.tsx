@@ -1,3 +1,9 @@
+/**
+ * Jurnal Baru — form pembuatan Journal Entry vernon_accounting.
+ *
+ * Tambahan presentasi: panduan singkat pengisian dan glossary Cost Center.
+ * Logika form, validasi keseimbangan, dan submit handler tidak diubah.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
@@ -6,6 +12,7 @@ import {
   DatePicker,
   FormField,
   FormGrid,
+  GlossaryTooltip,
   Input,
   PageHeader,
   SectionCard,
@@ -22,6 +29,16 @@ import {
   type JournalEntry,
 } from "../data/akuntansi";
 import { useActiveCompany } from "../lib/akuntansi-scope";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { defOf } from "../lib/glossary";
+
+const GUIDE_STEPS = [
+  { title: "Isi informasi jurnal", detail: "Tetapkan tanggal posting. Company terisi otomatis dari sekolah aktif." },
+  { title: "Tambah baris debit & kredit", detail: "Minimal dua baris. Total debit harus sama dengan total kredit (status 'Seimbang')." },
+  { title: "Simpan draft atau submit", detail: "'Simpan Draft' menyimpan tanpa posting; 'Simpan & Submit' langsung mengalir ke buku besar." },
+];
+
+const GUIDE_TIPS = ["Jurnal tidak bisa di-submit selama belum seimbang atau ada akun kosong."];
 
 interface RowDraft {
   account: string;
@@ -106,6 +123,13 @@ function JurnalNewPage() {
 
       {err && <Alert tone="danger" title="Error">{err}</Alert>}
 
+      <KeuanganPageGuide
+        storageId="jurnal-new"
+        intro="Buat entri jurnal manual dalam tiga langkah. Pastikan debit = kredit sebelum submit."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+
       <SectionCard title="Informasi Jurnal">
         <FormGrid cols={3}>
           <FormField label="Posting Date" required>
@@ -133,7 +157,9 @@ function JurnalNewPage() {
             <thead className="text-xs uppercase text-muted-fg">
               <tr>
                 <th className="text-left py-2 pr-2">Account</th>
-                <th className="text-left py-2 pr-2">Cost Center</th>
+                <th className="text-left py-2 pr-2">
+                  <GlossaryTooltip term="Cost Center" definition={defOf("Cost Center") ?? "Pusat biaya — dimensi untuk mengelompokkan biaya/pendapatan per unit."} />
+                </th>
                 <th className="text-right py-2 pr-2 w-[140px]">Debit</th>
                 <th className="text-right py-2 pr-2 w-[140px]">Kredit</th>
                 <th className="text-left py-2 pr-2">Keterangan</th>

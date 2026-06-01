@@ -1,3 +1,10 @@
+/**
+ * Daftar Tax Period (periode pelaporan pajak per jenis).
+ *
+ * Presentation-only redesign: adds a workflow guide, an Open/Closed distribution
+ * bar, and a glossary tooltip. The list/create/update hooks, filters, columns,
+ * and modal save logic are unchanged.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -7,6 +14,7 @@ import {
   FilterBar,
   FormField,
   FormGrid,
+  GlossaryTooltip,
   Input,
   Modal,
   PageHeader,
@@ -17,6 +25,9 @@ import {
 import { useResourceCreate, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, TAX_PERIOD_TYPES, type TaxPeriod, type TaxPeriodType } from "../data/akuntansi";
 import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { DistributionBar, type DistributionSegment } from "../components/viz";
+import { defOf } from "../lib/glossary";
 
 const ALL = "Semua";
 
@@ -46,6 +57,17 @@ function TaxPeriodPage() {
       return true;
     });
   }, [list.data, q, type]);
+
+  // Distribusi periode menurut status Open/Closed untuk visualisasi ringkas.
+  const statusDist = useMemo<DistributionSegment[]>(() => {
+    const all = list.data ?? [];
+    const closed = all.filter((r) => r.is_closed).length;
+    return [
+      { label: "Open", value: all.length - closed, tone: "emerald" },
+      { label: "Closed", value: closed, tone: "rose" },
+    ];
+  }, [list.data]);
+  const hasPeriods = (list.data ?? []).length > 0;
 
   const cols: Column<TaxPeriod>[] = [
     { key: "name", header: "Period Name", cell: (r) => r.period_name },
@@ -82,7 +104,26 @@ function TaxPeriodPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Tax Period" description="Periode pelaporan pajak per jenis." actions={<Button onClick={() => openModal(null)}>+ Tax Period</Button>} />
+      <PageHeader
+        title="Tax Period"
+        description={<><GlossaryTooltip term="Tax Period" definition={defOf("Tax Period") ?? "Periode (bulan/tahun) sebagai wadah pelaporan pajak per jenis."} />: periode pelaporan pajak per jenis.</>}
+        actions={<Button onClick={() => openModal(null)}>+ Tax Period</Button>}
+      />
+      <KeuanganPageGuide
+        storageId="tax-period-list"
+        intro="Definisikan periode pajak (bulan/tahun per jenis) sebagai acuan SPT dan e-Faktur. Tutup periode setelah pelaporan selesai."
+        steps={[
+          { title: "Buat periode", detail: "Klik + Tax Period, isi nama periode, jenis pajak, bulan, dan tahun." },
+          { title: "Edit dari tabel", detail: "Klik baris untuk mengubah data atau menutup periode." },
+          { title: "Tutup periode", detail: "Set status Closed agar tidak ada lagi transaksi pajak masuk ke periode itu." },
+        ]}
+        tips={["Tutup periode hanya setelah SPT dan e-Faktur terkait sudah dilaporkan."]}
+      />
+      {hasPeriods ? (
+        <SectionCard title="Distribusi Status Periode" description="Perbandingan periode yang masih Open dan yang sudah Closed.">
+          <DistributionBar segments={statusDist} />
+        </SectionCard>
+      ) : null}
       <FilterBar
         search={{ value: q, placeholder: "Cari…", onChange: setQ }}
         filters={[{

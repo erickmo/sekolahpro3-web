@@ -1,3 +1,12 @@
+/**
+ * Budget create page — Keuangan hub.
+ *
+ * Form to compose a new budget: header (fiscal year, company, cost center) plus
+ * a per-account, per-month allocation grid. Presentation-only redesign: adds a
+ * short page guide and glossary tooltips on jargon. The form state, validation
+ * (canSave), submit handler (handleSave), and data wiring (useResourceCreate,
+ * submitDoc, DOCTYPE) are preserved verbatim.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
@@ -5,6 +14,7 @@ import {
   Button,
   FormField,
   FormGrid,
+  GlossaryTooltip,
   Input,
   PageHeader,
   SectionCard,
@@ -22,6 +32,10 @@ import {
   type OverspendAction,
 } from "../data/akuntansi";
 import { useActiveCompany } from "../lib/akuntansi-scope";
+import { KeuanganPageGuide } from "../components/keuangan";
+
+const FISCAL_YEAR_DEF = "Fiscal Year (tahun anggaran) — periode 12 bulan yang dipakai sebagai dasar penyusunan dan pelaporan anggaran.";
+const OVERSPEND_DEF = "Overspend Action — perilaku saat realisasi melebihi anggaran: None (abaikan), Warn (peringatan), Stop (blokir transaksi).";
 
 interface RowDraft {
   account: string;
@@ -90,9 +104,27 @@ function BudgetNewPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Budget Baru" description="Buat alokasi anggaran per akun per bulan." />
+
+      <KeuanganPageGuide
+        storageId="anggaran-budget-new"
+        intro="Susun anggaran dengan mengisi header lalu alokasi dana per akun untuk tiap bulan dalam satu tahun anggaran."
+        steps={[
+          { title: "Isi header", detail: "Tentukan Fiscal Year dan Cost Center. Company terisi otomatis dari sekolah aktif." },
+          { title: "Alokasikan per akun", detail: "Tambah baris akun, atur Overspend Action, lalu isi nominal tiap bulan. Total per bulan dan total keseluruhan terhitung otomatis." },
+          { title: "Simpan atau submit", detail: "Simpan Draft untuk melanjutkan nanti, atau Simpan & Submit untuk langsung mengaktifkan kontrol anggaran." },
+        ]}
+        tips={["Overspend Action 'Stop' akan memblokir transaksi yang melebihi anggaran akun tersebut."]}
+      />
+
       {err && <Alert tone="danger" title="Error">{err}</Alert>}
 
-      <SectionCard title="Header">
+      <SectionCard
+        title={
+          <span className="inline-flex items-center gap-1">
+            Header <GlossaryTooltip term="Fiscal Year" definition={FISCAL_YEAR_DEF} />
+          </span>
+        }
+      >
         <FormGrid cols={3}>
           <FormField label="Fiscal Year" required>
             <Input value={fiscalYear} onChange={(e) => setFiscalYear(e.target.value)} placeholder="2026" />
@@ -115,7 +147,11 @@ function BudgetNewPage() {
             <thead className="text-muted-fg">
               <tr>
                 <th className="text-left py-2 pr-2">Account</th>
-                <th className="text-left py-2 pr-2">Overspend</th>
+                <th className="text-left py-2 pr-2">
+                  <span className="inline-flex items-center gap-1">
+                    Overspend <GlossaryTooltip term="Overspend Action" definition={OVERSPEND_DEF} />
+                  </span>
+                </th>
                 {MONTH12.map((m) => <th key={m} className="text-right py-2 pr-2 w-[90px]">{m}</th>)}
                 <th className="text-right py-2 pr-2">Total</th>
                 <th className="w-8"></th>

@@ -1,3 +1,10 @@
+/**
+ * Bagan Akun (Chart of Accounts) — daftar + CRUD akun vernon_accounting.
+ *
+ * Tambahan presentasi: panduan halaman dan distribusi akun per root type di
+ * atas tabel. Logika data (useResourceList / Create / Update + company scope)
+ * dan modal CRUD dibiarkan apa adanya.
+ */
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -22,8 +29,26 @@ import {
   type RootType,
 } from "../data/akuntansi";
 import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { DistributionBar, type DistributionSegment, type Tone } from "../components/viz";
+import { KeuanganPageGuide } from "../components/keuangan";
 
 const ALL = "Semua";
+
+const ROOT_TYPE_TONE: Record<string, Tone> = {
+  Asset: "emerald",
+  Liability: "rose",
+  Equity: "brand",
+  Income: "sky",
+  Expense: "amber",
+};
+
+const GUIDE_STEPS = [
+  { title: "Telusuri struktur akun", detail: "Saring per Root Type (Asset, Liability, Equity, Income, Expense) atau cari nama akun." },
+  { title: "Tambah atau ubah akun", detail: "Klik '+ Akun Baru' untuk membuat, atau klik baris untuk menyunting akun yang ada.", roles: ["akuntan"] },
+  { title: "Tandai akun group", detail: "Akun group menampung sub-akun dan tidak bisa dipakai langsung untuk posting.", roles: ["akuntan"] },
+];
+
+const GUIDE_TIPS = ["Nonaktifkan (Disabled) akun yang tidak dipakai lagi alih-alih menghapusnya."];
 
 function AkunPage() {
   const [q, setQ] = useState("");
@@ -56,6 +81,20 @@ function AkunPage() {
     });
   }, [list.data, q, root]);
 
+  /** Account composition by root type for the distribution bar. */
+  const rootDistribution = useMemo<DistributionSegment[]>(() => {
+    const totals = new Map<string, number>();
+    for (const a of list.data ?? []) {
+      const rt = a.root_type ?? "Lainnya";
+      totals.set(rt, (totals.get(rt) ?? 0) + 1);
+    }
+    return [...totals.entries()].map(([label, value]) => ({
+      label,
+      value,
+      tone: ROOT_TYPE_TONE[label] ?? "neutral",
+    }));
+  }, [list.data]);
+
   const cols: Column<Account>[] = [
     { key: "name", header: "Nama", cell: (r) => <span className="font-mono text-xs">{r.name}</span>, width: "260px" },
     { key: "account_name", header: "Account Name", cell: (r) => r.account_name },
@@ -73,6 +112,19 @@ function AkunPage() {
         description="Chart of Accounts — struktur akun Vernon Accounting."
         actions={<Button onClick={() => { setEditing(null); setOpen(true); }}>+ Akun Baru</Button>}
       />
+
+      <KeuanganPageGuide
+        storageId="akun-coa"
+        intro="Bagan Akun adalah fondasi pembukuan. Susun strukturnya sebelum mulai memposting jurnal."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+
+      {rootDistribution.length > 0 && (
+        <SectionCard title="Komposisi Akun per Root Type" description={`Total ${list.data?.length ?? 0} akun`}>
+          <DistributionBar segments={rootDistribution} />
+        </SectionCard>
+      )}
 
       <FilterBar
         search={{ value: q, placeholder: "Cari akun…", onChange: setQ }}

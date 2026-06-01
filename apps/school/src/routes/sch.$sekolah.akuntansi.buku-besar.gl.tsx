@@ -1,9 +1,16 @@
+/**
+ * Buku Besar (GL Entry) — daftar semua posting ledger vernon_accounting.
+ *
+ * Tambahan presentasi: panduan halaman, glossary GL, dan distribusi debit vs
+ * kredit baris terfilter di atas tabel. Filter, query, dan order_by tidak diubah.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Badge,
   DataTable,
   FilterBar,
+  GlossaryTooltip,
   PageHeader,
   SectionCard,
   type Column,
@@ -16,8 +23,19 @@ import {
   type GLEntry,
 } from "../data/akuntansi";
 import { useActiveCompany } from "../lib/akuntansi-scope";
+import { DistributionBar, type DistributionSegment } from "../components/viz";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { defOf } from "../lib/glossary";
 
 const ALL = "Semua";
+
+const GUIDE_STEPS = [
+  { title: "Cari posting ledger", detail: "Saring per status (Active/Cancelled) atau ketik voucher, akun, atau remarks." },
+  { title: "Telusuri sumber voucher", detail: "Kolom Voucher menunjukkan dokumen asal (Journal Entry, Payment Entry) yang membentuk baris GL." },
+  { title: "Verifikasi keseimbangan", detail: "Baris total di bawah tabel menjumlahkan debit dan kredit baris terfilter.", roles: ["akuntan"] },
+];
+
+const GUIDE_TIPS = ["GL Entry dibuat otomatis saat jurnal atau pembayaran di-submit — tidak diinput manual di sini."];
 
 function GLPage() {
   const [q, setQ] = useState("");
@@ -56,12 +74,32 @@ function GLPage() {
   const totalD = rows.reduce((a, r) => a + (r.debit ?? 0), 0);
   const totalC = rows.reduce((a, r) => a + (r.credit ?? 0), 0);
 
+  const balanceSegments: DistributionSegment[] = [
+    { label: "Debit", value: totalD, tone: "brand" },
+    { label: "Kredit", value: totalC, tone: "emerald" },
+  ];
+
   return (
     <div className="space-y-4">
       <PageHeader
         title="Buku Besar (GL)"
-        description="GL Entry — semua posting yang menghasilkan pergerakan ledger."
+        description={
+          <span className="inline-flex flex-wrap items-center gap-1">
+            <GlossaryTooltip term="GL" definition={defOf("GL") ?? "General Ledger — buku besar tempat semua posting akuntansi terkumpul."} /> Entry — semua posting yang menghasilkan pergerakan ledger.
+          </span>
+        }
       />
+      <KeuanganPageGuide
+        storageId="buku-besar-gl"
+        intro="Buku Besar memuat setiap baris posting yang menggerakkan saldo akun. Baris di sini hanya untuk dibaca."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+      {(totalD > 0 || totalC > 0) && (
+        <SectionCard title="Debit vs Kredit (terfilter)" description={`${rows.length} baris GL`}>
+          <DistributionBar segments={balanceSegments} />
+        </SectionCard>
+      )}
       <FilterBar
         search={{ value: q, placeholder: "Cari voucher / akun / remarks…", onChange: setQ }}
         filters={[

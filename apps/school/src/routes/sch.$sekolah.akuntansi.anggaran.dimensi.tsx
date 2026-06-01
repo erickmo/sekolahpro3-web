@@ -1,3 +1,11 @@
+/**
+ * Accounting Dimension management page — Keuangan hub.
+ *
+ * CRUD over reporting dimensions via an inline modal. Presentation-only
+ * redesign: adds a page guide, a distribution viz (wajib vs opsional), and a
+ * glossary tooltip on the dimension concept. All CRUD/modal/data logic
+ * (useResourceList/Create/Update, DOCTYPE, handleSave) is preserved verbatim.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -12,10 +20,15 @@ import {
   PageHeader,
   SectionCard,
   Select,
+  GlossaryTooltip,
   type Column,
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, type AccountingDimension } from "../data/akuntansi";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { DistributionBar } from "../components/viz";
+
+const DIMENSION_DEF = "Accounting Dimension — atribut pelaporan tambahan (mis. Proyek, Program) yang dilekatkan pada transaksi agar laporan bisa dipotong per dimensi.";
 
 function DimensiPage() {
   const [q, setQ] = useState("");
@@ -38,6 +51,21 @@ function DimensiPage() {
     const n = q.toLowerCase();
     return all.filter((r) => r.dimension_name?.toLowerCase().includes(n));
   }, [list.data, q]);
+
+  // Distribusi wajib vs opsional, dihitung dari data yang sudah diambil (read-only).
+  const mandatoryDist = useMemo(() => {
+    const all = list.data ?? [];
+    let wajib = 0;
+    let opsional = 0;
+    for (const r of all) {
+      if (r.mandatory) wajib += 1;
+      else opsional += 1;
+    }
+    return [
+      { label: "Wajib", value: wajib, tone: "amber" as const },
+      { label: "Opsional", value: opsional, tone: "neutral" as const },
+    ];
+  }, [list.data]);
 
   const cols: Column<AccountingDimension>[] = [
     { key: "name", header: "Nama", cell: (r) => r.dimension_name },
@@ -64,7 +92,34 @@ function DimensiPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Accounting Dimension" description="Dimensi pelaporan tambahan untuk transaksi akuntansi." actions={<Button onClick={() => { setEditing(null); setForm({}); setOpen(true); }}>+ Dimensi</Button>} />
+      <PageHeader
+        title="Accounting Dimension"
+        description={
+          <span className="inline-flex items-center gap-1">
+            <GlossaryTooltip term="Accounting Dimension" definition={DIMENSION_DEF} />
+            {" "}— dimensi pelaporan tambahan untuk transaksi akuntansi.
+          </span>
+        }
+        actions={<Button onClick={() => { setEditing(null); setForm({}); setOpen(true); }}>+ Dimensi</Button>}
+      />
+
+      <KeuanganPageGuide
+        storageId="anggaran-dimensi"
+        intro="Dimensi akuntansi menambah sudut pandang pelaporan (mis. Proyek, Program) pada transaksi, melengkapi akun dan cost center."
+        steps={[
+          { title: "Definisikan dimensi", detail: "Beri nama dimensi dan tentukan document type yang akan memakainya (mis. Journal Entry)." },
+          { title: "Atur wajib atau opsional", detail: "Tandai Wajib bila setiap transaksi pada document type tersebut harus mengisi dimensi ini.", roles: ["akuntan"] },
+          { title: "Nonaktifkan bila tak dipakai", detail: "Set Disabled untuk berhenti memakai dimensi tanpa menghapus data historis." },
+        ]}
+        tips={["Dimensi yang Wajib akan memblokir penyimpanan transaksi bila belum diisi — gunakan seperlunya."]}
+      />
+
+      {list.data && list.data.length > 0 && (
+        <SectionCard title="Komposisi Dimensi">
+          <DistributionBar segments={mandatoryDist} />
+        </SectionCard>
+      )}
+
       <FilterBar search={{ value: q, placeholder: "Cari…", onChange: setQ }} />
       <SectionCard padded={false}>
         <DataTable<AccountingDimension>

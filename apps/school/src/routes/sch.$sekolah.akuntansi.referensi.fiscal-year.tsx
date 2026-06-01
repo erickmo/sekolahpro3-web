@@ -1,3 +1,12 @@
+/**
+ * Fiscal Year reference list — Keuangan hub.
+ *
+ * Manages the company fiscal years that frame every accounting period and
+ * budget. Presentation-only redesign: adds a concise page guide and an
+ * Open/Closed status-distribution visualization computed from the already
+ * fetched list. All data wiring (useResourceList/Create/Update, DOCTYPE,
+ * filters, order_by) and the modal CRUD logic are preserved verbatim.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -17,6 +26,8 @@ import {
 import { useResourceCreate, useResourceList, useResourceUpdate } from "@sekolahpro/api-client";
 import { DOCTYPE, formatTanggal, type FiscalYear } from "../data/akuntansi";
 import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { DistributionBar, type DistributionSegment } from "../components/viz";
 
 function FiscalYearPage() {
   const [q, setQ] = useState("");
@@ -41,6 +52,21 @@ function FiscalYearPage() {
     const n = q.toLowerCase();
     return all.filter((r) => r.year_name?.toLowerCase().includes(n));
   }, [list.data, q]);
+
+  // Distribusi status Open/Closed dihitung dari data yang sudah diambil (read-only).
+  const statusDist = useMemo<DistributionSegment[]>(() => {
+    const all = list.data ?? [];
+    let open = 0;
+    let closed = 0;
+    for (const r of all) {
+      if (r.is_closed) closed += 1;
+      else open += 1;
+    }
+    const segments: DistributionSegment[] = [];
+    if (open > 0) segments.push({ label: "Open", value: open, tone: "emerald" });
+    if (closed > 0) segments.push({ label: "Closed", value: closed, tone: "rose" });
+    return segments;
+  }, [list.data]);
 
   const cols: Column<FiscalYear>[] = [
     { key: "year_name", header: "Nama", cell: (r) => r.year_name },
@@ -71,6 +97,24 @@ function FiscalYearPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Fiscal Year" description="Tahun fiskal." actions={<Button onClick={() => openModal(null)}>+ Fiscal Year</Button>} />
+
+      <KeuanganPageGuide
+        storageId="referensi-fiscal-year"
+        intro="Fiscal Year adalah kerangka tahun anggaran perusahaan. Setiap periode akuntansi, jurnal, dan budget mengacu pada tahun fiskal ini."
+        steps={[
+          { title: "Buat tahun fiskal", detail: "Klik + Fiscal Year, isi nama (mis. 2026) beserta tanggal mulai dan selesai. Company terisi otomatis dari sekolah aktif." },
+          { title: "Atur status", detail: "Biarkan Open selama tahun berjalan. Ubah ke Closed setelah tutup buku agar transaksi tahun itu tidak berubah lagi." },
+          { title: "Edit lewat baris tabel", detail: "Klik salah satu baris untuk membuka kembali dan memperbarui datanya." },
+        ]}
+        tips={["Satu tahun fiskal biasanya berdurasi 12 bulan dan tidak boleh tumpang tindih dengan tahun lain."]}
+      />
+
+      {statusDist.length > 0 && (
+        <SectionCard title="Distribusi Status Tahun Fiskal">
+          <DistributionBar segments={statusDist} />
+        </SectionCard>
+      )}
+
       <FilterBar search={{ value: q, placeholder: "Cari…", onChange: setQ }} />
       <SectionCard padded={false}>
         <DataTable<FiscalYear>

@@ -1,9 +1,16 @@
+/**
+ * Detail Jurnal Umum — tampilan satu Journal Entry vernon_accounting.
+ *
+ * Tambahan presentasi: panduan singkat aksi submit/cancel dan glossary Cost
+ * Center. Aksi submit/cancel dan pemuatan dokumen dipertahankan apa adanya.
+ */
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   Alert,
   Badge,
   Button,
+  GlossaryTooltip,
   InfoField,
   PageHeader,
   SectionCard,
@@ -18,6 +25,14 @@ import {
   submitDoc,
   type JournalEntry,
 } from "../data/akuntansi";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { defOf } from "../lib/glossary";
+
+const GUIDE_STEPS = [
+  { title: "Periksa baris jurnal", detail: "Pastikan akun, debit, dan kredit sudah benar sebelum mengubah status." },
+  { title: "Submit jika masih draft", detail: "Tombol Submit memposting jurnal ke buku besar sehingga memengaruhi saldo.", roles: ["akuntan"] },
+  { title: "Cancel bila perlu", detail: "Jurnal yang sudah submitted bisa di-Cancel; pembatalan membuat balik GL Entry.", roles: ["akuntan"] },
+];
 
 function JurnalDetailPage() {
   const { sekolah, name } = useParams({ from: "/sch/$sekolah/akuntansi/buku-besar/jurnal/$name" });
@@ -59,6 +74,12 @@ function JurnalDetailPage() {
 
       {err && <Alert tone="danger" title="Error">{err}</Alert>}
 
+      <KeuanganPageGuide
+        storageId="jurnal-detail"
+        intro="Tinjau dan ubah status jurnal di sini. Aksi yang tersedia menyesuaikan status dokumen."
+        steps={GUIDE_STEPS}
+      />
+
       <SectionCard title="Informasi">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <InfoField label="Posting Date" value={formatTanggal(j.posting_date)} />
@@ -76,7 +97,9 @@ function JurnalDetailPage() {
               <th className="text-left px-4 py-2">#</th>
               <th className="text-left px-4 py-2">Account</th>
               <th className="text-left px-4 py-2">Party</th>
-              <th className="text-left px-4 py-2">Cost Center</th>
+              <th className="text-left px-4 py-2">
+                <GlossaryTooltip term="Cost Center" definition={defOf("Cost Center") ?? "Pusat biaya — dimensi untuk mengelompokkan biaya/pendapatan per unit."} />
+              </th>
               <th className="text-right px-4 py-2">Debit</th>
               <th className="text-right px-4 py-2">Kredit</th>
               <th className="text-left px-4 py-2">Keterangan</th>

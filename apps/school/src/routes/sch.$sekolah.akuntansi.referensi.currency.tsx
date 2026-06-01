@@ -1,3 +1,12 @@
+/**
+ * Currency Exchange reference list — Keuangan hub.
+ *
+ * Records daily foreign-exchange rates used to translate valas transactions.
+ * Presentation-only redesign: adds a concise page guide and a currency-pair
+ * distribution visualization computed from the already fetched list. All data
+ * wiring (useResourceList/Create, DOCTYPE, order_by) and the modal create logic
+ * are preserved verbatim.
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -14,6 +23,11 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 import { DOCTYPE, formatTanggal, type CurrencyExchange } from "../data/akuntansi";
+import { KeuanganPageGuide } from "../components/keuangan";
+import { DistributionBar, type DistributionSegment, type Tone } from "../components/viz";
+
+/** Rotating palette for currency-pair distribution segments. */
+const PAIR_TONES: readonly Tone[] = ["brand", "emerald", "amber", "violet", "sky", "rose"];
 
 function CurrencyPage() {
   const [q, setQ] = useState("");
@@ -35,6 +49,21 @@ function CurrencyPage() {
     return all.filter((r) => r.from_currency?.toLowerCase().includes(n) || r.to_currency?.toLowerCase().includes(n));
   }, [list.data, q]);
 
+  // Distribusi jumlah entri per pasangan mata uang, dari data yang sudah diambil (read-only).
+  const pairDist = useMemo<DistributionSegment[]>(() => {
+    const all = list.data ?? [];
+    const counts = new Map<string, number>();
+    for (const r of all) {
+      const pair = `${r.from_currency ?? "?"}→${r.to_currency ?? "?"}`;
+      counts.set(pair, (counts.get(pair) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([label, value], i) => ({
+      label,
+      value,
+      tone: PAIR_TONES[i % PAIR_TONES.length] ?? "neutral",
+    }));
+  }, [list.data]);
+
   const cols: Column<CurrencyExchange>[] = [
     { key: "date", header: "Tanggal", cell: (r) => formatTanggal(r.date) },
     { key: "from", header: "From", cell: (r) => r.from_currency },
@@ -54,6 +83,24 @@ function CurrencyPage() {
   return (
     <div className="space-y-4">
       <PageHeader title="Currency Exchange" description="Kurs valas harian." actions={<Button onClick={() => { setForm({ date: new Date().toISOString().slice(0, 10) }); setOpen(true); }}>+ Kurs</Button>} />
+
+      <KeuanganPageGuide
+        storageId="referensi-currency"
+        intro="Currency Exchange menyimpan nilai tukar harian. Kurs dipakai untuk menerjemahkan transaksi mata uang asing (valas) ke mata uang dasar perusahaan."
+        steps={[
+          { title: "Tambah kurs", detail: "Klik + Kurs, pilih tanggal berlaku, masukkan From Currency (mis. USD), To Currency (mis. IDR), dan exchange rate-nya." },
+          { title: "Perbarui per tanggal", detail: "Isi entri baru setiap hari/transaksi penting agar nilai tukar yang dipakai selalu akurat — entri lama tetap tersimpan sebagai riwayat." },
+          { title: "Cari pasangan mata uang", detail: "Gunakan kotak pencarian untuk menyaring berdasarkan mata uang asal atau tujuan." },
+        ]}
+        tips={["Cukup isi halaman ini bila sekolah punya transaksi valas; jika seluruh transaksi dalam IDR, kurs tidak diperlukan."]}
+      />
+
+      {pairDist.length > 0 && (
+        <SectionCard title="Distribusi Entri per Pasangan Mata Uang">
+          <DistributionBar segments={pairDist} />
+        </SectionCard>
+      )}
+
       <FilterBar search={{ value: q, placeholder: "Cari mata uang…", onChange: setQ }} />
       <SectionCard padded={false}>
         <DataTable<CurrencyExchange>
