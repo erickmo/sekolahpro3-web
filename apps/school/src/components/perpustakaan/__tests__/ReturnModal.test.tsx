@@ -64,6 +64,25 @@ describe("ReturnModal", () => {
     );
   });
 
+  it("invalidates peminjaman doc/list and denda list on success (PERP-GAP-16)", async () => {
+    vi.mocked(frappeFetch)
+      .mockResolvedValueOnce({ name: "RET-1" })
+      .mockResolvedValueOnce({ name: "RET-1", docstatus: 1 });
+    const qc = new QueryClient();
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    render(
+      <QueryClientProvider client={qc}>
+        <ReturnModal open peminjaman="LOAN-1" onClose={() => {}} onSuccess={() => {}} />
+      </QueryClientProvider>,
+    );
+    const dialog = within(screen.getByRole("dialog"));
+    fireEvent.click(dialog.getByRole("button", { name: /simpan/i }));
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(3));
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["resource:list", "Peminjaman Buku"] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["resource:doc", "Peminjaman Buku", "LOAN-1"] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["resource:list", "Denda Perpustakaan"] });
+  });
+
   it("shows error from Frappe when peminjaman already returned", async () => {
     vi.mocked(frappeFetch).mockRejectedValueOnce(
       new Error("Peminjaman LOAN-1 sudah selesai."),
