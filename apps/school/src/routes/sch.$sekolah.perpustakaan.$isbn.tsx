@@ -45,8 +45,6 @@ import {
 import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
   findBuku,
-  formatRupiah,
-  formatTanggal,
   type AktivitasRow,
   type Buku,
   type KopiRow,
@@ -55,6 +53,7 @@ import {
   type StokTransaksiRow,
 } from "../data/perpustakaan";
 import { bukuEnrichIsbn } from "../components/perpustakaan/bukuIdentity";
+import { perpFormatRupiah, perpFormatDate } from "../components/perpustakaan/perpFormatters";
 
 type TabKey = "ringkasan" | "detail" | "kopi" | "peminjaman" | "review" | "stok" | "aktivitas";
 
@@ -127,27 +126,27 @@ function Hero({ buku, onEdit }: { buku: Buku; onEdit: () => void }) {
             <span>{buku.penulis.join(", ")}</span>
           </div>
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-fg">
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5"><IconBook /></span>{buku.penerbit}</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5"><IconCalendar /></span>{buku.tahunTerbit}</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5"><IconFile /></span>{buku.jumlahHalaman} halaman</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5"><IconMapPin /></span>{buku.lokasi}</span>
+            <span className="inline-flex items-center gap-1.5"><IconBook className="h-3.5 w-3.5 shrink-0" />{buku.penerbit}</span>
+            <span className="inline-flex items-center gap-1.5"><IconCalendar className="h-3.5 w-3.5 shrink-0" />{buku.tahunTerbit}</span>
+            <span className="inline-flex items-center gap-1.5"><IconFile className="h-3.5 w-3.5 shrink-0" />{buku.jumlahHalaman} halaman</span>
+            <span className="inline-flex items-center gap-1.5"><IconMapPin className="h-3.5 w-3.5 shrink-0" />{buku.lokasi}</span>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => stubAction(`Pinjamkan ${buku.judul}`)}>
-            <span className="h-4 w-4 mr-1.5"><IconChat /></span>Pinjamkan
+            <IconChat className="mr-1.5 h-4 w-4 shrink-0" />Pinjamkan
           </Button>
           <Button variant="outline" size="sm" onClick={() => stubAction(`Cetak Label ${buku.kodeBuku}`)}>
-            <span className="h-4 w-4 mr-1.5"><IconPrint /></span>Cetak Label
+            <IconPrint className="mr-1.5 h-4 w-4 shrink-0" />Cetak Label
           </Button>
           <Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Metadata ${buku.kodeBuku}`)}>
-            <span className="h-4 w-4 mr-1.5"><IconDownload /></span>Unduh
+            <IconDownload className="mr-1.5 h-4 w-4 shrink-0" />Unduh
           </Button>
           <Button size="sm" onClick={onEdit}>
-            <span className="h-4 w-4 mr-1.5"><IconEdit /></span>Edit
+            <IconEdit className="mr-1.5 h-4 w-4 shrink-0" />Edit
           </Button>
           <Button variant="outline" size="sm" className="!px-2" onClick={() => stubAction("Aksi lainnya (menu)")}>
-            <span className="h-4 w-4"><IconMore /></span>
+            <IconMore className="h-4 w-4 shrink-0" />
           </Button>
         </div>
       </div>
@@ -183,12 +182,12 @@ function RingkasanTab({ buku, onChangeTab }: { buku: Buku; onChangeTab: (k: TabK
                   <Avatar name={p.peminjam} size="sm" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-fg">{p.peminjam}</div>
-                    <div className="text-xs text-muted-fg">NIS {p.nis ?? "—"} · Pinjam {formatTanggal(p.tanggalPinjam)} · Kembali {formatTanggal(p.tanggalKembali)}</div>
+                    <div className="text-xs text-muted-fg">NIS {p.nis ?? "—"} · Pinjam {perpFormatDate(p.tanggalPinjam)} · Kembali {perpFormatDate(p.tanggalKembali)}</div>
                   </div>
                   <div className="text-right">
                     <Badge tone={PEMINJAMAN_TONE[p.status]} dot>{p.status}</Badge>
                     {p.denda !== undefined ? (
-                      <div className="text-xs text-amber-700 mt-0.5 tabular-nums">{formatRupiah(p.denda)}</div>
+                      <div className="text-xs text-amber-700 mt-0.5 tabular-nums">{perpFormatRupiah(p.denda)}</div>
                     ) : null}
                   </div>
                 </li>
@@ -205,8 +204,8 @@ function RingkasanTab({ buku, onChangeTab }: { buku: Buku; onChangeTab: (k: TabK
             <InfoGrid cols={2}>
               <InfoField label="Lokasi" icon={<IconMapPin />} value={buku.lokasi} />
               <InfoField label="Edisi" value={buku.edisi ?? "—"} />
-              <InfoField label="Harga Perolehan" value={buku.hargaPerolehan !== undefined ? formatRupiah(buku.hargaPerolehan) : "—"} />
-              <InfoField label="Ditambahkan" value={formatTanggal(buku.ditambahkan)} />
+              <InfoField label="Harga Perolehan" value={buku.hargaPerolehan !== undefined ? perpFormatRupiah(buku.hargaPerolehan) : "—"} />
+              <InfoField label="Ditambahkan" value={perpFormatDate(buku.ditambahkan)} />
             </InfoGrid>
           </SectionCard>
 
@@ -219,7 +218,7 @@ function RingkasanTab({ buku, onChangeTab }: { buku: Buku; onChangeTab: (k: TabK
                     <div className="text-sm font-medium text-fg truncate">{r.peresensi}</div>
                     <div className="text-xs text-muted-fg flex items-center gap-2">
                       <StarRating value={r.rating} />
-                      <span>{formatTanggal(r.tanggal)}</span>
+                      <span>{perpFormatDate(r.tanggal)}</span>
                     </div>
                     <div className="text-xs text-fg mt-1 line-clamp-2">{r.isi}</div>
                   </div>
@@ -260,7 +259,7 @@ function DetailTab({ buku }: { buku: Buku }) {
           <InfoField label="Kategori" value={<Badge tone="neutral">{buku.kategori}</Badge>} />
           <InfoField label="Bahasa" value={buku.bahasa} />
           <InfoField label="Jumlah Halaman" value={<span className="tabular-nums">{buku.jumlahHalaman}</span>} />
-          <InfoField label="Harga Perolehan" value={buku.hargaPerolehan !== undefined ? formatRupiah(buku.hargaPerolehan) : "—"} />
+          <InfoField label="Harga Perolehan" value={buku.hargaPerolehan !== undefined ? perpFormatRupiah(buku.hargaPerolehan) : "—"} />
           <InfoField label="Lokasi" icon={<IconMapPin />} value={buku.lokasi} />
         </InfoGrid>
       </SectionCard>
@@ -283,7 +282,7 @@ function KopiTab({ buku }: { buku: Buku }) {
     <SectionCard
       title="Daftar Kopi"
       description={`${buku.jumlahKopi} eksemplar`}
-      action={<Button size="sm" onClick={() => stubAction(`Tambah Kopi ${buku.kodeBuku}`)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Tambah Kopi</Button>}
+      action={<Button size="sm" onClick={() => stubAction(`Tambah Kopi ${buku.kodeBuku}`)}><IconPlus className="mr-1 h-3.5 w-3.5 shrink-0" />Tambah Kopi</Button>}
       padded={false}
     >
       <DataTable data={buku.kopi} columns={cols} rowKey={(r) => r.kodeKopi} />
@@ -296,10 +295,10 @@ function PeminjamanTab({ buku }: { buku: Buku }) {
     { key: "id", header: "ID", cell: (r) => <span className="tabular-nums text-muted-fg">{r.id}</span> },
     { key: "peminjam", header: "Peminjam", cell: (r) => <span className="font-medium">{r.peminjam}</span> },
     { key: "nis", header: "NIS", cell: (r) => <span className="tabular-nums text-muted-fg">{r.nis ?? "—"}</span> },
-    { key: "pinjam", header: "Tanggal Pinjam", cell: (r) => formatTanggal(r.tanggalPinjam) },
-    { key: "kembali", header: "Tanggal Kembali", cell: (r) => formatTanggal(r.tanggalKembali) },
+    { key: "pinjam", header: "Tanggal Pinjam", cell: (r) => perpFormatDate(r.tanggalPinjam) },
+    { key: "kembali", header: "Tanggal Kembali", cell: (r) => perpFormatDate(r.tanggalKembali) },
     { key: "status", header: "Status", cell: (r) => <Badge tone={PEMINJAMAN_TONE[r.status]} dot>{r.status}</Badge> },
-    { key: "denda", header: "Denda", align: "right", cell: (r) => <span className="tabular-nums">{r.denda !== undefined ? formatRupiah(r.denda) : "—"}</span> },
+    { key: "denda", header: "Denda", align: "right", cell: (r) => <span className="tabular-nums">{r.denda !== undefined ? perpFormatRupiah(r.denda) : "—"}</span> },
     { key: "petugas", header: "Petugas", cell: (r) => r.petugas },
   ];
   const counts = buku.peminjaman.reduce<Record<string, number>>((acc, p) => {
@@ -319,7 +318,7 @@ function PeminjamanTab({ buku }: { buku: Buku }) {
         action={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => stubAction("Filter Periode Peminjaman")}>Filter Periode</Button>
-            <Button size="sm" onClick={() => stubAction(`Pinjamkan ${buku.judul}`)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Pinjamkan</Button>
+            <Button size="sm" onClick={() => stubAction(`Pinjamkan ${buku.judul}`)}><IconPlus className="mr-1 h-3.5 w-3.5 shrink-0" />Pinjamkan</Button>
           </div>
         }
         padded={false}
@@ -350,7 +349,7 @@ function ReviewTab({ buku }: { buku: Buku }) {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-fg">{r.peresensi}</span>
                     <StarRating value={r.rating} />
-                    <span className="text-xs text-muted-fg">· {formatTanggal(r.tanggal)}</span>
+                    <span className="text-xs text-muted-fg">· {perpFormatDate(r.tanggal)}</span>
                   </div>
                   <div className="text-sm text-fg mt-1.5 leading-relaxed">{r.isi}</div>
                 </div>
@@ -365,7 +364,7 @@ function ReviewTab({ buku }: { buku: Buku }) {
 
 function StokTab({ buku }: { buku: Buku }) {
   const cols: Column<StokTransaksiRow>[] = [
-    { key: "tgl", header: "Tanggal", cell: (r) => formatTanggal(r.tanggal) },
+    { key: "tgl", header: "Tanggal", cell: (r) => perpFormatDate(r.tanggal) },
     { key: "tipe", header: "Tipe", cell: (r) => <Badge tone={STOK_TONE[r.tipe]} dot>{r.tipe}</Badge> },
     { key: "jumlah", header: "Jumlah", align: "right", cell: (r) => <span className="tabular-nums">{r.jumlah}</span> },
     { key: "sumber", header: "Sumber", cell: (r) => r.sumber ?? "—" },
@@ -374,7 +373,7 @@ function StokTab({ buku }: { buku: Buku }) {
   return (
     <SectionCard
       title="Riwayat Transaksi Stok"
-      action={<Button size="sm" onClick={() => stubAction(`Catat Transaksi Stok ${buku.kodeBuku}`)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Catat Transaksi</Button>}
+      action={<Button size="sm" onClick={() => stubAction(`Catat Transaksi Stok ${buku.kodeBuku}`)}><IconPlus className="mr-1 h-3.5 w-3.5 shrink-0" />Catat Transaksi</Button>}
       padded={false}
     >
       <DataTable data={buku.stokTransaksi} columns={cols} rowKey={(r) => `${r.tanggal}-${r.tipe}-${r.jumlah}`} />
@@ -400,7 +399,7 @@ function AktivitasTab({ buku }: { buku: Buku }) {
                   <span className="text-muted-fg">{a.aksi}</span>
                 </div>
                 <div className="text-xs text-muted-fg mt-1 inline-flex items-center gap-1">
-                  <span className="h-3 w-3"><IconClock /></span>{a.waktu}
+                  <IconClock className="h-3 w-3 shrink-0" />{a.waktu}
                 </div>
               </div>
             </li>
@@ -500,6 +499,16 @@ const KATEGORI_SET = new Set<Buku["kategori"]>([
   "Fiksi", "Non-Fiksi", "Pelajaran", "Referensi", "Majalah",
   "Komik", "Biografi", "Sejarah", "Sains", "Agama",
 ]);
+const KATEGORI_FALLBACK: Buku["kategori"] = "Referensi";
+
+/**
+ * Coerce a raw backend `kategori` string into the Buku kategori union, so a value
+ * outside the union can never leak into a Buku (PERP-GAP-14). The lone `as` is the
+ * unavoidable Set.has membership test, scoped to this guard.
+ */
+function normalizeKategori(raw: string | undefined): Buku["kategori"] {
+  return raw && KATEGORI_SET.has(raw as Buku["kategori"]) ? (raw as Buku["kategori"]) : KATEGORI_FALLBACK;
+}
 
 function deriveStatus(kopi: KopiRow[]): StatusBuku {
   if (kopi.length === 0) return "Arsip";
@@ -512,8 +521,7 @@ function deriveStatus(kopi: KopiRow[]): StatusBuku {
 // Build a Buku purely from backend data when no mock fixture exists for this
 // ISBN (e.g. records freshly created via the daftar modal).
 function bukuFromBackend(d: BukuDoc, kopi: KopiRow[], peminjaman: PeminjamanRow[], sekolah: Buku["sekolah"]): Buku {
-  const kategoriRaw = d.kategori as Buku["kategori"] | undefined;
-  const kategori: Buku["kategori"] = kategoriRaw && KATEGORI_SET.has(kategoriRaw) ? kategoriRaw : "Referensi";
+  const kategori = normalizeKategori(d.kategori);
   const tersedia = kopi.filter((k) => k.status === "Tersedia").length;
   const dipinjam = kopi.filter((k) => k.status === "Dipinjam").length;
   return {
@@ -571,7 +579,7 @@ function SedangDipinjamSection({
             <li key={p.name} className="flex items-center gap-3 px-5 py-3.5">
               <div className="flex-1 min-w-0 text-sm text-fg">
                 <span className="font-medium tabular-nums">{p.name}</span>
-                <span className="text-muted-fg"> — peminjam {p.anggota ?? "—"} — rencana {formatTanggal(p.tanggal_kembali_rencana ?? "")}</span>
+                <span className="text-muted-fg"> — peminjam {p.anggota ?? "—"} — rencana {perpFormatDate(p.tanggal_kembali_rencana ?? "")}</span>
               </div>
               <Badge tone={p.status === "Terlambat" ? "warning" : "brand"} dot>{p.status ?? "Aktif"}</Badge>
               <Button size="sm" onClick={() => onReturn(p.name)}>Kembalikan</Button>
@@ -615,6 +623,8 @@ function BukuDetailPage() {
       if (!d) return undefined;
       const kopi = kopiQ.data ? mapEksemplarToKopi(kopiQ.data, "Rak A") : [];
       const peminjaman = pinjQ.data ? mapPeminjamanRows(pinjQ.data) : [];
+      // sekolah is the active route slug; Buku.sekolah is a presentation-only,
+      // mock-typed field, so the slug is valid by construction here. PERP-GAP-14
       return bukuFromBackend(d, kopi, peminjaman, sekolah as Buku["sekolah"]);
     }
     if (!d) return mock;
@@ -631,7 +641,7 @@ function BukuDetailPage() {
       penulis,
       penerbit: d.penerbit ?? mock.penerbit,
       tahunTerbit: d.tahun_terbit ?? mock.tahunTerbit,
-      kategori: (d.kategori as Buku["kategori"]) ?? mock.kategori,
+      kategori: d.kategori ? normalizeKategori(d.kategori) : mock.kategori,
       deskripsi: d.deskripsi ?? mock.deskripsi,
       kopi: kopiBackend,
       peminjaman: pinjBackend,
@@ -703,7 +713,7 @@ function BukuDetailPage() {
             description={`ISBN ${buku.isbn} · ${buku.kategori} · ${buku.status}`}
             actions={
               <Button variant="outline" onClick={() => navigate({ to: "/sch/$sekolah/perpustakaan", params: { sekolah } })}>
-                <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
+                <IconArrowLeft className="mr-1.5 h-4 w-4 shrink-0" />
                 Kembali ke daftar
               </Button>
             }
@@ -747,7 +757,7 @@ export const Route = createFileRoute("/sch/$sekolah/perpustakaan/$isbn")({
         description="ISBN yang diminta tidak ada di sistem. Periksa kembali atau kembali ke daftar buku."
         action={
           <Link to="/sch/$sekolah/perpustakaan" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
-            <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
+            <IconArrowLeft className="h-4 w-4 shrink-0" /> Kembali ke daftar
           </Link>
         }
       />
