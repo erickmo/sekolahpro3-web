@@ -3,27 +3,26 @@
  * Sub-section: Stock Opname (audit terjadwal) + Berita Acara Kerusakan (ad-hoc).
  * Internal segmented control supaya hemat tab utama Perpustakaan.
  */
-import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, redirect, useParams, useRouterState } from "@tanstack/react-router";
 import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
-
-const SEGMENTS: { to: string; label: string }[] = [
-  { to: "/sch/$sekolah/perpustakaan/inventaris/opname", label: "Stock Opname" },
-  { to: "/sch/$sekolah/perpustakaan/inventaris/berita-acara", label: "Berita Acara Kerusakan" },
-];
+import { INVENTARIS_SEGMENTS, isSegmentActive } from "../components/perpustakaan/inventarisNav";
 
 function InventarisLayout() {
-
+  // $sekolah must be threaded into both the <Link> params and the active check;
+  // the segment `to` templates carry the param. PERP-GAP-03
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <div className="space-y-4">
       <PerpPageGuide id="inventaris" />
       <div className="inline-flex rounded-md border border-border bg-card p-1">
-        {SEGMENTS.map((s) => {
-          const active = pathname === s.to || pathname.startsWith(s.to + "/");
+        {INVENTARIS_SEGMENTS.map((s) => {
+          const active = isSegmentActive(pathname, s.to, sekolah);
           return (
             <Link
               key={s.to}
               to={s.to}
+              params={{ sekolah }}
               className={
                 "rounded px-3 py-1.5 text-sm transition " +
                 (active ? "bg-brand text-white" : "text-muted-fg hover:text-fg")
