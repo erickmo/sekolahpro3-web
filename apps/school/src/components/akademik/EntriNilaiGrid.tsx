@@ -7,6 +7,7 @@ import {
   PageHeader,
   SectionCard,
   IconArrowLeft,
+  IconChart,
 } from "@sekolahpro/ui";
 import {
   createResource,
@@ -16,6 +17,7 @@ import {
 } from "@sekolahpro/api-client";
 import { Link } from "@tanstack/react-router";
 import { useAkademikContextOptional } from "../../lib/akademikContext";
+import { ProgressRing, DistributionBar, type DistributionSegment } from "../viz";
 
 interface Selection {
   rombel: string;
@@ -120,6 +122,60 @@ function computeNilaiAkhir(
   }
   if (!any || totalBobot === 0) return null;
   return totalNilai / totalBobot;
+}
+
+/** Passing threshold (KKM) used to classify a student's final score. */
+const KKM_DEFAULT = 75;
+const PERCENT_MAX = 100;
+
+/** Aggregated progress / mastery snapshot for the whole class. */
+interface GridSummary {
+  totalCells: number;
+  filledCells: number;
+  fillPercent: number;
+  tuntas: number;
+  belumTuntas: number;
+  belumDinilai: number;
+}
+
+/** Count how many component cells in a row hold a valid numeric value. */
+function countFilledCells(
+  row: Record<string, CellState> | undefined,
+  komponen: KomponenNilai[],
+): number {
+  if (!row) return 0;
+  let filled = 0;
+  for (const k of komponen) {
+    const v = row[k.name]?.value.trim();
+    if (v && !Number.isNaN(Number(v))) filled += 1;
+  }
+  return filled;
+}
+
+/**
+ * Build the class summary (fill % + mastery split) from the in-memory grid.
+ * Derived purely from already-loaded data — no extra network calls.
+ */
+function buildSummary(
+  anggota: AnggotaRombel[],
+  grid: GridState,
+  komponen: KomponenNilai[],
+): GridSummary {
+  const totalCells = anggota.length * komponen.length;
+  let filledCells = 0;
+  let tuntas = 0;
+  let belumTuntas = 0;
+  let belumDinilai = 0;
+  for (const a of anggota) {
+    const row = grid[a.siswa];
+    filledCells += countFilledCells(row, komponen);
+    const akhir = computeNilaiAkhir(row, komponen);
+    if (akhir == null) belumDinilai += 1;
+    else if (akhir >= KKM_DEFAULT) tuntas += 1;
+    else belumTuntas += 1;
+  }
+  const fillPercent = totalCells === 0 ? 0 : (filledCells / totalCells) * PERCENT_MAX;
+  return { totalCells, filledCells, fillPercent, tuntas, belumTuntas, belumDinilai };
 }
 
 async function fetchRombelDoc(name: string): Promise<RombelDoc | null> {
@@ -302,6 +358,12 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
     return out;
   }, [anggota, grid]);
 
+  // Class progress / mastery snapshot for the summary panel (derived data).
+  const summary = useMemo(
+    () => buildSummary(anggota, grid, komponenList),
+    [anggota, grid, komponenList],
+  );
+
   const akademik = useAkademikContextOptional();
   // Lapor status edit-belum-tersimpan ke konteks Akademik agar bar bisa
   // mengonfirmasi sebelum user mengganti periode.
@@ -469,6 +531,10 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
         </div>
       ) : null}
 
+      {komponenList.length > 0 && anggota.length > 0 ? (
+        <ClassSummaryPanel summary={summary} />
+      ) : null}
+
       <SectionCard
         title={`${anggota.length} siswa × ${komponenList.length} komponen`}
         description="Isi nilai 0–100 per sel. Klik Simpan untuk menyimpan baris yang berubah."
@@ -587,6 +653,43 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
         )}
       </SectionCard>
     </div>
+  );
+}
+
+/**
+ * Class summary panel: a fill-progress ring plus a mastery distribution bar.
+ * Helps Kepala Sekolah / Administrator gauge entry progress at a glance.
+ */
+function ClassSummaryPanel({ summary }: { summary: GridSummary }) {
+  const segments: DistributionSegment[] = [
+    { label: "Tuntas", value: summary.tuntas, tone: "emerald" },
+    { label: "Belum tuntas", value: summary.belumTuntas, tone: "rose" },
+    { label: "Belum dinilai", value: summary.belumDinilai, tone: "neutral" },
+  ];
+  const fillTone = summary.fillPercent >= PERCENT_MAX ? "emerald" : "brand";
+  return (
+    <SectionCard
+      title="Ringkasan kelas"
+      description={`Progres pengisian & ketuntasan terhadap KKM ${KKM_DEFAULT}, dihitung dari nilai akhir berbobot tiap siswa.`}
+    >
+      <div className="grid gap-6 sm:grid-cols-[auto_1fr] sm:items-center">
+        <div className="flex flex-col items-center gap-1">
+          <ProgressRing value={summary.fillPercent} tone={fillTone} label="Sel terisi" />
+          <span className="text-xs text-muted-fg tabular-nums">
+            {summary.filledCells} / {summary.totalCells} sel
+          </span>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-fg">
+            <span className="h-4 w-4 text-muted-fg">
+              <IconChart />
+            </span>
+            Sebaran ketuntasan siswa
+          </div>
+          <DistributionBar segments={segments} />
+        </div>
+      </div>
+    </SectionCard>
   );
 }
 
