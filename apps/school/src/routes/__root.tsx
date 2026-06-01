@@ -541,8 +541,9 @@ function Layout() {
     {
       title: "Operasional",
       items: [
-        mk("/keuangan", "Keuangan", <IconWallet />, 3),
-        mk("/akuntansi", "Akuntansi", <IconChart />),
+        // Unified Keuangan hub: operasional kas + akuntansi live under one entry.
+        // The /akuntansi route tree stays reachable via the in-hub nav.
+        mk("/keuangan", "Keuangan & Akuntansi", <IconWallet />, 3),
         mk("/pesan", "Pesan", <IconChat />),
         mk("/laporan", "Laporan", <IconChart />),
         mk("/pickup-verify", "Verifikasi Penjemputan", <IconCheck />),
