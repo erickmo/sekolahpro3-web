@@ -427,9 +427,8 @@ function RaportPage() {
         description={`Kelola raport siswa per semester. Status mengikuti alur Draft → Review → Submitted → Final → Locked/Tercetak.${periodeSuffix}`}
         actions={
           <Button onClick={() => setOpenGenerate(true)}>
-            <span className="mr-1.5 h-4 w-4">
-              <IconPlus />
-            </span>
+            {/* Size the icon directly: a wrapper span does not constrain a raw svg */}
+            <IconPlus className="mr-1.5 h-4 w-4 shrink-0" />
             Generate Raport
           </Button>
         }

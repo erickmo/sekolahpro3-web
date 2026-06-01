@@ -48,6 +48,11 @@ const STORAGE_PREFIX = "akademik-guide:";
 const DEFAULT_TITLE = "Cara pakai halaman ini";
 const DEFAULT_OPEN = true;
 
+/** Muted hint shown next to the chevron to signal the collapse action. */
+const HINT_WHEN_OPEN = "Sembunyikan";
+/** Muted hint shown next to the chevron to signal the expand action. */
+const HINT_WHEN_COLLAPSED = "Tampilkan";
+
 /** Build the namespaced localStorage key for a guide instance. */
 function storageKey(storageId: string): string {
   return STORAGE_PREFIX + storageId;
@@ -202,13 +207,15 @@ export function PageGuide({
         type="button"
         onClick={toggle}
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-3 text-left"
+        className="group flex w-full cursor-pointer items-center justify-between gap-3 text-left transition-colors hover:text-brand"
       >
-        <span className="flex items-center gap-2 text-sm font-semibold text-fg">
-          <IconBook className="text-brand" />
+        <span className="flex items-center gap-2 text-sm font-semibold text-fg transition-colors group-hover:text-brand">
+          <IconBook className="h-4 w-4 shrink-0 text-brand" />
           {title}
         </span>
-        <span className="text-muted-fg">
+        {/* Always-visible affordance: muted hint label + rotating chevron. */}
+        <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-fg transition-colors group-hover:text-brand">
+          <span>{open ? HINT_WHEN_OPEN : HINT_WHEN_COLLAPSED}</span>
           <Chevron open={open} />
         </span>
       </button>

@@ -26,7 +26,7 @@ describe("AkademikContextBar", () => {
 
   it("banner muncul saat periode lampau/ditutup", () => {
     renderBar({ isPastPeriod: true });
-    expect(screen.getByText(/periode lampau/i)).toBeTruthy();
+    expect(screen.getByText(/mengedit periode lampau/i)).toBeTruthy();
   });
 
   it("nudge muncul saat tak ada TA aktif", () => {

@@ -155,7 +155,7 @@ function WorkflowStrip({ steps, activeIndex }: { steps: FlowStep[]; activeIndex:
 /** The 4 friendly steps of the Guru input-nilai flow, in Bahasa Indonesia. */
 const FLOW_STEPS: FlowStep[] = [
   { icon: <IconUsersGlyph />, title: "Pilih kelas & mapel", detail: "Tentukan rombel dan mata pelajaran yang akan dinilai." },
-  { icon: <IconPlus />, title: "Buat test", detail: "Beri judul, tanggal, komponen, semester, dan tahun ajaran." },
+  { icon: <IconPlus className="h-4 w-4 shrink-0" />, title: "Buat test", detail: "Beri judul, tanggal, komponen, semester, dan tahun ajaran." },
   { icon: <IconEditPencil />, title: "Input nilai per siswa", detail: "Isi nilai satu kelas dengan cepat di halaman test." },
   { icon: <IconCheckGlyph />, title: "Nilai masuk komponen", detail: "Nilai otomatis terhitung pada komponen mata pelajaran." },
 ];
@@ -292,7 +292,7 @@ function AsesmenListPage() {
         description={`Pilih kelas & mapel, lalu buka/buat test untuk input nilai cepat satu kelas.${periodeSuffix}`}
         actions={
           <Button onClick={() => setOpenCreate(true)} disabled={!ready}>
-            <span className="mr-1.5 h-4 w-4"><IconPlus /></span>
+            <IconPlus className="mr-1.5 h-4 w-4 shrink-0" />
             Test Baru
           </Button>
         }
@@ -416,7 +416,7 @@ function AsesmenListPage() {
                   Buat test pertama untuk kelas & mapel ini, lalu input nilai satu kelas dengan cepat.
                 </p>
                 <Button className="mt-1" onClick={() => setOpenCreate(true)}>
-                  <span className="mr-1.5 h-4 w-4"><IconPlus /></span>
+                  <IconPlus className="mr-1.5 h-4 w-4 shrink-0" />
                   Test Baru
                 </Button>
               </div>

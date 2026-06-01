@@ -499,9 +499,9 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={onChangeSelection}>
-              <span className="h-4 w-4 mr-1.5">
-                <IconArrowLeft />
-              </span>
+              {/* Size class lives on the icon itself so the SVG is always
+                  bounded (base icon defaults to width/height 100%). */}
+              <IconArrowLeft className="h-4 w-4 shrink-0 mr-1.5" />
               Ubah Konteks
             </Button>
             <Button onClick={saveAll} disabled={saving || dirtyRows.length === 0}>
@@ -681,9 +681,9 @@ function ClassSummaryPanel({ summary }: { summary: GridSummary }) {
         </div>
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium text-fg">
-            <span className="h-4 w-4 text-muted-fg">
-              <IconChart />
-            </span>
+            {/* Size class on the icon, not the wrapper: an unconstrained SVG
+                (base width/height 100%) would balloon to fill the flex row. */}
+            <IconChart className="h-4 w-4 shrink-0 text-muted-fg" />
             Sebaran ketuntasan siswa
           </div>
           <DistributionBar segments={segments} />

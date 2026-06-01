@@ -340,7 +340,7 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
             params={{ sekolah: sekolah ?? "" }}
             className="inline-flex items-center justify-center rounded-md border border-border h-10 px-4 text-sm font-medium hover:bg-muted"
           >
-            <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
+            <IconArrowLeft className="h-4 w-4 mr-1.5 shrink-0" />
             Kembali
           </Link>
         }
@@ -441,7 +441,7 @@ function MetaSection({ doc, totalSiswa }: { doc: AsesmenDoc; totalSiswa: number 
         <Badge tone="neutral">{doc.komponen}</Badge>
         <Badge tone="success">{doc.tahun_ajaran}</Badge>
         <span className="inline-flex items-center gap-1 text-xs text-muted-fg">
-          <span className="h-3.5 w-3.5"><IconUsers /></span>
+          <IconUsers className="h-3.5 w-3.5 shrink-0" />
           {totalSiswa} siswa
         </span>
       </div>
@@ -473,7 +473,7 @@ function ProgressSection({
         <div className="flex flex-col items-center gap-3 py-2">
           <ProgressRing value={pct} tone={fillTone} label={`${summary.filled} dari ${summary.total} siswa terisi`} />
           <div className="flex items-center gap-1.5 text-xs text-muted-fg">
-            <span className="h-3.5 w-3.5"><IconClock /></span>
+            <IconClock className="h-3.5 w-3.5 shrink-0" />
             {summary.empty > 0 ? `${summary.empty} siswa belum dinilai` : "Semua siswa sudah dinilai"}
           </div>
         </div>
@@ -559,7 +559,7 @@ function RowStatusIndicator({ status, saved, error }: { status: RowStatus; saved
   if (status === "saving") {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-muted-fg">
-        <span className="h-3.5 w-3.5 animate-pulse"><IconClock /></span>
+        <IconClock className="h-3.5 w-3.5 shrink-0 animate-pulse" />
         menyimpan…
       </span>
     );
@@ -569,7 +569,7 @@ function RowStatusIndicator({ status, saved, error }: { status: RowStatus; saved
   if (status === "saved" && saved) {
     return (
       <span className="text-emerald-600" title="Tersimpan">
-        <span className="h-4 w-4 inline-block"><IconCheck /></span>
+        <IconCheck className="h-4 w-4 shrink-0 inline-block" />
       </span>
     );
   }

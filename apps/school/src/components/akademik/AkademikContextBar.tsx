@@ -63,7 +63,8 @@ function PeriodeStatusBadge({ status }: { status: PeriodeStatus }) {
   const Icon = status === "aktif" ? IconCheck : IconClock;
   return (
     <Badge tone={STATUS_TONE[status]} className="gap-1">
-      <Icon className="h-3 w-3" aria-hidden />
+      {/* shrink-0 so the glyph keeps its fixed size inside the flex badge */}
+      <Icon className="h-3 w-3 shrink-0" aria-hidden />
       {STATUS_LABEL[status]}
     </Badge>
   );
@@ -74,7 +75,8 @@ function RoleBadge() {
   const { primary } = useAkademikRole();
   return (
     <Badge tone="brand" className="gap-1">
-      <IconUsers className="h-3 w-3" aria-hidden />
+      {/* shrink-0 so the glyph keeps its fixed size inside the flex badge */}
+      <IconUsers className="h-3 w-3 shrink-0" aria-hidden />
       {ROLE_LABEL[primary]}
     </Badge>
   );

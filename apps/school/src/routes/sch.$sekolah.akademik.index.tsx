@@ -2,7 +2,7 @@
 // Administrator Akademik, Guru, and Kepala Sekolah. Presentation, guidance,
 // and visualization redesign only: every data hook, doctype/field name, filter,
 // and the AttentionList + cut-off raport logic are preserved verbatim.
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   AttentionList,
@@ -124,26 +124,26 @@ const QUICK_ACTION_GROUPS: QuickActionGroup[] = [
     role: "guru",
     blurb: "Tugas harian guru: masukkan dan rekap nilai.",
     actions: [
-      { to: "/sch/$sekolah/akademik/asesmen", label: "Input Nilai Test", description: "Input nilai satu test untuk satu kelas, cepat.", icon: <IconEdit />, accent: "brand" },
-      { to: "/sch/$sekolah/akademik/entri-nilai", label: "Entri Nilai", description: "Rekap nilai per siswa × komponen.", icon: <IconChart />, accent: "sky" },
+      { to: "/sch/$sekolah/akademik/asesmen", label: "Input Nilai Test", description: "Input nilai satu test untuk satu kelas, cepat.", icon: <IconEdit className="h-4 w-4 shrink-0" />, accent: "brand" },
+      { to: "/sch/$sekolah/akademik/entri-nilai", label: "Entri Nilai", description: "Rekap nilai per siswa × komponen.", icon: <IconChart className="h-4 w-4 shrink-0" />, accent: "sky" },
     ],
   },
   {
     role: "admin",
     blurb: "Setup & konfigurasi yang menopang seluruh penilaian.",
     actions: [
-      { to: "/sch/$sekolah/master/kkm", label: "KKM", description: "Atur Kriteria Ketuntasan Minimal.", icon: <IconCheck />, accent: "amber" },
-      { to: "/sch/$sekolah/master/komponen-nilai", label: "Komponen Nilai", description: "Definisikan bobot komponen penilaian.", icon: <IconChart />, accent: "violet" },
-      { to: "/sch/$sekolah/master/kurikulum", label: "Kurikulum", description: "Kelola kurikulum & struktur mapel.", icon: <IconGrad />, accent: "sky" },
-      { to: "/sch/$sekolah/master/konfigurasi", label: "Konfigurasi", description: "Pengaturan modul akademik.", icon: <IconSettings />, accent: "rose" },
+      { to: "/sch/$sekolah/master/kkm", label: "KKM", description: "Atur Kriteria Ketuntasan Minimal.", icon: <IconCheck className="h-4 w-4 shrink-0" />, accent: "amber" },
+      { to: "/sch/$sekolah/master/komponen-nilai", label: "Komponen Nilai", description: "Definisikan bobot komponen penilaian.", icon: <IconChart className="h-4 w-4 shrink-0" />, accent: "violet" },
+      { to: "/sch/$sekolah/master/kurikulum", label: "Kurikulum", description: "Kelola kurikulum & struktur mapel.", icon: <IconGrad className="h-4 w-4 shrink-0" />, accent: "sky" },
+      { to: "/sch/$sekolah/master/konfigurasi", label: "Konfigurasi", description: "Pengaturan modul akademik.", icon: <IconSettings className="h-4 w-4 shrink-0" />, accent: "rose" },
     ],
   },
   {
     role: "kepala",
     blurb: "Pantau progres penilaian dan terbitkan raport.",
     actions: [
-      { to: "/sch/$sekolah/akademik/raport", label: "Raport", description: "Susun & cetak raport siswa.", icon: <IconFile />, accent: "emerald" },
-      { to: "/sch/$sekolah/akademik/entri-nilai", label: "Monitoring Nilai", description: "Pantau kelengkapan nilai per kelas.", icon: <IconChart />, accent: "sky" },
+      { to: "/sch/$sekolah/akademik/raport", label: "Raport", description: "Susun & cetak raport siswa.", icon: <IconFile className="h-4 w-4 shrink-0" />, accent: "emerald" },
+      { to: "/sch/$sekolah/akademik/entri-nilai", label: "Monitoring Nilai", description: "Pantau kelengkapan nilai per kelas.", icon: <IconChart className="h-4 w-4 shrink-0" />, accent: "sky" },
     ],
   },
 ];
@@ -236,6 +236,11 @@ function AkademikDashboardPage() {
   const ctx = useAkademikContextOptional();
   const role = useAkademikRole();
   const now = useMemo(() => new Date(), []);
+
+  // Role the user is currently "viewing as". Defaults to their primary role but
+  // can be switched via the role chips so any user can preview another role's
+  // emphasized quick-action group. Framing only — no data/permission change.
+  const [viewRole, setViewRole] = useState<AkademikRole>(role.primary);
 
   const mapelQ = useResourceList<Mapel>("Mata Pelajaran", {
     fields: MAPEL_FIELDS,
@@ -332,7 +337,13 @@ function AkademikDashboardPage() {
           ? "warn"
           : "normal";
 
-  const renderStatLink = (href: string, children: React.ReactNode) => <Link to={href}>{children}</Link>;
+  // StatCard action links point at static routes containing the $sekolah
+  // segment; cast + params substitute the param so navigation actually works.
+  const renderStatLink = (href: string, children: React.ReactNode) => (
+    <Link to={href as "/sch/$sekolah/master/kkm"} params={{ sekolah }}>
+      {children}
+    </Link>
+  );
 
   const perluPerhatianItems = useMemo<AttentionItem[]>(() => {
     const kkmSet = new Set(kkmList.map((k) => k.mata_pelajaran));
@@ -415,7 +426,7 @@ function AkademikDashboardPage() {
         tips={GUIDE_TIPS}
       />
 
-      <RoleChips primary={role.primary} />
+      <RoleChips selected={viewRole} onSelect={setViewRole} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -515,7 +526,12 @@ function AkademikDashboardPage() {
       >
         <div className="grid gap-4 lg:grid-cols-3">
           {QUICK_ACTION_GROUPS.map((g) => (
-            <QuickActionGroupCard key={g.role} group={g} emphasized={g.role === role.primary} />
+            <QuickActionGroupCard
+              key={g.role}
+              group={g}
+              emphasized={g.role === viewRole}
+              sekolah={sekolah}
+            />
           ))}
         </div>
       </SectionCard>
@@ -539,7 +555,11 @@ function AkademikDashboardPage() {
               items={perluPerhatianItems}
               maxItems={5}
               renderLink={(href, children, className) => (
-                <Link to={href} className={className}>
+                <Link
+                  to={href as "/sch/$sekolah/akademik/entri-nilai"}
+                  params={{ sekolah }}
+                  className={className}
+                >
                   {children}
                 </Link>
               )}
@@ -583,30 +603,46 @@ function AkademikDashboardPage() {
   );
 }
 
-/** Read-only role chips highlighting the active primary role (framing only). */
-function RoleChips({ primary }: { primary: AkademikRole }) {
-  const roles: AkademikRole[] = ["admin", "guru", "kepala"];
+// All selectable roles, in display order, for the role-chip switcher.
+const SELECTABLE_ROLES: AkademikRole[] = ["admin", "guru", "kepala"];
+
+/**
+ * Interactive role chips. Clicking a chip changes which role's quick-action
+ * group is emphasized (framing/preview only — no data or permission change).
+ */
+function RoleChips({
+  selected,
+  onSelect,
+}: {
+  selected: AkademikRole;
+  onSelect: (role: AkademikRole) => void;
+}) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs text-muted-fg inline-flex items-center gap-1.5">
-        <span className="h-4 w-4 text-muted-fg">
-          <IconUsers />
-        </span>
+        <IconUsers className="h-4 w-4 shrink-0 text-muted-fg" />
         Tampilan untuk:
       </span>
-      {roles.map((r) => (
-        <span
-          key={r}
-          className={cn(
-            "rounded-full border px-3 py-1 text-xs font-medium transition",
-            r === primary
-              ? "border-brand bg-brand/10 text-brand"
-              : "border-border bg-bg text-muted-fg",
-          )}
-        >
-          {ROLE_LABEL[r]}
-        </span>
-      ))}
+      {SELECTABLE_ROLES.map((r) => {
+        const active = r === selected;
+        return (
+          <button
+            key={r}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onSelect(r)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs font-medium transition",
+              "hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+              active
+                ? "border-brand bg-brand/10 text-brand"
+                : "border-border bg-bg text-muted-fg",
+            )}
+          >
+            {ROLE_LABEL[r]}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -636,9 +672,11 @@ function VizTile({
 function QuickActionGroupCard({
   group,
   emphasized,
+  sekolah,
 }: {
   group: QuickActionGroup;
   emphasized: boolean;
+  sekolah: string;
 }) {
   return (
     <div
@@ -656,11 +694,15 @@ function QuickActionGroupCard({
         {group.actions.map((a) => (
           <Link
             key={`${group.role}-${a.label}`}
-            to={a.to}
+            // `to` is a static route literal at runtime; cast satisfies the
+            // typed router while params substitutes the $sekolah segment.
+            to={a.to as "/sch/$sekolah/akademik/asesmen"}
+            params={{ sekolah }}
             className="group flex items-start gap-3 rounded-lg border border-border bg-bg p-3 hover:border-brand hover:shadow-sm transition"
           >
             <div className="h-8 w-8 shrink-0 rounded-md bg-muted flex items-center justify-center text-fg group-hover:text-brand">
-              <span className="h-4 w-4">{a.icon}</span>
+              {/* Icons carry their own h-4 w-4 size; wrapper only centers them. */}
+              <span className="inline-flex items-center justify-center">{a.icon}</span>
             </div>
             <div className="min-w-0">
               <div className="text-sm font-medium text-fg group-hover:text-brand">{a.label}</div>
