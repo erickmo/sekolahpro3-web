@@ -1,6 +1,6 @@
 // PERP-GAP-03
 import { describe, it, expect } from "vitest";
-import { resolveSegmentPath, isSegmentActive } from "../inventarisNav";
+import { resolveSegmentPath, isSegmentActive, opnameDetailPath } from "../inventarisNav";
 
 const OPNAME = "/sch/$sekolah/perpustakaan/inventaris/opname";
 
@@ -28,5 +28,13 @@ describe("isSegmentActive", () => {
   it("never matches when comparing against the raw $sekolah template (regression guard)", () => {
     // The old code compared the live pathname against the unresolved template.
     expect(isSegmentActive(OPNAME, OPNAME, "sdn-1")).toBe(false);
+  });
+});
+
+describe("opnameDetailPath", () => {
+  it("includes the /sch/<sekolah> scope (PERP-GAP-05 regression guard)", () => {
+    expect(opnameDetailPath("sdn-1", "OPN-1")).toBe(
+      "/sch/sdn-1/perpustakaan/inventaris/opname/OPN-1",
+    );
   });
 });

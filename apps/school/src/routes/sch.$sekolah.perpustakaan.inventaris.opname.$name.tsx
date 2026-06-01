@@ -27,6 +27,7 @@ import {
 } from "@sekolahpro/ui";
 import { createResource, getResource, listResource, updateResource } from "@sekolahpro/api-client";
 import { perpToday } from "../components/perpustakaan/perpFormatters";
+import { opnameDetailPath } from "../components/perpustakaan/inventarisNav";
 
 type ScanRow = {
   eksemplar: string;
@@ -164,8 +165,9 @@ function OpnameScanPage() {
         if (typeof window !== "undefined") {
           window.localStorage.removeItem(lsKey("new"));
         }
-        // shallow URL update so refresh resumes the right doc
-        window.history.replaceState(null, "", `/perpustakaan/inventaris/opname/${created.name}`);
+        // shallow URL update so refresh resumes the right doc — must keep the
+        // /sch/<sekolah> scope or the refresh 404s. PERP-GAP-05
+        window.history.replaceState(null, "", opnameDetailPath(sekolah, created.name));
       } else {
         await updateResource("Stock Opname Perpustakaan", currentName, payload);
       }
@@ -176,7 +178,7 @@ function OpnameScanPage() {
     } finally {
       setSaving(false);
     }
-  }, [doc, currentName, isReadonly]);
+  }, [doc, currentName, isReadonly, sekolah]);
 
   // debounced autosave
   useEffect(() => {

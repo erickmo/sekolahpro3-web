@@ -42,3 +42,15 @@ export function isSegmentActive(pathname: string, to: string, sekolah: string): 
   const resolved = resolveSegmentPath(to, sekolah);
   return pathname === resolved || pathname.startsWith(resolved + "/");
 }
+
+/**
+ * Scoped pathname for a Stock Opname detail doc, used for the shallow
+ * refresh-resume URL written after the first autosave (PERP-GAP-05). MUST include
+ * the `/sch/<sekolah>` scope or a refresh hits a non-existent path (404).
+ *
+ * @param sekolah active school slug
+ * @param name opname docname
+ */
+export function opnameDetailPath(sekolah: string, name: string): string {
+  return `/sch/${sekolah}/perpustakaan/inventaris/opname/${name}`;
+}
