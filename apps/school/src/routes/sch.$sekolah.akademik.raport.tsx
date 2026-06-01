@@ -16,7 +16,7 @@
  * tidak pernah menyembunyikan atau menonaktifkan fungsi apa pun.
  */
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import {
   Badge,
   Button,
@@ -346,6 +346,8 @@ function usePeriodFilters(ctx: ReturnType<typeof useAkademikContextOptional>) {
 }
 
 function RaportPage() {
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const navigate = useNavigate();
   const ctx = useAkademikContextOptional();
   const role = useAkademikRole();
   const periodeSuffix = ctx?.tahunAjaran ? ` · Periode: ${ctx.tahunAjaran} ${ctx.semester}` : "";
@@ -486,6 +488,9 @@ function RaportPage() {
           rowKey={(r) => r.name}
           sort={sort}
           onSortChange={setSort}
+          onRowClick={(r) =>
+            navigate({ to: "/sch/$sekolah/akademik/raport/$id", params: { sekolah, id: r.name } })
+          }
           empty={
             <div>
               <div className="font-medium text-fg">
