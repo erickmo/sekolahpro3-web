@@ -44,6 +44,8 @@ type BA = {
 };
 
 const MAX_FOTO_BYTES = 1024 * 1024;
+/** JPEG quality used when re-encoding oversized incident photos. */
+const FOTO_JPEG_QUALITY = 0.8;
 
 function defaultBA(): BA {
   return {
@@ -103,7 +105,7 @@ async function compressImage(file: File): Promise<File> {
   ctx.drawImage(bitmap, 0, 0, w, h);
   // toBlob may yield null (e.g. canvas too large); fall back to the original
   // file rather than uploading a corrupt empty blob. PERP-GAP-21
-  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", 0.8));
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", FOTO_JPEG_QUALITY));
   if (!blob) return file;
   return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
 }

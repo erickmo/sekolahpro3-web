@@ -38,6 +38,19 @@ type LogEntry = {
 };
 
 const FEEDBACK_MS = 2500;
+/** Individual terminal loan window in days (cf. kolektif's 14 — intentionally shorter). */
+const LOAN_PERIOD_DAYS = 7;
+/** Scan round-trip latency tone thresholds; <500ms is the spec NFR target. */
+const LATENCY_OK_MS = 500;
+const LATENCY_WARN_MS = 1000;
+/** Max recent scan-log entries retained in the on-screen history. */
+const LOG_HISTORY_MAX = 30;
+/** Web Audio beep parameters for scan feedback. */
+const BEEP_GAIN = 0.15;
+const SUCCESS_BEEP_HZ = 880;
+const SUCCESS_BEEP_MS = 120;
+const ERROR_BEEP_HZ = 220;
+const ERROR_BEEP_MS = 250;
 
 function beep(freq: number, ms: number) {
   try {
@@ -49,7 +62,7 @@ function beep(freq: number, ms: number) {
     gain.connect(ctx.destination);
     osc.frequency.value = freq;
     osc.type = "sine";
-    gain.gain.value = 0.15;
+    gain.gain.value = BEEP_GAIN;
     osc.start();
     setTimeout(() => {
       osc.stop();
@@ -60,8 +73,8 @@ function beep(freq: number, ms: number) {
   }
 }
 
-function beepSuccess() { beep(880, 120); }
-function beepError() { beep(220, 250); }
+function beepSuccess() { beep(SUCCESS_BEEP_HZ, SUCCESS_BEEP_MS); }
+function beepError() { beep(ERROR_BEEP_HZ, ERROR_BEEP_MS); }
 
 function TerminalPage() {
   const [mode, setMode] = useState<Mode>("idle");
@@ -79,7 +92,7 @@ function TerminalPage() {
   });
 
   const pushLog = useCallback((kind: LogEntry["kind"], message: string) => {
-    setLog((prev) => [{ ts: Date.now(), kind, message }, ...prev].slice(0, 30));
+    setLog((prev) => [{ ts: Date.now(), kind, message }, ...prev].slice(0, LOG_HISTORY_MAX));
   }, []);
 
   const flashEvent = (kind: "success" | "error", message: string) => {
@@ -193,7 +206,7 @@ function TerminalPage() {
       // Pinjam baru
       const today = new Date();
       const due = new Date(today);
-      due.setDate(due.getDate() + 7);
+      due.setDate(due.getDate() + LOAN_PERIOD_DAYS);
       // insert→submit so the loan's on_submit checkout side-effects run. PERP-GAP-02
       await insertAndSubmit("Peminjaman Buku", {
         anggota: anggota.name,
@@ -231,8 +244,8 @@ function TerminalPage() {
 
   const latencyTone = useMemo<"success" | "warning" | "danger">(() => {
     if (latencyMs === null) return "success";
-    if (latencyMs < 500) return "success";
-    if (latencyMs < 1000) return "warning";
+    if (latencyMs < LATENCY_OK_MS) return "success";
+    if (latencyMs < LATENCY_WARN_MS) return "warning";
     return "danger";
   }, [latencyMs]);
 

@@ -72,6 +72,12 @@ const DASHBOARD_GUIDE_TIPS = [
 
 // Window length (days) for the loan-trend bar chart on the dashboard.
 const TREN_HARI = 7;
+/** Rows shown in the "recent activity" and "needs attention" lists. */
+const RECENT_LIMIT = 5;
+const ATTENTION_LIMIT = 5;
+/** On-time circulation health thresholds (percent) for the dashboard ring tone. */
+const HEALTH_GOOD_PCT = 80;
+const HEALTH_WARN_PCT = 50;
 
 type BukuRow = {
   name: string;
@@ -263,7 +269,7 @@ function PerpustakaanDashboardPage() {
     return items;
   }, [pinjam, baPending, opnameDrafts, today]);
 
-  const aktivitasTerbaru = useMemo(() => pinjam.slice(0, 5), [pinjam]);
+  const aktivitasTerbaru = useMemo(() => pinjam.slice(0, RECENT_LIMIT), [pinjam]);
 
   // Visualizations derived purely from data already fetched above (no extra
   // backend calls). Logic lives in dashboardViz.ts and is unit-tested there.
@@ -435,7 +441,7 @@ function PerpustakaanDashboardPage() {
             <div className="flex flex-col items-center">
               <ProgressRing
                 value={kesehatan.percentTepatWaktu}
-                tone={kesehatan.percentTepatWaktu >= 80 ? "emerald" : kesehatan.percentTepatWaktu >= 50 ? "amber" : "rose"}
+                tone={kesehatan.percentTepatWaktu >= HEALTH_GOOD_PCT ? "emerald" : kesehatan.percentTepatWaktu >= HEALTH_WARN_PCT ? "amber" : "rose"}
                 label={`${kesehatan.aktif.toLocaleString("id-ID")} tepat waktu · ${kesehatan.terlambat.toLocaleString("id-ID")} terlambat`}
               />
             </div>
@@ -513,7 +519,7 @@ function PerpustakaanDashboardPage() {
           ) : (
             <AttentionList
               items={perluPerhatianItems}
-              maxItems={5}
+              maxItems={ATTENTION_LIMIT}
               renderLink={renderLink}
             />
           )}
