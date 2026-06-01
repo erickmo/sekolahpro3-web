@@ -4,6 +4,7 @@ import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { PerpCreateModal, type PerpFieldDef } from "../components/perpustakaan/PerpCreateModal";
 import { perpToday } from "../components/perpustakaan/perpFormatters";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 type Row = {
   name: string;
@@ -49,6 +50,7 @@ function AnggotaPage() {
 
   return (
     <>
+      <PerpPageGuide id="anggota" />
       <ResourceListPage<Row>
         eyebrow="Perpustakaan"
         title="Anggota Perpustakaan"

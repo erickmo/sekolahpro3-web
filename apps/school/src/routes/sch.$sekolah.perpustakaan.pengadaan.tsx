@@ -5,6 +5,7 @@
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 type Row = {
   name: string;
@@ -60,6 +61,8 @@ function PengadaanPage() {
 
   const navigate = useNavigate();
   return (
+    <>
+    <PerpPageGuide id="pengadaan" />
     <ResourceListPage<Row>
       eyebrow="Perpustakaan"
       title="Pengadaan Buku"
@@ -78,6 +81,7 @@ function PengadaanPage() {
       onAdd={() => navigate({ to: "/sch/$sekolah/perpustakaan/pengadaan/$name", params: { sekolah, name: "new" } })}
       onRowClick={(r) => navigate({ to: "/sch/$sekolah/perpustakaan/pengadaan/$name", params: { sekolah, name: r.name } })}
     />
+    </>
   );
 }
 

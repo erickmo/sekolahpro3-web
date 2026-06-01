@@ -8,13 +8,14 @@
  */
 import { useState, type ReactNode } from "react";
 import { Badge, SectionCard, IconBook, cn } from "@sekolahpro/ui";
-import { ROLE_LABEL, type AkademikRole } from "../../lib/akademikRole";
+import { ROLE_LABEL as AKADEMIK_ROLE_LABEL } from "../../lib/akademikRole";
 
 /** A single step in the guide. */
 export interface PageGuideStep {
   title: ReactNode;
   detail?: ReactNode;
-  roles?: AkademikRole[];
+  /** Coarse role keys this step is most relevant to (presentation hint only). */
+  roles?: string[];
 }
 
 export interface PageGuideProps {
@@ -25,6 +26,22 @@ export interface PageGuideProps {
   tips?: ReactNode[];
   defaultOpen?: boolean;
   className?: string;
+  /**
+   * Maps a step's role key to a human label. Module-agnostic so each module
+   * passes its own labels (Akademik, Perpustakaan, ...). Falls back to the
+   * academic labels, then the raw key, so existing call sites keep working
+   * without passing this prop.
+   */
+  roleLabels?: Record<string, string>;
+}
+
+/** Resolve a role key to its display label across the fallback chain. */
+function resolveRoleLabel(role: string, roleLabels?: Record<string, string>): string {
+  return (
+    roleLabels?.[role] ??
+    AKADEMIK_ROLE_LABEL[role as keyof typeof AKADEMIK_ROLE_LABEL] ??
+    role
+  );
 }
 
 const STORAGE_PREFIX = "akademik-guide:";
@@ -84,12 +101,18 @@ function Chevron({ open }: { open: boolean }): ReactNode {
 }
 
 /** Role badges rendered for a step that is scoped to specific roles. */
-function StepRoles({ roles }: { roles: AkademikRole[] }): ReactNode {
+function StepRoles({
+  roles,
+  roleLabels,
+}: {
+  roles: string[];
+  roleLabels: Record<string, string> | undefined;
+}): ReactNode {
   return (
     <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
       {roles.map((role) => (
         <Badge key={role} tone="brand">
-          {ROLE_LABEL[role]}
+          {resolveRoleLabel(role, roleLabels)}
         </Badge>
       ))}
     </span>
@@ -97,7 +120,13 @@ function StepRoles({ roles }: { roles: AkademikRole[] }): ReactNode {
 }
 
 /** The ordered list of numbered steps. */
-function StepList({ steps }: { steps: PageGuideStep[] }): ReactNode {
+function StepList({
+  steps,
+  roleLabels,
+}: {
+  steps: PageGuideStep[];
+  roleLabels: Record<string, string> | undefined;
+}): ReactNode {
   return (
     <ol className="mt-3 space-y-2">
       {steps.map((step, index) => (
@@ -108,7 +137,7 @@ function StepList({ steps }: { steps: PageGuideStep[] }): ReactNode {
           <div className="min-w-0 text-sm">
             <span className="font-semibold text-fg">{step.title}</span>
             {step.roles && step.roles.length > 0 ? (
-              <StepRoles roles={step.roles} />
+              <StepRoles roles={step.roles} roleLabels={roleLabels} />
             ) : null}
             {step.detail ? (
               <p className="mt-0.5 text-xs text-muted-fg">{step.detail}</p>
@@ -148,6 +177,7 @@ export function PageGuide({
   tips,
   defaultOpen,
   className,
+  roleLabels,
 }: PageGuideProps): ReactNode {
   const initialFallback = defaultOpen ?? DEFAULT_OPEN;
   const [open, setOpen] = useState<boolean>(() =>
@@ -186,7 +216,7 @@ export function PageGuide({
       {open ? (
         <div className="mt-3">
           {intro ? <p className="text-sm text-muted-fg">{intro}</p> : null}
-          {hasSteps ? <StepList steps={steps} /> : null}
+          {hasSteps ? <StepList steps={steps} roleLabels={roleLabels} /> : null}
           {hasTips ? <TipsBlock tips={tips} /> : null}
         </div>
       ) : null}

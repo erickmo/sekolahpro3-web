@@ -29,6 +29,48 @@ const PERPUS_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "denda", label: "Denda", hint: "Tagih keterlambatan", href: "/sch/$sekolah/perpustakaan/denda" },
 ];
 import { useResourceList } from "@sekolahpro/api-client";
+import { BarChart, DonutChart, HBarChart, ProgressRing } from "../components/viz";
+import { PageGuide, type PageGuideStep } from "../components/guide";
+import { ROLE_LABEL as PERPUS_ROLE_LABELS } from "../lib/perpustakaanRole";
+import {
+  buildKategoriBars,
+  buildSirkulasiSegments,
+  buildTrenPeminjaman,
+  computeKesehatanSirkulasi,
+} from "../components/perpustakaan/dashboardViz";
+
+// Onboarding guide for the dashboard, role-tagged so a new petugas, a pustakawan
+// reviewing, and an admin all see which steps speak to them — without hiding any.
+const DASHBOARD_GUIDE_STEPS: PageGuideStep[] = [
+  {
+    title: "Mulai dari yang mendesak",
+    detail: "Kartu di atas menyoroti jatuh tempo hari ini, keterlambatan, dan denda. Tangani itu lebih dulu.",
+    roles: ["petugas"],
+  },
+  {
+    title: "Buka Terminal untuk sirkulasi cepat",
+    detail: "Tombol 'Buka Terminal Sirkulasi' di bar atas membuka mode scan kartu + eksemplar.",
+    roles: ["petugas"],
+  },
+  {
+    title: "Pantau sebaran lewat grafik",
+    detail: "Status sirkulasi, kesehatan pinjaman, koleksi per kategori, dan tren 7 hari ada di bagian visualisasi.",
+    roles: ["pustakawan", "petugas"],
+  },
+  {
+    title: "Tindak lanjuti approval & opname",
+    detail: "BA kerusakan menunggu approval dan draft opname yang tertinggal muncul di 'Perlu Perhatian'.",
+    roles: ["pustakawan", "admin"],
+  },
+];
+
+const DASHBOARD_GUIDE_TIPS = [
+  "Setiap kartu & item bisa diklik untuk langsung ke halaman tindak lanjutnya.",
+  "Grafik dihitung dari data yang sudah dimuat — tanpa beban query tambahan.",
+];
+
+// Window length (days) for the loan-trend bar chart on the dashboard.
+const TREN_HARI = 7;
 
 type BukuRow = {
   name: string;
@@ -118,12 +160,14 @@ function PerpustakaanDashboardPage() {
     limit_page_length: 0,
   });
 
-  const buku = bukuQ.data ?? [];
-  const pinjam = pinjamQ.data ?? [];
-  const denda = dendaQ.data ?? [];
-  const baPending = baQ.data ?? [];
-  const opnameDrafts = opnameDraftQ.data ?? [];
-  const pengadaanBulanIni = pengadaanBulanIniQ.data ?? [];
+  // Stabilize derived arrays so dependent useMemo hooks don't recompute every
+  // render when a query's data is still undefined (`?? []` would be a new ref).
+  const buku = useMemo(() => bukuQ.data ?? [], [bukuQ.data]);
+  const pinjam = useMemo(() => pinjamQ.data ?? [], [pinjamQ.data]);
+  const denda = useMemo(() => dendaQ.data ?? [], [dendaQ.data]);
+  const baPending = useMemo(() => baQ.data ?? [], [baQ.data]);
+  const opnameDrafts = useMemo(() => opnameDraftQ.data ?? [], [opnameDraftQ.data]);
+  const pengadaanBulanIni = useMemo(() => pengadaanBulanIniQ.data ?? [], [pengadaanBulanIniQ.data]);
 
   const TODAY = "2026-05-25";
 
@@ -204,9 +248,24 @@ function PerpustakaanDashboardPage() {
       }
     }
     return items;
-  }, [pinjam]);
+  }, [pinjam, baPending, opnameDrafts]);
 
   const aktivitasTerbaru = useMemo(() => pinjam.slice(0, 5), [pinjam]);
+
+  // Visualizations derived purely from data already fetched above (no extra
+  // backend calls). Logic lives in dashboardViz.ts and is unit-tested there.
+  const kategoriBars = useMemo(() => buildKategoriBars(buku), [buku]);
+  const sirkulasiSegments = useMemo(() => buildSirkulasiSegments(pinjam), [pinjam]);
+  const trenPeminjaman = useMemo(() => buildTrenPeminjaman(pinjam, TODAY, TREN_HARI), [pinjam]);
+  const kesehatan = useMemo(() => computeKesehatanSirkulasi(pinjam), [pinjam]);
+  const sirkulasiDonut = useMemo(
+    () => sirkulasiSegments.map((s) => ({ label: s.label, value: s.value, tone: s.tone })),
+    [sirkulasiSegments],
+  );
+  const totalSirkulasi = useMemo(
+    () => sirkulasiSegments.reduce((sum, s) => sum + s.value, 0),
+    [sirkulasiSegments],
+  );
 
   const isZeroState = !bukuQ.isLoading && !bukuQ.isError && buku.length === 0;
 
@@ -219,6 +278,15 @@ function PerpustakaanDashboardPage() {
         eyebrow="Layanan"
         title="Dashboard Perpustakaan"
         description="Ringkasan koleksi, sirkulasi, dan tindakan cepat untuk operasional harian."
+      />
+
+      <PageGuide
+        storageId="perpus-dashboard"
+        title="Cara pakai Dashboard Perpustakaan"
+        intro="Dirancang untuk petugas sirkulasi: lihat yang mendesak lebih dulu, lalu bertindak langsung dari kartu & grafik di bawah."
+        steps={DASHBOARD_GUIDE_STEPS}
+        tips={DASHBOARD_GUIDE_TIPS}
+        roleLabels={PERPUS_ROLE_LABELS}
       />
 
       {isZeroState && (
@@ -307,6 +375,87 @@ function PerpustakaanDashboardPage() {
           actionHref="/sch/$sekolah/perpustakaan/pengadaan"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <SectionCard
+          title="Status Sirkulasi"
+          description="Sebaran status seluruh transaksi peminjaman."
+          className="lg:col-span-2"
+        >
+          {pinjamQ.isLoading ? (
+            <div className="text-sm text-muted-fg">Memuat...</div>
+          ) : totalSirkulasi === 0 ? (
+            <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-fg">
+              Belum ada transaksi peminjaman.
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-6">
+              <DonutChart
+                data={sirkulasiDonut}
+                centerTop={<span className="text-2xl font-semibold text-fg tabular-nums">{totalSirkulasi}</span>}
+                centerBottom={<span className="text-xs text-muted-fg">transaksi</span>}
+              />
+              <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
+                {sirkulasiSegments.map((s) => (
+                  <li key={s.label} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="flex items-center gap-2 text-muted-fg">
+                      <Badge tone={s.label === "Terlambat" || s.label === "Hilang" ? "warning" : "neutral"} dot>
+                        {s.label}
+                      </Badge>
+                    </span>
+                    <span className="font-medium text-fg tabular-nums">{s.value.toLocaleString("id-ID")}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Kesehatan Sirkulasi"
+          description="Peminjaman aktif yang masih tepat waktu vs terlambat."
+        >
+          {pinjamQ.isLoading ? (
+            <div className="text-sm text-muted-fg">Memuat...</div>
+          ) : kesehatan.total === 0 ? (
+            <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-fg">
+              Tidak ada peminjaman aktif.
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+              <ProgressRing
+                value={kesehatan.percentTepatWaktu}
+                tone={kesehatan.percentTepatWaktu >= 80 ? "emerald" : kesehatan.percentTepatWaktu >= 50 ? "amber" : "rose"}
+                label={`${kesehatan.aktif.toLocaleString("id-ID")} tepat waktu · ${kesehatan.terlambat.toLocaleString("id-ID")} terlambat`}
+              />
+            </div>
+          )}
+        </SectionCard>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SectionCard
+          title="Koleksi per Kategori"
+          description="Jumlah judul tiap kategori (8 terbanyak)."
+        >
+          {bukuQ.isLoading ? (
+            <div className="text-sm text-muted-fg">Memuat...</div>
+          ) : (
+            <HBarChart data={kategoriBars} valueFormatter={(v) => v.toLocaleString("id-ID")} />
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Tren Peminjaman 7 Hari"
+          description="Jumlah transaksi pinjam per hari, hingga hari ini."
+        >
+          {pinjamQ.isLoading ? (
+            <div className="text-sm text-muted-fg">Memuat...</div>
+          ) : (
+            <BarChart data={trenPeminjaman} valueFormatter={(v) => v.toLocaleString("id-ID")} />
+          )}
+        </SectionCard>
       </div>
 
       <ModuleFlow

@@ -4,6 +4,7 @@ import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { PerpCreateModal, type PerpFieldDef } from "../components/perpustakaan/PerpCreateModal";
 import { perpToday } from "../components/perpustakaan/perpFormatters";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 type Row = {
   name: string;
@@ -56,6 +57,7 @@ function ReservasiPage() {
 
   return (
     <>
+      <PerpPageGuide id="reservasi" />
       <ResourceListPage<Row>
         eyebrow="Perpustakaan"
         title="Reservasi Buku"
