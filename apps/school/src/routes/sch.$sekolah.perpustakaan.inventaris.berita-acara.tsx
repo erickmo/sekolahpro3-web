@@ -5,6 +5,7 @@
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
 
 type Row = {
   name: string;
@@ -41,7 +42,7 @@ const COLUMNS: Column<Row>[] = [
   { key: "keputusan", header: "Keputusan",
     cell: (r) => r.keputusan ? <Badge tone={KEPUTUSAN_TONE[r.keputusan] ?? "neutral"} dot>{r.keputusan}</Badge> : <span className="text-muted-fg">— pending —</span> },
   { key: "nilai_ganti_rugi", header: "Ganti Rugi", align: "right", sortable: true,
-    cell: (r) => r.nilai_ganti_rugi ? <span className="tabular-nums">Rp {r.nilai_ganti_rugi.toLocaleString("id-ID")}</span> : <span className="text-muted-fg">—</span> },
+    cell: (r) => r.nilai_ganti_rugi ? <span className="tabular-nums">{perpFormatRupiah(r.nilai_ganti_rugi)}</span> : <span className="text-muted-fg">—</span> },
   { key: "docstatus", header: "Status",
     cell: (r) => {
       const ds = r.docstatus ?? 0;

@@ -38,7 +38,7 @@ import {
   buildTrenPeminjaman,
   computeKesehatanSirkulasi,
 } from "../components/perpustakaan/dashboardViz";
-import { perpToday, perpMonthRange } from "../components/perpustakaan/perpFormatters";
+import { perpToday, perpMonthRange, perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
 
 // Onboarding guide for the dashboard, role-tagged so a new petugas, a pustakawan
 // reviewing, and an admin all see which steps speak to them — without hiding any.
@@ -343,7 +343,7 @@ function PerpustakaanDashboardPage() {
         />
         <StatCard
           label="Denda Belum Dibayar"
-          value={dendaQ.isLoading ? "…" : `Rp ${stats.dendaOutstanding.toLocaleString("id-ID")}`}
+          value={dendaQ.isLoading ? "…" : perpFormatRupiah(stats.dendaOutstanding)}
           hint={dendaQ.isLoading ? "memuat..." : `${stats.dendaCount.toLocaleString("id-ID")} tagihan terbuka`}
           icon={<IconCheck />}
           accent="amber"

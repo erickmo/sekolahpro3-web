@@ -30,7 +30,7 @@ import {
   listResource,
   updateResource,
 } from "@sekolahpro/api-client";
-import { perpToday } from "../components/perpustakaan/perpFormatters";
+import { perpToday, perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
 
 type ItemRow = {
   buku: string;
@@ -361,7 +361,7 @@ function PengadaanDetailPage() {
                     />
                   </td>
                   <td className="px-2 py-2 text-right tabular-nums text-fg">
-                    Rp {((Number(it.jumlah_eksemplar) || 0) * (Number(it.harga_satuan) || 0)).toLocaleString("id-ID")}
+                    {perpFormatRupiah((Number(it.jumlah_eksemplar) || 0) * (Number(it.harga_satuan) || 0))}
                   </td>
                   <td className="px-2 py-2">
                     <Input
@@ -396,7 +396,7 @@ function PengadaanDetailPage() {
                   {totals.totalEksemplar.toLocaleString("id-ID")} eks.
                 </td>
                 <td className="px-2 py-2 text-right tabular-nums font-medium" colSpan={3}>
-                  Rp {totals.totalBiaya.toLocaleString("id-ID")}
+                  {perpFormatRupiah(totals.totalBiaya)}
                 </td>
               </tr>
             </tfoot>

@@ -27,7 +27,7 @@ import {
   listResource,
   updateResource,
 } from "@sekolahpro/api-client";
-import { perpToday } from "../components/perpustakaan/perpFormatters";
+import { perpToday, perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
 
 type BA = {
   name?: string;
@@ -341,7 +341,7 @@ function BADetailPage() {
             />
           </FormField>
           <FormField label="Nilai Ganti Rugi (Rp)" htmlFor="rugi"
-            hint={suggestedRugi > 0 ? `Saran (harga buku): Rp ${suggestedRugi.toLocaleString("id-ID")}` : undefined}>
+            hint={suggestedRugi > 0 ? `Saran (harga buku): ${perpFormatRupiah(suggestedRugi)}` : undefined}>
             <Input id="rugi" type="number" min={0} value={String(doc.nilai_ganti_rugi)}
               disabled={isReadonly || doc.keputusan !== "Ganti Rugi"}
               onChange={(e) => setDoc((p) => ({ ...p, nilai_ganti_rugi: Number(e.target.value) }))} />

@@ -6,6 +6,7 @@ import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
+import { perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
 
 type Row = {
   name: string;
@@ -30,11 +31,6 @@ const STATUS_TONE: Record<number, "neutral" | "brand" | "success"> = {
   2: "warning" as never,
 };
 
-function formatRp(n?: number): string {
-  if (!n) return "—";
-  return `Rp ${n.toLocaleString("id-ID")}`;
-}
-
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "No. Pengadaan", sortable: true,
     cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
@@ -47,7 +43,7 @@ const COLUMNS: Column<Row>[] = [
   { key: "total_eksemplar", header: "Eksemplar", align: "right", sortable: true,
     cell: (r) => <span className="tabular-nums">{r.total_eksemplar ?? 0}</span> },
   { key: "total_biaya", header: "Total Biaya", align: "right", sortable: true,
-    cell: (r) => <span className="tabular-nums">{formatRp(r.total_biaya)}</span> },
+    cell: (r) => <span className="tabular-nums">{perpFormatRupiah(r.total_biaya)}</span> },
   { key: "docstatus", header: "Status",
     cell: (r) => {
       const ds = r.docstatus ?? 0;

@@ -9,7 +9,7 @@
 import { Badge, Button, Modal } from "@sekolahpro/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useResourceList, updateResource } from "@sekolahpro/api-client";
-import { perpToday } from "./perpFormatters";
+import { perpToday, perpFormatRupiah } from "./perpFormatters";
 
 const DOCTYPE = "Denda Perpustakaan";
 const STATUS_BELUM_LUNAS = "Belum Lunas" as const;
@@ -42,11 +42,6 @@ interface Props {
   onClose: () => void;
 }
 
-/** Format integer rupiah in id-ID locale; returns em-dash for nullish input. */
-function fmtRp(n?: number): string {
-  return n === undefined ? "—" : `Rp ${n.toLocaleString("id-ID")}`;
-}
-
 /** Single denda <li>: identity, breakdown, status badge, and (optional) pay button. */
 function DendaRowItem({
   row,
@@ -62,8 +57,8 @@ function DendaRowItem({
       <div className="text-sm space-y-1">
         <div className="font-mono text-xs text-muted-fg">{row.name}</div>
         <div>
-          {row.hari_terlambat ?? 0} hari × {fmtRp(row.denda_per_hari)} ={" "}
-          <strong>{fmtRp(row.total_denda)}</strong>
+          {row.hari_terlambat ?? 0} hari × {perpFormatRupiah(row.denda_per_hari)} ={" "}
+          <strong>{perpFormatRupiah(row.total_denda)}</strong>
         </div>
         <Badge tone={row.status_bayar === STATUS_LUNAS ? "success" : "warning"} dot>
           {row.status_bayar ?? "—"}
