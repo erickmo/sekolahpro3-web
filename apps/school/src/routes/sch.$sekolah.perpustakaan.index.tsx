@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {
   AttentionList,
@@ -38,6 +38,7 @@ import {
   buildTrenPeminjaman,
   computeKesehatanSirkulasi,
 } from "../components/perpustakaan/dashboardViz";
+import { perpToday, perpMonthRange } from "../components/perpustakaan/perpFormatters";
 
 // Onboarding guide for the dashboard, role-tagged so a new petugas, a pustakawan
 // reviewing, and an admin all see which steps speak to them — without hiding any.
@@ -120,6 +121,20 @@ const PINJAM_TONE: Record<string, "brand" | "success" | "warning" | "danger" | "
 function PerpustakaanDashboardPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
 
+  // Resolve the `$sekolah` segment and feed TanStack params so every dashboard
+  // action href (StatCard / AttentionList / GettingStarted) navigates to a real
+  // scoped path instead of the raw template, which 404s. PERP-GAP-04
+  const renderLink = (href: string, children: ReactNode, className?: string) => (
+    <Link to={href.replace("$sekolah", sekolah)} params={{ sekolah }} className={className}>
+      {children}
+    </Link>
+  );
+
+  // Live reference date; the dashboard's "hari ini", due-today, and rolling
+  // trend window all derive from it instead of a frozen literal. PERP-GAP-08
+  const today = perpToday();
+  const { start: monthStart, nextStart: monthNextStart } = perpMonthRange(today);
+
   const bukuQ = useResourceList<BukuRow>("Buku", {
     fields: ["name", "judul", "pengarang", "kategori", "tahun_terbit"],
     limit_page_length: 0,
@@ -154,8 +169,8 @@ function PerpustakaanDashboardPage() {
   const pengadaanBulanIniQ = useResourceList<PengadaanRow>("Pengadaan Buku", {
     fields: ["name", "tanggal_pengadaan", "total_eksemplar"],
     filters: [
-      ["tanggal_pengadaan", ">=", "2026-05-01"],
-      ["tanggal_pengadaan", "<=", "2026-05-31"],
+      ["tanggal_pengadaan", ">=", monthStart],
+      ["tanggal_pengadaan", "<", monthNextStart],
     ],
     limit_page_length: 0,
   });
@@ -169,15 +184,13 @@ function PerpustakaanDashboardPage() {
   const opnameDrafts = useMemo(() => opnameDraftQ.data ?? [], [opnameDraftQ.data]);
   const pengadaanBulanIni = useMemo(() => pengadaanBulanIniQ.data ?? [], [pengadaanBulanIniQ.data]);
 
-  const TODAY = "2026-05-25";
-
   const stats = useMemo(() => {
     const totalJudul = buku.length;
     const aktif = pinjam.filter((p) => p.status === "Aktif").length;
     const terlambat = pinjam.filter((p) => p.status === "Terlambat").length;
-    // Actionable: buku jatuh tempo hari ini (dueDate == TODAY) — masih Aktif.
+    // Actionable: buku jatuh tempo hari ini (dueDate == today) — masih Aktif.
     const jatuhTempoHariIni = pinjam.filter(
-      (p) => p.status === "Aktif" && p.tanggal_kembali_rencana === TODAY,
+      (p) => p.status === "Aktif" && p.tanggal_kembali_rencana === today,
     ).length;
     const dendaOutstanding = denda.reduce((s, d) => s + (d.nominal ?? 0), 0);
     const dendaCount = denda.length;
@@ -188,7 +201,7 @@ function PerpustakaanDashboardPage() {
       totalJudul, aktif, terlambat, jatuhTempoHariIni, dendaOutstanding, dendaCount,
       baPendingCount, opnameDraftCount, pengadaanEksBulanIni,
     };
-  }, [buku, pinjam, denda, baPending, opnameDrafts, pengadaanBulanIni]);
+  }, [buku, pinjam, denda, baPending, opnameDrafts, pengadaanBulanIni, today]);
 
   const perluPerhatianItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = [];
@@ -201,7 +214,7 @@ function PerpustakaanDashboardPage() {
         tone: "neutral",
         badge: "Draft",
         actionLabel: "Resume",
-        actionHref: `/perpustakaan/inventaris/opname/${op.name}`,
+        actionHref: `/sch/$sekolah/perpustakaan/inventaris/opname/${op.name}`,
       });
     }
     for (const ba of baPending) {
@@ -212,7 +225,7 @@ function PerpustakaanDashboardPage() {
         tone: "warning",
         badge: "Approval",
         actionLabel: "Review",
-        actionHref: `/perpustakaan/inventaris/berita-acara/${ba.name}`,
+        actionHref: `/sch/$sekolah/perpustakaan/inventaris/berita-acara/${ba.name}`,
       });
     }
     for (const p of pinjam) {
@@ -236,7 +249,7 @@ function PerpustakaanDashboardPage() {
           actionLabel: "Buat Denda",
           actionHref: "/sch/$sekolah/perpustakaan/denda",
         });
-      } else if (p.status === "Aktif" && p.tanggal_kembali_rencana === TODAY) {
+      } else if (p.status === "Aktif" && p.tanggal_kembali_rencana === today) {
         items.push({
           id: `due-${p.name}`,
           label: p.name,
@@ -248,7 +261,7 @@ function PerpustakaanDashboardPage() {
       }
     }
     return items;
-  }, [pinjam, baPending, opnameDrafts]);
+  }, [pinjam, baPending, opnameDrafts, today]);
 
   const aktivitasTerbaru = useMemo(() => pinjam.slice(0, 5), [pinjam]);
 
@@ -256,7 +269,7 @@ function PerpustakaanDashboardPage() {
   // backend calls). Logic lives in dashboardViz.ts and is unit-tested there.
   const kategoriBars = useMemo(() => buildKategoriBars(buku), [buku]);
   const sirkulasiSegments = useMemo(() => buildSirkulasiSegments(pinjam), [pinjam]);
-  const trenPeminjaman = useMemo(() => buildTrenPeminjaman(pinjam, TODAY, TREN_HARI), [pinjam]);
+  const trenPeminjaman = useMemo(() => buildTrenPeminjaman(pinjam, today, TREN_HARI), [pinjam, today]);
   const kesehatan = useMemo(() => computeKesehatanSirkulasi(pinjam), [pinjam]);
   const sirkulasiDonut = useMemo(
     () => sirkulasiSegments.map((s) => ({ label: s.label, value: s.value, tone: s.tone })),
@@ -295,11 +308,7 @@ function PerpustakaanDashboardPage() {
           title="Perpustakaan belum punya koleksi"
           description="Input buku pertama atau import katalog untuk mulai layanan peminjaman."
           primaryAction={{ label: "Tambah Buku", href: "/sch/$sekolah/perpustakaan/daftar" }}
-          renderLink={(href, children, className) => (
-            <Link to={href} className={className}>
-              {children}
-            </Link>
-          )}
+          renderLink={renderLink}
         />
       )}
 
@@ -312,7 +321,7 @@ function PerpustakaanDashboardPage() {
           accent="amber"
           urgency="warn"
           actionHref="/sch/$sekolah/perpustakaan/peminjaman"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
+          renderLink={renderLink}
         />
         <StatCard
           label="Peminjaman Aktif"
@@ -330,7 +339,7 @@ function PerpustakaanDashboardPage() {
           accent="rose"
           urgency="critical"
           actionHref="/sch/$sekolah/perpustakaan/peminjaman"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
+          renderLink={renderLink}
         />
         <StatCard
           label="Denda Belum Dibayar"
@@ -340,7 +349,7 @@ function PerpustakaanDashboardPage() {
           accent="amber"
           urgency={stats.dendaOutstanding > 0 ? "warn" : "normal"}
           actionHref="/sch/$sekolah/perpustakaan/peminjaman"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
+          renderLink={renderLink}
         />
       </div>
 
@@ -353,7 +362,7 @@ function PerpustakaanDashboardPage() {
           accent="rose"
           urgency={stats.baPendingCount > 0 ? "warn" : "normal"}
           actionHref="/sch/$sekolah/perpustakaan/inventaris/berita-acara"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
+          renderLink={renderLink}
         />
         <StatCard
           label="Opname Draft Tertinggal"
@@ -363,7 +372,7 @@ function PerpustakaanDashboardPage() {
           accent="violet"
           urgency={stats.opnameDraftCount > 0 ? "warn" : "normal"}
           actionHref="/sch/$sekolah/perpustakaan/inventaris/opname"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
+          renderLink={renderLink}
         />
         <StatCard
           label="Eksemplar Baru Bulan Ini"
@@ -373,7 +382,7 @@ function PerpustakaanDashboardPage() {
           accent="emerald"
           urgency="normal"
           actionHref="/sch/$sekolah/perpustakaan/pengadaan"
-          renderLink={(href, children) => <Link to={href}>{children}</Link>}
+          renderLink={renderLink}
         />
       </div>
 
@@ -505,11 +514,7 @@ function PerpustakaanDashboardPage() {
             <AttentionList
               items={perluPerhatianItems}
               maxItems={5}
-              renderLink={(href, children, className) => (
-                <Link to={href} className={className}>
-                  {children}
-                </Link>
-              )}
+              renderLink={renderLink}
             />
           )}
         </SectionCard>
