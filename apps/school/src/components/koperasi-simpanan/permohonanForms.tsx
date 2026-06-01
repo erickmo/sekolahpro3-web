@@ -66,6 +66,17 @@ function toOptions(values: string[]): SearchableOption[] {
   return values.map((v) => ({ value: v, label: v }));
 }
 
+/** Name-only loader for a master link field (label = doc name). */
+async function searchByName(doctype: string, q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<{ name: string }>(doctype, {
+    fields: ["name"],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({ value: r.name, label: r.name }));
+}
+
 /** Async option loader for a Frappe link field. */
 async function searchLink(
   doctype: string,
@@ -221,6 +232,7 @@ function PermohonanFields({ kind, rekening, anggota }: FieldsProps) {
   const [akad, setAkad] = useState("Wadiah");
   const [anggotaVal, setAnggotaVal] = useState(anggota ?? "");
   const [rekeningVal, setRekeningVal] = useState(rekening ?? "");
+  const [produkVal, setProdukVal] = useState("");
 
   if (kind === "buka") {
     return (
@@ -238,7 +250,13 @@ function PermohonanFields({ kind, rekening, anggota }: FieldsProps) {
           <input type="hidden" name="anggota" value={anggotaVal} />
         </FormField>
         <FormField label="Produk" required>
-          <Input name="produk" required placeholder="Misal: Simpanan Wajib" />
+          <SearchableSelect
+            value={produkVal}
+            onChange={(v) => setProdukVal(v)}
+            loadOptions={(q) => searchByName("Produk Simpanan", q)}
+            placeholder="Cari produk simpanan…"
+          />
+          <input type="hidden" name="produk" value={produkVal} />
         </FormField>
         <FormField label="Akad" required>
           <SearchableSelect

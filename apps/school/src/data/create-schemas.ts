@@ -199,6 +199,66 @@ export const JADWAL_ANGSURAN_BASE_VALUES = {
   parentfield: "jadwal_angsuran",
 };
 
+// ============================================================ Koperasi Sosial
+// Penerimaan ZIS = dana sosial masuk (Zakat/Infak/Sedekah/Wakaf Tunai).
+// jenis_dana options match the existing list filter on the ZIS route.
+export const PENERIMAAN_ZIS_FIELDS: ResourceFieldDef[] = [
+  {
+    name: "jenis_dana",
+    label: "Jenis Dana",
+    type: "select",
+    required: true,
+    options: ["Zakat", "Infak", "Sedekah", "Wakaf Tunai"].map((v) => ({ value: v, label: v })),
+  },
+  { name: "jumlah", label: "Nominal (Rp)", type: "number", required: true, positive: true },
+  { name: "tanggal", label: "Tanggal", type: "date", required: true, defaultValue: "@today" },
+  {
+    name: "nasabah",
+    label: "Muzakki / Sumber",
+    type: "link",
+    linkDoctype: "Nasabah",
+    hint: "Opsional — kosongkan untuk infak anonim.",
+  },
+  {
+    name: "status",
+    label: "Status",
+    type: "select",
+    required: true,
+    defaultValue: "Diterima",
+    options: ["Diterima", "Disalurkan"].map((v) => ({ value: v, label: v })),
+  },
+  { name: "keterangan", label: "Keterangan", type: "textarea", colSpan: 2 },
+];
+
+// Aset Wakaf = aset wakaf yang dikelola koperasi.
+export const ASET_WAKAF_FIELDS: ResourceFieldDef[] = [
+  { name: "nama_aset", label: "Nama Aset", type: "text", required: true, colSpan: 2 },
+  {
+    name: "jenis_wakaf",
+    label: "Jenis Wakaf",
+    type: "select",
+    required: true,
+    options: ["Tunai", "Tanah", "Bangunan", "Kendaraan", "Lainnya"].map((v) => ({ value: v, label: v })),
+  },
+  { name: "nilai", label: "Nilai (Rp)", type: "number", required: true, positive: true },
+  {
+    name: "wakif",
+    label: "Wakif",
+    type: "link",
+    linkDoctype: "Nasabah",
+    hint: "Opsional — pemberi wakaf.",
+  },
+  {
+    name: "status",
+    label: "Status",
+    type: "select",
+    required: true,
+    defaultValue: "Produktif",
+    options: ["Produktif", "Tidak Produktif"].map((v) => ({ value: v, label: v })),
+  },
+  { name: "keterangan", label: "Keterangan", type: "textarea", colSpan: 2 },
+];
+
 // ============================================================ Laporan
 export const LAPORAN_TERJADWAL_FIELDS: ResourceFieldDef[] = [
   { name: "nama", label: "Nama Jadwal", type: "text", required: true, colSpan: 2 },

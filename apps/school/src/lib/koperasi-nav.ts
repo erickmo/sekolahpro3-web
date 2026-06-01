@@ -24,6 +24,7 @@ export const KOPERASI_NAV: KoperasiNavSection[] = [
   {
     title: "Anggota & Rekening",
     items: [
+      { to: "/onboarding", label: "Pendaftaran Anggota" },
       { to: "/daftar", label: "Anggota" },
       { to: "/rekening", label: "Rekening" },
     ],

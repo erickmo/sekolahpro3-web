@@ -43,6 +43,45 @@ export function computeSelisih(args: {
   return args.totalDenominasiTutup - args.saldoSeharusnya;
 }
 
+export interface TransaksiCashRow {
+  jenis: string;
+  jumlah: number;
+}
+
+/**
+ * Cash-drawer effect per transaction jenis. Only Setor (cash in) and Tarik
+ * (cash out) move physical cash in a teller drawer; Transfer / Bagi Hasil /
+ * Koreksi are book entries that do not change the cash on hand, so they are
+ * excluded from the reconciliation expected-balance. (+1 = setoran, -1 =
+ * penarikan, 0 = non-cash.)
+ */
+const CASH_SIGN: Record<string, 1 | -1 | 0> = {
+  Setor: 1,
+  Tarik: -1,
+  Transfer: 0,
+  "Bagi Hasil": 0,
+  Koreksi: 0,
+};
+
+/**
+ * Sum a day's transactions into cash setoran/penarikan totals for the closing
+ * reconciliation. Replaces the previous hard-coded zeros in TutupSesiForm so
+ * "saldo seharusnya" reflects the real day, not just the opening modal.
+ */
+export function sumTransaksiSigned(rows: TransaksiCashRow[]): {
+  totalSetoran: number;
+  totalPenarikan: number;
+} {
+  let totalSetoran = 0;
+  let totalPenarikan = 0;
+  for (const row of rows) {
+    const sign = CASH_SIGN[row.jenis] ?? 0;
+    if (sign === 1) totalSetoran += row.jumlah ?? 0;
+    else if (sign === -1) totalPenarikan += row.jumlah ?? 0;
+  }
+  return { totalSetoran, totalPenarikan };
+}
+
 export interface BukaSesiInput {
   shift: Shift;
   modalKas: number;
