@@ -1,8 +1,15 @@
 import { useState } from "react";
 import { createFileRoute, Link, useParams} from "@tanstack/react-router";
-import { Badge, Button, type Column } from "@sekolahpro/ui";
+import { Badge, Button, EmptyState, type Column } from "@sekolahpro/ui";
 import { frappeFetch } from "@sekolahpro/api-client";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { summarizeIjazah } from "../lib/orang/siswaListSummaries";
+
+// Summary buckets archives by distribution status (Belum/Sudah Diambil/Dikirim).
+const SUMMARY_FIELDS = ["name", "status_distribusi"];
+// Styling for the EmptyState's primary link (mirrors the brand button look).
+const PRIMARY_LINK_CLASS =
+  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors h-10 px-5 bg-brand text-white hover:bg-brand/90";
 
 type Row = {
   name: string;
@@ -180,6 +187,19 @@ function IjazahPage() {
         ]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
+        summarize={summarizeIjazah}
+        summaryFields={SUMMARY_FIELDS}
+        gettingStarted={
+          <EmptyState
+            title="Belum ada arsip ijazah"
+            description="Arsip ijazah terbit dari proses kelulusan. Selesaikan kelulusan siswa terlebih dahulu."
+            action={
+              <Link to="/sch/$sekolah/siswa/kelulusan" params={{ sekolah }} className={PRIMARY_LINK_CLASS}>
+                Buka Kelulusan
+              </Link>
+            }
+          />
+        }
         defaultSort={{ key: "tanggal_terbit", dir: "desc" }}
         searchFields={["name", "siswa", "no_ijazah"]}
         selectFilters={[

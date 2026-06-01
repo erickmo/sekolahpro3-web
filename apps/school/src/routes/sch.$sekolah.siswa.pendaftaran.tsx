@@ -2,6 +2,15 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { SiswaGettingStarted } from "../components/siswa/SiswaGettingStarted";
+import { summarizePendaftaran, SISWA_STATUS_FIELDS } from "../lib/orang/siswaListSummaries";
+
+// Onboarding steps shown when no registration exists yet.
+const ONBOARDING_STEPS = [
+  "Klik Daftar Siswa Baru lalu pilih jenis pendaftaran",
+  "Isi data calon dan rombel target",
+  "Submit untuk diverifikasi panitia, lalu Diterima/Ditolak",
+];
 
 type Row = {
   name: string;
@@ -85,6 +94,17 @@ function PendaftaranPage() {
       ]}
       rowKey={(r) => r.name}
       columns={columns}
+      summarize={summarizePendaftaran}
+      summaryFields={SISWA_STATUS_FIELDS}
+      gettingStarted={
+        <SiswaGettingStarted
+          sekolah={sekolah}
+          title="Belum ada pendaftaran"
+          description="Mulai proses penerimaan siswa baru untuk tahun ajaran ini."
+          steps={ONBOARDING_STEPS}
+          primaryAction={{ label: "Daftar Siswa Baru", href: "/sch/$sekolah/siswa/pendaftaran/new" }}
+        />
+      }
       defaultSort={{ key: "tanggal_daftar", dir: "desc" }}
       searchFields={["name", "nama_lengkap", "nisn"]}
       selectFilters={[
