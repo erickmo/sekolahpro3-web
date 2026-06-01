@@ -335,7 +335,7 @@ function KolektifDetailPage() {
         <Button variant="outline" onClick={() => navigate({ to: "/sch/$sekolah/perpustakaan/kolektif", params: { sekolah } })}>Kembali</Button>
         {!isReadonly ? (
           <Button onClick={save} disabled={saving}>
-            <span className="mr-1 inline-flex h-4 w-4"><IconCheck /></span>
+            <IconCheck className="mr-1 h-4 w-4 shrink-0" />
             {saving ? "Menyimpan..." : "Simpan"}
           </Button>
         ) : null}

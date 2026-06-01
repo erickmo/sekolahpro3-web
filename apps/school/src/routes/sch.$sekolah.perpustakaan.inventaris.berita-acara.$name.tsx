@@ -356,7 +356,7 @@ function BADetailPage() {
       {isReadonly ? (
         <div className="flex items-center justify-between rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-emerald-700">
-            <span className="h-4 w-4"><IconCheck /></span>
+            <IconCheck className="h-4 w-4 shrink-0" />
             BA approved — keputusan <Badge tone="success" dot>{doc.keputusan}</Badge> sudah diterapkan ke eksemplar.
           </div>
           <Button variant="outline" onClick={() => navigate({ to: "/sch/$sekolah/perpustakaan/inventaris/berita-acara", params: { sekolah } })}>

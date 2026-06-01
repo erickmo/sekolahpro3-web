@@ -243,7 +243,7 @@ function TerminalPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-brand text-white">
-              <IconBook />
+              <IconBook className="h-5 w-5" />
             </span>
             <div>
               <h1 className="text-lg font-semibold text-fg">Terminal Sirkulasi RFID</h1>
@@ -269,7 +269,7 @@ function TerminalPage() {
           }
         >
           <div className="mx-auto inline-flex h-10 w-10 items-center justify-center">
-            {lastEvent.kind === "success" ? <IconCheck /> : <IconAlert />}
+            {lastEvent.kind === "success" ? <IconCheck className="h-8 w-8" /> : <IconAlert className="h-8 w-8" />}
           </div>
           <div className="mt-2 text-2xl font-semibold">{lastEvent.message}</div>
         </div>

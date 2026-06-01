@@ -481,7 +481,7 @@ function OpnameScanPage() {
             Simpan Sekarang
           </Button>
           <Button onClick={() => setConfirmSubmit(true)} disabled={saving || doc.items.length === 0}>
-            <span className="mr-1 inline-flex h-4 w-4"><IconCheck /></span>
+            <IconCheck className="mr-1 h-4 w-4 shrink-0" />
             Submit Opname
           </Button>
         </div>

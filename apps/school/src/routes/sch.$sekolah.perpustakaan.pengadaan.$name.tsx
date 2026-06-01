@@ -294,7 +294,7 @@ function PengadaanDetailPage() {
         action={
           !isReadonly ? (
             <Button variant="outline" onClick={addItem}>
-              <span className="mr-1 inline-flex h-4 w-4"><IconPlus /></span>
+              <IconPlus className="mr-1 h-4 w-4 shrink-0" />
               Tambah Baris
             </Button>
           ) : undefined
@@ -426,7 +426,7 @@ function PengadaanDetailPage() {
               </div>
             ))}
             <div className="flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700">
-              <span className="h-4 w-4 shrink-0"><IconAlert /></span>
+              <IconAlert className="h-4 w-4 shrink-0" />
               <span>
                 Submit akan generate <b>{totals.totalEksemplar} eksemplar permanen</b> — cancel tidak akan menghapus eksemplar.
               </span>
@@ -444,14 +444,14 @@ function PengadaanDetailPage() {
             Simpan Draft
           </Button>
           <Button onClick={() => setConfirmSubmit(true)} disabled={saving || totals.totalEksemplar === 0}>
-            <span className="mr-1 inline-flex h-4 w-4"><IconCheck /></span>
+            <IconCheck className="mr-1 h-4 w-4 shrink-0" />
             Submit
           </Button>
         </div>
       ) : (
         <div className="flex items-center justify-between rounded-md border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-emerald-700">
-            <span className="h-4 w-4"><IconCheck /></span>
+            <IconCheck className="h-4 w-4 shrink-0" />
             Pengadaan disubmit — <Badge tone="success" dot>{totals.totalEksemplar} eksemplar</Badge> sudah dibuat.
           </div>
           <Button variant="outline" onClick={() => navigate({ to: "/sch/$sekolah/perpustakaan/pengadaan", params: { sekolah } })}>

@@ -100,14 +100,14 @@ type OpnameRow = { name: string; docstatus?: number; tanggal?: string };
 type PengadaanRow = { name: string; tanggal_pengadaan?: string; total_eksemplar?: number };
 
 const QUICK_ACTIONS: { to: string; label: string; description: string; icon: React.ReactNode }[] = [
-  { to: "/sch/$sekolah/perpustakaan/terminal", label: "Terminal RFID", description: "Mode kios scan kartu + eksemplar.", icon: <IconBook /> },
-  { to: "/sch/$sekolah/perpustakaan/peminjaman", label: "Peminjaman", description: "Catat peminjaman individu / kolektif.", icon: <IconCheck /> },
-  { to: "/sch/$sekolah/perpustakaan/reservasi", label: "Reservasi", description: "Kelola antrian reservasi buku.", icon: <IconClock /> },
-  { to: "/sch/$sekolah/perpustakaan/pengadaan", label: "Pengadaan", description: "Pembelian / hibah / sumbangan koleksi.", icon: <IconWallet /> },
-  { to: "/sch/$sekolah/perpustakaan/inventaris/opname", label: "Stock Opname", description: "Audit inventaris via scan.", icon: <IconChart /> },
-  { to: "/sch/$sekolah/perpustakaan/inventaris/berita-acara", label: "BA Kerusakan", description: "Insiden rusak / hilang per eksemplar.", icon: <IconAlert /> },
-  { to: "/sch/$sekolah/perpustakaan/anggota", label: "Anggota", description: "Kelola data anggota perpustakaan.", icon: <IconUsers /> },
-  { to: "/sch/$sekolah/perpustakaan/laporan", label: "Laporan", description: "Ringkasan sirkulasi & koleksi.", icon: <IconChart /> },
+  { to: "/sch/$sekolah/perpustakaan/terminal", label: "Terminal RFID", description: "Mode kios scan kartu + eksemplar.", icon: <IconBook className="h-5 w-5" /> },
+  { to: "/sch/$sekolah/perpustakaan/peminjaman", label: "Peminjaman", description: "Catat peminjaman individu / kolektif.", icon: <IconCheck className="h-5 w-5" /> },
+  { to: "/sch/$sekolah/perpustakaan/reservasi", label: "Reservasi", description: "Kelola antrian reservasi buku.", icon: <IconClock className="h-5 w-5" /> },
+  { to: "/sch/$sekolah/perpustakaan/pengadaan", label: "Pengadaan", description: "Pembelian / hibah / sumbangan koleksi.", icon: <IconWallet className="h-5 w-5" /> },
+  { to: "/sch/$sekolah/perpustakaan/inventaris/opname", label: "Stock Opname", description: "Audit inventaris via scan.", icon: <IconChart className="h-5 w-5" /> },
+  { to: "/sch/$sekolah/perpustakaan/inventaris/berita-acara", label: "BA Kerusakan", description: "Insiden rusak / hilang per eksemplar.", icon: <IconAlert className="h-5 w-5" /> },
+  { to: "/sch/$sekolah/perpustakaan/anggota", label: "Anggota", description: "Kelola data anggota perpustakaan.", icon: <IconUsers className="h-5 w-5" /> },
+  { to: "/sch/$sekolah/perpustakaan/laporan", label: "Laporan", description: "Ringkasan sirkulasi & koleksi.", icon: <IconChart className="h-5 w-5" /> },
 ];
 
 const PINJAM_TONE: Record<string, "brand" | "success" | "warning" | "danger" | "neutral"> = {
@@ -487,7 +487,7 @@ function PerpustakaanDashboardPage() {
               className="group flex items-start gap-3 rounded-lg border border-border bg-card p-3 transition hover:border-brand hover:bg-muted/40"
             >
               <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-md bg-muted text-fg group-hover:text-brand">
-                <span className="h-5 w-5">{a.icon}</span>
+                {a.icon}
               </span>
               <div className="min-w-0">
                 <div className="font-medium text-fg">{a.label}</div>
@@ -558,7 +558,7 @@ function PerpustakaanDashboardPage() {
       <p className="text-xs text-muted-fg">
         Tip: buka{" "}
         <Link to="/sch/$sekolah/perpustakaan/daftar" params={{ sekolah }} className="text-brand hover:underline inline-flex items-center gap-1">
-          <span className="h-3 w-3"><IconArrowLeft /></span>
+          <IconArrowLeft className="h-3 w-3 shrink-0" />
           katalog buku lengkap
         </Link>
         {" "}untuk mencari atau menambahkan koleksi baru.

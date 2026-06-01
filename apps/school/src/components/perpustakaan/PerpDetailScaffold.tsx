@@ -68,7 +68,7 @@ export function PerpDetailScaffold(props: PerpDetailScaffoldProps) {
           description={errorMessage}
           action={
             <Link {...scopedLinkProps(sekolah, backTo)} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
-              <span className="h-4 w-4"><IconArrowLeft /></span>
+              <IconArrowLeft className="h-4 w-4 shrink-0" />
               {backLabel}
             </Link>
           }
@@ -98,7 +98,7 @@ export function PerpDetailScaffold(props: PerpDetailScaffoldProps) {
                 {status ? <Badge tone={status.tone} dot>{status.label}</Badge> : null}
                 {actions}
                 <Button variant="outline" onClick={() => navigate(scopedLinkProps(sekolah, backTo) as never)}>
-                  <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
+                  <IconArrowLeft className="mr-1.5 h-4 w-4 shrink-0" />
                   {backLabel}
                 </Button>
               </div>
