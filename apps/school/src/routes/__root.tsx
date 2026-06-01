@@ -28,6 +28,7 @@ import {
   IconBell,
   IconSearch,
   IconLogout,
+  IconLayers,
   SetupBanner,
 } from "@sekolahpro/ui";
 import { logout, useSession, useSessionStore } from "@sekolahpro/auth";
@@ -313,14 +314,17 @@ const ROLE_MENU_MAP: Record<string, string[]> = {
     "/akuntansi",
     "/laporan",
     "/pickup-verify",
+    "/aset",
     "/master",
     "/pengaturan",
   ],
-  operator: ["/", "/siswa", "/staff", "/kelas", "/jadwal", "/absensi", "/ppdb", "/pesan", "/pickup-verify"],
+  operator: ["/", "/siswa", "/staff", "/kelas", "/jadwal", "/absensi", "/ppdb", "/pesan", "/pickup-verify", "/aset"],
   guru: ["/", "/siswa", "/kelas", "/akademik", "/master", "/jadwal", "/absensi", "/pesan"],
   bendahara: ["/", "/siswa", "/keuangan", "/akuntansi", "/koperasi", "/ppdb", "/laporan", "/pesan"],
   pustakawan: ["/", "/perpustakaan", "/siswa", "/pesan"],
   petugas_koperasi: ["/", "/koperasi", "/siswa", "/pesan"],
+  manajer_aset: ["/", "/aset", "/siswa", "/pesan", "/laporan"],
+  petugas_aset: ["/", "/aset", "/siswa", "/pesan"],
 };
 
 function canSee(to: string, roles: string[]): boolean {
@@ -553,6 +557,7 @@ function Layout() {
       title: "Infrastruktur & Master",
       items: [
         mk("/infrastruktur", "Infrastruktur", <IconHome />),
+        mk("/aset", "Manajemen Aset", <IconLayers />),
         mk("/master", "Master Data", <IconSettings />),
       ],
     },
