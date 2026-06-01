@@ -1,3 +1,9 @@
+/**
+ * Reservasi detail + fulfillment. Reservation state changes are applied as a
+ * direct `status` patch (updateResource) — unlike the submittable Pengembalian
+ * workflow, `Reservasi Buku` is not a submittable doctype, so there is no
+ * insert→submit hook to run; the patch is the whole transition.
+ */
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@sekolahpro/ui";

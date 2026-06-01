@@ -11,6 +11,9 @@
  *  4) Audio feedback (Web Audio API): success beep, error buzz.
  *  5) Target latensi <500ms (NFR spec.html).
  *
+ * Sirkulasi (pinjam & kembali) ditulis lewat insert→submit agar on_submit
+ * jalan — sejalan dengan unifikasi sirkulasi PERP-ADR-0001 (lihat PERP-GAP-02).
+ *
  * Tidak ada hardware integration nyata di UI ini — diasumsikan
  * keyboard-wedge scanner (input keydown event seperti keyboard biasa).
  */

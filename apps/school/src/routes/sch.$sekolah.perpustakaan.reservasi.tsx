@@ -1,3 +1,7 @@
+/**
+ * Reservasi Buku: FIFO reservation queue per title, with create modal. Shows the
+ * queue position so staff can fulfill the next member when a copy is returned.
+ */
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, type Column } from "@sekolahpro/ui";

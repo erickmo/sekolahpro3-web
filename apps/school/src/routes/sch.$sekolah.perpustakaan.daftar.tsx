@@ -1,3 +1,8 @@
+/**
+ * Katalog Buku: searchable list of the `Buku` collection with a create modal.
+ * Rows route to the detail page by docname (PERP-GAP-01); per-copy stock lives
+ * on `Eksemplar Buku` and is shown on the detail page, not aggregated here.
+ */
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, type Column } from "@sekolahpro/ui";

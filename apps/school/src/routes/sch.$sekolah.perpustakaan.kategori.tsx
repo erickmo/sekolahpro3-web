@@ -1,3 +1,7 @@
+/**
+ * Kategori Buku: manage the collection categories used by the catalog filter and
+ * the dashboard "Koleksi per Kategori" chart.
+ */
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { type Column } from "@sekolahpro/ui";

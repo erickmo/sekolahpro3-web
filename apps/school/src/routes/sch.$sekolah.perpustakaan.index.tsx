@@ -1,3 +1,9 @@
+/**
+ * Perpustakaan dashboard (Beranda): role-framed overview for the circulation desk.
+ * Surfaces urgent counts (due today, overdue, denda) and pure-data visualizations
+ * (sirkulasi status, on-time health, kategori, 7-day trend) plus a needs-attention
+ * queue. All metrics derive from already-fetched lists — no extra backend calls.
+ */
 import { useMemo, type ReactNode } from "react";
 import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import {

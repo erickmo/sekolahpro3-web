@@ -153,6 +153,11 @@ const peminjamList = [
   "Andi Pratama", "Maya Sari", "Reza Maulana", "Nia Ramadhani", "Bagas Wicaksono",
 ];
 
+/**
+ * Deterministic pseudo-random in [0,1) from an integer seed (fractional part of
+ * sin(seed)*10000). WHY deterministic (not Math.random): demo fixtures must be
+ * stable across renders/reloads so the same book always shows the same numbers.
+ */
 function rand(seed: number) {
   const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);

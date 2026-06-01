@@ -1,3 +1,8 @@
+/**
+ * Perpustakaan module layout: sticky role-framed context bar + workflow-grouped
+ * sub-navigation (Operasi Harian first), rendering the active sub-route via Outlet.
+ * Sirkulasi (pinjam/kembali/denda) is unified under Peminjaman per PERP-ADR-0001.
+ */
 import { createFileRoute, Link, Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { IconBook } from "@sekolahpro/ui";
 import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";

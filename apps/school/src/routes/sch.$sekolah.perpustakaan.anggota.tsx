@@ -1,3 +1,7 @@
+/**
+ * Anggota Perpustakaan: searchable member list with tipe/status filters and a
+ * create modal. The member's `saldo_denda` and identity feed the circulation desk.
+ */
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { useState } from "react";
 import { Badge, type Column } from "@sekolahpro/ui";

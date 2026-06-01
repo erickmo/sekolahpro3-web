@@ -1,3 +1,7 @@
+/**
+ * Laporan Perpustakaan: period recap of circulation, collection, and denda for
+ * oversight. Real-time daily figures live on the Dashboard; this page is the rekap.
+ */
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, SectionCard, StatCard, IconBook, IconWallet, IconAlert, IconCheck } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
