@@ -6,16 +6,28 @@
  * kelengkapan dokumen. Filter status/jalur/jenjang + pencarian nama mempersempit
  * himpunan secara langsung.
  *
- * Sumber data: mock listPpdbForSekolah(sekolah) (shape Pendaftar) — diganti
- * dengan @sekolahpro/api-client ketika backend Calon Siswa siap.
+ * Sumber data: live useResourceList("Calon Siswa") + useDokumenLive untuk
+ * cincin kelengkapan dokumen. Jatuh ke mock listPpdbForSekolah(sekolah) ketika
+ * query live kosong, sehingga halaman tidak pernah kosong saat backend hampa.
  */
 
 import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { EmptyState, FilterBar, PageHeader, SectionCard } from "@sekolahpro/ui";
+import { useResourceList } from "@sekolahpro/api-client";
 import { PageGuide } from "../components/guide/PageGuide";
-import { CalonSiswaCard } from "../components/ppdb/calon-siswaPanel";
+import {
+  CalonSiswaCard,
+  calonSiswaToPendaftar,
+  type CalonSiswaLiveRow,
+} from "../components/ppdb/calon-siswaPanel";
+import { docCompletenessByPendaftaran, useDokumenLive } from "../lib/ppdbLive";
 import { listPpdbForSekolah, FILTER_OPTIONS, type Pendaftar } from "../data/ppdb";
+
+// Doctype + whitelisted fields untuk direktori live Calon Siswa.
+const DOCTYPE_CALON_SISWA = "Calon Siswa";
+const CALON_SISWA_FIELDS = ["name", "nama_lengkap", "nisn", "jenis_kelamin", "jenjang"];
+const LIST_LIMIT = 500;
 
 // Nilai sentinel "semua" pada dropdown filter (tidak menyaring apa pun).
 const ALL = "Semua";
@@ -103,8 +115,28 @@ export function CalonSiswaPage(): ReactNode {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const [filter, setFilter] = useState<FilterState>(INITIAL_FILTER);
 
-  // Sumber data mock di-scope ke sekolah aktif; memo agar stabil per render.
-  const all = useMemo(() => listPpdbForSekolah(sekolah), [sekolah]);
+  // Live: direktori Calon Siswa + dokumen untuk cincin kelengkapan.
+  const calonQ = useResourceList<CalonSiswaLiveRow>(DOCTYPE_CALON_SISWA, {
+    fields: CALON_SISWA_FIELDS,
+    limit_page_length: LIST_LIMIT,
+  });
+  const dokumenQ = useDokumenLive();
+
+  // Mock fallback di-scope ke sekolah aktif; tetap dihitung sebagai cadangan.
+  const fallback = useMemo(() => listPpdbForSekolah(sekolah), [sekolah]);
+
+  // Sumber utama: live Calon Siswa bila ada, jika kosong → mock fallback.
+  const all = useMemo<Pendaftar[]>(() => {
+    const live = calonQ.data ?? [];
+    return live.length ? live.map(calonSiswaToPendaftar) : fallback;
+  }, [calonQ.data, fallback]);
+
+  // Peta kelengkapan dokumen live, di-key per-pendaftaran (Calon Siswa.name).
+  const docMap = useMemo(
+    () => docCompletenessByPendaftaran(dokumenQ.data ?? []),
+    [dokumenQ.data],
+  );
+
   const visible = useMemo(() => applyFilter(all, filter), [all, filter]);
 
   /** Patch sebagian state filter sambil menjaga field lain tetap. */
@@ -169,6 +201,7 @@ export function CalonSiswaPage(): ReactNode {
             <CalonSiswaCard
               key={p.noPendaftaran}
               pendaftar={p}
+              docOverride={docMap[p.noPendaftaran]}
               renderDetailLink={(noPendaftaran, children) => (
                 <Link
                   to="/sch/$sekolah/ppdb/$noPendaftaran"
