@@ -1,6 +1,20 @@
 // PERP-GAP-08 | PERP-GAP-09 | PERP-GAP-16
 import { describe, it, expect } from "vitest";
-import { perpMonthRange, perpFormatDate } from "../perpFormatters";
+import { perpMonthRange, perpFormatDate, perpFormatRupiah } from "../perpFormatters";
+
+describe("perpFormatRupiah", () => {
+  it("formats a finite number in id-ID with an Rp prefix", () => {
+    expect(perpFormatRupiah(5000)).toBe("Rp 5.000");
+    expect(perpFormatRupiah(0)).toBe("Rp 0");
+  });
+
+  it("returns an em-dash for null/undefined/NaN/Infinity (PERP-GAP-24)", () => {
+    expect(perpFormatRupiah(undefined)).toBe("—");
+    expect(perpFormatRupiah(null)).toBe("—");
+    expect(perpFormatRupiah(NaN)).toBe("—");
+    expect(perpFormatRupiah(Infinity)).toBe("—");
+  });
+});
 
 describe("perpFormatDate", () => {
   it("returns an em-dash for empty input", () => {

@@ -1,7 +1,8 @@
 // Shared formatters for perpustakaan sub-routes (P2).
 
 export function perpFormatRupiah(value: number | undefined | null): string {
-  if (value === undefined || value === null || Number.isNaN(value)) return "—";
+  // Reject non-finite values (NaN AND ±Infinity) so a bad division never renders "∞".
+  if (value === undefined || value === null || !Number.isFinite(value)) return "—";
   return `Rp ${Number(value).toLocaleString("id-ID")}`;
 }
 

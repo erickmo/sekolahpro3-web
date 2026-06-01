@@ -20,8 +20,12 @@ import { listResource, useResourceCreate } from "@sekolahpro/api-client";
 
 // Year range for date pickers. Perpustakaan dates are transactional (loans,
 // returns, acquisitions) so a narrow recent range is enough for fast jumping.
-const MIN_YEAR = new Date().getFullYear() - 10;
-const MAX_YEAR = new Date().getFullYear() + 1;
+const YEAR_RANGE_BACK = 10;
+const YEAR_RANGE_FORWARD = 1;
+const MIN_YEAR = new Date().getFullYear() - YEAR_RANGE_BACK;
+const MAX_YEAR = new Date().getFullYear() + YEAR_RANGE_FORWARD;
+/** Page length for link-field option searches. */
+const LINK_SEARCH_LIMIT = 20;
 
 export type PerpFieldType = "text" | "number" | "date" | "select" | "textarea" | "link";
 
@@ -96,7 +100,7 @@ async function searchLink(
   const rows = await listResource<Record<string, unknown>>(doctype, {
     fields,
     ...(orFilters ? { or_filters: orFilters } : {}),
-    limit_page_length: 20,
+    limit_page_length: LINK_SEARCH_LIMIT,
     order_by: "modified desc",
   });
   return rows.map((r) => {

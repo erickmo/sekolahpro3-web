@@ -7,6 +7,14 @@
  * speaks to — they never hide anything from anyone.
  */
 import type { PageGuideStep } from "../guide";
+import type { PerpustakaanRole } from "../../lib/perpustakaanRole";
+
+/**
+ * Guide step whose role tags are constrained to the library role union, so a
+ * typo like `petgas` fails to compile instead of silently rendering no badge.
+ * Assignable to {@link PageGuideStep} since PerpustakaanRole[] ⊆ string[]. (PERP-GAP-24)
+ */
+export type PerpGuideStep = Omit<PageGuideStep, "roles"> & { roles?: PerpustakaanRole[] };
 
 /** Identifier for each guided Perpustakaan page. */
 export type PerpGuideId =
@@ -24,7 +32,7 @@ export type PerpGuideId =
 export interface PerpGuideContent {
   title: string;
   intro: string;
-  steps: PageGuideStep[];
+  steps: PerpGuideStep[];
   tips: string[];
 }
 

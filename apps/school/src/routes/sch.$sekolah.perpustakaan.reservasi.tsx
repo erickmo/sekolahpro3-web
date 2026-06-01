@@ -13,7 +13,6 @@ type Row = {
   posisi_antrian: number;
   status: string;
   tanggal_reservasi: string;
-  berlaku_sampai?: string;
 };
 
 const RESERVASI_TONE: Record<string, "brand" | "success" | "warning" | "neutral"> = {
