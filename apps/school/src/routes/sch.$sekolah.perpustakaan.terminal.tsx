@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, Button, IconBook, IconCheck, IconAlert } from "@sekolahpro/ui";
 import { listResource } from "@sekolahpro/api-client";
-import { insertAndSubmit } from "../components/perpustakaan/circulation";
+import { insertAndSubmit, determineScanAction } from "../components/perpustakaan/circulation";
 import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 type Mode = "idle" | "anggota_resolved" | "processing";
@@ -201,7 +201,8 @@ function TerminalPage() {
         or_filters: [["items.eksemplar", "=", ek.name]] as [string, string, unknown][],
         limit_page_length: 1,
       });
-      if (aktif.length > 0) {
+      const action = determineScanAction(ek.status, aktif.length > 0, STATUS_TERSEDIA);
+      if (action.kind === "return") {
         // insert→submit so on_submit runs (denda/eksemplar/reservasi). PERP-GAP-02
         await insertAndSubmit(DOCTYPE_PENGEMBALIAN, {
           peminjaman: aktif[0]!.name,
@@ -212,9 +213,9 @@ function TerminalPage() {
         pushLog("success", `Kembali ${ek.name} oleh ${anggota.name}`);
         return;
       }
-      if (ek.status && ek.status !== STATUS_TERSEDIA) {
-        flashEvent("error", `${ek.nomor_inventaris ?? ek.name} status ${ek.status}`);
-        pushLog("error", `Eksemplar ${ek.name} status ${ek.status}`);
+      if (action.kind === "unavailable") {
+        flashEvent("error", `${ek.nomor_inventaris ?? ek.name} status ${action.status}`);
+        pushLog("error", `Eksemplar ${ek.name} status ${action.status}`);
         return;
       }
       // Pinjam baru

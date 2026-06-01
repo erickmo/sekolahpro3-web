@@ -34,3 +34,29 @@ export async function insertAndSubmit<T extends { name: string }>(
     doc: { doctype, name: inserted.name },
   });
 }
+
+/** What a terminal scan of an existing eksemplar should do. */
+export type ScanAction =
+  | { kind: "return" }
+  | { kind: "unavailable"; status: string }
+  | { kind: "borrow" };
+
+/**
+ * Decide borrow vs return vs blocked for a scanned eksemplar already known to
+ * exist (PERP-GAP-23). Pure: the caller does the I/O, this only picks the action.
+ *
+ * @param eksemplarStatus the copy's current status
+ * @param hasActiveLoanByMember true if this member already has it on loan
+ * @param availableStatus the status that means "available to borrow"
+ */
+export function determineScanAction(
+  eksemplarStatus: string | undefined,
+  hasActiveLoanByMember: boolean,
+  availableStatus: string,
+): ScanAction {
+  if (hasActiveLoanByMember) return { kind: "return" };
+  if (eksemplarStatus && eksemplarStatus !== availableStatus) {
+    return { kind: "unavailable", status: eksemplarStatus };
+  }
+  return { kind: "borrow" };
+}

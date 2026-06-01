@@ -3,7 +3,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@sekolahpro/api-client", () => ({ frappeFetch: vi.fn() }));
 import { frappeFetch } from "@sekolahpro/api-client";
-import { insertAndSubmit } from "../circulation";
+import { insertAndSubmit, determineScanAction } from "../circulation";
+
+describe("determineScanAction (PERP-GAP-23)", () => {
+  it("returns 'return' when the member already has the copy on loan", () => {
+    expect(determineScanAction("Dipinjam", true, "Tersedia")).toEqual({ kind: "return" });
+  });
+  it("returns 'borrow' when available and not on loan", () => {
+    expect(determineScanAction("Tersedia", false, "Tersedia")).toEqual({ kind: "borrow" });
+  });
+  it("returns 'unavailable' with the status when not available and not on loan", () => {
+    expect(determineScanAction("Dipinjam", false, "Tersedia")).toEqual({ kind: "unavailable", status: "Dipinjam" });
+  });
+  it("treats undefined status as borrowable", () => {
+    expect(determineScanAction(undefined, false, "Tersedia")).toEqual({ kind: "borrow" });
+  });
+});
 
 describe("insertAndSubmit", () => {
   beforeEach(() => {
