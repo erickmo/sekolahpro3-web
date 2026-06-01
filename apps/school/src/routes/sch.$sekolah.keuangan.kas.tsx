@@ -2,7 +2,8 @@
  * Operasional › Buku Kas (daily cash book).
  *
  * Kasir/Bendahara reconcile daily cash flow. Adds a role guide, a closing-balance
- * trend line, and in/out KPIs over the existing ledger table. Mock-backed.
+ * trend line, and in/out KPIs over the existing ledger table. Live-backed: the daily
+ * cash book is derived from live payments + paid expenses.
  */
 import { useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -19,7 +20,8 @@ import {
 } from "@sekolahpro/ui";
 import { LineChart, StackedBarChart, type StackGroup, type Tone } from "../components/viz";
 import { KeuanganPageGuide } from "../components/keuangan";
-import { listKasForSekolah, formatRupiah, formatTanggal, type KasRow } from "../data/keuangan";
+import { formatRupiah, formatTanggal, type KasRow } from "../data/keuangan";
+import { useKasLive } from "../data/keuangan-live";
 
 const GUIDE_STEPS = [
   { title: "Catat kas harian", detail: "Setiap hari, saldo akhir = saldo awal + masuk - keluar. Sistem menghitung otomatis.", roles: ["kasir"] },
@@ -28,12 +30,12 @@ const GUIDE_STEPS = [
 ];
 
 function KasPage() {
-  const { sekolah } = Route.useParams();
-  const kasList = useMemo(() => listKasForSekolah(sekolah), [sekolah]);
+  const { rows: kasList, isLoading } = useKasLive();
 
   const totals = useMemo(() => {
     const masuk = kasList.reduce((s, k) => s + k.masuk, 0);
     const keluar = kasList.reduce((s, k) => s + k.keluar, 0);
+    // Rows are sorted ascending by date; closing balance is the last row's saldoAkhir.
     const last = kasList[kasList.length - 1];
     return { masuk, keluar, saldoAkhir: last?.saldoAkhir ?? 0, hari: kasList.length };
   }, [kasList]);
@@ -93,7 +95,7 @@ function KasPage() {
         </SectionCard>
       </div>
 
-      <SectionCard title={`Buku Kas Harian — ${kasList.length} entri`} padded={false}>
+      <SectionCard title={`Buku Kas Harian — ${isLoading ? "Memuat…" : `${kasList.length} entri`}`} padded={false}>
         <DataTable data={kasList} columns={cols} rowKey={(r) => r.tanggal} />
       </SectionCard>
     </div>

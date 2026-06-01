@@ -2,30 +2,46 @@
  * Operasional › Pembayaran (payment receipts).
  *
  * Kasir record incoming payments. Adds a role guide and a payment-method
- * composition donut over the existing table. Mock-backed (../data/keuangan).
+ * composition donut over the existing table. Wired to the live
+ * `School Fee Payment` doctype via usePembayaranLive (company-scoped), with a
+ * "Catat Pembayaran" create modal that submits each receipt to the GL.
  */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  Alert,
   Badge,
+  Button,
   type Column,
   DataTable,
   FilterBar,
+  FormField,
+  Input,
+  Modal,
   PageHeader,
   SectionCard,
+  Select,
   StatCard,
   type SelectFilter,
+  IconPlus,
 } from "@sekolahpro/ui";
 import { DonutChart, type ChartDatum, type Tone } from "../components/viz";
 import { KeuanganPageGuide } from "../components/keuangan";
 import {
-  listPembayaranForSekolah,
   FILTER_OPTIONS,
   formatRupiah,
   formatTanggal,
   type PembayaranRow,
   type MetodeBayar,
 } from "../data/keuangan";
+import { usePembayaranLive } from "../data/keuangan-live";
+import { useResourceCreate } from "@sekolahpro/api-client";
+import { useActiveCompany } from "../lib/akuntansi-scope";
+import { submitDoc } from "../data/akuntansi";
+
+const PAYMENT_DOCTYPE = "School Fee Payment";
+
+const METODE_OPTIONS: readonly MetodeBayar[] = ["Tunai", "Transfer", "QRIS", "Virtual Account", "EDC"];
 
 const METODE_TONE: Record<MetodeBayar, Tone> = {
   Tunai: "emerald",
@@ -46,12 +62,59 @@ function buildOptions(arr: readonly string[]) {
 }
 
 function PembayaranPage() {
-  const { sekolah } = Route.useParams();
   const [metode, setMetode] = useState("Semua");
   const [kelas, setKelas] = useState("Semua");
   const [search, setSearch] = useState("");
 
-  const scoped = useMemo(() => listPembayaranForSekolah(sekolah), [sekolah]);
+  const { rows: scoped, isLoading, refetch } = usePembayaranLive();
+
+  // Create modal state.
+  const company = useActiveCompany();
+  const create = useResourceCreate<{ name: string }>(PAYMENT_DOCTYPE);
+  const today = new Date().toISOString().slice(0, 10);
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [postingDate, setPostingDate] = useState(today);
+  const [student, setStudent] = useState("");
+  const [studentName, setStudentName] = useState("");
+  const [judul, setJudul] = useState("");
+  const [invoice, setInvoice] = useState("");
+  const [formMetode, setFormMetode] = useState<MetodeBayar>("Tunai");
+  const [jumlah, setJumlah] = useState(0);
+  const [ref, setRef] = useState("");
+  const [penerima, setPenerima] = useState("");
+  const [paidTo, setPaidTo] = useState("");
+  const [receivableAccount, setReceivableAccount] = useState("");
+
+  const canSave = Boolean(postingDate && company && student && jumlah > 0 && paidTo && receivableAccount);
+
+  const handleSave = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const doc = await create.mutateAsync({
+        posting_date: postingDate,
+        company,
+        student,
+        ...(studentName ? { student_name: studentName } : {}),
+        ...(judul ? { judul } : {}),
+        ...(invoice ? { invoice } : {}),
+        metode: formMetode,
+        jumlah,
+        ...(ref ? { ref } : {}),
+        ...(penerima ? { penerima } : {}),
+        paid_to: paidTo,
+        receivable_account: receivableAccount,
+      } as Record<string, unknown>);
+      await submitDoc(PAYMENT_DOCTYPE, doc.name); // submit so it posts to the GL
+      setOpen(false);
+      refetch();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal menyimpan.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -110,6 +173,12 @@ function PembayaranPage() {
         eyebrow="Operasional"
         title="Pembayaran"
         description="Catat dan telusuri penerimaan pembayaran siswa."
+        actions={
+          <Button onClick={() => setOpen(true)}>
+            <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
+            Catat Pembayaran
+          </Button>
+        }
       />
 
       <KeuanganPageGuide storageId="pembayaran" steps={GUIDE_STEPS} />
@@ -133,9 +202,59 @@ function PembayaranPage() {
         filters={filters}
       />
 
-      <SectionCard title={`${filtered.length} pembayaran`} padded={false}>
+      <SectionCard title={isLoading ? "Memuat…" : `${filtered.length} item`} padded={false}>
         <DataTable data={filtered} columns={cols} rowKey={(r) => r.id} />
       </SectionCard>
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Catat Pembayaran" tone="emerald" icon={<IconPlus />}>
+        <div className="space-y-3">
+          {err && <Alert tone="danger" title="Error">{err}</Alert>}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label="Tanggal" required>
+              <Input type="date" value={postingDate} onChange={(e) => setPostingDate(e.target.value)} />
+            </FormField>
+            <FormField label="Company" hint="Auto: company sekolah aktif">
+              <Input value={company} disabled />
+            </FormField>
+            <FormField label="Siswa (ID)" required>
+              <Input value={student} onChange={(e) => setStudent(e.target.value)} placeholder="ID siswa" />
+            </FormField>
+            <FormField label="Nama Siswa">
+              <Input value={studentName} onChange={(e) => setStudentName(e.target.value)} />
+            </FormField>
+            <FormField label="Judul">
+              <Input value={judul} onChange={(e) => setJudul(e.target.value)} placeholder="SPP, Daftar Ulang, dll" />
+            </FormField>
+            <FormField label="Tagihan (Invoice)">
+              <Input value={invoice} onChange={(e) => setInvoice(e.target.value)} placeholder="ID tagihan" />
+            </FormField>
+            <FormField label="Metode" required>
+              <Select value={formMetode} onChange={(e) => setFormMetode(e.target.value as MetodeBayar)}>
+                {METODE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+              </Select>
+            </FormField>
+            <FormField label="Jumlah (IDR)" required>
+              <Input type="number" value={jumlah || ""} onChange={(e) => setJumlah(Number(e.target.value) || 0)} />
+            </FormField>
+            <FormField label="Referensi">
+              <Input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="No. transaksi / bukti" />
+            </FormField>
+            <FormField label="Penerima">
+              <Input value={penerima} onChange={(e) => setPenerima(e.target.value)} />
+            </FormField>
+            <FormField label="Akun Kas/Bank (Paid To)" required>
+              <Input value={paidTo} onChange={(e) => setPaidTo(e.target.value)} placeholder="Kas / Bank account name" />
+            </FormField>
+            <FormField label="Akun Piutang (Receivable)" required>
+              <Input value={receivableAccount} onChange={(e) => setReceivableAccount(e.target.value)} placeholder="Receivable account" />
+            </FormField>
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
+            <Button onClick={handleSave} disabled={!canSave || busy}>{busy ? "Menyimpan…" : "Simpan"}</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

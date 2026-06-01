@@ -4,16 +4,24 @@
  * Bendahara record operational spending with an approval status. Adds a role
  * guide, expense-by-category donut, and approval KPIs.
  * Wired to the live `School Expense` doctype via usePengeluaranLive (company-scoped).
+ * Includes an "Ajukan Pengeluaran" create modal; the doc is only submitted to
+ * the GL when the chosen status is `Disetujui` or `Dibayar`.
  */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Badge,
+  Button,
   type Column,
   DataTable,
   FilterBar,
+  FormField,
+  FormGrid,
+  Input,
+  Modal,
   PageHeader,
   SectionCard,
+  Select,
   StatCard,
   type SelectFilter,
   IconCheck,
@@ -21,6 +29,7 @@ import {
   IconAlert,
   IconWallet,
 } from "@sekolahpro/ui";
+import { useResourceCreate } from "@sekolahpro/api-client";
 import { DonutChart, type ChartDatum, type Tone } from "../components/viz";
 import { KeuanganPageGuide } from "../components/keuangan";
 import {
@@ -32,6 +41,27 @@ import {
   type KategoriPengeluaran,
 } from "../data/keuangan";
 import { usePengeluaranLive } from "../data/keuangan-live";
+import { useActiveCompany } from "../lib/akuntansi-scope";
+import { submitDoc } from "../data/akuntansi";
+
+const DOCTYPE_EXPENSE = "School Expense";
+
+// Statuses for which the backend allows submit (posts to the GL).
+const SUBMITTABLE_STATUS: ReadonlySet<string> = new Set(["Disetujui", "Dibayar"]);
+
+const KATEGORI_OPTIONS = [
+  "Operasional",
+  "Gaji",
+  "Sarana Prasarana",
+  "Kegiatan",
+  "ATK",
+  "Utilitas",
+  "Lainnya",
+] as const;
+
+const METODE_OPTIONS = ["Tunai", "Transfer", "QRIS", "Virtual Account", "EDC"] as const;
+
+const STATUS_OPTIONS = ["Draft", "Approval", "Disetujui", "Ditolak", "Dibayar"] as const;
 
 const TONE_PENGELUARAN: Record<StatusPengeluaran, "success" | "warning" | "danger" | "brand" | "neutral"> = {
   Disetujui: "success",
@@ -61,13 +91,34 @@ function buildOptions(arr: readonly string[]) {
   return arr.map((v) => ({ value: v, label: v }));
 }
 
+// Today as an ISO yyyy-mm-dd string for the posting_date default.
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function PengeluaranPage() {
   const [kategori, setKategori] = useState("Semua");
   const [status, setStatus] = useState("Semua");
   const [metode, setMetode] = useState("Semua");
   const [search, setSearch] = useState("");
 
-  const { rows: scoped, isLoading } = usePengeluaranLive();
+  const { rows: scoped, isLoading, refetch } = usePengeluaranLive();
+  const company = useActiveCompany();
+  const create = useResourceCreate<{ name: string }>(DOCTYPE_EXPENSE);
+
+  // Create-modal state.
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [fPostingDate, setFPostingDate] = useState(todayIso());
+  const [fKategori, setFKategori] = useState<string>(KATEGORI_OPTIONS[0]);
+  const [fDeskripsi, setFDeskripsi] = useState("");
+  const [fJumlah, setFJumlah] = useState(0);
+  const [fPenerima, setFPenerima] = useState("");
+  const [fMetode, setFMetode] = useState<string>(METODE_OPTIONS[0]);
+  const [fExpenseAccount, setFExpenseAccount] = useState("");
+  const [fPaidFrom, setFPaidFrom] = useState("");
+  const [fStatus, setFStatus] = useState<string>("Draft");
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -98,6 +149,49 @@ function PengeluaranPage() {
 
   const totalBelanja = useMemo(() => filtered.reduce((s, p) => s + p.jumlah, 0), [filtered]);
 
+  const canSave = !!fDeskripsi.trim() && fJumlah > 0 && !!fExpenseAccount.trim() && !!fPaidFrom.trim();
+
+  const resetForm = () => {
+    setFPostingDate(todayIso());
+    setFKategori(KATEGORI_OPTIONS[0]);
+    setFDeskripsi("");
+    setFJumlah(0);
+    setFPenerima("");
+    setFMetode(METODE_OPTIONS[0]);
+    setFExpenseAccount("");
+    setFPaidFrom("");
+    setFStatus("Draft");
+    setErr(null);
+  };
+
+  const handleSave = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const doc = await create.mutateAsync({
+        posting_date: fPostingDate,
+        company,
+        kategori: fKategori,
+        deskripsi: fDeskripsi,
+        jumlah: fJumlah,
+        metode: fMetode,
+        expense_account: fExpenseAccount,
+        paid_from: fPaidFrom,
+        status: fStatus,
+        ...(fPenerima.trim() ? { penerima: fPenerima } : {}),
+      } as Record<string, unknown>);
+      // Backend only allows submit when status is Disetujui or Dibayar.
+      if (SUBMITTABLE_STATUS.has(fStatus)) await submitDoc(DOCTYPE_EXPENSE, doc.name);
+      setOpen(false);
+      resetForm();
+      refetch();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal menyimpan.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const filters: SelectFilter[] = [
     { key: "kategori", label: "Kategori", value: kategori, options: buildOptions(FILTER_OPTIONS.kategoriPengeluaran), onChange: setKategori },
     { key: "status", label: "Status", value: status, options: buildOptions(FILTER_OPTIONS.statusPengeluaran), onChange: setStatus },
@@ -122,6 +216,7 @@ function PengeluaranPage() {
         eyebrow="Operasional"
         title="Pengeluaran"
         description="Catat belanja operasional sekolah dan alur persetujuannya."
+        actions={<Button onClick={() => { resetForm(); setOpen(true); }}>Ajukan Pengeluaran</Button>}
       />
 
       <KeuanganPageGuide storageId="pengeluaran" steps={GUIDE_STEPS} />
@@ -148,6 +243,52 @@ function PengeluaranPage() {
       <SectionCard title={isLoading ? "Memuat pengeluaran…" : `${filtered.length} pengeluaran`} padded={false}>
         <DataTable data={filtered} columns={cols} rowKey={(r) => r.id} />
       </SectionCard>
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Ajukan Pengeluaran">
+        {err && <div className="mb-3 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{err}</div>}
+        <FormGrid cols={2}>
+          <FormField label="Tanggal" required>
+            <Input type="date" value={fPostingDate} onChange={(e) => setFPostingDate(e.target.value)} />
+          </FormField>
+          <FormField label="Company" hint="Auto: company sekolah aktif">
+            <Input value={company} disabled />
+          </FormField>
+          <FormField label="Kategori" required>
+            <Select value={fKategori} onChange={(e) => setFKategori(e.target.value)}>
+              {KATEGORI_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+            </Select>
+          </FormField>
+          <FormField label="Jumlah (IDR)" required>
+            <Input type="number" value={fJumlah || ""} onChange={(e) => setFJumlah(Number(e.target.value) || 0)} />
+          </FormField>
+          <FormField label="Penerima">
+            <Input value={fPenerima} onChange={(e) => setFPenerima(e.target.value)} />
+          </FormField>
+          <FormField label="Metode">
+            <Select value={fMetode} onChange={(e) => setFMetode(e.target.value)}>
+              {METODE_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+            </Select>
+          </FormField>
+          <FormField label="Expense Account" required>
+            <Input value={fExpenseAccount} onChange={(e) => setFExpenseAccount(e.target.value)} placeholder="Nama akun beban" />
+          </FormField>
+          <FormField label="Paid From (Account)" required>
+            <Input value={fPaidFrom} onChange={(e) => setFPaidFrom(e.target.value)} placeholder="Kas / Bank account name" />
+          </FormField>
+          <FormField label="Status">
+            <Select value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
+              {STATUS_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+            </Select>
+          </FormField>
+        </FormGrid>
+        <FormField label="Deskripsi" required className="mt-3">
+          <Input value={fDeskripsi} onChange={(e) => setFDeskripsi(e.target.value)} placeholder="Keterangan pengeluaran" />
+        </FormField>
+        <div className="flex justify-end gap-2 pt-3">
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
+          <Button onClick={handleSave} disabled={busy || !canSave}>{busy ? "Menyimpan…" : "Simpan"}</Button>
+        </div>
+      </Modal>
     </div>
   );
 }

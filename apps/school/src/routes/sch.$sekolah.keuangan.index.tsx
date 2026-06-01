@@ -3,8 +3,8 @@
  *
  * Role-aware (Bendahara / Kasir / Akuntan / Kepala), heavy on visualization:
  * cash trend, income-vs-expense, expense composition, collection gauge, cash
- * waterfall, and an overdue-bills attention list. Mock-backed until the
- * vernon_accounting keuangan doctypes land (see ../data/keuangan).
+ * waterfall, and an overdue-bills attention list. Backed by the live
+ * vernon_accounting keuangan doctypes via ../data/keuangan-live.
  */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -31,17 +31,24 @@ import {
 } from "../components/viz";
 import { KeuanganRoleChips, KeuanganPageGuide } from "../components/keuangan";
 import { useKeuanganRole, type KeuanganRole } from "../lib/keuanganRole";
+import { formatRupiah, type KategoriPengeluaran } from "../data/keuangan";
 import {
-  listTagihanForSekolah,
-  listPembayaranForSekolah,
-  listPengeluaranForSekolah,
-  listKasForSekolah,
-  RINGKASAN_BULAN,
-  formatRupiah,
-  type KategoriPengeluaran,
-} from "../data/keuangan";
+  useTagihanLive,
+  usePembayaranLive,
+  usePengeluaranLive,
+  useKasLive,
+  aggregateMonthly,
+} from "../data/keuangan-live";
 
-const CURRENT_MONTH_PREFIX = "2026-05";
+/** Current month as a yyyy-mm prefix, used to scope "bulan ini" KPIs. */
+function currentMonthPrefix(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+const CURRENT_MONTH_PREFIX = currentMonthPrefix();
 
 /** Tone palette for expense categories (stable, max 7). */
 const KATEGORI_TONE: Record<KategoriPengeluaran, Tone> = {
@@ -68,26 +75,27 @@ const GUIDE_TIPS = [
   "Angka pada kartu memakai data bulan berjalan; grafik tren memakai 12 bulan.",
 ];
 
-/** Build the 12-month cash trend (income vs expense) line series. */
-function useCashTrend() {
-  return useMemo(() => {
-    const masuk = RINGKASAN_BULAN.map((r) => r.pemasukan);
-    const keluar = RINGKASAN_BULAN.map((r) => r.pengeluaran);
-    const labels = RINGKASAN_BULAN.map((r) => r.bulan);
-    return { masuk, keluar, labels };
-  }, []);
-}
-
 function KeuanganDashboard() {
-  const { sekolah } = Route.useParams();
   const role = useKeuanganRole();
   const [activeRole, setActiveRole] = useState<KeuanganRole>(role.primary);
 
-  const tagihan = useMemo(() => listTagihanForSekolah(sekolah), [sekolah]);
-  const pembayaran = useMemo(() => listPembayaranForSekolah(sekolah), [sekolah]);
-  const pengeluaran = useMemo(() => listPengeluaranForSekolah(sekolah), [sekolah]);
-  const kas = useMemo(() => listKasForSekolah(sekolah), [sekolah]);
-  const trend = useCashTrend();
+  const { rows: tagihan } = useTagihanLive();
+  const { rows: pembayaran } = usePembayaranLive();
+  const { rows: pengeluaran } = usePengeluaranLive();
+  const { rows: kas } = useKasLive();
+
+  /** Monthly income/expense rollup from live rows (chronological). */
+  const ringkasan = useMemo(() => aggregateMonthly(pembayaran, pengeluaran), [pembayaran, pengeluaran]);
+
+  /** 12-month cash trend (income vs expense) line series. */
+  const trend = useMemo(() => {
+    const recent = ringkasan.slice(-12);
+    return {
+      masuk: recent.map((r) => r.pemasukan),
+      keluar: recent.map((r) => r.pengeluaran),
+      labels: recent.map((r) => r.bulan),
+    };
+  }, [ringkasan]);
 
   const stats = useMemo(() => {
     const last = kas[kas.length - 1];
@@ -119,14 +127,14 @@ function KeuanganDashboard() {
   /** Income vs expense stacked bars over the last 6 months. */
   const monthlyStacks = useMemo<StackGroup[]>(
     () =>
-      RINGKASAN_BULAN.slice(-6).map((r) => ({
+      ringkasan.slice(-6).map((r) => ({
         label: r.bulan,
         segments: [
           { value: r.pemasukan, tone: "emerald" as Tone },
           { value: r.pengeluaran, tone: "rose" as Tone },
         ],
       })),
-    [],
+    [ringkasan],
   );
 
   /** Top 6 overdue bills (HBar + attention list). */

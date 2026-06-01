@@ -4,7 +4,8 @@
  * Bendahara/Kasir issue & track SPP and other student bills. Adds a role-aware
  * guide, a status distribution bar, and KPI counters over the table.
  * Wired to the live `School Fee Invoice` doctype (vernon_accounting) via
- * useTagihanLive, scoped to the active company.
+ * useTagihanLive, scoped to the active company. The "Buat Tagihan" header
+ * action opens a create modal that posts a new invoice and submits it.
  */
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -14,8 +15,13 @@ import {
   type Column,
   DataTable,
   FilterBar,
+  FormField,
+  FormGrid,
+  Input,
+  Modal,
   PageHeader,
   SectionCard,
+  Select,
   StatCard,
   type SelectFilter,
   IconWallet,
@@ -24,6 +30,7 @@ import {
   IconClock,
   IconPlus,
 } from "@sekolahpro/ui";
+import { useResourceCreate } from "@sekolahpro/api-client";
 import { DistributionBar, type DistributionSegment } from "../components/viz";
 import { KeuanganPageGuide } from "../components/keuangan";
 import {
@@ -34,6 +41,8 @@ import {
   type StatusTagihan,
 } from "../data/keuangan";
 import { useTagihanLive } from "../data/keuangan-live";
+import { useActiveCompany } from "../lib/akuntansi-scope";
+import { submitDoc } from "../data/akuntansi";
 
 const TONE_TAGIHAN: Record<StatusTagihan, "success" | "warning" | "danger" | "brand" | "neutral"> = {
   Lunas: "success",
@@ -45,6 +54,8 @@ const TONE_TAGIHAN: Record<StatusTagihan, "success" | "warning" | "danger" | "br
   Dibatalkan: "neutral",
 };
 
+const FEE_INVOICE_DOCTYPE = "School Fee Invoice";
+
 const GUIDE_STEPS = [
   { title: "Terbitkan tagihan", detail: "Klik 'Buat Tagihan' untuk SPP atau biaya lain. Tagihan terkirim ke wali murid.", roles: ["bendahara"] },
   { title: "Pantau status", detail: "Gunakan filter status untuk melihat yang Jatuh Tempo atau Tertunda lebih dulu.", roles: ["bendahara", "kasir"] },
@@ -55,20 +66,47 @@ function buildOptions(arr: readonly string[]) {
   return arr.map((v) => ({ value: v, label: v }));
 }
 
+/** Today's date as an ISO yyyy-mm-dd string. */
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function TagihanPage() {
   const [status, setStatus] = useState("Semua");
+  const [kelas, setKelas] = useState("Semua");
+  const [tahunAjaran, setTahunAjaran] = useState("Semua");
   const [search, setSearch] = useState("");
 
-  const { rows: scoped, isLoading } = useTagihanLive();
+  const { rows: scoped, isLoading, refetch } = useTagihanLive();
+  const company = useActiveCompany();
+  const create = useResourceCreate<{ name: string }>(FEE_INVOICE_DOCTYPE);
+
+  // Create-modal state (mirrors akuntansi create pattern).
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [postingDate, setPostingDate] = useState(todayIso());
+  const [dueDate, setDueDate] = useState("");
+  const [student, setStudent] = useState("");
+  const [studentName, setStudentName] = useState("");
+  const [formKelas, setFormKelas] = useState("");
+  const [judul, setJudul] = useState("");
+  const [formTahunAjaran, setFormTahunAjaran] = useState("");
+  const [jumlah, setJumlah] = useState("");
+  const [dibayar, setDibayar] = useState("0");
+  const [receivableAccount, setReceivableAccount] = useState("");
+  const [incomeAccount, setIncomeAccount] = useState("");
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return scoped.filter((t) => {
       if (q && !`${t.siswa} ${t.judul} ${t.id}`.toLowerCase().includes(q)) return false;
       if (status !== "Semua" && t.status !== status) return false;
+      if (kelas !== "Semua" && t.kelas !== kelas) return false;
+      if (tahunAjaran !== "Semua" && t.tahunAjaran !== tahunAjaran) return false;
       return true;
     });
-  }, [scoped, search, status]);
+  }, [scoped, search, status, kelas, tahunAjaran]);
 
   const counts = useMemo(() => {
     const c = { Lunas: 0, Tertunda: 0, "Jatuh Tempo": 0, Cicilan: 0 } as Record<string, number>;
@@ -90,6 +128,8 @@ function TagihanPage() {
 
   const filters: SelectFilter[] = [
     { key: "status", label: "Status", value: status, options: buildOptions(FILTER_OPTIONS.statusTagihan), onChange: setStatus },
+    { key: "kelas", label: "Kelas", value: kelas, options: buildOptions(FILTER_OPTIONS.kelas), onChange: setKelas },
+    { key: "tahunAjaran", label: "Tahun Ajaran", value: tahunAjaran, options: buildOptions(FILTER_OPTIONS.tahunAjaran), onChange: setTahunAjaran },
   ];
 
   const cols: Column<TagihanRow>[] = [
@@ -120,6 +160,37 @@ function TagihanPage() {
     { key: "status", header: "Status", cell: (r) => <Badge tone={TONE_TAGIHAN[r.status]} dot>{r.status}</Badge> },
   ];
 
+  // Persist a new invoice and submit it so it posts to the GL, then refresh.
+  const handleSave = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const doc = await create.mutateAsync({
+        posting_date: postingDate,
+        ...(dueDate ? { due_date: dueDate } : {}),
+        company,
+        student,
+        ...(studentName ? { student_name: studentName } : {}),
+        ...(formKelas ? { kelas: formKelas } : {}),
+        judul,
+        ...(formTahunAjaran ? { tahun_ajaran: formTahunAjaran } : {}),
+        jumlah: Number(jumlah) || 0,
+        dibayar: Number(dibayar) || 0,
+        receivable_account: receivableAccount,
+        income_account: incomeAccount,
+      } as Record<string, unknown>);
+      await submitDoc(FEE_INVOICE_DOCTYPE, doc.name);
+      setOpen(false);
+      refetch();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal menyimpan.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const canSave = !busy && Boolean(student && judul && jumlah && receivableAccount && incomeAccount);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -127,7 +198,7 @@ function TagihanPage() {
         title="Tagihan Siswa"
         description="Terbitkan dan pantau SPP serta biaya siswa."
         actions={
-          <Button>
+          <Button onClick={() => setOpen(true)}>
             <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
             Buat Tagihan
           </Button>
@@ -155,6 +226,59 @@ function TagihanPage() {
       <SectionCard title={isLoading ? "Memuat tagihan…" : `${filtered.length} tagihan`} padded={false}>
         <DataTable data={filtered} columns={cols} rowKey={(r) => r.id} />
       </SectionCard>
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Buat Tagihan">
+        <FormGrid cols={2}>
+          <FormField label="Tanggal" required>
+            <Input type="date" value={postingDate} onChange={(e) => setPostingDate(e.target.value)} />
+          </FormField>
+          <FormField label="Jatuh Tempo">
+            <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </FormField>
+          <FormField label="Siswa" required>
+            <Input value={student} onChange={(e) => setStudent(e.target.value)} placeholder="ID Siswa" />
+          </FormField>
+          <FormField label="Nama Siswa">
+            <Input value={studentName} onChange={(e) => setStudentName(e.target.value)} />
+          </FormField>
+          <FormField label="Kelas">
+            <Select value={formKelas} onChange={(e) => setFormKelas(e.target.value)}>
+              <option value="">—</option>
+              {FILTER_OPTIONS.kelas.filter((k) => k !== "Semua").map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Tahun Ajaran">
+            <Select value={formTahunAjaran} onChange={(e) => setFormTahunAjaran(e.target.value)}>
+              <option value="">—</option>
+              {FILTER_OPTIONS.tahunAjaran.filter((t) => t !== "Semua").map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Judul" required className="sm:col-span-2">
+            <Input value={judul} onChange={(e) => setJudul(e.target.value)} placeholder="mis. SPP Bulanan" />
+          </FormField>
+          <FormField label="Jumlah" required>
+            <Input type="number" value={jumlah} onChange={(e) => setJumlah(e.target.value)} placeholder="0" />
+          </FormField>
+          <FormField label="Dibayar">
+            <Input type="number" value={dibayar} onChange={(e) => setDibayar(e.target.value)} placeholder="0" />
+          </FormField>
+          <FormField label="Receivable Account" required>
+            <Input value={receivableAccount} onChange={(e) => setReceivableAccount(e.target.value)} placeholder="mis. Piutang Usaha" />
+          </FormField>
+          <FormField label="Income Account" required>
+            <Input value={incomeAccount} onChange={(e) => setIncomeAccount(e.target.value)} placeholder="mis. Pendapatan SPP" />
+          </FormField>
+        </FormGrid>
+        {err && <p className="pt-3 text-xs text-rose-600">{err}</p>}
+        <div className="flex justify-end gap-2 pt-3">
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
+          <Button onClick={handleSave} disabled={!canSave}>{busy ? "Menyimpan…" : "Simpan"}</Button>
+        </div>
+      </Modal>
     </div>
   );
 }
