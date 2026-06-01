@@ -52,6 +52,17 @@ const SUCCESS_BEEP_MS = 120;
 const ERROR_BEEP_HZ = 220;
 const ERROR_BEEP_MS = 250;
 
+/** Frappe doctypes touched by the terminal. */
+const DOCTYPE_KARTU = "Koperasi Kartu";
+const DOCTYPE_ANGGOTA = "Anggota Perpustakaan";
+const DOCTYPE_EKSEMPLAR = "Eksemplar Buku";
+const DOCTYPE_PEMINJAMAN = "Peminjaman Buku";
+const DOCTYPE_PENGEMBALIAN = "Pengembalian Buku";
+/** terminal_id field value stamped on records created from this kiosk. */
+const TERMINAL_ID = "RFID-TERM";
+const STATUS_AKTIF = "Aktif";
+const STATUS_TERSEDIA = "Tersedia";
+
 function beep(freq: number, ms: number) {
   try {
     const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
@@ -105,7 +116,7 @@ function TerminalPage() {
 
   const resolveAnggotaFromKartu = async (rfid: string): Promise<Anggota | null> => {
     // Cari kartu Koperasi → ambil anggota → cari Anggota Perpustakaan via siswa.
-    const kartu = await listResource<{ name: string; siswa?: string; anggota?: string }>("Koperasi Kartu", {
+    const kartu = await listResource<{ name: string; siswa?: string; anggota?: string }>(DOCTYPE_KARTU, {
       fields: ["name", "siswa", "anggota"],
       or_filters: [["name", "=", rfid], ["nomor_kartu", "=", rfid]] as [string, string, unknown][],
       limit_page_length: 1,
@@ -114,7 +125,7 @@ function TerminalPage() {
     if (!k) return null;
     const linkField = k.siswa ?? k.anggota;
     if (!linkField) return null;
-    const ap = await listResource<Anggota>("Anggota Perpustakaan", {
+    const ap = await listResource<Anggota>(DOCTYPE_ANGGOTA, {
       fields: ["name", "nama_lengkap", "tipe_anggota", "status", "jumlah_pinjam_aktif"],
       filters: { siswa: linkField } as Record<string, unknown>,
       limit_page_length: 1,
@@ -123,7 +134,7 @@ function TerminalPage() {
   };
 
   const resolveAnggotaDirect = async (code: string): Promise<Anggota | null> => {
-    const rows = await listResource<Anggota>("Anggota Perpustakaan", {
+    const rows = await listResource<Anggota>(DOCTYPE_ANGGOTA, {
       fields: ["name", "nama_lengkap", "tipe_anggota", "status", "jumlah_pinjam_aktif"],
       or_filters: [["name", "=", code], ["nomor_anggota", "=", code]] as [string, string, unknown][],
       limit_page_length: 1,
@@ -167,7 +178,7 @@ function TerminalPage() {
     setMode("processing");
     try {
       const rows = await listResource<{ name: string; status?: string; buku?: string; nomor_inventaris?: string }>(
-        "Eksemplar Buku",
+        DOCTYPE_EKSEMPLAR,
         {
           fields: ["name", "status", "buku", "nomor_inventaris"],
           or_filters: [["name", "=", code], ["nomor_inventaris", "=", code]] as [string, string, unknown][],
@@ -181,24 +192,24 @@ function TerminalPage() {
         return;
       }
       // Cek apakah eksemplar ini sedang dipinjam oleh anggota ini → return flow
-      const aktif = await listResource<{ name: string; anggota: string }>("Peminjaman Buku", {
+      const aktif = await listResource<{ name: string; anggota: string }>(DOCTYPE_PEMINJAMAN, {
         fields: ["name", "anggota"],
-        filters: { status: "Aktif", anggota: anggota.name } as Record<string, unknown>,
+        filters: { status: STATUS_AKTIF, anggota: anggota.name } as Record<string, unknown>,
         or_filters: [["items.eksemplar", "=", ek.name]] as [string, string, unknown][],
         limit_page_length: 1,
       });
       if (aktif.length > 0) {
         // insert→submit so on_submit runs (denda/eksemplar/reservasi). PERP-GAP-02
-        await insertAndSubmit("Pengembalian Buku", {
+        await insertAndSubmit(DOCTYPE_PENGEMBALIAN, {
           peminjaman: aktif[0]!.name,
           tanggal_kembali_aktual: new Date().toISOString().slice(0, 10),
-          terminal_id: "RFID-TERM",
+          terminal_id: TERMINAL_ID,
         });
         flashEvent("success", `Kembali: ${ek.nomor_inventaris ?? ek.name}`);
         pushLog("success", `Kembali ${ek.name} oleh ${anggota.name}`);
         return;
       }
-      if (ek.status && ek.status !== "Tersedia") {
+      if (ek.status && ek.status !== STATUS_TERSEDIA) {
         flashEvent("error", `${ek.nomor_inventaris ?? ek.name} status ${ek.status}`);
         pushLog("error", `Eksemplar ${ek.name} status ${ek.status}`);
         return;
@@ -208,12 +219,12 @@ function TerminalPage() {
       const due = new Date(today);
       due.setDate(due.getDate() + LOAN_PERIOD_DAYS);
       // insert→submit so the loan's on_submit checkout side-effects run. PERP-GAP-02
-      await insertAndSubmit("Peminjaman Buku", {
+      await insertAndSubmit(DOCTYPE_PEMINJAMAN, {
         anggota: anggota.name,
         tanggal_pinjam: today.toISOString().slice(0, 10),
         tanggal_kembali_rencana: due.toISOString().slice(0, 10),
-        status: "Aktif",
-        terminal_id: "RFID-TERM",
+        status: STATUS_AKTIF,
+        terminal_id: TERMINAL_ID,
         items: [{ eksemplar: ek.name, nomor_inventaris: ek.nomor_inventaris ?? "", judul_buku: ek.buku ?? "" }],
       });
       flashEvent("success", `Pinjam: ${ek.nomor_inventaris ?? ek.name}`);

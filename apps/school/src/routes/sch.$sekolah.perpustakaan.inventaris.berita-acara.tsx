@@ -30,6 +30,10 @@ const JENIS_TONE: Record<string, "warning" | "danger" | "neutral"> = {
   "Hilang": "danger",
 };
 
+/** Frappe docstatus → label/tone, mirroring the Record-map pattern above. */
+const DOCSTATUS_LABEL: Record<number, string> = { 0: "Draft", 1: "Approved", 2: "Batal" };
+const DOCSTATUS_TONE: Record<number, "neutral" | "success" | "warning"> = { 0: "neutral", 1: "success", 2: "warning" };
+
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "No. BA", sortable: true,
     cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
@@ -46,9 +50,7 @@ const COLUMNS: Column<Row>[] = [
   { key: "docstatus", header: "Status",
     cell: (r) => {
       const ds = r.docstatus ?? 0;
-      const label = ds === 1 ? "Approved" : ds === 2 ? "Batal" : "Draft";
-      const tone = ds === 1 ? "success" : ds === 2 ? "warning" : "neutral";
-      return <Badge tone={tone} dot>{label}</Badge>;
+      return <Badge tone={DOCSTATUS_TONE[ds] ?? "neutral"} dot>{DOCSTATUS_LABEL[ds] ?? "Draft"}</Badge>;
     } },
 ];
 
