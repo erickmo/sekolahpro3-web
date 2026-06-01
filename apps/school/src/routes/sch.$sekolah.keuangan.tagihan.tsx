@@ -24,13 +24,14 @@ import {
   Select,
   StatCard,
   type SelectFilter,
+  InfoField,
   IconWallet,
   IconCheck,
   IconAlert,
   IconClock,
   IconPlus,
 } from "@sekolahpro/ui";
-import { useResourceCreate } from "@sekolahpro/api-client";
+import { useResourceCreate, useResourceDoc } from "@sekolahpro/api-client";
 import { DistributionBar, type DistributionSegment } from "../components/viz";
 import { KeuanganPageGuide } from "../components/keuangan";
 import {
@@ -42,7 +43,7 @@ import {
 } from "../data/keuangan";
 import { useTagihanLive } from "../data/keuangan-live";
 import { useActiveCompany } from "../lib/akuntansi-scope";
-import { submitDoc } from "../data/akuntansi";
+import { submitDoc, cancelDoc, docstatusBadge } from "../data/akuntansi";
 
 const TONE_TAGIHAN: Record<StatusTagihan, "success" | "warning" | "danger" | "brand" | "neutral"> = {
   Lunas: "success",
@@ -96,6 +97,36 @@ function TagihanPage() {
   const [dibayar, setDibayar] = useState("0");
   const [receivableAccount, setReceivableAccount] = useState("");
   const [incomeAccount, setIncomeAccount] = useState("");
+
+  // Detail/cancel-modal state: open a row's invoice, then Submit or Batalkan it.
+  const [detailId, setDetailId] = useState<string | undefined>(undefined);
+  const [busy2, setBusy2] = useState(false);
+  const detail = useResourceDoc<Record<string, unknown>>(FEE_INVOICE_DOCTYPE, detailId);
+  const doc = detail.data;
+  const docstatus = typeof doc?.docstatus === "number" ? doc.docstatus : 0;
+  const docBadge = docstatusBadge(docstatus === 1 ? 1 : docstatus === 2 ? 2 : 0);
+
+  // Run a submit/cancel action against the open invoice, then refresh & close.
+  const act = async (fn: (dt: string, name: string) => Promise<unknown>) => {
+    if (!detailId) return;
+    setBusy2(true);
+    try {
+      await fn(FEE_INVOICE_DOCTYPE, detailId);
+      refetch();
+      setDetailId(undefined);
+    } finally {
+      setBusy2(false);
+    }
+  };
+
+  // Coerce an unknown doc field to a display string for the InfoField rows.
+  const fieldText = (key: string): string => {
+    const v = doc?.[key];
+    if (v === null || v === undefined || v === "") return "—";
+    if (typeof v === "number") return String(v);
+    if (typeof v === "string") return v;
+    return String(v);
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -158,6 +189,14 @@ function TagihanPage() {
       },
     },
     { key: "status", header: "Status", cell: (r) => <Badge tone={TONE_TAGIHAN[r.status]} dot>{r.status}</Badge> },
+    {
+      key: "aksi",
+      header: "",
+      align: "right",
+      cell: (r) => (
+        <Button variant="ghost" onClick={() => setDetailId(r.id)}>Detail</Button>
+      ),
+    },
   ];
 
   // Persist a new invoice and submit it so it posts to the GL, then refresh.
@@ -278,6 +317,41 @@ function TagihanPage() {
           <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
           <Button onClick={handleSave} disabled={!canSave}>{busy ? "Menyimpan…" : "Simpan"}</Button>
         </div>
+      </Modal>
+
+      <Modal open={!!detailId} onClose={() => setDetailId(undefined)} title="Detail Tagihan">
+        {detail.isLoading ? (
+          <p className="text-sm text-muted-fg">Memuat…</p>
+        ) : doc ? (
+          <div className="space-y-4">
+            <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              <InfoField label="Nama Siswa" value={fieldText("student_name")} />
+              <InfoField
+                label="Status"
+                value={<Badge tone={docBadge.tone} dot>{fieldText("status")}</Badge>}
+              />
+              <InfoField label="Judul" value={fieldText("judul")} className="sm:col-span-2" />
+              <InfoField label="Jumlah" value={formatRupiah(Number(doc.jumlah) || 0)} />
+              <InfoField label="Dibayar" value={formatRupiah(Number(doc.dibayar) || 0)} />
+              <InfoField label="Tanggal" value={formatTanggal(fieldText("posting_date"))} />
+              <InfoField label="Jatuh Tempo" value={formatTanggal(fieldText("due_date"))} />
+            </div>
+            <div className="flex gap-2 pt-2">
+              {docstatus === 0 ? (
+                <Button onClick={() => act(submitDoc)} disabled={busy2}>
+                  {busy2 ? "Memproses…" : "Submit"}
+                </Button>
+              ) : null}
+              {docstatus === 1 ? (
+                <Button variant="destructive" onClick={() => act(cancelDoc)} disabled={busy2}>
+                  {busy2 ? "Memproses…" : "Batalkan"}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-fg">Tidak ditemukan.</p>
+        )}
       </Modal>
     </div>
   );
