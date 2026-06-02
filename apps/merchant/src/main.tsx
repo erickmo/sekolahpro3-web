@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { configure, createQueryClient } from "@sekolahpro/api-client";
 import { parseEnv } from "@sekolahpro/config";
+import { AdsProvider } from "@sekolahpro/ads";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
@@ -51,7 +52,9 @@ async function bootstrap() {
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
       <QueryClientProvider client={qc}>
-        <RouterProvider router={router} />
+        <AdsProvider baseUrl={env.VITE_ADS_BASE ?? ""} propertyKey={env.VITE_ADS_PROPERTY_KEY ?? ""}>
+          <RouterProvider router={router} />
+        </AdsProvider>
       </QueryClientProvider>
     </StrictMode>,
   );

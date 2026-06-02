@@ -11,6 +11,7 @@ import { useMerchantContext } from "../lib/merchant-session";
 import { useConnectivity } from "../lib/connectivity";
 import { tapPay } from "../lib/tap-pay";
 import { chargeErrorMessage } from "../lib/error-codes";
+import { AdBanner } from "@sekolahpro/ads";
 
 function pingFn() {
   return fetch("/api/method/ping")
@@ -91,6 +92,7 @@ function PosPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto">
+        <AdBanner slot="merchant-dashboard-top" className="mb-4 w-full" />
         {catalog.data && (
           <CatalogGrid
             items={catalog.data}

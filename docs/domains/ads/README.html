@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Domain: Ads Manager — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Ads Manager</h1>
+  <p class="muted">Platform banner-ads: dikelola dari aplikasi SaaS admin, ditayangkan di semua aplikasi SekolahPro lain. Setiap aplikasi konsumen = satu <em>Property</em> yang dilacak (impression &amp; klik).</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend</strong>: app Frappe <code>vernon_ads</code> (repo terpisah), di-install di site <code>sekolahpro.localhost</code>. 7 doctype + API guest <code>get_ad</code>/<code>track</code>/<code>click</code> + endpoint admin <code>stats.overview</code>.</li>
+    <li><strong>Paket bersama</strong>: <code>@sekolahpro/ads</code> — <code>&lt;AdsProvider baseUrl propertyKey&gt;</code> + <code>&lt;AdBanner slot&gt;</code> + <code>useAd</code> + client (<code>fetchAd</code>/<code>trackImpression</code>/<code>resolveClick</code>).</li>
+    <li><strong>Admin</strong>: modul <code>/ads/*</code> di <code>apps/saas</code> — dashboard analitik + CRUD (customer, group, property, slot, campaign, creative) lewat Frappe resource API. Gate role <code>SekolahPro Admin</code>.</li>
+    <li><strong>Konsumen</strong>: 6 app (school, parent, student, merchant, landing, situs) dibungkus <code>&lt;AdsProvider&gt;</code> + memasang <code>&lt;AdBanner&gt;</code> di slot bernama.</li>
+  </ul>
+
+  <h2>Doctypes</h2>
+  <table>
+    <tr><th>Doctype</th><th>Peran</th><th>Field kunci</th></tr>
+    <tr><td>Property</td><td>Satu aplikasi/situs penayang</td><td><code>property_name</code> (PK), <code>status</code>, <code>platform</code>, <code>property_group</code>, <code>url</code>, <code>api_key</code> (auto <code>secrets.token_hex</code>, read-only)</td></tr>
+    <tr><td>Property Group</td><td>Kelompok property yang ditarget campaign</td><td>nama (autoname <code>prompt</code>), <code>description</code></td></tr>
+    <tr><td>Ad Slot</td><td>Titik tayang banner dalam sebuah property</td><td><code>slot_key</code> (PK, di-slugify saat insert), <code>property</code>, <code>ad_type</code>, <code>width</code>, <code>height</code></td></tr>
+    <tr><td>Campaign</td><td>Kampanye terjadwal per property group</td><td><code>campaign_name</code> (PK), <code>status</code>, <code>customer</code>, <code>property_group</code>, <code>start_date</code>/<code>end_date</code>, <code>pricing_model</code>, <code>budget</code></td></tr>
+    <tr><td>Ad Creative</td><td>Materi banner</td><td><code>creative_name</code> (PK), <code>campaign</code>, <code>ad_type</code>, <code>status</code>, <code>title</code>, <code>destination_url</code>, <code>image</code>, <code>width</code>/<code>height</code></td></tr>
+    <tr><td>Ad Event</td><td>Catatan impression/klik</td><td><code>ad_creative</code>, <code>ad_slot</code>, <code>event_type</code>, <code>timestamp</code> (auto), <code>ip_address</code>, <code>user_agent</code>, <code>utm_*</code></td></tr>
+    <tr><td>Ads Customer</td><td>Pengiklan</td><td><code>customer_name</code> (PK), <code>status</code>, <code>email</code>, <code>company</code></td></tr>
+  </table>
+
+  <h2>Alur penayangan</h2>
+  <ol>
+    <li><code>&lt;AdBanner slot="school-dashboard-top"&gt;</code> mount → <code>GET get_ad?slot&amp;property_key</code>.</li>
+    <li>Backend <code>select_creative</code>: Property(api_key, Active) → Ad Slot(slot_key, property) → Campaign aktif (property_group, tanggal) → Ad Creative cocok (ad_type, ukuran, Active) → pilih acak. Balikan: creative + token HMAC + url track/klik.</li>
+    <li>Banner tampil. Saat ≥50% terlihat → <code>POST track {token}</code> (Impression, sekali).</li>
+    <li>Klik → <code>GET click?token</code> → catat Click → <code>window.open(redirect)</code>.</li>
+  </ol>
+
+  <h2>Endpoint analitik</h2>
+  <p><code>vernon_ads.api.stats.overview(from_date, to_date)</code> (whitelist, perlu sesi) — total impression/klik, breakdown per campaign &amp; per property, dan deret harian. CTR dihitung di sisi klien. Default 30 hari terakhir.</p>
+
+  <h2>Slot bawaan (seed)</h2>
+  <p><code>after_install</code> men-seed 1 Property Group (<code>SekolahPro Apps</code>) + 6 Property (satu per app, <code>api_key</code> auto) + 3 slot per property: <code>&lt;app&gt;-dashboard-top</code> (728×90), <code>&lt;app&gt;-sidebar</code> (300×250), <code>&lt;app&gt;-content-bottom</code> (728×90). Key memakai tanda hubung (slug-safe).</p>
+
+  <h2>Konfigurasi konsumen (env)</h2>
+  <p>Tiap app set <code>VITE_ADS_PROPERTY_KEY</code> = <code>api_key</code> Property-nya. <code>VITE_ADS_BASE</code> kosong untuk app same-origin (school/parent/student/merchant, lewat proxy) dan <code>http://sekolahpro.localhost</code> untuk app cross-origin (landing/situs, perlu CORS). Provider no-op bila key kosong.</p>
+
+  <h2>Keamanan</h2>
+  <ul>
+    <li>Token HMAC bertanda (TTL 24 jam) menggerbang track/klik — creative ID tak bisa dipalsukan. Secret di <code>site_config.vernon_ads_token_secret</code>.</li>
+    <li><code>api_key</code> = read-key publik (serve guest), aman ditaruh di env app.</li>
+    <li>CORS dibatasi ke origin landing/situs, bukan <code>*</code>.</li>
+    <li><code>body_html</code> tidak dirender di FE ronde ini (banner gambar saja) → tanpa permukaan XSS.</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  <h3>Triggers (memicu)</h3>
+  <p class="muted">Tidak ada. Domain ini self-contained — tidak memancarkan event ke domain lain.</p>
+  <h3>Listens (bereaksi)</h3>
+  <p class="muted">Tidak ada. Tidak mendengarkan event domain lain.</p>
+
+  <h2>Batas ruang lingkup (YAGNI)</h2>
+  <ul>
+    <li>Hanya banner gambar (ad_type Banner). Video/Native/Interstitial ditunda.</li>
+    <li>Tanpa budget pacing / billing otomatis, tanpa frequency capping / geo-targeting (seleksi acak).</li>
+  </ul>
+</body>
+</html>

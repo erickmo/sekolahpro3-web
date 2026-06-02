@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { AdBanner } from "@sekolahpro/ads";
 import { useHomepageContent, type HomepageContent } from "../lib/homepage";
 import { useSiteContent } from "../lib/site";
 
@@ -13,6 +14,9 @@ export function Home() {
       <StatsSection c={c} />
       <TestimonialSection c={c} />
       <ProcessSection c={c} />
+      <div className="mx-auto max-w-5xl px-4 py-8 flex justify-center">
+        <AdBanner slot="landing-content-bottom" />
+      </div>
       <FinalCTASection c={c} />
     </>
   );

@@ -8,6 +8,7 @@ import {
   IconBook,
 } from "@sekolahpro/ui";
 import { RequireAuth } from "@sekolahpro/auth";
+import { AdBanner } from "@sekolahpro/ads";
 import { useActiveChild } from "../lib/activeChild";
 import { useChildDashboard } from "../data/dashboard";
 
@@ -22,6 +23,7 @@ function DashboardPage() {
         title={active ? `Dashboard ${active.nama}` : "Dashboard"}
         description={active ? `${active.kelas} · NIS ${active.nis}` : undefined}
       />
+      <AdBanner slot="parent-dashboard-top" className="mb-4 w-full" />
       {isLoading || !data ? (
         <div className="text-sm text-muted-fg">Memuat…</div>
       ) : (

@@ -1,0 +1,5 @@
+{
+  "extends": "@sekolahpro/tsconfig/react.json",
+  "compilerOptions": { "types": ["@testing-library/jest-dom"] },
+  "include": ["src"]
+}
