@@ -420,6 +420,12 @@ function Layout() {
     }
   }, [taActiveQ.error, navigate]);
 
+  // Shell koperasi punya prefix /kop sendiri & sidebar khusus koperasi.
+  // Hook mode dipanggil sebelum early-return di bawah agar urutan hook konsisten
+  // (react-hooks/rules-of-hooks): semua hook harus dipanggil tiap render.
+  const isKop = pathname.startsWith("/kop/");
+  const { isSyariah } = useKoperasiMode(isKop);
+
   if (session.status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-fg">
@@ -460,10 +466,6 @@ function Layout() {
         ),
     };
   };
-
-  // Shell koperasi punya prefix /kop sendiri & sidebar khusus koperasi.
-  const isKop = pathname.startsWith("/kop/");
-  const { isSyariah } = useKoperasiMode(isKop);
 
   // Builder item sidebar koperasi — mirror `mk` tapi pakai prefix /kop.
   const mkKop = (to: string, label: string, icon: React.ReactNode): SidebarItem => {
