@@ -26,10 +26,10 @@ type RelChild = {
 
 function RelTree({
   root,
-  children,
+  items,
 }: {
   root: { icon: React.ReactNode; label: string; desc: string };
-  children: RelChild[];
+  items: RelChild[];
 }) {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   return (
@@ -42,7 +42,7 @@ function RelTree({
         </div>
       </div>
       <div className="ml-5 mt-1.5 border-l-2 border-border pl-4 space-y-2 pb-1 pt-1">
-        {children.map((c) => {
+        {items.map((c) => {
           const inner = (
             <>
               <span className="h-4 w-4 shrink-0 text-muted-fg group-hover:text-brand">{c.icon}</span>
@@ -82,7 +82,7 @@ function RelationDiagram() {
       <div className="grid gap-6 sm:grid-cols-2">
         <RelTree
           root={{ icon: <IconCalendar />, label: "Tahun Ajaran", desc: "Anchor periode akademik" }}
-          children={[
+          items={[
             {
               icon: <IconCalendar />,
               label: "Semester",
@@ -98,7 +98,7 @@ function RelationDiagram() {
         />
         <RelTree
           root={{ icon: <IconBook />, label: "Kurikulum", desc: "Anchor struktur akademik" }}
-          children={[
+          items={[
             {
               icon: <IconBook />,
               label: "Komponen Nilai",

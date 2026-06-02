@@ -18,7 +18,6 @@ import {
   DetailPageTemplate,
   EmptyState,
   PageHeader,
-  SectionCard,
   Tabs,
   IconArrowLeft,
   IconBook,
