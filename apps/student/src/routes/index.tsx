@@ -11,6 +11,7 @@ import {
   IconCheck,
 } from "@sekolahpro/ui";
 import { useSession } from "@sekolahpro/auth";
+import { AdBanner } from "@sekolahpro/ads";
 import {
   KELAS_SISWA,
   agendaMendatang,
@@ -127,6 +128,7 @@ function Home() {
       ))}
       primary={
         <>
+          <AdBanner slot="student-dashboard-top" className="mb-4 w-full" />
           <Hero name={name} hariIni={hariIni} />
           <SectionCard
             title="Jadwal Hari Ini"

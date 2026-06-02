@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@sekolahpro/ads": "workspace:*",
     "@sekolahpro/api-client": "workspace:*",
     "@sekolahpro/auth": "workspace:*",
     "@sekolahpro/card": "workspace:*",
