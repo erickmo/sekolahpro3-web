@@ -107,6 +107,12 @@ export interface SitusTemplate {
   preview_image: string | null;
   status: string;
   aksen_default: string | null;
+  hero_variant?: string | null;
+  radius?: string | null;
+  font_heading?: string | null;
+  font_body?: string | null;
+  shadow?: string | null;
+  section_style?: string | null;
 }
 
 export type KontenDoctype =
