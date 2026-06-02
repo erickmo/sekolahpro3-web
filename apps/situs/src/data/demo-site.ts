@@ -8,9 +8,14 @@ import type {
   Berita,
   Galeri,
   Halaman,
+  Keunggulan,
+  LayoutBlock,
   PpdbInfo,
   Prestasi,
   SiteData,
+  SiteTheme,
+  Statistik,
+  Testimoni,
 } from "../types";
 
 export const DEMO_SEKOLAH = "SMP Pelita Bangsa";
@@ -47,6 +52,9 @@ export const demoSite: SiteData = {
     namaKepsek: "Dra. Hj. Siti Rahmawati, M.Pd.",
     alamat: "Jl. Merdeka No. 45, Bandung, Jawa Barat 40115",
     petaEmbed: "",
+    heroEyebrow: "Sekolah Berakreditasi A · Sejak 1998",
+    heroCta2Label: "Profil Sekolah",
+    heroCta2Url: "/profil",
   },
   contact: {
     telepon: "(022) 1234-5678",
@@ -71,21 +79,44 @@ export const demoSite: SiteData = {
     { to: "/ppdb", label: "PPDB", section: "ppdb" },
     { to: "/kontak", label: "Kontak", section: "kontak" },
   ],
-  // Phase 2 block engine: the demo derives a default layout from `sections`
-  // when these are empty (rich demo content lands in a later task).
-  layoutBlocks: [],
-  keunggulan: [],
-  statistik: [],
-  testimoni: [],
-  // Empty tokens => skins.css supplies each template's defaults.
+  // Phase 2 block engine: a modern, ordered block layout drives the offline
+  // homepage Composer. Every tipe/variant pair resolves via blockRegistry.
+  layoutBlocks: [
+    { tipe: "hero", variant: "split", aktif: true },
+    { tipe: "statistik", variant: "bar", aktif: true, judul: "SMP Pelita Bangsa dalam Angka" },
+    { tipe: "keunggulan", variant: "grid", aktif: true, judul: "Mengapa Memilih Kami", subjudul: "Keunggulan" },
+    { tipe: "berita", variant: "default", aktif: true },
+    { tipe: "prestasi", variant: "default", aktif: true },
+    { tipe: "testimoni", variant: "grid", aktif: true, judul: "Apa Kata Mereka", subjudul: "Testimoni" },
+    { tipe: "galeri", variant: "default", aktif: true },
+    { tipe: "profil", variant: "default", aktif: true },
+    { tipe: "cta", variant: "banner", aktif: true, judul: "Siap Bergabung Tahun Ajaran 2026/2027?", subjudul: "Daftar sekarang, kuota terbatas.", ctaLabel: "Daftar PPDB", ctaUrl: "/ppdb" },
+  ] satisfies LayoutBlock[],
+  keunggulan: [
+    { ikon: "📚", judul: "Kurikulum Merdeka", deskripsi: "Pembelajaran aktif, kreatif, dan berpusat pada peserta didik." },
+    { ikon: "🏆", judul: "Berprestasi", deskripsi: "Puluhan prestasi akademik dan non-akademik tingkat kota hingga nasional." },
+    { ikon: "💻", judul: "Fasilitas Modern", deskripsi: "Lab komputer & IPA, perpustakaan digital, dan ruang kelas ber-AC." },
+    { ikon: "🤝", judul: "Pembinaan Karakter", deskripsi: "Penanaman akhlak dan budi pekerti dalam setiap kegiatan." },
+  ] satisfies Keunggulan[],
+  statistik: [
+    { label: "Peserta Didik", nilai: "1.200", satuan: "+" },
+    { label: "Guru & Staf", nilai: "84" },
+    { label: "Tahun Pengalaman", nilai: "27" },
+    { label: "Akreditasi", nilai: "A" },
+  ] satisfies Statistik[],
+  testimoni: [
+    { nama: "Ahmad Fauzan", peran: "Alumni 2023", foto: "", kutipan: "Guru-gurunya sangat suportif. Saya merasa siap menghadapi jenjang berikutnya." },
+    { nama: "Ibu Ratna", peran: "Orang Tua Siswa", foto: "", kutipan: "Komunikasi sekolah dengan orang tua sangat baik dan anak saya berkembang pesat." },
+    { nama: "Khadijah Salsabila", peran: "Siswa Kelas 9", foto: "", kutipan: "Banyak ekstrakurikuler seru dan fasilitasnya lengkap. Belajar jadi menyenangkan." },
+  ] satisfies Testimoni[],
   theme: {
     heroVariant: "split",
-    radius: "",
+    radius: "14px",
     fontHeading: "",
     fontBody: "",
-    shadow: "",
+    shadow: "0 18px 40px -28px rgba(15, 23, 42, 0.45)",
     sectionStyle: "card",
-  },
+  } satisfies SiteTheme,
   isDemo: true,
 };
 
