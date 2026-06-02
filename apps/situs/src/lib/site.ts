@@ -10,6 +10,7 @@ import {
   DEFAULT_VARIANT,
   SECTION_KEYS,
   SECTION_STYLES,
+  TEMPLATE_KEYS,
   type SectionKey,
   type SectionStyle,
   type TemplateKey,
@@ -58,7 +59,9 @@ interface ApiSite {
 }
 
 function validTemplate(key: string | undefined): TemplateKey {
-  return (["klasik", "modern", "ceria"] as const).includes(key as TemplateKey)
+  // Derive from TEMPLATE_KEYS so new templates (e.g. aurora) resolve to their
+  // own skin/nav instead of silently downgrading to the default.
+  return (TEMPLATE_KEYS as readonly string[]).includes(key ?? "")
     ? (key as TemplateKey)
     : DEFAULT_TEMPLATE;
 }

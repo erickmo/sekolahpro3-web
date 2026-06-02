@@ -8,12 +8,14 @@ import { DEFAULT_TEMPLATE } from "../constants";
 import { klasik } from "./Klasik";
 import { modern } from "./Modern";
 import { ceria } from "./Ceria";
+import { aurora } from "./Aurora";
 import type { TemplateDef } from "./types";
 
 export const TEMPLATE_REGISTRY: Record<TemplateKey, TemplateDef> = {
   klasik,
   modern,
   ceria,
+  aurora,
 };
 
 export function getTemplate(key: TemplateKey): TemplateDef {

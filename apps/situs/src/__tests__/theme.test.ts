@@ -48,6 +48,25 @@ describe("computeTemplateVars", () => {
     expect(vars["--situs-section-style"]).toBe("flat");
   });
 
+  it("maps a semantic shadow token (sm/md/lg) to a real box-shadow CSS string", () => {
+    const md = computeTemplateVars({ ...full, shadow: "md" })["--situs-card-shadow"];
+    // Semantic tier resolves to a usable box-shadow value, not the literal "md".
+    expect(md).not.toBe("md");
+    expect(md).toMatch(/rgba?\(/);
+    // sm < lg in visual weight: both still valid CSS shadows.
+    expect(computeTemplateVars({ ...full, shadow: "sm" })["--situs-card-shadow"]).toMatch(/rgba?\(/);
+    expect(computeTemplateVars({ ...full, shadow: "lg" })["--situs-card-shadow"]).toMatch(/rgba?\(/);
+  });
+
+  it("passes a full CSS shadow string through unchanged", () => {
+    const css = "0 18px 40px -28px rgba(15, 23, 42, 0.4)";
+    expect(computeTemplateVars({ ...full, shadow: css })["--situs-card-shadow"]).toBe(css);
+  });
+
+  it("passes 'none' through unchanged", () => {
+    expect(computeTemplateVars({ ...full, shadow: "none" })["--situs-card-shadow"]).toBe("none");
+  });
+
   it("omits a var when its token is empty so skins.css remains the fallback", () => {
     const vars = computeTemplateVars({
       heroVariant: "split",

@@ -3,7 +3,7 @@
 // The contract test (src/__tests__/contract.test.ts) asserts the template
 // registry and section components only use keys declared here.
 
-export const TEMPLATE_KEYS = ["klasik", "modern", "ceria"] as const;
+export const TEMPLATE_KEYS = ["klasik", "modern", "ceria", "aurora"] as const;
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 export const DEFAULT_TEMPLATE: TemplateKey = "klasik";
 

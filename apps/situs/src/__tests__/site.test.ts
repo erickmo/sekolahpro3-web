@@ -31,6 +31,11 @@ describe("mapSite", () => {
     expect(site.templateKey).toBe("klasik");
   });
 
+  it("resolves aurora to its own template key (no downgrade to klasik)", () => {
+    const site = mapSite({ sekolah: "X", template_key: "aurora" });
+    expect(site.templateKey).toBe("aurora");
+  });
+
   it("defaults to all sections when none provided", () => {
     const site = mapSite({ sekolah: "X" });
     expect(site.sections).toEqual([...SECTION_KEYS]);
