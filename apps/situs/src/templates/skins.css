@@ -74,3 +74,15 @@
 .situs-soft-bg {
   background: var(--situs-section-soft, #f8fafc);
 }
+
+/* Section chrome override driven by Template Situs.section_style via --situs-section-style.
+   Falls back to each template's .situs-card defaults when the var is unset. */
+[data-section-style="flat"] .situs-card {
+  border-color: transparent;
+  box-shadow: none;
+  background: var(--situs-section-soft, #f8fafc);
+}
+[data-section-style="bordered"] .situs-card {
+  border: 1px solid var(--situs-border);
+  box-shadow: none;
+}

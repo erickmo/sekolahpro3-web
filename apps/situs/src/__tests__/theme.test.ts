@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { computeThemeVars, hexToRgb, readableOn } from "../theme";
+import { computeThemeVars, hexToRgb, readableOn, computeTemplateVars } from "../theme";
+import type { SiteTheme } from "../types";
 
 describe("theme", () => {
   it("parses hex to rgb", () => {
@@ -25,5 +26,41 @@ describe("theme", () => {
     const vars = computeThemeVars({ color: "", color2: "nonsense", logo: null, favicon: null, heroImage: null });
     expect(vars["--situs-brand"]).toMatch(/^#[0-9a-f]{6}$/i);
     expect(vars["--situs-brand-2"]).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+});
+
+describe("computeTemplateVars", () => {
+  const full: SiteTheme = {
+    heroVariant: "overlay",
+    radius: "16px",
+    fontHeading: "Poppins",
+    fontBody: "Inter",
+    shadow: "0 10px 30px rgba(0,0,0,.2)",
+    sectionStyle: "flat",
+  };
+
+  it("emits CSS vars for every provided token", () => {
+    const vars = computeTemplateVars(full);
+    expect(vars["--situs-radius"]).toBe("16px");
+    expect(vars["--situs-heading-font"]).toBe("Poppins");
+    expect(vars["--situs-body-font"]).toBe("Inter");
+    expect(vars["--situs-card-shadow"]).toBe("0 10px 30px rgba(0,0,0,.2)");
+    expect(vars["--situs-section-style"]).toBe("flat");
+  });
+
+  it("omits a var when its token is empty so skins.css remains the fallback", () => {
+    const vars = computeTemplateVars({
+      heroVariant: "split",
+      radius: "",
+      fontHeading: "",
+      fontBody: "",
+      shadow: "",
+      sectionStyle: "card",
+    });
+    expect(vars["--situs-radius"]).toBeUndefined();
+    expect(vars["--situs-heading-font"]).toBeUndefined();
+    expect(vars["--situs-card-shadow"]).toBeUndefined();
+    // sectionStyle is an enum (never empty) so it is always emitted.
+    expect(vars["--situs-section-style"]).toBe("card");
   });
 });

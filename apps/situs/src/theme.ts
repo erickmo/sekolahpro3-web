@@ -2,7 +2,7 @@
 // on the document root. Templates + sections reference ONLY these variables
 // (never hardcoded hex), so a school's palette flows through every template.
 
-import type { SiteBrand } from "./types";
+import type { SiteBrand, SiteTheme } from "./types";
 
 const FALLBACK_BRAND = "#1d4ed8";
 const FALLBACK_BRAND_2 = "#f59e0b";
@@ -48,12 +48,35 @@ export function computeThemeVars(brand: SiteBrand): ThemeVars {
   };
 }
 
+/**
+ * Per-school template tokens (radius / fonts / shadow / section style) sourced
+ * from Template Situs. Only non-empty tokens are emitted so skins.css keeps
+ * supplying the per-template default for any token the school left blank.
+ */
+export function computeTemplateVars(theme: SiteTheme): Record<string, string> {
+  const vars: Record<string, string> = {};
+  if (theme.radius) {
+    vars["--situs-radius"] = theme.radius;
+    vars["--situs-radius-lg"] = theme.radius;
+  }
+  if (theme.fontHeading) vars["--situs-heading-font"] = theme.fontHeading;
+  if (theme.fontBody) vars["--situs-body-font"] = theme.fontBody;
+  if (theme.shadow) vars["--situs-card-shadow"] = theme.shadow;
+  // Always present (enum): drives [data-section-style] section chrome.
+  vars["--situs-section-style"] = theme.sectionStyle;
+  return vars;
+}
+
 /** Apply theme vars to the document root (no-op in SSR/test without document). */
-export function applyTheme(brand: SiteBrand): void {
+export function applyTheme(brand: SiteBrand, theme?: SiteTheme): void {
   if (typeof document === "undefined") return;
-  const vars = computeThemeVars(brand);
   const root = document.documentElement;
-  for (const [key, value] of Object.entries(vars)) {
+  for (const [key, value] of Object.entries(computeThemeVars(brand))) {
     root.style.setProperty(key, value);
+  }
+  if (theme) {
+    for (const [key, value] of Object.entries(computeTemplateVars(theme))) {
+      root.style.setProperty(key, value);
+    }
   }
 }
