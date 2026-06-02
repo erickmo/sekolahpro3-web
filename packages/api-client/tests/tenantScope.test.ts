@@ -81,6 +81,23 @@ describe("tenant-scoped listResource", () => {
     expect(captured?.searchParams.get("filters")).toBeNull();
   });
 
+  it("skips injection for org-anchored doctypes (Langganan)", async () => {
+    setup();
+    let captured: URL | undefined;
+    server.use(
+      http.get("https://api.test/api/resource/Langganan", ({ request }) => {
+        captured = new URL(request.url);
+        return HttpResponse.json({ data: [] });
+      }),
+    );
+    await listResource("Langganan", { filters: { organisasi: "ORG-001" } });
+    // Only the caller's organisasi filter survives — no `sekolah` is injected
+    // against a column Langganan does not have (ADR-0043 ORG_ONLY tier).
+    expect(JSON.parse(captured!.searchParams.get("filters")!)).toEqual({
+      organisasi: "ORG-001",
+    });
+  });
+
   it("skips injection when no active sekolah is set", async () => {
     configureResource({ baseUrl: "https://api.test", getActiveSekolah: () => null });
     let captured: URL | undefined;

@@ -50,6 +50,12 @@ const TENANT_BLOCKLIST = new Set<string>([
   "Sekolah",
   "File",
   "Communication",
+  // ORG_ONLY tier (ADR-0043) — anchored by `organisasi`, no `sekolah` column.
+  // The provider/SaaS console queries these by `organisasi`; injecting a
+  // `sekolah` filter would target a non-existent column → empty result.
+  // (`Organisasi` itself is already listed above.)
+  "Langganan",
+  "Invoice Tenant",
   // Child tables tenanted via their parent (istable=1, no own `sekolah` field).
   // Injecting a `sekolah` filter would target a non-existent column → empty
   // result. Scope is enforced through the parent doc instead.
