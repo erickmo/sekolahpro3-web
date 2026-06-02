@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import { render } from "@testing-library/react";
+import { render, type RenderResult } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { SiteProvider } from "../SiteContext";
@@ -11,7 +11,7 @@ function makeClient() {
 }
 
 /** Wrap UI in query + router providers (no site context). */
-export function renderApp(ui: ReactElement, initialPath = "/") {
+export function renderApp(ui: ReactElement, initialPath = "/"): RenderResult {
   return render(
     <QueryClientProvider client={makeClient()}>
       <MemoryRouter initialEntries={[initialPath]}>{ui}</MemoryRouter>
@@ -20,7 +20,7 @@ export function renderApp(ui: ReactElement, initialPath = "/") {
 }
 
 /** Wrap UI with a resolved site context (for section-level tests). */
-export function renderWithSite(ui: ReactNode, site: SiteData = demoSite, initialPath = "/") {
+export function renderWithSite(ui: ReactNode, site: SiteData = demoSite, initialPath = "/"): RenderResult {
   return render(
     <QueryClientProvider client={makeClient()}>
       <MemoryRouter initialEntries={[initialPath]}>
