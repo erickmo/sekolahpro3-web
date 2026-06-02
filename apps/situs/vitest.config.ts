@@ -7,5 +7,9 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test-setup.ts"],
+    // PPDB tests drive ~13 sequential userEvent interactions; under parallel
+    // turbo load the default 5s testTimeout flakes. Generous headroom (passes
+    // in <1s in isolation) keeps CI deterministic without masking real failures.
+    testTimeout: 20000,
   },
 });
