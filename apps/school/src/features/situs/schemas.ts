@@ -33,6 +33,17 @@ export interface KontenSchema {
   fields: KontenField[];
 }
 
+/** Schema for a Situs Sekolah child table (rows saved as an array, no own doctype CRUD). */
+export interface ChildSchema {
+  /** snake_case parent field holding the rows (e.g. "keunggulan"). */
+  field: string;
+  /** Singular human label, e.g. "Keunggulan". */
+  singular: string;
+  /** Field shown as the row title in the list. */
+  titleField: string;
+  fields: KontenField[];
+}
+
 const STATUS: KontenField = {
   name: "status",
   label: "Status",
