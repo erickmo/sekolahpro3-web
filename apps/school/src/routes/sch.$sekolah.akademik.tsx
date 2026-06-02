@@ -11,6 +11,7 @@ import { useResourceList } from "@sekolahpro/api-client";
 import { AkademikContextProvider } from "../lib/akademikContext";
 import { AkademikContextBar } from "../components/akademik/AkademikContextBar";
 import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
+import { ModuleHeader } from "../components/ModuleHeader";
 import { PageGuide, type PageGuideStep } from "../components/guide";
 import { DistributionBar, type DistributionSegment } from "../components/viz";
 import { SectionCard } from "@sekolahpro/ui";
@@ -220,7 +221,10 @@ function AkademikLayout() {
       <div className="space-y-4">
         {contextual ? (
           <>
-            <AkademikContextBar />
+            <ModuleHeader
+              context={<AkademikContextBar />}
+              nav={<GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="header" />}
+            />
             <PageGuide
               storageId="layout-contextbar"
               title="Cara pakai Konteks Periode"
@@ -241,8 +245,9 @@ function AkademikLayout() {
               )}
             </SectionCard>
           </>
-        ) : null}
-        <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="inline" />
+        ) : (
+          <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="inline" />
+        )}
         <Outlet />
       </div>
     </AkademikContextProvider>

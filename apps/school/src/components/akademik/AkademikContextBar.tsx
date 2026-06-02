@@ -1,9 +1,12 @@
-// AkademikContextBar — sticky periode selector (Tahun Ajaran + Semester) untuk
-// halaman operasional Akademik. Redesign: tambah label peran pengguna aktif,
-// indikator status periode (berjalan / lampau / belum aktif), dan kejelasan
-// visual selector. Semua logika periode (guarded switch, dirty confirm,
-// setTahunAjaran/setSemester, banner) DIPERTAHANKAN tanpa perubahan perilaku.
-import { useCallback } from "react";
+// AkademikContextBar — periode selector (Tahun Ajaran + Semester) untuk halaman
+// operasional Akademik: label peran pengguna aktif, indikator status periode
+// (berjalan / lampau / belum aktif), dan selector. Logika periode (guarded
+// switch, dirty confirm, setTahunAjaran/setSemester, banner) DIPERTAHANKAN.
+//
+// Renders inner content only (konteks row + optional banner); the sticky,
+// full-bleed panel chrome lives in ModuleHeader so the bar and the sub-nav read
+// as one cohesive header.
+import { Fragment, useCallback } from "react";
 import {
   Badge,
   SearchableSelect,
@@ -114,7 +117,7 @@ export function AkademikContextBar() {
   const readOnlyHint = periodeStatus !== "aktif";
 
   return (
-    <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 mb-4 border-b border-border bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/75">
+    <Fragment>
       <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-fg">
@@ -170,6 +173,6 @@ export function AkademikContextBar() {
           )}
         </div>
       )}
-    </div>
+    </Fragment>
   );
 }

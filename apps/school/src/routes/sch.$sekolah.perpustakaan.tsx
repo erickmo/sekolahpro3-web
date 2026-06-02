@@ -6,6 +6,7 @@
 import { createFileRoute, Link, Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { IconBook } from "@sekolahpro/ui";
 import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
+import { ModuleHeader } from "../components/ModuleHeader";
 import { PerpustakaanContextBar } from "../components/perpustakaan/PerpustakaanContextBar";
 
 // Navigation reorganized around the circulation staff's day, not the data model:
@@ -64,8 +65,10 @@ function PerpustakaanLayout() {
 
   return (
     <div className="space-y-4">
-      <PerpustakaanContextBar cta={terminalCta} />
-      <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="inline" />
+      <ModuleHeader
+        context={<PerpustakaanContextBar cta={terminalCta} />}
+        nav={<GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="header" />}
+      />
       <Outlet />
     </div>
   );

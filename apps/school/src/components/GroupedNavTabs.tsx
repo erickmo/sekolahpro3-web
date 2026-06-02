@@ -3,12 +3,15 @@ import { Tabs, type TabItem } from "@sekolahpro/ui";
 
 // Grouped sub-navigation shared by module layouts (Akademik, Master Data, ...).
 //
-// Two layouts:
+// Three layouts:
 // - "stacked" (default): an uppercase label above a row of Tabs, per group.
 //   Suits modules with many groups.
-// - "inline": a single horizontal, horizontally-scrollable pill bar. Group
-//   labels are dropped; groups are separated by a thin vertical divider. Active
-//   item is a solid pill. Compact, no vertical stacking.
+// - "inline": a single horizontal, horizontally-scrollable pill bar in its own
+//   rounded, bordered container. Group labels are dropped; groups are separated
+//   by a thin vertical divider. Active item is a solid pill.
+// - "header": same pill row as "inline" but without the rounded border/bg
+//   chrome, so it can sit flush inside a ModuleHeader panel that already
+//   provides the chrome.
 //
 // A tab is active on exact match or, unless `exact`, on any nested path beneath it.
 
@@ -23,7 +26,7 @@ export interface NavTabGroup {
   items: NavTabItem[];
 }
 
-export type NavTabsVariant = "stacked" | "inline";
+export type NavTabsVariant = "stacked" | "inline" | "header";
 
 const PILL_BASE =
   "whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40";
@@ -43,8 +46,8 @@ export function GroupedNavTabs({
   pathname: string;
   variant?: NavTabsVariant;
 }) {
-  if (variant === "inline") {
-    return <InlineNavPills groups={groups} pathname={pathname} />;
+  if (variant === "inline" || variant === "header") {
+    return <InlineNavPills groups={groups} pathname={pathname} bare={variant === "header"} />;
   }
 
   return (
@@ -76,15 +79,23 @@ export function GroupedNavTabs({
 // Single-row pill bar. Groups keep their order but lose their label; a hairline
 // divider marks each group boundary. The row scrolls horizontally so additional
 // menu items stay reachable without wrapping or changing layout height.
+//
+// `bare` drops the rounded border/bg/padding chrome so the row can sit flush
+// inside a ModuleHeader panel (which already supplies the surrounding chrome).
 function InlineNavPills({
   groups,
   pathname,
+  bare = false,
 }: {
   groups: NavTabGroup[];
   pathname: string;
+  bare?: boolean;
 }) {
+  const containerClass = bare
+    ? "flex items-center gap-1 overflow-x-auto"
+    : "flex items-center gap-1 overflow-x-auto rounded-xl border border-border bg-bg p-1";
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto rounded-xl border border-border bg-bg p-1">
+    <nav className={containerClass}>
       {groups.map((g, gi) => (
         <div key={g.label} className="flex items-center gap-1">
           {gi > 0 ? (

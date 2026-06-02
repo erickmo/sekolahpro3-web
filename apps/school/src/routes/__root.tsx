@@ -44,6 +44,7 @@ import {
   kopActivePath,
 } from "../lib/scoped";
 import { KOPERASI_NAV } from "../lib/koperasi-nav";
+import { SetupBannerContext } from "../lib/setupBanner";
 
 const SEARCH_MIN_QUERY = 2;
 const SEARCH_MAX_HITS = 8;
@@ -656,27 +657,29 @@ function Layout() {
         </div>
       }
     >
-      <div className="space-y-4">
-        {showSetupBanner ? (
-          <SetupBanner
-            tone="danger"
-            title="Tahun Ajaran belum aktif"
-            description="Modul absensi, akademik, dan jadwal membutuhkan Tahun Ajaran aktif untuk berfungsi normal."
-            actionLabel="Atur Tahun Ajaran"
-            actionHref="/master/tahun-ajaran"
-            renderLink={(href, children) =>
-              slug ? (
-                <Link to={scopedTo(slug, href)} params={scopedParams(slug)}>
-                  {children}
-                </Link>
-              ) : (
-                <Link to="/pilih">{children}</Link>
-              )
-            }
-          />
-        ) : null}
-        <Outlet />
-      </div>
+      <SetupBannerContext.Provider value={showSetupBanner}>
+        <div className="space-y-4">
+          {showSetupBanner ? (
+            <SetupBanner
+              tone="danger"
+              title="Tahun Ajaran belum aktif"
+              description="Modul absensi, akademik, dan jadwal membutuhkan Tahun Ajaran aktif untuk berfungsi normal."
+              actionLabel="Atur Tahun Ajaran"
+              actionHref="/master/tahun-ajaran"
+              renderLink={(href, children) =>
+                slug ? (
+                  <Link to={scopedTo(slug, href)} params={scopedParams(slug)}>
+                    {children}
+                  </Link>
+                ) : (
+                  <Link to="/pilih">{children}</Link>
+                )
+              }
+            />
+          ) : null}
+          <Outlet />
+        </div>
+      </SetupBannerContext.Provider>
     </AppShell>
   );
 }
