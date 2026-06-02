@@ -16,6 +16,8 @@ import {
 const TABS: { to: string; label: string; icon: ReactNode; exact?: boolean }[] = [
   { to: "/sch/$sekolah/situs", label: "Ringkasan", icon: <IconHome />, exact: true },
   { to: "/sch/$sekolah/situs/tampilan", label: "Tampilan", icon: <IconSettings /> },
+  { to: "/sch/$sekolah/situs/tataletak", label: "Tata Letak", icon: <IconLayers /> },
+  { to: "/sch/$sekolah/situs/sorotan", label: "Sorotan", icon: <IconFlag /> },
   { to: "/sch/$sekolah/situs/berita", label: "Berita", icon: <IconFile /> },
   { to: "/sch/$sekolah/situs/halaman", label: "Halaman", icon: <IconBook /> },
   { to: "/sch/$sekolah/situs/agenda", label: "Agenda", icon: <IconCalendar /> },
@@ -24,7 +26,7 @@ const TABS: { to: string; label: string; icon: ReactNode; exact?: boolean }[] = 
   { to: "/sch/$sekolah/situs/domain", label: "Domain", icon: <IconMapPin /> },
 ];
 
-function SitusLayout() {
+export function SitusLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const items: TabItem[] = TABS.map((t) => ({
     key: t.to,
