@@ -6,6 +6,20 @@ import { trackImpression, resolveClick } from "./client";
 
 const VISIBLE_RATIO = 0.5;
 
+/** Return an absolute http(s) URL string, or null if `dest` is empty, malformed,
+ * or uses a dangerous scheme (javascript:/data:/etc.). Guards window.open against
+ * XSS from an admin-authored destination_url. */
+function safeHttpUrl(dest: string): string | null {
+  if (!dest) return null;
+  try {
+    const url = new URL(dest, window.location.origin);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 interface Props {
   /** Slot key as seeded, e.g. "school-dashboard-top". */
   slot: string;
@@ -45,7 +59,8 @@ export function AdBanner({ slot, className }: Props) {
   async function handleClick(e: React.MouseEvent) {
     e.preventDefault();
     const dest = await resolveClick(cfg!.baseUrl, creative!.click_url);
-    if (dest) window.open(dest, "_blank", "noopener,noreferrer");
+    const safe = safeHttpUrl(dest);
+    if (safe) window.open(safe, "_blank", "noopener,noreferrer");
   }
 
   return (

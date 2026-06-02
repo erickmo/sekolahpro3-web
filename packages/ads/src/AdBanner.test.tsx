@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { AdsProvider } from "./AdsProvider";
 import { AdBanner } from "./AdBanner";
 
@@ -57,5 +57,43 @@ describe("AdBanner", () => {
       const trackCalls = fetchMock.mock.calls.filter((c) => String(c[0]).includes("track"));
       expect(trackCalls.length).toBe(1);
     });
+  });
+
+  // Routes get_ad → creative, click → the given redirect.
+  function stubFetchWithRedirect(redirect: string) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          json: async () =>
+            String(url).includes("get_ad") ? { message: CREATIVE } : { message: { redirect } },
+        }),
+      ),
+    );
+  }
+
+  it("does NOT open a javascript: destination (XSS guard)", async () => {
+    const openSpy = vi.fn();
+    vi.stubGlobal("open", openSpy);
+    stubFetchWithRedirect("javascript:alert(document.cookie)");
+    renderBanner();
+    const link = await screen.findByRole("link");
+    fireEvent.click(link);
+    await waitFor(() =>
+      expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.some((c) => String(c[0]).includes("click"))).toBe(true),
+    );
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it("opens an https: destination", async () => {
+    const openSpy = vi.fn();
+    vi.stubGlobal("open", openSpy);
+    stubFetchWithRedirect("https://advertiser.example/promo");
+    renderBanner();
+    const link = await screen.findByRole("link");
+    fireEvent.click(link);
+    await waitFor(() => expect(openSpy).toHaveBeenCalled());
+    expect(String(openSpy.mock.calls[0][0])).toContain("https://advertiser.example/promo");
   });
 });
