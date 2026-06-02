@@ -2,7 +2,9 @@
   "name": "sekolahpro-web",
   "private": true,
   "version": "0.0.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "build": "turbo run build",
@@ -14,9 +16,10 @@
   },
   "devDependencies": {
     "@sekolahpro/eslint-config": "workspace:*",
+    "@tanstack/router-cli": "^1.45.0",
     "eslint": "^8.57.0",
+    "prettier": "^3.2.0",
     "turbo": "^2.0.0",
-    "typescript": "^5.4.0",
-    "prettier": "^3.2.0"
+    "typescript": "^5.4.0"
   }
 }
