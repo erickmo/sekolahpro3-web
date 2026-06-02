@@ -4,7 +4,6 @@ import {
   PageHeader,
   DataTable,
   Card,
-  Badge,
   Input,
   Select,
   Button,
@@ -12,17 +11,11 @@ import {
   type Column,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
+import { resolveTenantDomain, type OrganisasiRow } from "../lib/tenants";
+import { OrgStatusBadge } from "../components/StatusBadges";
 
-interface TenantRow {
-  name: string;
-  tenant_name?: string;
-  domain?: string;
-  status?: string;
-  plan?: string;
-  modified?: string;
-}
-
-const STATUS_OPTIONS = ["", "Active", "Trial", "Suspended", "Churned"] as const;
+// A tenant IS an Organisasi (ADR-0042/0043) — there is no `Tenant` doctype.
+const STATUS_OPTIONS = ["", "Aktif", "Nonaktif"] as const;
 
 function TenantsList() {
   const [query, setQuery] = useState("");
@@ -31,8 +24,8 @@ function TenantsList() {
   const filters: Record<string, unknown> = {};
   if (status) filters.status = status;
 
-  const tenantsQ = useResourceList<TenantRow>("Tenant", {
-    fields: ["name", "tenant_name", "domain", "status", "plan", "modified"],
+  const tenantsQ = useResourceList<OrganisasiRow>("Organisasi", {
+    fields: ["name", "nama", "custom_domain", "subdomain", "status", "modified"],
     filters,
     limit_page_length: 200,
     order_by: "modified desc",
@@ -44,25 +37,24 @@ function TenantsList() {
     const q = query.toLowerCase();
     return data.filter(
       (r) =>
-        (r.tenant_name ?? "").toLowerCase().includes(q) ||
-        (r.domain ?? "").toLowerCase().includes(q) ||
+        (r.nama ?? "").toLowerCase().includes(q) ||
+        resolveTenantDomain(r).toLowerCase().includes(q) ||
         r.name.toLowerCase().includes(q),
     );
   }, [tenantsQ.data, query]);
 
-  const columns: Column<TenantRow>[] = [
+  const columns: Column<OrganisasiRow>[] = [
     {
       key: "name",
       header: "Tenant",
       cell: (r) => (
         <Link to="/tenants/$id" params={{ id: r.name }} className="font-medium text-brand hover:underline">
-          {r.tenant_name ?? r.name}
+          {r.nama ?? r.name}
         </Link>
       ),
     },
-    { key: "domain", header: "Domain", cell: (r) => r.domain ?? "—" },
-    { key: "plan", header: "Plan", cell: (r) => r.plan ?? "—" },
-    { key: "status", header: "Status", cell: (r) => <StatusBadge status={r.status ?? ""} /> },
+    { key: "domain", header: "Domain", cell: (r) => resolveTenantDomain(r) },
+    { key: "status", header: "Status", cell: (r) => <OrgStatusBadge status={r.status} /> },
     {
       key: "modified",
       header: "Diperbarui",
@@ -106,7 +98,7 @@ function TenantsList() {
       </Card>
 
       <Card className="p-0 overflow-hidden">
-        <DataTable<TenantRow>
+        <DataTable<OrganisasiRow>
           data={rows}
           columns={columns}
           rowKey={(r) => r.name}
@@ -123,13 +115,6 @@ function TenantsList() {
       </Card>
     </>
   );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (!status) return <span className="text-muted-fg">—</span>;
-  const tone: "success" | "brand" | "danger" | "neutral" =
-    status === "Active" ? "success" : status === "Trial" ? "brand" : status === "Suspended" ? "danger" : "neutral";
-  return <Badge tone={tone}>{status}</Badge>;
 }
 
 export const Route = createFileRoute("/tenants/")({ component: TenantsList });

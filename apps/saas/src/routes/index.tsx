@@ -4,7 +4,6 @@ import {
   StatCard,
   Card,
   DataTable,
-  Badge,
   IconUsers,
   IconWallet,
   IconChart,
@@ -12,48 +11,37 @@ import {
   type Column,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
+import { resolveTenantDomain, type OrganisasiRow } from "../lib/tenants";
+import { OrgStatusBadge } from "../components/StatusBadges";
 
-interface TenantRow {
-  name: string;
-  tenant_name?: string;
-  status?: string;
-  plan?: string;
-  domain?: string;
-  modified?: string;
-}
-
+// A tenant IS an Organisasi (ADR-0042/0043) — there is no `Tenant` doctype.
 function Overview() {
-  const tenantsQ = useResourceList<TenantRow>("Tenant", {
-    fields: ["name", "tenant_name", "status", "plan", "domain", "modified"],
+  const tenantsQ = useResourceList<OrganisasiRow>("Organisasi", {
+    fields: ["name", "nama", "status", "custom_domain", "subdomain", "domain_verified", "modified"],
     limit_page_length: 100,
     order_by: "modified desc",
   });
 
   const rows = tenantsQ.data ?? [];
   const totalTenants = rows.length;
-  const activeTenants = rows.filter((r) => r.status === "Active").length;
-  const trialTenants = rows.filter((r) => r.status === "Trial").length;
-  const suspended = rows.filter((r) => r.status === "Suspended").length;
+  const activeTenants = rows.filter((r) => r.status === "Aktif").length;
+  const inactiveTenants = rows.filter((r) => r.status === "Nonaktif").length;
+  const verifiedDomains = rows.filter((r) => r.domain_verified === 1).length;
 
   const recent = rows.slice(0, 5);
 
-  const columns: Column<TenantRow>[] = [
+  const columns: Column<OrganisasiRow>[] = [
     {
       key: "name",
       header: "Tenant",
       cell: (r) => (
         <Link to="/tenants/$id" params={{ id: r.name }} className="font-medium text-brand hover:underline">
-          {r.tenant_name ?? r.name}
+          {r.nama ?? r.name}
         </Link>
       ),
     },
-    { key: "domain", header: "Domain", cell: (r) => <span className="text-muted-fg">{r.domain ?? "—"}</span> },
-    { key: "plan", header: "Plan", cell: (r) => r.plan ?? "—" },
-    {
-      key: "status",
-      header: "Status",
-      cell: (r) => <StatusBadge status={r.status ?? ""} />,
-    },
+    { key: "domain", header: "Domain", cell: (r) => <span className="text-muted-fg">{resolveTenantDomain(r)}</span> },
+    { key: "status", header: "Status", cell: (r) => <OrgStatusBadge status={r.status} /> },
   ];
 
   return (
@@ -74,17 +62,17 @@ function Overview() {
           accent="emerald"
         />
         <StatCard
-          label="Trial"
-          value={tenantsQ.isLoading ? "…" : trialTenants}
-          icon={<IconWallet />}
-          accent="amber"
-        />
-        <StatCard
-          label="Suspended"
-          value={tenantsQ.isLoading ? "…" : suspended}
+          label="Nonaktif"
+          value={tenantsQ.isLoading ? "…" : inactiveTenants}
           icon={<IconAlert />}
           accent="rose"
-          urgency={suspended > 0 ? "warn" : "normal"}
+          urgency={inactiveTenants > 0 ? "warn" : "normal"}
+        />
+        <StatCard
+          label="Domain terverifikasi"
+          value={tenantsQ.isLoading ? "…" : verifiedDomains}
+          icon={<IconWallet />}
+          accent="amber"
         />
       </div>
 
@@ -98,7 +86,7 @@ function Overview() {
             Lihat semua →
           </Link>
         </div>
-        <DataTable<TenantRow>
+        <DataTable<OrganisasiRow>
           data={recent}
           columns={columns}
           rowKey={(r) => r.name}
@@ -111,13 +99,6 @@ function Overview() {
       </Card>
     </>
   );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (!status) return <span className="text-muted-fg">—</span>;
-  const tone: "success" | "brand" | "danger" | "neutral" =
-    status === "Active" ? "success" : status === "Trial" ? "brand" : status === "Suspended" ? "danger" : "neutral";
-  return <Badge tone={tone}>{status}</Badge>;
 }
 
 export const Route = createFileRoute("/")({ component: Overview });
