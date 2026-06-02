@@ -10,7 +10,9 @@ export const KEUNGGULAN_SCHEMA: ChildSchema = {
   singular: "Keunggulan",
   titleField: "judul",
   fields: [
-    { name: "ikon", label: "Ikon", type: "text" },
+    // Renderer (apps/situs KeunggulanBlock) prints this as a text glyph, so it
+    // must be an emoji (e.g. 🏆), not a lucide icon name.
+    { name: "ikon", label: "Ikon (emoji, mis. 🏆)", type: "text" },
     { name: "judul", label: "Judul", type: "text", required: true, listColumn: true },
     { name: "deskripsi", label: "Deskripsi", type: "textarea" },
   ],
