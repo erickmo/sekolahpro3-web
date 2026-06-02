@@ -44,6 +44,8 @@ import {
   kopActivePath,
 } from "../lib/scoped";
 import { KOPERASI_NAV } from "../lib/koperasi-nav";
+import { filterKoperasiNav } from "../lib/koperasi/filterKoperasiNav";
+import { useKoperasiMode } from "../lib/koperasi/useKoperasiMode";
 import { SetupBannerContext } from "../lib/setupBanner";
 
 const SEARCH_MIN_QUERY = 2;
@@ -418,6 +420,12 @@ function Layout() {
     }
   }, [taActiveQ.error, navigate]);
 
+  // Shell koperasi punya prefix /kop sendiri & sidebar khusus koperasi.
+  // Hook mode dipanggil sebelum early-return di bawah agar urutan hook konsisten
+  // (react-hooks/rules-of-hooks): semua hook harus dipanggil tiap render.
+  const isKop = pathname.startsWith("/kop/");
+  const { isSyariah } = useKoperasiMode(isKop);
+
   if (session.status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-fg">
@@ -459,9 +467,6 @@ function Layout() {
     };
   };
 
-  // Shell koperasi punya prefix /kop sendiri & sidebar khusus koperasi.
-  const isKop = pathname.startsWith("/kop/");
-
   // Builder item sidebar koperasi — mirror `mk` tapi pakai prefix /kop.
   const mkKop = (to: string, label: string, icon: React.ReactNode): SidebarItem => {
     const livePath = kopActivePath(slug, to);
@@ -489,11 +494,11 @@ function Layout() {
     "Anggota & Rekening": <IconUsers />,
     Operasional: <IconWallet />,
     Pembiayaan: <IconChart />,
-    Sosial: <IconCheck />,
+    "Baitul Maal": <IconCheck />,
     Admin: <IconSettings />,
   };
 
-  const kopSections: SidebarNavSection[] = KOPERASI_NAV.map((s) => ({
+  const kopSections: SidebarNavSection[] = filterKoperasiNav(KOPERASI_NAV, isSyariah).map((s) => ({
     title: s.title,
     items: s.items.map((it) => mkKop(it.to, it.label, KOP_SECTION_ICON[s.title] ?? <IconWallet />)),
   }));
