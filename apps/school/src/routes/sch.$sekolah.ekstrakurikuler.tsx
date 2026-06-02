@@ -9,6 +9,7 @@ import { useResourceList } from "@sekolahpro/api-client";
 import { Badge, SearchableSelect } from "@sekolahpro/ui";
 import { EkskulContextProvider } from "../lib/ekskulContext";
 import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
+import { ModuleHeader } from "../components/ModuleHeader";
 import { useEkskulRole, ROLE_LABEL } from "../lib/ekskulRole";
 import {
   resolveTahunAjaran,
@@ -159,7 +160,10 @@ function EkskulLayout() {
       }}
     >
       <div className="space-y-4">
-        <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 mb-1 border-b border-border bg-bg/95 backdrop-blur px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <ModuleHeader
+          nav={<GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="header" />}
+          context={
+            <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-fg shrink-0">
             Konteks Ekstrakurikuler
           </span>
@@ -201,8 +205,9 @@ function EkskulLayout() {
           <span className="ml-auto">
             <Badge tone="brand">{ROLE_LABEL[primary]}</Badge>
           </span>
-        </div>
-        <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="inline" />
+            </div>
+          }
+        />
         <Outlet />
       </div>
     </EkskulContextProvider>

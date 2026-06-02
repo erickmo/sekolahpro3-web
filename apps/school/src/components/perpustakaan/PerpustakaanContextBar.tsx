@@ -1,8 +1,11 @@
-// PerpustakaanContextBar — sticky role-framing bar for the Perpustakaan module.
-// Unlike Akademik (which selects a period), the library desk has no period
-// context; this bar instead anchors WHO the user is and WHAT their daily focus
-// is, plus a slot for the primary action (open the circulation terminal). Roles
-// only frame the UI — they never hide functionality.
+// PerpustakaanContextBar — role-framing bar for the Perpustakaan module. Unlike
+// Akademik (which selects a period), the library desk has no period context;
+// this bar instead anchors WHO the user is and WHAT their daily focus is, plus a
+// slot for the primary action (open the circulation terminal). Roles only frame
+// the UI — they never hide functionality.
+//
+// Renders the konteks row only; the sticky, full-bleed panel chrome lives in
+// ModuleHeader so the bar and the sub-nav read as one cohesive header.
 import type { ReactNode } from "react";
 import { Badge, IconUsers, cn } from "@sekolahpro/ui";
 import { usePerpustakaanRole, ROLE_LABEL, type PerpustakaanRole } from "../../lib/perpustakaanRole";
@@ -22,22 +25,20 @@ const ROLE_FOCUS: Record<PerpustakaanRole, string> = {
 export function PerpustakaanContextBar({ cta }: { cta?: ReactNode }) {
   const { primary } = usePerpustakaanRole();
   return (
-    <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 lg:-mx-8 mb-4 border-b border-border bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/75">
-      <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-fg">
-            Konteks Perpustakaan
-          </span>
-          <Badge tone="brand" className={cn("gap-1")}>
-            <IconUsers className="h-3 w-3" aria-hidden />
-            {ROLE_LABEL[primary]}
-          </Badge>
-        </div>
-
-        <p className="min-w-0 text-xs text-muted-fg">{ROLE_FOCUS[primary]}</p>
-
-        {cta ? <div className="ml-auto flex items-center gap-2">{cta}</div> : null}
+    <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-fg">
+          Konteks Perpustakaan
+        </span>
+        <Badge tone="brand" className={cn("gap-1")}>
+          <IconUsers className="h-3 w-3" aria-hidden />
+          {ROLE_LABEL[primary]}
+        </Badge>
       </div>
+
+      <p className="min-w-0 text-xs text-muted-fg">{ROLE_FOCUS[primary]}</p>
+
+      {cta ? <div className="ml-auto flex items-center gap-2">{cta}</div> : null}
     </div>
   );
 }
