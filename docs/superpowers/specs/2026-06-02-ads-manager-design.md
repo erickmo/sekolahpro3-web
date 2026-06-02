@@ -41,7 +41,7 @@ Backend tests already green.
 ## Decisions (from brainstorming)
 
 - **Scope:** full-stack — frontend + deploy backend; backend stays doctype-driven (native Frappe, no framework bypass).
-- **Backend site:** `saas.localhost` hosts `vernon_ads` and serves the ad API (ads are platform-level / cross-tenant).
+- **Backend site:** `sekolahpro.localhost` hosts `vernon_ads` and serves the ad API. (The SaaS admin FE proxies `/api` → `Host: sekolahpro.localhost`, and school/parent/student/merchant share that backend → admin CRUD + most consumer ad fetches are same-origin. Original `saas.localhost` pick revised after finding the real proxy wiring.)
 - **Placement:** named slots per app (`<AdBanner slot="..." />`).
 - **Targets:** all 6 consumer apps — `school`, `parent`, `student`, `merchant`, `landing`, `situs`.
 - **Analytics:** concise — KPI (impressions/clicks/CTR) + breakdown tables (per campaign, per property) + daily trend. One `stats` endpoint.
@@ -57,9 +57,10 @@ untestable), iframe (responsive + tracking pain).
 ## Architecture
 
 ```
-saas.localhost  (Frappe + vernon_ads installed)
- ├─ /api/resource/<Doctype>      ← SaaS admin CRUD  (auth: SekolahPro Admin)
- ├─ get_ad / track / click       ← guest, CORS-enabled  ← all 6 consumer apps
+sekolahpro.localhost  (Frappe + vernon_ads installed)
+ ├─ /api/resource/<Doctype>      ← SaaS admin CRUD  (same-origin, auth: SekolahPro Admin)
+ ├─ get_ad / track / click       ← guest; same-origin for school/parent/student/merchant,
+ │                                 CORS only for landing + situs
  └─ api/stats.py (NEW)           ← analytics aggregation JSON (admin dashboard)
 
 apps/saas (admin)      → new /ads/* module: dashboard, customers,
@@ -74,10 +75,10 @@ apps/{school,parent,student,merchant,landing,situs}
 
 ### A. Backend `vernon_ads` (own repo, branch off `master`)
 
-- **Deploy:** install on `saas.localhost`; `bench set-config -g vernon_ads_token_secret <random>`; enable CORS for the 6 app origins in `saas.localhost/site_config.json` (`allow_cors` allowlist, not `*`).
-- **NEW `api/stats.py`** — one `@frappe.whitelist()` method (≤10 lines) delegating to a helper that runs GROUP BY aggregation: totals (impressions/clicks/CTR), per-campaign, per-property, daily series over a date range. Justified low-code Priority 5: the React admin needs JSON; a native Query Report does not return cleanly to React.
-- **`Ad Event` controller `before_insert`** sets `timestamp = frappe.utils.now()` (currently unset) — doctype controller method, Priority 1. Needed for the daily-trend series.
-- **Seed fixtures:** 1 Property Group (`SekolahPro Apps`) + 6 Property records (one per app, generated `api_key`, `status=Active`) + starter Slots per property. Exported via `hooks.py` fixtures.
+- **Deploy:** install on `sekolahpro.localhost`; `bench set-config vernon_ads_token_secret <random>`; enable CORS only for landing + situs origins in `sekolahpro.localhost/site_config.json` (`allow_cors` allowlist, not `*`).
+- **NEW `api/stats.py`** — one `@frappe.whitelist()` method (≤10 lines) delegating to module helpers that run GROUP BY aggregation: totals (impressions/clicks), per-campaign, per-property, daily series over a date range. CTR computed client-side. Justified low-code Priority 5: the React admin needs JSON; a native Query Report does not return cleanly to React.
+- **`Ad Event` timestamp:** already set by the existing `before_insert` controller (`now_datetime()`) — no change needed. Daily series groups on `DATE(timestamp)`.
+- **Seed via `after_install` hook** (Priority 3 framework event), NOT fixtures: `api_key` is a per-install secret (`secrets.token_hex`, `read_only`, `no_copy`) that must not be committed. Idempotent setup creates 1 Property Group (`SekolahPro Apps`) + 6 Property records (one per app, `status=Active`) + starter Slots per property. Admin reads generated keys from the UI to fill each app's env.
 
 ### B. `packages/ads` — new shared package `@sekolahpro/ads`
 
