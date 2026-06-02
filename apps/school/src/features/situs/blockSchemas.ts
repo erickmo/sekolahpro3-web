@@ -1,4 +1,5 @@
 import type { ChildSchema, KontenField } from "./schemas";
+import type { BlockTipe } from "../../data/situs";
 
 // Schemas for the Situs Sekolah child tables (keunggulan/statistik/testimoni)
 // and the layout-block editor. Field names MUST stay in sync with the backend
@@ -63,9 +64,7 @@ export const BLOCK_TIPE_OPTIONS = [
   "cta",
   "kontak",
   "richtext",
-] as const;
-
-export type BlockTipe = (typeof BLOCK_TIPE_OPTIONS)[number];
+] as const satisfies readonly BlockTipe[];
 
 // Variant options per block type for the CMS dropdowns. MUST match the SPA
 // block registry (apps/situs/src/templates/blocks/registry.ts) so every picked
