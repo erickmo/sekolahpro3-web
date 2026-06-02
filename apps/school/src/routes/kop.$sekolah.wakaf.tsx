@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, Button, type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { ASET_WAKAF_FIELDS } from "../data/create-schemas";
 
 type Row = {
   name: string;
@@ -23,26 +26,31 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function WakafPage() {
+  const [open, setOpen] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Koperasi"
-      title="Aset Wakaf"
-      doctype="Aset Wakaf"
-      fields={["name", "nama_aset", "jenis_wakaf", "nilai", "wakif", "status"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "name", dir: "desc" }}
-      searchFields={["name", "nama_aset", "wakif"]}
-      extraActions={
-        <Button
-          variant="outline"
-          disabled
-          title="Form aset wakaf dijadwalkan sprint berikutnya."
-        >
-          Catat Wakaf
-        </Button>
-      }
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Koperasi"
+        title="Aset Wakaf"
+        doctype="Aset Wakaf"
+        fields={["name", "nama_aset", "jenis_wakaf", "nilai", "wakif", "status"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "name", dir: "desc" }}
+        searchFields={["name", "nama_aset", "wakif"]}
+        addLabel="Catat Wakaf"
+        onAdd={() => setOpen(true)}
+      />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Aset Wakaf"
+        title="Catat Aset Wakaf"
+        description="Daftarkan aset wakaf yang dikelola koperasi."
+        fields={ASET_WAKAF_FIELDS}
+        submitLabel="Simpan Aset"
+      />
+    </>
   );
 }
 

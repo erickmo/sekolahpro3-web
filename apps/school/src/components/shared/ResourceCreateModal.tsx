@@ -13,6 +13,7 @@ import {
   type SearchableOption,
 } from "@sekolahpro/ui";
 import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+import { validateResourceForm, resolveDefaultValue } from "./resourceForm";
 
 // Generic create-form modal for any Frappe DocType.
 // Each list route declares a schema; the modal renders fields and POSTs to the DocType.
@@ -36,7 +37,10 @@ export interface ResourceFieldDef {
   required?: boolean;
   hint?: string;
   options?: Array<{ value: string; label: string }>;
+  /** Initial value. For a `date` field, "@today" resolves to today at open. */
   defaultValue?: string | number;
+  /** When true, a `number` field must be strictly greater than zero. */
+  positive?: boolean;
   colSpan?: 1 | 2;
   /** For `link`: target DocType to query. */
   linkDoctype?: string;
@@ -89,9 +93,9 @@ export interface ResourceCreateModalProps {
   onCreated?: (doc: Record<string, unknown>) => void;
 }
 
-function emptyValues(fields: ResourceFieldDef[]): Record<string, string> {
+function emptyValues(fields: ResourceFieldDef[], today: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const f of fields) out[f.name] = f.defaultValue !== undefined ? String(f.defaultValue) : "";
+  for (const f of fields) out[f.name] = resolveDefaultValue(f.defaultValue, f.type, today);
   return out;
 }
 
@@ -136,13 +140,14 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
     submitLabel = "Simpan",
     onCreated,
   } = props;
-  const [values, setValues] = useState<Record<string, string>>(() => emptyValues(fields));
+  const today = new Date().toISOString().slice(0, 10);
+  const [values, setValues] = useState<Record<string, string>>(() => emptyValues(fields, today));
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const qc = useQueryClient();
   const mut = useResourceCreate(doctype);
 
   const reset = () => {
-    setValues(emptyValues(fields));
+    setValues(emptyValues(fields, today));
     setErrMsg(null);
   };
 
@@ -156,27 +161,17 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
     e.preventDefault();
     setErrMsg(null);
 
-    for (const f of fields) {
-      if (f.required && !values[f.name]?.toString().trim()) {
-        setErrMsg(`Field "${f.label}" wajib diisi.`);
-        return;
-      }
+    const validationError = validateResourceForm(fields, values);
+    if (validationError) {
+      setErrMsg(validationError);
+      return;
     }
 
     const payload: Record<string, unknown> = { ...(baseValues ?? {}) };
     for (const f of fields) {
       const raw = values[f.name];
       if (raw === undefined || raw === "") continue;
-      if (f.type === "number") {
-        const n = Number(raw);
-        if (Number.isNaN(n)) {
-          setErrMsg(`Field "${f.label}" harus berupa angka.`);
-          return;
-        }
-        payload[f.name] = n;
-      } else {
-        payload[f.name] = raw;
-      }
+      payload[f.name] = f.type === "number" ? Number(raw) : raw;
     }
 
     try {

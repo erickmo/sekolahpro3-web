@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
-import { Badge, type Column } from "@sekolahpro/ui";
+import { Badge, Button, IconUsers, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { ANGGOTA_KOPERASI_FIELDS } from "../data/create-schemas";
@@ -94,6 +94,15 @@ function KoperasiDaftarPage() {
       columns={COLUMNS}
       defaultSort={{ key: "tanggal_masuk", dir: "desc" }}
       searchFields={["name", "nomor_anggota", "nasabah"]}
+      extraActions={
+        <Button
+          variant="outline"
+          onClick={() => navigate({ to: "/kop/$sekolah/onboarding", params: { sekolah } })}
+        >
+          <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
+          Pendaftaran Terpandu
+        </Button>
+      }
       selectFilters={[
         {
           key: "status",

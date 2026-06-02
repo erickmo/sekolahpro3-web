@@ -12,10 +12,21 @@ import {
   type SearchableOption,
 } from "@sekolahpro/ui";
 import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+import { AKAD_POKOK_FIELD, buildAkadPayload } from "../../lib/koperasi/akadContract";
 
 const AKAD_DOCTYPE = "Akad Pembiayaan";
-const NUMERIC_FIELDS = new Set(["pokok_pembiayaan", "margin", "tenor_bulan"]);
 const AKAD_TYPES = ["Murabahah", "Ijarah", "Qardh", "Musyarakah"] as const;
+
+/** Name-only loader for a master link field (label = doc name). */
+async function searchByName(doctype: string, q: string): Promise<SearchableOption[]> {
+  const rows = await listResource<{ name: string }>(doctype, {
+    fields: ["name"],
+    ...(q ? { or_filters: [["name", "like", `%${q}%`]] as [string, string, unknown][] } : {}),
+    limit_page_length: 20,
+    order_by: "modified desc",
+  });
+  return rows.map((r) => ({ value: r.name, label: r.name }));
+}
 
 // Akad dates stay near the present — narrow year range for fast jumping.
 const MIN_YEAR = new Date().getFullYear() - 10;
@@ -89,20 +100,42 @@ export function AkadCreateModal(props: AkadCreateModalProps) {
   const [akad, setAkad] = useState<string>("Murabahah");
   const [tanggalAkad, setTanggalAkad] = useState<string>("");
   const [anggotaVal, setAnggotaVal] = useState<string>(anggota ?? "");
+  const [produkVal, setProdukVal] = useState<string>("");
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
-    const doc: Record<string, unknown> = {};
-    fd.forEach((v, k) => {
-      if (typeof v !== "string" || v.trim() === "") return;
-      if (NUMERIC_FIELDS.has(k)) {
-        const n = Number(v);
-        if (!Number.isNaN(n)) doc[k] = n;
-      } else {
-        doc[k] = v;
-      }
+    const num = (k: string) => {
+      const v = fd.get(k);
+      const n = Number(v);
+      return typeof v === "string" && v.trim() !== "" && !Number.isNaN(n) ? n : undefined;
+    };
+    const str = (k: string) => {
+      const v = fd.get(k);
+      return typeof v === "string" && v.trim() !== "" ? v.trim() : undefined;
+    };
+
+    const pokok = num(AKAD_POKOK_FIELD);
+    const tenor = num("tenor_bulan");
+    if (!anggotaVal || !produkVal || pokok === undefined || tenor === undefined) {
+      setError("Lengkapi anggota, produk, pokok pembiayaan, dan tenor.");
+      return;
+    }
+
+    const margin = num("margin");
+    const jaminan = str("jaminan");
+    const catatan = str("catatan");
+    const doc = buildAkadPayload({
+      anggota: anggotaVal,
+      produk: produkVal,
+      akad,
+      tanggal_akad: tanggalAkad,
+      pokok_pembiayaan: pokok,
+      tenor_bulan: tenor,
+      ...(margin !== undefined ? { margin } : {}),
+      ...(jaminan ? { jaminan } : {}),
+      ...(catatan ? { catatan } : {}),
     });
     try {
       const created = await create.mutateAsync(doc);
@@ -138,7 +171,12 @@ export function AkadCreateModal(props: AkadCreateModalProps) {
             <input type="hidden" name="anggota" value={anggotaVal} />
           </FormField>
           <FormField label="Produk" required>
-            <Input name="produk" required placeholder="Misal: Pembiayaan Modal Usaha" />
+            <SearchableSelect
+              value={produkVal}
+              onChange={(v) => setProdukVal(v)}
+              loadOptions={(q) => searchByName("Produk Pembiayaan", q)}
+              placeholder="Cari produk pembiayaan…"
+            />
           </FormField>
           <FormField label="Akad" required>
             <SearchableSelect
@@ -166,7 +204,7 @@ export function AkadCreateModal(props: AkadCreateModalProps) {
           description="Pokok, margin, tenor, dan jaminan pembiayaan."
         >
           <FormField label="Pokok Pembiayaan (Rp)" required>
-            <Input name="pokok_pembiayaan" type="number" min={0} step="1" required placeholder="0" />
+            <Input name={AKAD_POKOK_FIELD} type="number" min={1} step="1" required placeholder="0" />
           </FormField>
           <FormField label="Margin (Rp)">
             <Input name="margin" type="number" min={0} step="1" placeholder="0" />

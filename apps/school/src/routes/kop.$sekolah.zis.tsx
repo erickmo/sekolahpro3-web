@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, Button, type Column } from "@sekolahpro/ui";
+import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
+import { PENERIMAAN_ZIS_FIELDS } from "../data/create-schemas";
 
 type Row = {
   name: string;
@@ -23,31 +26,36 @@ const COLUMNS: Column<Row>[] = [
 ];
 
 function ZisPage() {
+  const [open, setOpen] = useState(false);
   return (
-    <ResourceListPage<Row>
-      eyebrow="Koperasi"
-      title="ZIS (Zakat, Infak, Sedekah)"
-      description="Penerimaan & penyaluran dana sosial."
-      doctype="Penerimaan ZIS"
-      fields={["name", "jenis_dana", "nasabah", "jumlah", "tanggal"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "tanggal", dir: "desc" }}
-      searchFields={["name", "nasabah"]}
-      selectFilters={[
-        { key: "jenis", label: "Jenis", field: "jenis_dana",
-          options: ["Semua", "Zakat", "Infak", "Sedekah", "Wakaf Tunai"].map((v) => ({ value: v, label: v })) },
-      ]}
-      extraActions={
-        <Button
-          variant="outline"
-          disabled
-          title="Form penerimaan ZIS dijadwalkan sprint berikutnya."
-        >
-          Catat Penerimaan
-        </Button>
-      }
-    />
+    <>
+      <ResourceListPage<Row>
+        eyebrow="Koperasi"
+        title="ZIS (Zakat, Infak, Sedekah)"
+        description="Penerimaan & penyaluran dana sosial."
+        doctype="Penerimaan ZIS"
+        fields={["name", "jenis_dana", "nasabah", "jumlah", "tanggal", "status"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "tanggal", dir: "desc" }}
+        searchFields={["name", "nasabah"]}
+        selectFilters={[
+          { key: "jenis", label: "Jenis", field: "jenis_dana",
+            options: ["Semua", "Zakat", "Infak", "Sedekah", "Wakaf Tunai"].map((v) => ({ value: v, label: v })) },
+        ]}
+        addLabel="Catat Penerimaan"
+        onAdd={() => setOpen(true)}
+      />
+      <ResourceCreateModal
+        open={open}
+        onClose={() => setOpen(false)}
+        doctype="Penerimaan ZIS"
+        title="Catat Penerimaan ZIS"
+        description="Catat dana zakat, infak, sedekah, atau wakaf tunai yang diterima."
+        fields={PENERIMAAN_ZIS_FIELDS}
+        submitLabel="Simpan Penerimaan"
+      />
+    </>
   );
 }
 
