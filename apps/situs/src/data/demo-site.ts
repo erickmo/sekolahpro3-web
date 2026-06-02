@@ -71,6 +71,21 @@ export const demoSite: SiteData = {
     { to: "/ppdb", label: "PPDB", section: "ppdb" },
     { to: "/kontak", label: "Kontak", section: "kontak" },
   ],
+  // Phase 2 block engine: the demo derives a default layout from `sections`
+  // when these are empty (rich demo content lands in a later task).
+  layoutBlocks: [],
+  keunggulan: [],
+  statistik: [],
+  testimoni: [],
+  // Empty tokens => skins.css supplies each template's defaults.
+  theme: {
+    heroVariant: "split",
+    radius: "",
+    fontHeading: "",
+    fontBody: "",
+    shadow: "",
+    sectionStyle: "card",
+  },
   isDemo: true,
 };
 
