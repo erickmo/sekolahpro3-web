@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { SiteProvider } from "../SiteContext";
 import { useSiteData } from "../lib/site";
@@ -9,6 +9,10 @@ import { Nav } from "../sections/Nav";
 import { Footer } from "../sections/Footer";
 import { Spinner } from "../sections/primitives";
 import type { SiteData } from "../types";
+import type { TemplateKey } from "../constants";
+import { applyDemoTemplate } from "../demo/templatePresets";
+import { isDemoMode } from "../demo/demoMode";
+import { DemoSwitcher } from "../demo/DemoSwitcher";
 
 /** Resolves the per-school site from the host, then renders its template. */
 export function SiteLayout() {
@@ -24,20 +28,29 @@ export function SiteLayout() {
 }
 
 function SiteShell({ site }: { site: SiteData }) {
+  // Demo-only override: lets a presenter flip templates live (see DemoSwitcher).
+  const [demoKey, setDemoKey] = useState<TemplateKey | null>(null);
+  const demo = isDemoMode();
+  const effectiveSite = useMemo(
+    () => (demoKey ? applyDemoTemplate(site, demoKey) : site),
+    [site, demoKey],
+  );
+
   useEffect(() => {
-    applyTheme(site.brand, site.theme);
-  }, [site.brand, site.theme]);
+    applyTheme(effectiveSite.brand, effectiveSite.theme);
+  }, [effectiveSite.brand, effectiveSite.theme]);
   useSeo({ title: site.meta.metaTitle, description: site.meta.metaDescription, image: site.meta.ogImage });
 
-  const tpl = getTemplate(site.templateKey);
+  const tpl = getTemplate(effectiveSite.templateKey);
   return (
-    <SiteProvider value={site}>
+    <SiteProvider value={effectiveSite}>
       <div className={`${tpl.themeClass} flex min-h-screen flex-col`}>
         <Nav variant={tpl.navVariant} />
         <main className="flex-1">
           <Outlet />
         </main>
         <Footer />
+        {demo && <DemoSwitcher current={effectiveSite.templateKey} onPick={setDemoKey} />}
       </div>
     </SiteProvider>
   );
