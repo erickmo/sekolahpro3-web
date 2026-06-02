@@ -595,6 +595,10 @@ function Layout() {
 
   return (
     <AppShell
+      // Drop <main> padding; the content wrapper below supplies the inset via
+      // margin instead, so the sticky ModuleHeader can bleed full-width without
+      // fighting padding.
+      mainClassName=""
       brand={
         <Brand
           name={tenantName}
@@ -658,7 +662,9 @@ function Layout() {
       }
     >
       <SetupBannerContext.Provider value={showSetupBanner}>
-        <div className="space-y-4">
+        {/* Page inset lives here as margin (not <main> padding) so a full-bleed
+            sticky header can escape it with matching negative margins. */}
+        <div className="m-6 lg:m-8 space-y-4">
           {showSetupBanner ? (
             <SetupBanner
               tone="danger"

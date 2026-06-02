@@ -7,9 +7,23 @@ interface Props {
   brand?: ReactNode;
   children: ReactNode;
   className?: string;
+  /**
+   * Classes for the <main> content region. Defaults to the standard page inset
+   * (`p-6 lg:p-8`). Pass "" to drop the padding when the page provides its own
+   * spacing via child margins instead (lets a full-bleed sticky header sit flush
+   * while sibling content stays inset). Other apps omit it and keep the default.
+   */
+  mainClassName?: string;
 }
 
-export function AppShell({ sidebar, topbar, brand, children, className }: Props) {
+export function AppShell({
+  sidebar,
+  topbar,
+  brand,
+  children,
+  className,
+  mainClassName = "p-6 lg:p-8",
+}: Props) {
   return (
     <div
       className={cn(
@@ -27,7 +41,7 @@ export function AppShell({ sidebar, topbar, brand, children, className }: Props)
       <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur flex items-center px-6">
         {topbar}
       </header>
-      <main className="p-6 lg:p-8">{children}</main>
+      <main className={cn(mainClassName)}>{children}</main>
     </div>
   );
 }
