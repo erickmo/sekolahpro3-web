@@ -25,8 +25,8 @@ export function SiteLayout() {
 
 function SiteShell({ site }: { site: SiteData }) {
   useEffect(() => {
-    applyTheme(site.brand);
-  }, [site.brand]);
+    applyTheme(site.brand, site.theme);
+  }, [site.brand, site.theme]);
   useSeo({ title: site.meta.metaTitle, description: site.meta.metaDescription, image: site.meta.ogImage });
 
   const tpl = getTemplate(site.templateKey);

@@ -52,6 +52,21 @@
   font-weight: 800;
 }
 
+.tpl-aurora {
+  --situs-radius: 16px;
+  --situs-radius-lg: 28px;
+  --situs-heading-font: var(--font-situs-sans);
+  --situs-body-font: var(--font-situs-sans);
+  --situs-card-border: 1px solid transparent;
+  --situs-card-shadow: 0 24px 60px -30px rgba(99, 102, 241, 0.45);
+  --situs-section-soft: #f5f3ff;
+}
+.tpl-aurora h1,
+.tpl-aurora h2 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
 /* Section primitives consumed by all templates via the scoped vars. */
 .situs-card {
   border: var(--situs-card-border, 1px solid var(--situs-border));
@@ -73,4 +88,16 @@
 }
 .situs-soft-bg {
   background: var(--situs-section-soft, #f8fafc);
+}
+
+/* Section chrome override driven by Template Situs.section_style via --situs-section-style.
+   Falls back to each template's .situs-card defaults when the var is unset. */
+[data-section-style="flat"] .situs-card {
+  border-color: transparent;
+  box-shadow: none;
+  background: var(--situs-section-soft, #f8fafc);
+}
+[data-section-style="bordered"] .situs-card {
+  border: 1px solid var(--situs-border);
+  box-shadow: none;
 }

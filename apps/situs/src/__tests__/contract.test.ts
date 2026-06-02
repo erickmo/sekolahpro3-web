@@ -22,4 +22,10 @@ describe("template registry contract", () => {
     // @ts-expect-error testing runtime guard with an invalid key
     expect(getTemplate("nope").key).toBe("klasik");
   });
+
+  it("aurora is a first-class template with its own skin class", () => {
+    const def = getTemplate("aurora");
+    expect(def.key).toBe("aurora");
+    expect(def.themeClass).toBe("tpl-aurora");
+  });
 });

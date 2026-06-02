@@ -22,6 +22,64 @@ export interface SiteSocial {
   whatsapp?: string | undefined;
 }
 
+/** Discriminator for a layout block; mirrors backend Situs Layout Block.tipe. */
+export type BlockType =
+  | "hero"
+  | "keunggulan"
+  | "statistik"
+  | "testimoni"
+  | "profil"
+  | "berita"
+  | "agenda"
+  | "galeri"
+  | "prestasi"
+  | "ppdb"
+  | "cta"
+  | "kontak"
+  | "richtext";
+
+/** One ordered section on the homepage. `variant` selects a renderer skin. */
+export interface LayoutBlock {
+  tipe: BlockType;
+  variant: string;
+  aktif: boolean;
+  judul?: string | undefined;
+  subjudul?: string | undefined;
+  ctaLabel?: string | undefined;
+  ctaUrl?: string | undefined;
+  /** HTML (Text Editor) for richtext blocks. */
+  konten?: string | undefined;
+}
+
+export interface Keunggulan {
+  ikon: string;
+  judul: string;
+  deskripsi: string;
+}
+
+export interface Statistik {
+  label: string;
+  nilai: string;
+  satuan?: string | undefined;
+}
+
+export interface Testimoni {
+  nama: string;
+  peran?: string | undefined;
+  foto?: string | undefined;
+  kutipan: string;
+}
+
+/** Visual tokens sourced from the school's Template Situs record. */
+export interface SiteTheme {
+  heroVariant: string;
+  radius: string;
+  fontHeading: string;
+  fontBody: string;
+  shadow: string;
+  sectionStyle: "card" | "flat" | "bordered";
+}
+
 export interface SiteProfil {
   tagline: string;
   heroJudul: string;
@@ -37,6 +95,12 @@ export interface SiteProfil {
   alamat: string;
   /** Raw <iframe> embed string for an optional map. */
   petaEmbed: string;
+  /** Small uppercase label above the hero title. */
+  heroEyebrow?: string | undefined;
+  /** Secondary hero CTA label. */
+  heroCta2Label?: string | undefined;
+  /** Secondary hero CTA url. */
+  heroCta2Url?: string | undefined;
 }
 
 export interface SiteContact {
@@ -74,6 +138,12 @@ export interface SiteData {
   /** Enabled sections in canonical order. */
   sections: SectionKey[];
   nav: NavLink[];
+  /** Ordered homepage blocks; empty => template derives a default layout. */
+  layoutBlocks: LayoutBlock[];
+  keunggulan: Keunggulan[];
+  statistik: Statistik[];
+  testimoni: Testimoni[];
+  theme: SiteTheme;
   /** True when this is the offline/demo fallback (no live backend). */
   isDemo?: boolean;
 }

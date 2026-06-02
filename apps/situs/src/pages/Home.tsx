@@ -1,9 +1,6 @@
-import { useSite } from "../SiteContext";
-import { getTemplate } from "../templates/registry";
+import { Composer } from "../templates/Composer";
 
-/** Homepage: delegates composition to the school's chosen template. */
+/** Homepage: block-driven via Composer, with template HomeBody as the default. */
 export function Home() {
-  const site = useSite();
-  const tpl = getTemplate(site.templateKey);
-  return <tpl.HomeBody />;
+  return <Composer />;
 }

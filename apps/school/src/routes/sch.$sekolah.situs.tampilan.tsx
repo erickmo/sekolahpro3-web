@@ -21,8 +21,7 @@ const TOGGLES: { name: keyof SitusDoc; label: string }[] = [
   { name: "tampilkan_ppdb", label: "PPDB" },
 ];
 
-function TampilanCms() {
-  const { sekolah } = Route.useParams();
+export function TampilanPage({ sekolah }: { sekolah: string }) {
   const { data } = useSitus(sekolah);
   const templates = useTemplates();
   const save = useSaveSitus(sekolah);
@@ -64,6 +63,13 @@ function TampilanCms() {
                   {active ? <span className="text-xs font-semibold text-brand">Dipilih</span> : null}
                 </div>
                 <p className="mt-1 text-xs text-slate-500">{t.deskripsi}</p>
+                {(t.font_heading || t.radius || t.shadow) ? (
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    {[t.font_heading, t.radius ? `radius ${t.radius}` : null, t.shadow ? `shadow ${t.shadow}` : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                ) : null}
               </button>
             );
           })}
@@ -102,6 +108,17 @@ function TampilanCms() {
         <FormField label="Subjudul Hero">
           <Textarea rows={2} value={str("hero_subjudul")} onChange={(e) => set("hero_subjudul", e.target.value)} />
         </FormField>
+        <FormField label="Eyebrow Hero">
+          <Input aria-label="Eyebrow Hero" value={str("hero_eyebrow")} onChange={(e) => set("hero_eyebrow", e.target.value)} />
+        </FormField>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Label Tombol Kedua">
+            <Input aria-label="Label Tombol Kedua" value={str("hero_cta2_label")} onChange={(e) => set("hero_cta2_label", e.target.value)} />
+          </FormField>
+          <FormField label="URL Tombol Kedua">
+            <Input aria-label="URL Tombol Kedua" value={str("hero_cta2_url")} onChange={(e) => set("hero_cta2_url", e.target.value)} />
+          </FormField>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label="Visi">
             <Textarea rows={3} value={str("visi")} onChange={(e) => set("visi", e.target.value)} />
@@ -134,6 +151,11 @@ function TampilanCms() {
       </Card>
     </div>
   );
+}
+
+function TampilanCms() {
+  const { sekolah } = Route.useParams();
+  return <TampilanPage sekolah={sekolah} />;
 }
 
 export const Route = createFileRoute("/sch/$sekolah/situs/tampilan")({ component: TampilanCms });
