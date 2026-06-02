@@ -78,6 +78,7 @@ export function SesiKasBanner() {
             name: sesi.name,
             modalKas: sesi.modal_kas ?? 0,
             shift: (sesi.shift as "Pagi" | "Siang" | "Sore") ?? "Pagi",
+            ...(sesi.tanggal ? { tanggal: sesi.tanggal } : {}),
           }}
           onClose={() => setTutupOpen(false)}
           onSuccess={() => {

@@ -13,6 +13,7 @@ import {
 import {
   listResource,
   useResourceCreate,
+  useResourceList,
   useResourceUpdate,
 } from "@sekolahpro/api-client";
 import { useSession } from "@sekolahpro/auth";
@@ -20,6 +21,7 @@ import {
   computeTotalDenominasi,
   computeSaldoSeharusnya,
   computeSelisih,
+  sumTransaksiSigned,
   validateBukaSesi,
   validateTutupSesi,
   type DenominasiItem,
@@ -96,9 +98,16 @@ interface BukaProps {
 
 interface TutupProps {
   mode: "tutup";
-  sesi: { name: string; modalKas: number; shift: Shift };
+  sesi: { name: string; modalKas: number; shift: Shift; tanggal?: string };
   onClose: () => void;
   onSuccess?: () => void;
+}
+
+interface TransaksiCashQueryRow {
+  name: string;
+  jenis: string;
+  jumlah: number;
+  tanggal: string;
 }
 
 export function SesiKasForm(props: BukaProps | TutupProps) {
@@ -265,15 +274,32 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
   const [error, setError] = useState<string | null>(null);
   const updateMut = useResourceUpdate("Sesi Kas Teller");
 
-  // Total setoran/penarikan harian seharusnya dihitung backend; client tidak
-  // punya akses agregat — fallback ke saldo seharusnya = modal_kas saja jika
-  // backend belum mengisi field tersebut. UI menampilkan asumsi ini eksplisit.
+  // Saldo seharusnya = modal awal + setoran − penarikan hari ini. Setoran &
+  // penarikan diturunkan dari Transaksi Simpanan tanggal sesi (client-side)
+  // sehingga selisih merefleksikan aktivitas nyata, bukan modal saja. Bila
+  // agregat tak bisa dihitung, UI menyatakan eksplisit "belum dapat dihitung"
+  // dan tidak menampilkan angka selisih yang menyesatkan.
+  const txQ = useResourceList<TransaksiCashQueryRow>(
+    "Transaksi Simpanan",
+    {
+      fields: ["name", "jenis", "jumlah", "tanggal"],
+      filters: [["tanggal", "=", sesi.tanggal ?? ""]],
+      limit_page_length: 0,
+    },
+    { enabled: Boolean(sesi.tanggal) },
+  );
+
   const filled = useMemo(() => denominasi.filter((d) => d.jumlah > 0), [denominasi]);
   const totalTutup = computeTotalDenominasi(filled);
+
+  const canCompute = Boolean(sesi.tanggal) && !txQ.isError && txQ.data !== undefined;
+  const { totalSetoran, totalPenarikan } = canCompute
+    ? sumTransaksiSigned(txQ.data ?? [])
+    : { totalSetoran: 0, totalPenarikan: 0 };
   const saldoSeharusnya = computeSaldoSeharusnya({
     modalKas: sesi.modalKas,
-    totalSetoran: 0,
-    totalPenarikan: 0,
+    totalSetoran,
+    totalPenarikan,
   });
   const selisih = computeSelisih({
     totalDenominasiTutup: totalTutup,
@@ -281,13 +307,23 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
   });
 
   const handleSubmit = () => {
-    const err = validateTutupSesi({
-      denominasiTutup: filled,
-      saldoSeharusnya,
-      catatanSelisih: catatan,
-    });
-    if (err) {
-      setError(err);
+    if (filled.length === 0) {
+      setError("Rincian denominasi tutup wajib diisi.");
+      return;
+    }
+    if (canCompute) {
+      const err = validateTutupSesi({
+        denominasiTutup: filled,
+        saldoSeharusnya,
+        catatanSelisih: catatan,
+      });
+      if (err) {
+        setError(err);
+        return;
+      }
+    } else if (!catatan.trim()) {
+      // Selisih tak terhitung otomatis → wajib catatan kondisi kas.
+      setError("Selisih belum dapat dihitung otomatis — isi catatan kondisi kas terlebih dahulu.");
       return;
     }
     if (!supervisor) {
@@ -335,28 +371,41 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
           <div>
             <div className="text-xs text-muted-fg">Saldo Seharusnya</div>
             <div className="font-medium tabular-nums">
-              Rp {saldoSeharusnya.toLocaleString("id-ID")}
+              {txQ.isLoading ? "menghitung…" : canCompute ? `Rp ${saldoSeharusnya.toLocaleString("id-ID")}` : "belum dapat dihitung"}
             </div>
             <div className="text-[10px] text-muted-fg">
-              setoran/penarikan dihitung backend
+              {canCompute
+                ? `modal + setoran Rp ${totalSetoran.toLocaleString("id-ID")} − penarikan Rp ${totalPenarikan.toLocaleString("id-ID")}`
+                : "transaksi hari ini tak dapat diakses"}
             </div>
           </div>
           <div>
             <div className="text-xs text-muted-fg">Selisih</div>
-            <div
-              className={`font-semibold tabular-nums ${
-                selisih === 0
-                  ? "text-success"
-                  : selisih > 0
-                    ? "text-info"
-                    : "text-danger"
-              }`}
-            >
-              {selisih > 0 ? "+" : ""}
-              Rp {selisih.toLocaleString("id-ID")}
-            </div>
+            {canCompute ? (
+              <div
+                className={`font-semibold tabular-nums ${
+                  selisih === 0
+                    ? "text-success"
+                    : selisih > 0
+                      ? "text-info"
+                      : "text-danger"
+                }`}
+              >
+                {selisih > 0 ? "+" : ""}
+                Rp {selisih.toLocaleString("id-ID")}
+              </div>
+            ) : (
+              <div className="font-medium text-muted-fg">—</div>
+            )}
           </div>
         </div>
+
+        {!txQ.isLoading && !canCompute ? (
+          <Alert tone="warning" statusRole>
+            Selisih belum dapat dihitung otomatis (agregat transaksi hari ini tak tersedia). Hitung
+            manual, isi catatan kondisi kas, dan minta supervisor verifikasi fisik.
+          </Alert>
+        ) : null}
 
         <div className="space-y-1.5">
           <div className="text-sm font-medium">Rincian Denominasi Akhir</div>

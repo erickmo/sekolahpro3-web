@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  Alert,
   Button,
   DatePicker,
   FormField,
@@ -11,7 +12,13 @@ import {
   Textarea,
   type SearchableOption,
 } from "@sekolahpro/ui";
-import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+import { listResource, useResourceCreate, useResourceList } from "@sekolahpro/api-client";
+import { useSession } from "@sekolahpro/auth";
+import { validateTransaksi, hasActiveSession } from "../../lib/koperasi/transaksiGuard";
+import { SesiKasForm } from "../koperasi/SesiKasForm";
+
+/** Jenis transaksi yang menggerakkan kas fisik → wajib ada sesi kas aktif. */
+const CASH_JENIS: ReadonlySet<string> = new Set(["Setor", "Tarik"]);
 
 export type TransaksiJenis = "Setor" | "Tarik" | "Transfer" | "Bagi Hasil" | "Koreksi";
 
@@ -102,6 +109,7 @@ interface TransaksiModalProps {
 export function TransaksiModal(props: TransaksiModalProps) {
   const { open, onClose, rekening, defaultJenis = "Setor", onSuccess } = props;
   const qc = useQueryClient();
+  const session = useSession();
   const create = useResourceCreate<{ name: string }>(DOCTYPE);
   const [jenis, setJenis] = useState<TransaksiJenis>(defaultJenis);
   const today = new Date().toISOString().slice(0, 10);
@@ -109,11 +117,60 @@ export function TransaksiModal(props: TransaksiModalProps) {
   const [rekeningVal, setRekeningVal] = useState<string>(rekening ?? "");
   const [rekeningTujuan, setRekeningTujuan] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const [bukaSesiOpen, setBukaSesiOpen] = useState(false);
+
+  // Sesi kas aktif milik teller saat ini — gate untuk transaksi tunai.
+  const sesiQ = useResourceList<{ name: string; teller: string; status: string }>(
+    "Sesi Kas Teller",
+    {
+      fields: ["name", "teller", "status"],
+      filters: [
+        ["teller", "=", session.user ?? ""],
+        ["status", "=", "Aktif"],
+      ],
+      limit_page_length: 5,
+    },
+    { enabled: open && Boolean(session.user) },
+  );
+  const sessionActive = hasActiveSession(sesiQ.data ?? [], session.user ?? "");
+  const isCash = CASH_JENIS.has(jenis);
+  const cashBlocked = isCash && !sesiQ.isLoading && !sessionActive;
+
+  // Saldo rekening sumber — untuk memblok penarikan melebihi saldo.
+  const saldoQ = useResourceList<{ name: string; saldo?: number }>(
+    "Rekening Simpanan",
+    {
+      fields: ["name", "saldo"],
+      filters: [["name", "=", rekeningVal]],
+      limit_page_length: 1,
+    },
+    { enabled: open && jenis === "Tarik" && Boolean(rekeningVal) },
+  );
+  const saldoSumber = saldoQ.data?.[0]?.saldo;
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
+    const nominal = Number(fd.get("nominal"));
+
+    // Guard sisi-klien sebelum POST: cegah salah ketik & selisih kas.
+    const guardError = validateTransaksi({
+      jenis,
+      nominal,
+      rekening: rekeningVal,
+      ...(jenis === "Transfer" ? { rekeningTujuan } : {}),
+      ...(jenis === "Tarik" && saldoSumber !== undefined ? { saldo: saldoSumber } : {}),
+    });
+    if (guardError) {
+      setError(guardError);
+      return;
+    }
+    if (cashBlocked) {
+      setError("Belum ada sesi kas aktif — buka sesi kas dulu sebelum transaksi tunai.");
+      return;
+    }
+
     const doc: Record<string, unknown> = {};
     fd.forEach((v, k) => {
       if (typeof v === "string" && v.trim() !== "") {
@@ -147,6 +204,16 @@ export function TransaksiModal(props: TransaksiModalProps) {
       tone="brand"
     >
       <form onSubmit={onSubmit} className="space-y-5">
+        {cashBlocked ? (
+          <Alert tone="warning" title="Belum ada sesi kas aktif">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>Transaksi tunai butuh sesi kas yang terbuka atas nama Anda.</span>
+              <Button type="button" size="sm" variant="outline" onClick={() => setBukaSesiOpen(true)}>
+                Buka Sesi Kas
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
         <FormSection
           title="Detail Transaksi"
           description="Tentukan jenis, rekening, dan nominal transaksi."
@@ -179,8 +246,14 @@ export function TransaksiModal(props: TransaksiModalProps) {
             />
             <input type="hidden" name="rekening" value={rekeningVal} />
           </FormField>
-          <FormField label="Nominal (Rp)" required>
-            <Input name="nominal" type="number" min={0} step={1} required placeholder="0" />
+          <FormField
+            label="Nominal (Rp)"
+            required
+            {...(jenis === "Tarik" && saldoSumber !== undefined
+              ? { hint: `Saldo tersedia: Rp ${saldoSumber.toLocaleString("id-ID")}` }
+              : {})}
+          >
+            <Input name="nominal" type="number" min={1} step={1} required placeholder="0" />
           </FormField>
           {jenis === "Transfer" ? (
             <FormField label="Rekening Tujuan" required className="col-span-2">
@@ -208,11 +281,22 @@ export function TransaksiModal(props: TransaksiModalProps) {
           <Button type="button" variant="outline" onClick={onClose}>
             Batal
           </Button>
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" disabled={create.isPending || cashBlocked}>
             {create.isPending ? "Memproses..." : "Catat Transaksi"}
           </Button>
         </div>
       </form>
+
+      {bukaSesiOpen ? (
+        <SesiKasForm
+          mode="buka"
+          onClose={() => setBukaSesiOpen(false)}
+          onSuccess={() => {
+            setBukaSesiOpen(false);
+            void sesiQ.refetch();
+          }}
+        />
+      ) : null}
     </Modal>
   );
 }

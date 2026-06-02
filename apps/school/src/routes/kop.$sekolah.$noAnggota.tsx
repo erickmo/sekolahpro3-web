@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link, notFound, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Avatar,
@@ -26,7 +27,6 @@ import {
   IconId,
   IconMail,
   IconMapPin,
-  IconMore,
   IconPhone,
   IconPlus,
   IconPrint,
@@ -35,6 +35,10 @@ import {
   type TabItem,
 } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
+import { TransaksiModal, type TransaksiJenis } from "../components/koperasi-simpanan/transaksiForm";
+import { AkadCreateModal } from "../components/koperasi-pembiayaan/akadForm";
+import { PembayaranAngsuranModal } from "../components/koperasi-pembiayaan/pembayaranForm";
+import { selectPrimaryRekening } from "../lib/koperasi/memberActions";
 import {
   findAnggota,
   formatRupiah,
@@ -87,7 +91,19 @@ const ANGSURAN_TONE = {
   Telat: "danger",
 } as const;
 
-function Hero({ anggota }: { anggota: Anggota }) {
+/** Live action handlers for the member detail, wired to existing modals. */
+interface MemberActions {
+  hasActiveRekening: boolean;
+  onSetor: () => void;
+  onTarik: () => void;
+  onPinjaman: () => void;
+  onAngsuran: () => void;
+}
+
+const NO_REKENING_HINT = "Belum ada rekening aktif — buka rekening lewat pendaftaran terpandu dulu.";
+const SOON_HINT = "Segera hadir.";
+
+function Hero({ anggota, actions }: { anggota: Anggota; actions: MemberActions }) {
   return (
     <div className="rounded-2xl border border-border bg-gradient-to-br from-brand/5 via-bg to-violet-500/5 p-6 shadow-sm">
       <div className="flex flex-wrap items-start gap-5">
@@ -110,20 +126,23 @@ function Hero({ anggota }: { anggota: Anggota }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!actions.hasActiveRekening}
+            {...(actions.hasActiveRekening ? {} : { title: NO_REKENING_HINT })}
+            onClick={actions.onSetor}
+          >
             <span className="h-4 w-4 mr-1.5"><IconWallet /></span>Setor Simpanan
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={actions.onPinjaman}>
             <span className="h-4 w-4 mr-1.5"><IconChart /></span>Buat Pinjaman
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" disabled title={SOON_HINT}>
             <span className="h-4 w-4 mr-1.5"><IconPrint /></span>Cetak Buku
           </Button>
-          <Button size="sm">
+          <Button size="sm" disabled title={SOON_HINT}>
             <span className="h-4 w-4 mr-1.5"><IconEdit /></span>Edit
-          </Button>
-          <Button variant="outline" size="sm" className="!px-2">
-            <span className="h-4 w-4"><IconMore /></span>
           </Button>
         </div>
       </div>
@@ -131,7 +150,7 @@ function Hero({ anggota }: { anggota: Anggota }) {
   );
 }
 
-function RingkasanTab({ anggota }: { anggota: Anggota }) {
+function RingkasanTab({ anggota, actions }: { anggota: Anggota; actions: MemberActions }) {
   const sisaAngsuran = anggota.angsuran
     .filter((a) => a.status === "Terjadwal" || a.status === "Telat")
     .reduce((s, a) => s + a.jumlah, 0);
@@ -255,10 +274,30 @@ function RingkasanTab({ anggota }: { anggota: Anggota }) {
 
           <SectionCard title="Aksi Cepat">
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm"><span className="text-xs">Setor Simpanan</span></Button>
-              <Button variant="outline" size="sm"><span className="text-xs">Tarik Simpanan</span></Button>
-              <Button variant="outline" size="sm"><span className="text-xs">Bayar Angsuran</span></Button>
-              <Button variant="outline" size="sm"><span className="text-xs">Cetak Buku</span></Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!actions.hasActiveRekening}
+                {...(actions.hasActiveRekening ? {} : { title: NO_REKENING_HINT })}
+                onClick={actions.onSetor}
+              >
+                <span className="text-xs">Setor Simpanan</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!actions.hasActiveRekening}
+                {...(actions.hasActiveRekening ? {} : { title: NO_REKENING_HINT })}
+                onClick={actions.onTarik}
+              >
+                <span className="text-xs">Tarik Simpanan</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={actions.onAngsuran}>
+                <span className="text-xs">Bayar Angsuran</span>
+              </Button>
+              <Button variant="outline" size="sm" disabled title={SOON_HINT}>
+                <span className="text-xs">Cetak Buku</span>
+              </Button>
             </div>
           </SectionCard>
         </div>
@@ -295,7 +334,7 @@ function ProfilTab({ anggota }: { anggota: Anggota }) {
   );
 }
 
-function SimpananTab({ anggota }: { anggota: Anggota }) {
+function SimpananTab({ anggota, actions }: { anggota: Anggota; actions: MemberActions }) {
   const cols: Column<SimpananRow>[] = [
     { key: "tgl", header: "Tanggal", cell: (r) => <span className="tabular-nums">{formatTanggal(r.tanggal)}</span> },
     { key: "jenis", header: "Jenis", cell: (r) => <Badge tone="neutral">{r.jenis}</Badge> },
@@ -317,8 +356,15 @@ function SimpananTab({ anggota }: { anggota: Anggota }) {
         title="Riwayat Simpanan"
         action={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">Filter Periode</Button>
-            <Button size="sm"><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Setor</Button>
+            <Button variant="outline" size="sm" disabled title={SOON_HINT}>Filter Periode</Button>
+            <Button
+              size="sm"
+              disabled={!actions.hasActiveRekening}
+              {...(actions.hasActiveRekening ? {} : { title: NO_REKENING_HINT })}
+              onClick={actions.onSetor}
+            >
+              <span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Setor
+            </Button>
           </div>
         }
         padded={false}
@@ -329,7 +375,7 @@ function SimpananTab({ anggota }: { anggota: Anggota }) {
   );
 }
 
-function PinjamanTab({ anggota }: { anggota: Anggota }) {
+function PinjamanTab({ anggota, actions }: { anggota: Anggota; actions: MemberActions }) {
   const cols: Column<PinjamanRow>[] = [
     { key: "id", header: "ID", cell: (r) => <span className="tabular-nums text-muted-fg">{r.id}</span> },
     { key: "tgl", header: "Tanggal", cell: (r) => formatTanggal(r.tanggal) },
@@ -344,7 +390,7 @@ function PinjamanTab({ anggota }: { anggota: Anggota }) {
     <div className="space-y-6">
       <SectionCard
         title="Pinjaman"
-        action={<Button size="sm"><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Buat Pinjaman</Button>}
+        action={<Button size="sm" onClick={actions.onPinjaman}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Buat Pinjaman</Button>}
         padded={false}
       >
         {anggota.pinjaman.length === 0 ? (
@@ -357,7 +403,7 @@ function PinjamanTab({ anggota }: { anggota: Anggota }) {
   );
 }
 
-function AngsuranTab({ anggota }: { anggota: Anggota }) {
+function AngsuranTab({ anggota, actions }: { anggota: Anggota; actions: MemberActions }) {
   const cols: Column<AngsuranRow>[] = [
     { key: "id", header: "ID", cell: (r) => <span className="tabular-nums text-muted-fg">{r.id}</span> },
     { key: "tgl", header: "Tanggal", cell: (r) => formatTanggal(r.tanggal) },
@@ -381,7 +427,7 @@ function AngsuranTab({ anggota }: { anggota: Anggota }) {
       </div>
       <SectionCard
         title="Riwayat Angsuran"
-        action={<Button size="sm"><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Bayar Angsuran</Button>}
+        action={<Button size="sm" onClick={actions.onAngsuran}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Bayar Angsuran</Button>}
         padded={false}
       >
         {anggota.angsuran.length === 0 ? (
@@ -413,7 +459,7 @@ function TokoTab({ anggota }: { anggota: Anggota }) {
       </div>
       <SectionCard
         title="Riwayat Transaksi Toko"
-        action={<Button variant="outline" size="sm"><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>}
+        action={<Button variant="outline" size="sm" disabled title={SOON_HINT}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>}
         padded={false}
       >
         {anggota.transaksiToko.length === 0 ? (
@@ -438,7 +484,7 @@ function SHUTab({ anggota }: { anggota: Anggota }) {
     <SectionCard
       title="Riwayat SHU (Sisa Hasil Usaha)"
       description="Pembagian keuntungan tahunan"
-      action={<Button variant="outline" size="sm"><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh Slip</Button>}
+      action={<Button variant="outline" size="sm" disabled title={SOON_HINT}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh Slip</Button>}
       padded={false}
     >
       {anggota.shu.length === 0 ? (
@@ -511,7 +557,7 @@ type AnggotaDoc = {
 type AkadPembiayaanRow = {
   name: string;
   nomor_akad?: string;
-  jumlah_pokok?: number;
+  pokok_pembiayaan?: number;
   margin_total?: number;
   total_kewajiban?: number;
   tenor?: number;
@@ -528,7 +574,7 @@ const AKAD_STATUS_MAP: Record<string, PinjamanRow["status"]> = {
 
 function mapAkadToPinjamanRows(rows: AkadPembiayaanRow[]): PinjamanRow[] {
   return rows.map((r) => {
-    const pokok = r.jumlah_pokok ?? 0;
+    const pokok = r.pokok_pembiayaan ?? 0;
     const margin = r.margin_total ?? 0;
     const tenor = r.tenor ?? 0;
     const totalKewajiban = r.total_kewajiban ?? pokok + margin;
@@ -564,7 +610,7 @@ function AnggotaDetailPage() {
       fields: [
         "name",
         "nomor_akad",
-        "jumlah_pokok",
+        "pokok_pembiayaan",
         "margin_total",
         "total_kewajiban",
         "tenor",
@@ -575,6 +621,18 @@ function AnggotaDetailPage() {
     },
     { enabled: Boolean(nasabah) },
   );
+  // Member's savings accounts — drives Setor/Tarik pre-fill + enablement.
+  const rekeningQ = useResourceList<{ name: string; status?: string; tanggal_buka?: string }>(
+    "Rekening Simpanan",
+    {
+      fields: ["name", "status", "tanggal_buka"],
+      filters: [["nasabah", "=", nasabah ?? ""]],
+      limit_page_length: 20,
+    },
+    { enabled: Boolean(nasabah) },
+  );
+  const primaryRekening = selectPrimaryRekening(rekeningQ.data ?? []);
+  const hasActiveRekening = (rekeningQ.data ?? []).some((r) => r.status === "Aktif");
   const mock = findAnggota(noAnggota, sekolah);
   const anggota: Anggota | undefined = (() => {
     if (!mock) return undefined;
@@ -595,6 +653,9 @@ function AnggotaDetailPage() {
     };
   })();
   const navigate = useNavigate();
+  const [txJenis, setTxJenis] = useState<TransaksiJenis | null>(null);
+  const [akadOpen, setAkadOpen] = useState(false);
+  const [bayarOpen, setBayarOpen] = useState(false);
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
     navigate({ to: "/kop/$sekolah/$noAnggota", params: { sekolah, noAnggota }, search: { tab: next === "ringkasan" ? undefined : next } });
@@ -603,6 +664,14 @@ function AnggotaDetailPage() {
   if (!anggota) {
     throw notFound();
   }
+
+  const memberActions: MemberActions = {
+    hasActiveRekening,
+    onSetor: () => setTxJenis("Setor"),
+    onTarik: () => setTxJenis("Tarik"),
+    onPinjaman: () => setAkadOpen(true),
+    onAngsuran: () => setBayarOpen(true),
+  };
 
   const counts: Partial<Record<TabKey, number>> = {
     simpanan: anggota.simpanan.length,
@@ -628,11 +697,11 @@ function AnggotaDetailPage() {
 
   const renderTab = () => {
     switch (tab) {
-      case "ringkasan": return <RingkasanTab anggota={anggota} />;
+      case "ringkasan": return <RingkasanTab anggota={anggota} actions={memberActions} />;
       case "profil": return <ProfilTab anggota={anggota} />;
-      case "simpanan": return <SimpananTab anggota={anggota} />;
-      case "pinjaman": return <PinjamanTab anggota={anggota} />;
-      case "angsuran": return <AngsuranTab anggota={anggota} />;
+      case "simpanan": return <SimpananTab anggota={anggota} actions={memberActions} />;
+      case "pinjaman": return <PinjamanTab anggota={anggota} actions={memberActions} />;
+      case "angsuran": return <AngsuranTab anggota={anggota} actions={memberActions} />;
       case "toko": return <TokoTab anggota={anggota} />;
       case "shu": return <SHUTab anggota={anggota} />;
       case "aktivitas": return <AktivitasTab anggota={anggota} />;
@@ -640,6 +709,7 @@ function AnggotaDetailPage() {
   };
 
   return (
+    <>
     <DetailPageTemplate
       header={
         <div className="space-y-3">
@@ -663,10 +733,32 @@ function AnggotaDetailPage() {
           />
         </div>
       }
-      hero={<Hero anggota={anggota} />}
+      hero={<Hero anggota={anggota} actions={memberActions} />}
       tabs={<Tabs items={tabItems} />}
       primary={renderTab()}
     />
+
+    {txJenis !== null ? (
+      <TransaksiModal
+        open
+        onClose={() => setTxJenis(null)}
+        {...(primaryRekening ? { rekening: primaryRekening } : {})}
+        defaultJenis={txJenis}
+        onSuccess={() => setTxJenis(null)}
+      />
+    ) : null}
+    <AkadCreateModal
+      open={akadOpen}
+      onClose={() => setAkadOpen(false)}
+      anggota={docQ.data?.name ?? noAnggota}
+      onSuccess={() => setAkadOpen(false)}
+    />
+    <PembayaranAngsuranModal
+      open={bayarOpen}
+      onClose={() => setBayarOpen(false)}
+      onSuccess={() => setBayarOpen(false)}
+    />
+    </>
   );
 }
 

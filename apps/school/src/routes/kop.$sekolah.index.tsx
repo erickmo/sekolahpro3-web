@@ -1,8 +1,9 @@
 import { useMemo, type ReactNode } from "react";
-import { createFileRoute, Link, useParams} from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Alert,
   Badge,
+  Button,
   GettingStartedCard,
   PageHeader,
   SectionCard,
@@ -20,6 +21,7 @@ import {
   ModuleFlow,
   type ModuleFlowStep,
 } from "@sekolahpro/ui";
+import { DashboardWorklist } from "../components/koperasi/DashboardWorklist";
 
 const KOPERASI_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "pengaturan", label: "Pengaturan", hint: "Konfigurasi awal koperasi", href: "/kop/$sekolah/pengaturan" },
@@ -63,6 +65,7 @@ const QUICK_ACTIONS: {
   description: string;
   icon: ReactNode;
 }[] = [
+  { to: "/kop/$sekolah/onboarding", label: "Pendaftaran Anggota", description: "Onboarding terpandu anggota baru.", icon: <IconUsers /> },
   { to: "/kop/$sekolah/transaksi", label: "Transaksi", description: "Setor, tarik, dan transaksi simpanan.", icon: <IconWallet /> },
   { to: "/kop/$sekolah/pembiayaan", label: "Pembiayaan", description: "Pengajuan dan pencairan pinjaman.", icon: <IconFile /> },
   { to: "/kop/$sekolah/angsuran", label: "Angsuran", description: "Pembayaran cicilan pinjaman anggota.", icon: <IconChart /> },
@@ -86,6 +89,7 @@ const STATUS_TONE: Record<string, "success" | "neutral" | "danger" | "warning"> 
 
 function KoperasiDashboardPage() {
   const { sekolah } = useParams({ from: "/kop/$sekolah" });
+  const navigate = useNavigate();
 
   const anggotaQ = useResourceList<AnggotaRow>("Anggota Koperasi", {
     fields: ["name", "nomor_anggota", "nasabah", "status", "jenis_anggota", "tanggal_masuk"],
@@ -127,11 +131,11 @@ function KoperasiDashboardPage() {
         <GettingStartedCard
           icon={<IconUsers />}
           title="Koperasi belum dikonfigurasi"
-          description="Tambah anggota koperasi pertama dan buka kas teller untuk mulai mencatat transaksi."
-          primaryAction={{ label: "Tambah Anggota", href: "/kop/$sekolah/daftar" }}
+          description="Daftarkan anggota pertama lewat alur terpandu, lalu buka kas teller untuk mulai mencatat transaksi."
+          primaryAction={{ label: "Pendaftaran Anggota Baru", href: "/kop/$sekolah/onboarding" }}
           secondaryAction={{ label: "Buka Kas Teller", href: "/kop/$sekolah/kas-teller" }}
           renderLink={(href, children, className) => (
-            <Link to={href as "/kop/$sekolah/daftar"} params={{ sekolah }} className={className}>
+            <Link to={href as "/kop/$sekolah/onboarding"} params={{ sekolah }} className={className}>
               {children}
             </Link>
           )}
@@ -146,7 +150,15 @@ function KoperasiDashboardPage() {
         eyebrow="Layanan"
         title="Dashboard Koperasi"
         description="Ringkasan koperasi sekolah, aksi cepat, dan hal yang perlu ditindaklanjuti."
+        actions={
+          <Button onClick={() => navigate({ to: "/kop/$sekolah/onboarding", params: { sekolah } })}>
+            <span className="h-4 w-4 mr-1.5"><IconUsers /></span>
+            Pendaftaran Anggota Baru
+          </Button>
+        }
       />
+
+      <DashboardWorklist sekolah={sekolah} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
@@ -184,9 +196,9 @@ function KoperasiDashboardPage() {
       </div>
 
       <Alert tone="info" statusRole>
-        Metrik <strong>Volume Transaksi Hari Ini</strong>, <strong>Pinjaman Macet</strong>, dan{" "}
-        <strong>Saldo Kas GL</strong> sedang menunggu endpoint agregasi backend. Sementara tidak ditampilkan
-        agar tidak menyesatkan keputusan supervisor.
+        <strong>Saldo Kas (GL)</strong> menunggu integrasi akun kas General Ledger backend, jadi belum
+        ditampilkan agar tidak menyesatkan. Metrik operasional lain (closing, persetujuan, tunggakan,
+        volume transaksi) sudah ditarik langsung dari data koperasi di panel <em>Tugas Hari Ini</em>.
       </Alert>
 
       <ModuleFlow

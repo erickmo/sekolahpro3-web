@@ -10,7 +10,6 @@ type Row = {
   produk?: string;
   akad?: string;
   pokok_pembiayaan?: number;
-  jumlah_pokok?: number;
   margin?: number;
   tenor_bulan?: number;
   status: string;
@@ -22,8 +21,8 @@ const COLUMNS: Column<Row>[] = [
   { key: "anggota", header: "Anggota", sortable: true, cell: (r) => r.anggota ?? "—" },
   { key: "produk", header: "Produk", cell: (r) => r.produk ?? "—" },
   { key: "akad", header: "Akad", cell: (r) => <Badge tone="neutral">{r.akad ?? "—"}</Badge> },
-  { key: "jumlah_pokok", header: "Pokok", align: "right", sortable: true,
-    cell: (r) => r.jumlah_pokok !== undefined ? <span className="tabular-nums">Rp {r.jumlah_pokok.toLocaleString("id-ID")}</span> : "—" },
+  { key: "pokok_pembiayaan", header: "Pokok", align: "right", sortable: true,
+    cell: (r) => r.pokok_pembiayaan !== undefined ? <span className="tabular-nums">Rp {r.pokok_pembiayaan.toLocaleString("id-ID")}</span> : "—" },
   { key: "tenor_bulan", header: "Tenor", align: "right",
     cell: (r) => r.tenor_bulan ? <span className="tabular-nums">{r.tenor_bulan} bln</span> : "—" },
   { key: "status", header: "Status",
@@ -43,7 +42,7 @@ function PembiayaanPage() {
         title="Pembiayaan"
         description="Akad pembiayaan: Murabahah, Ijarah, Qardh, Musyarakah."
         doctype="Akad Pembiayaan"
-        fields={["name", "jumlah_pokok", "status", "tanggal_akad"]}
+        fields={["name", "pokok_pembiayaan", "status", "tanggal_akad"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "tanggal_akad", dir: "desc" }}
