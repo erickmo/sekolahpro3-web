@@ -29,6 +29,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.4.0
         version: 5.4.0(react-hook-form@7.76.1(react@18.3.1))
+      '@sekolahpro/ads':
+        specifier: workspace:*
+        version: link:../../packages/ads
       '@sekolahpro/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -427,6 +430,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.4.0
         version: 5.4.0(react-hook-form@7.76.1(react@18.3.1))
+      '@sekolahpro/ads':
+        specifier: workspace:*
+        version: link:../../packages/ads
       '@sekolahpro/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
+import { AdBanner } from "@sekolahpro/ads";
 import { SiteProvider } from "../SiteContext";
 import { useSiteData } from "../lib/site";
 import { useSeo } from "../lib/seo";
@@ -36,6 +37,9 @@ function SiteShell({ site }: { site: SiteData }) {
         <Nav variant={tpl.navVariant} />
         <main className="flex-1">
           <Outlet />
+          <div className="mx-auto max-w-5xl px-4 py-8 flex justify-center">
+            <AdBanner slot="situs-content-bottom" />
+          </div>
         </main>
         <Footer />
       </div>
