@@ -48,6 +48,15 @@ const TENANT_BLOCKLIST = new Set<string>([
   "Feature Flag",
   "Organisasi",
   "Sekolah",
+  // vernon_ads — platform-level ad doctypes; no `sekolah` field. Without this,
+  // auto-injected tenant filters target a non-existent column and break lists.
+  "Property",
+  "Property Group",
+  "Ad Slot",
+  "Campaign",
+  "Ad Creative",
+  "Ad Event",
+  "Ads Customer",
   "File",
   "Communication",
   // ORG_ONLY tier (ADR-0043) — anchored by `organisasi`, no `sekolah` column.
