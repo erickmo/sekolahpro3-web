@@ -316,6 +316,7 @@ const ROLE_MENU_MAP: Record<string, string[]> = {
     "/laporan",
     "/pickup-verify",
     "/master",
+    "/situs",
     "/pengaturan",
   ],
   operator: ["/", "/siswa", "/staff", "/kelas", "/jadwal", "/absensi", "/ppdb", "/ekstrakurikuler", "/pesan", "/pickup-verify"],
@@ -562,6 +563,7 @@ function Layout() {
     {
       title: "Lainnya",
       items: [
+        mk("/situs", "Situs Web", <IconHome />),
         mk("/audit", "Audit Log", <IconAlert />),
         mk("/pengaturan", "Pengaturan", <IconSettings />),
       ],
