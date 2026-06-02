@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Navigate } from "@tanstack/react-router";
 import { Button, Input } from "@sekolahpro/ui";
-import { login } from "@sekolahpro/auth";
+import { login, useSession } from "@sekolahpro/auth";
 
 const APP_NAME = "SekolahPro";
 const FALLBACK_ERROR = "Login gagal";
@@ -14,9 +14,12 @@ const FALLBACK_ERROR = "Login gagal";
  *   branded gradient backdrop keeps the provider sign-in calm and modern.
  * - Identifier field accepts username OR email (Frappe's `login` endpoint
  *   resolves both), so it is `type="text"`, not `type="email"`.
+ * - An already-authenticated visitor (e.g. used browser back to /login) is
+ *   bounced straight to the console rather than shown a redundant form.
  */
-function LoginPage() {
+export function LoginPage() {
   const navigate = useNavigate();
+  const session = useSession();
   const [usr, setUsr] = useState("");
   const [pwd, setPwd] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -39,6 +42,11 @@ function LoginPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Session already established → skip the form, go to the console.
+  if (session.status === "authenticated") {
+    return <Navigate to="/" />;
   }
 
   return (
@@ -98,6 +106,7 @@ function LoginPage() {
                 id="usr"
                 type="text"
                 autoComplete="username"
+                autoFocus
                 placeholder="cth. admin atau admin@sekolah.id"
                 value={usr}
                 onChange={(e) => setUsr(e.target.value)}
