@@ -7,6 +7,10 @@ import type { SiteBrand, SiteTheme } from "./types";
 const FALLBACK_BRAND = "#1d4ed8";
 const FALLBACK_BRAND_2 = "#f59e0b";
 
+/** Brand-gradient band/panel background (brand → brand-2) shared by the
+ *  Statistik and Cta blocks. Color flows from the per-tenant --situs-brand* vars. */
+export const BRAND_GRADIENT = "linear-gradient(135deg, var(--situs-brand) 0%, var(--situs-brand-2) 100%)";
+
 /** Normalize a possibly-empty color to a safe hex string. */
 function normalize(color: string | null | undefined, fallback: string): string {
   const c = (color ?? "").trim();

@@ -5,10 +5,8 @@
 
 import { useSite } from "../../SiteContext";
 import { Container } from "../../sections/primitives";
+import { BRAND_GRADIENT } from "../../theme";
 import type { BlockProps } from "./registry";
-
-/** Brand-gradient band background shared with the Cta block. */
-const BRAND_GRADIENT = "linear-gradient(135deg, var(--situs-brand) 0%, var(--situs-brand-2) 100%)";
 
 /**
  * Render the statistik band.

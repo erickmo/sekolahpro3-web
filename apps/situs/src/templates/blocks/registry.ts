@@ -13,6 +13,7 @@ import type { FC } from "react";
 import {
   BERITA_VARIANTS,
   CTA_VARIANTS,
+  DEFAULT_VARIANT,
   GALERI_VARIANTS,
   HERO_VARIANTS,
   KEUNGGULAN_VARIANTS,
@@ -60,8 +61,8 @@ function mapVariants(variants: readonly string[], renderer: BlockRenderer): Reco
   return Object.fromEntries(variants.map((v) => [v, renderer]));
 }
 
-/** profil/agenda/prestasi/kontak ship only the `default` variant. */
-const DEFAULT_ONLY = ["default"] as const;
+/** profil/agenda/prestasi/kontak ship only the universal fallback variant. */
+const DEFAULT_ONLY = [DEFAULT_VARIANT] as const;
 
 export const blockRegistry: BlockRegistry = {
   hero: mapVariants(HERO_VARIANTS, HeroBlock),
@@ -76,7 +77,7 @@ export const blockRegistry: BlockRegistry = {
   ppdb: mapVariants(PPDB_VARIANTS, PpdbBlock),
   cta: mapVariants(CTA_VARIANTS, CtaBlock),
   kontak: mapVariants(DEFAULT_ONLY, KontakBlock),
-  richtext: { default: RichTextBlock },
+  richtext: { [DEFAULT_VARIANT]: RichTextBlock },
 };
 
 /**

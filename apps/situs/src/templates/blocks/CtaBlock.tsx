@@ -6,10 +6,9 @@
 import { Link } from "react-router-dom";
 import { useSite } from "../../SiteContext";
 import { Container } from "../../sections/primitives";
+import { BRAND_GRADIENT } from "../../theme";
 import type { BlockProps } from "./registry";
 
-/** Brand-gradient panel background shared with the Statistik band. */
-const BRAND_GRADIENT = "linear-gradient(135deg, var(--situs-brand) 0%, var(--situs-brand-2) 100%)";
 /** Fallback primary CTA label/url when neither block nor profil supplies one. */
 const CTA_FALLBACK_LABEL = "Informasi PPDB";
 const CTA_FALLBACK_URL = "/ppdb";
