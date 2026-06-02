@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "generate": "tsr generate",
     "build": "tsc --noEmit && vite build",
     "lint": "ESLINT_USE_FLAT_CONFIG=true eslint 'src/**/*.{ts,tsx}'",
     "typecheck": "tsc --noEmit",
