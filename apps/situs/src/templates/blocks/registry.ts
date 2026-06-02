@@ -20,6 +20,7 @@ import {
   TESTIMONI_VARIANTS,
 } from "../../constants";
 import type { BlockType, LayoutBlock } from "../../types";
+import { HeroBlock } from "./HeroBlock";
 import { RichTextBlock } from "./RichTextBlock";
 
 /** Every block renderer receives its own block config. Site data is read
@@ -48,7 +49,7 @@ function mapVariants(variants: readonly string[], renderer: BlockRenderer): Reco
 const DEFAULT_ONLY = ["default"] as const;
 
 export const blockRegistry: BlockRegistry = {
-  hero: mapVariants(HERO_VARIANTS, Empty),
+  hero: mapVariants(HERO_VARIANTS, HeroBlock),
   keunggulan: mapVariants(KEUNGGULAN_VARIANTS, Empty),
   statistik: mapVariants(STATISTIK_VARIANTS, Empty),
   testimoni: mapVariants(TESTIMONI_VARIANTS, Empty),
