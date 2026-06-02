@@ -5,15 +5,23 @@
 // state. Dipakai oleh root layout untuk merender sidebar koperasi-only —
 // terpisah dari menu sekolah.
 
+export type KoperasiMode = "syariah" | "konvensional";
+
 export interface KoperasiNavItem {
   /** Suffix bare relatif `/kop/$sekolah` (mis. "/daftar", "/" untuk dashboard). */
   to: string;
   label: string;
+  /** Hanya tampil untuk mode ini; absen = kedua mode. */
+  mode?: KoperasiMode;
+  /** Label alternatif saat mode konvensional (mis. "Akad" → "Pinjaman"). */
+  labelKonvensional?: string;
 }
 
 export interface KoperasiNavSection {
   title: string;
   items: KoperasiNavItem[];
+  /** Section hanya tampil untuk mode ini; absen = kedua mode. */
+  mode?: KoperasiMode;
 }
 
 export const KOPERASI_NAV: KoperasiNavSection[] = [
@@ -42,16 +50,17 @@ export const KOPERASI_NAV: KoperasiNavSection[] = [
   {
     title: "Pembiayaan",
     items: [
-      { to: "/pembiayaan", label: "Akad" },
+      { to: "/pembiayaan", label: "Akad", labelKonvensional: "Pinjaman" },
       { to: "/angsuran", label: "Angsuran" },
+      { to: "/suku-bunga", label: "Suku Bunga", mode: "konvensional" },
     ],
   },
   {
-    title: "Sosial",
+    title: "Baitul Maal",
+    mode: "syariah",
     items: [
       { to: "/zis", label: "ZIS" },
       { to: "/wakaf", label: "Wakaf" },
-      { to: "/shu", label: "SHU" },
     ],
   },
   {
@@ -59,6 +68,7 @@ export const KOPERASI_NAV: KoperasiNavSection[] = [
     items: [
       { to: "/persetujuan", label: "Persetujuan" },
       { to: "/period-close", label: "Period Close" },
+      { to: "/shu", label: "SHU" },
       { to: "/ppatk", label: "PPATK" },
       { to: "/laporan", label: "Laporan" },
       { to: "/pengaturan", label: "Pengaturan" },
