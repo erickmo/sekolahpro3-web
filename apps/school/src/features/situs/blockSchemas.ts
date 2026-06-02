@@ -66,6 +66,24 @@ export const BLOCK_TIPE_OPTIONS = [
   "richtext",
 ] as const satisfies readonly BlockTipe[];
 
+// Human-readable Indonesian labels per block type for the layout-builder UI.
+// Keyed by every BLOCK_TIPE_OPTIONS member so dropdowns/cards never show a bare key.
+export const BLOCK_TIPE_LABELS: Record<BlockTipe, string> = {
+  hero: "Hero",
+  keunggulan: "Keunggulan",
+  statistik: "Statistik",
+  testimoni: "Testimoni",
+  profil: "Profil Sekolah",
+  berita: "Berita",
+  agenda: "Agenda",
+  galeri: "Galeri",
+  prestasi: "Prestasi",
+  ppdb: "PPDB",
+  cta: "Ajakan (CTA)",
+  kontak: "Kontak",
+  richtext: "Teks Bebas",
+};
+
 // Variant options per block type for the CMS dropdowns. MUST match the SPA
 // block registry (apps/situs/src/templates/blocks/registry.ts) so every picked
 // variant resolves to a real renderer. `default` is the universal fallback.
