@@ -11,6 +11,46 @@ import { frappeFetch } from "@sekolahpro/api-client";
 
 const M = "sekolahpro.api.situs_admin";
 
+/** Block tipe keys — mirror Situs Layout Block.tipe Select on the backend. */
+export type BlockTipe =
+  | "hero" | "keunggulan" | "statistik" | "testimoni" | "profil"
+  | "berita" | "agenda" | "galeri" | "prestasi" | "ppdb"
+  | "cta" | "kontak" | "richtext";
+
+/** One row of Situs Sekolah.layout_blocks (Situs Layout Block, istable). */
+export interface LayoutBlockRow {
+  tipe: BlockTipe;
+  variant: string;
+  aktif: 0 | 1;
+  judul?: string;
+  subjudul?: string;
+  cta_label?: string;
+  cta_url?: string;
+  konten?: string;
+}
+
+/** One row of Situs Sekolah.keunggulan (Situs Keunggulan, istable). */
+export interface KeunggulanRow {
+  ikon: string;
+  judul: string;
+  deskripsi: string;
+}
+
+/** One row of Situs Sekolah.statistik (Situs Statistik, istable). */
+export interface StatistikRow {
+  label: string;
+  nilai: string;
+  satuan?: string;
+}
+
+/** One row of Situs Sekolah.testimoni (Situs Testimoni, istable). */
+export interface TestimoniRow {
+  nama: string;
+  peran?: string;
+  foto?: string;
+  kutipan: string;
+}
+
 /** The editable Situs Sekolah config (subset the CMS touches). */
 export interface SitusDoc {
   sekolah: string;
@@ -30,6 +70,9 @@ export interface SitusDoc {
   hero_subjudul: string | null;
   hero_cta_label: string | null;
   hero_cta_url: string | null;
+  hero_eyebrow: string | null;
+  hero_cta2_label: string | null;
+  hero_cta2_url: string | null;
   visi: string | null;
   misi: string | null;
   sambutan_kepsek: string | null;
@@ -51,6 +94,10 @@ export interface SitusDoc {
   meta_title: string | null;
   meta_description: string | null;
   og_image: string | null;
+  layout_blocks: LayoutBlockRow[];
+  keunggulan: KeunggulanRow[];
+  statistik: StatistikRow[];
+  testimoni: TestimoniRow[];
 }
 
 export interface SitusTemplate {
