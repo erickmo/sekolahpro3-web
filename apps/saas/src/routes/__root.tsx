@@ -9,6 +9,9 @@ import {
   IconChart,
   IconSettings,
   IconLogout,
+  IconFlag,
+  IconFile,
+  IconLayers,
 } from "@sekolahpro/ui";
 import { RequireAuth, useSession, logout } from "@sekolahpro/auth";
 
@@ -34,6 +37,18 @@ const SIDEBAR_SECTIONS: Array<{
     items: [
       { to: "/users", label: "Staff & Roles", icon: <IconUsers /> },
       { to: "/ops", label: "Ops & Health", icon: <IconSettings /> },
+    ],
+  },
+  {
+    title: "Ads",
+    items: [
+      { to: "/ads", label: "Dashboard", icon: <IconChart /> },
+      { to: "/ads/campaigns", label: "Campaigns", icon: <IconFlag /> },
+      { to: "/ads/creatives", label: "Creatives", icon: <IconFile /> },
+      { to: "/ads/properties", label: "Properties", icon: <IconLayers /> },
+      { to: "/ads/slots", label: "Slots", icon: <IconLayers /> },
+      { to: "/ads/customers", label: "Customers", icon: <IconUsers /> },
+      { to: "/ads/groups", label: "Groups", icon: <IconLayers /> },
     ],
   },
 ];
