@@ -13,6 +13,11 @@ const EXPECTED_IDS: PerpGuideId[] = [
   "anggota",
   "laporan",
   "inventaris",
+  "denda",
+  "pengembalian",
+  "kolektif",
+  "inventaris-berita-acara",
+  "inventaris-opname",
 ];
 
 afterEach(() => {

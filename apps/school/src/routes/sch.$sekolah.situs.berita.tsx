@@ -4,7 +4,7 @@ import { BERITA_SCHEMA } from "../features/situs/schemas";
 
 function BeritaCms() {
   const { sekolah } = Route.useParams();
-  return <KontenManager sekolah={sekolah} schema={BERITA_SCHEMA} />;
+  return <KontenManager sekolah={sekolah} schema={BERITA_SCHEMA} guideId="berita" />;
 }
 
 export const Route = createFileRoute("/sch/$sekolah/situs/berita")({ component: BeritaCms });

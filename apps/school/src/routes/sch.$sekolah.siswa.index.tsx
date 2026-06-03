@@ -30,6 +30,9 @@ import {
   type SiswaStats,
 } from "../lib/orang/siswaStats";
 import { glossaryFor } from "../lib/orang/glossary";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // Only fields confirmed in sch.$sekolah.siswa.daftar.tsx are requested here.
 const SISWA_FIELDS = ["name", "nama_lengkap", "jenis_kelamin", "jenjang", "status"];
@@ -193,6 +196,16 @@ export function SiswaDashboardView({
   return (
     <div className="space-y-6">
       {header}
+
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="dashboard"
+        title={SISWA_PAGE_GUIDES.dashboard.title}
+        intro={SISWA_PAGE_GUIDES.dashboard.intro}
+        steps={SISWA_PAGE_GUIDES.dashboard.steps}
+        tips={SISWA_PAGE_GUIDES.dashboard.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
 
       {isError ? (
         <Badge tone="danger">Gagal memuat data siswa: {errorMessage ?? "kesalahan tidak diketahui"}</Badge>

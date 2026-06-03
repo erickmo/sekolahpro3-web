@@ -13,6 +13,9 @@ import {
   DatePicker,
   type SearchableOption,
 } from "@sekolahpro/ui";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type JenisMutasi = "Naik Kelas" | "Tinggal Kelas" | "Pindah Keluar" | "DO";
 
@@ -119,6 +122,16 @@ function MutasiNewPage() {
         eyebrow="Siswa › Mutasi"
         title="Ajukan Mutasi Baru"
         description="Catat mutasi siswa (naik kelas, tinggal kelas, pindah keluar, atau drop out)."
+      />
+
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="mutasi-baru"
+        title={SISWA_PAGE_GUIDES["mutasi-baru"].title}
+        intro={SISWA_PAGE_GUIDES["mutasi-baru"].intro}
+        steps={SISWA_PAGE_GUIDES["mutasi-baru"].steps}
+        tips={SISWA_PAGE_GUIDES["mutasi-baru"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <SectionCard title="Data Siswa & Jenis">

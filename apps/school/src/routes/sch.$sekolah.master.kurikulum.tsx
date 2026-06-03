@@ -3,6 +3,9 @@ import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { CreateResourceModal, type FieldSpec } from "../components/akademik/CreateResourceModal";
+import { PageGuide } from "../components/guide";
+import { MASTER_PAGE_GUIDES } from "../components/master/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -84,7 +87,16 @@ function KurikulumPage() {
   const navigate = useNavigate();
   const [openCreate, setOpenCreate] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="master-guide:"
+        storageId="kurikulum"
+        title={MASTER_PAGE_GUIDES.kurikulum.title}
+        intro={MASTER_PAGE_GUIDES.kurikulum.intro}
+        steps={MASTER_PAGE_GUIDES.kurikulum.steps}
+        tips={MASTER_PAGE_GUIDES.kurikulum.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Akademik"
         title="Kurikulum"
@@ -114,7 +126,7 @@ function KurikulumPage() {
         description="Buat versi kurikulum baru per unit jenjang & tahun ajaran."
         fields={FIELDS}
       />
-    </>
+    </div>
   );
 }
 

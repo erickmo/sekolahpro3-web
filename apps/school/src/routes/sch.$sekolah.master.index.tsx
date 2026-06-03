@@ -18,6 +18,9 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
+import { PageGuide } from "../components/guide";
+import { MASTER_PAGE_GUIDES } from "../components/master/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // Real doctype field shapes (verified).
 type Pengguna = { name: string; user?: string; sekolah?: string; role_sekolah?: string; status?: string };
@@ -120,6 +123,16 @@ function MasterDashboardPage() {
             Undang Pengguna
           </Link>
         }
+      />
+
+      <PageGuide
+        storageNamespace="master-guide:"
+        storageId="dashboard"
+        title={MASTER_PAGE_GUIDES.dashboard.title}
+        intro={MASTER_PAGE_GUIDES.dashboard.intro}
+        steps={MASTER_PAGE_GUIDES.dashboard.steps}
+        tips={MASTER_PAGE_GUIDES.dashboard.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

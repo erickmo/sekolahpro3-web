@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -62,7 +65,17 @@ function KelulusanPage() {
 
   const navigate = useNavigate();
   return (
-    <ResourceListPage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="kelulusan"
+        title={SISWA_PAGE_GUIDES.kelulusan.title}
+        intro={SISWA_PAGE_GUIDES.kelulusan.intro}
+        steps={SISWA_PAGE_GUIDES.kelulusan.steps}
+        tips={SISWA_PAGE_GUIDES.kelulusan.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <ResourceListPage<Row>
       eyebrow="Siswa"
       title="Kelulusan Siswa"
       doctype="Kelulusan Siswa"
@@ -90,7 +103,8 @@ function KelulusanPage() {
       ]}
       addLabel="Proses Kelulusan"
       onAdd={() => navigate({ to: "/sch/$sekolah/siswa/kelulusan/new", params: { sekolah } })}
-    />
+      />
+    </div>
   );
 }
 

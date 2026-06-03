@@ -3,6 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { AbsensiGuruFormModal } from "../components/absensi/AbsensiGuruFormModal";
+import { PageGuide } from "../components/guide";
+import { ABSENSI_PAGE_GUIDES } from "../components/absensi/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; tanggal: string; guru?: string; jam_masuk?: string; jam_pulang?: string; status?: string };
 
@@ -20,6 +23,15 @@ function AbsensiGuruPage() {
   const [showCreate, setShowCreate] = useState(false);
   return (
     <>
+      <PageGuide
+        storageNamespace="absensi-guide:"
+        storageId="guru"
+        title={ABSENSI_PAGE_GUIDES.guru.title}
+        intro={ABSENSI_PAGE_GUIDES.guru.intro}
+        steps={ABSENSI_PAGE_GUIDES.guru.steps}
+        tips={ABSENSI_PAGE_GUIDES.guru.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Absensi"
         title="Absensi Guru"

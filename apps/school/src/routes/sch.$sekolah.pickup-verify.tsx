@@ -12,6 +12,9 @@ import type { PickupEvent, PickupError } from "../data/pickup-types";
 import { QrScanner } from "../components/QrScanner";
 import { PinFallbackForm } from "../components/PinFallbackForm";
 import { PickupReleaseCard } from "../components/PickupReleaseCard";
+import { PageGuide } from "../components/guide";
+import { MISC_PAGE_GUIDES } from "../components/guide/miscPageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 const GATES = ["Gerbang Utama", "Gerbang Belakang", "Lobi"];
 
@@ -69,6 +72,16 @@ function PickupVerifyPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Verifikasi Penjemputan" description="Scan QR atau gunakan PIN" />
+
+      <PageGuide
+        storageNamespace="school-guide:"
+        storageId="pickup-verify"
+        title={MISC_PAGE_GUIDES["pickup-verify"].title}
+        intro={MISC_PAGE_GUIDES["pickup-verify"].intro}
+        steps={MISC_PAGE_GUIDES["pickup-verify"].steps}
+        tips={MISC_PAGE_GUIDES["pickup-verify"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
 
       <div className="flex items-center gap-2 text-sm">
         <label className="text-muted-fg">Gerbang:</label>

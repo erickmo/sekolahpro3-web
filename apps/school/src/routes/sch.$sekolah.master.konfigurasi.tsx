@@ -3,6 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { CreateResourceModal, type FieldSpec } from "../components/akademik/CreateResourceModal";
+import { PageGuide } from "../components/guide";
+import { MASTER_PAGE_GUIDES } from "../components/master/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -115,7 +118,16 @@ const FIELDS: FieldSpec[] = [
 function KonfigPage() {
   const [openCreate, setOpenCreate] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="master-guide:"
+        storageId="konfigurasi"
+        title={MASTER_PAGE_GUIDES.konfigurasi.title}
+        intro={MASTER_PAGE_GUIDES.konfigurasi.intro}
+        steps={MASTER_PAGE_GUIDES.konfigurasi.steps}
+        tips={MASTER_PAGE_GUIDES.konfigurasi.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Akademik"
         title="Konfigurasi Penilaian"
@@ -140,7 +152,7 @@ function KonfigPage() {
         description="Buat konfigurasi untuk kurikulum, dengan opsi scope ke mapel / tingkat tertentu."
         fields={FIELDS}
       />
-    </>
+    </div>
   );
 }
 

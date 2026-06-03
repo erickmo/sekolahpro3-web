@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, Button, Card, FormField, Input, PageHeader } from "@sekolahpro/ui";
 import { useSitus, useSetDomain } from "../data/situs";
+import { PageGuide } from "../components/guide";
+import { SITUS_PAGE_GUIDES } from "../components/situs/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 const MAIN_DOMAIN = (import.meta.env.VITE_SITUS_MAIN_DOMAIN as string | undefined) ?? "sekolahpro.id";
 
@@ -24,6 +27,16 @@ function DomainCms() {
   return (
     <div className="space-y-5">
       <PageHeader title="Domain & SSL" description="Atur alamat situs sekolah Anda." />
+
+      <PageGuide
+        storageNamespace="situs-guide:"
+        storageId="domain"
+        title={SITUS_PAGE_GUIDES.domain.title}
+        intro={SITUS_PAGE_GUIDES.domain.intro}
+        steps={SITUS_PAGE_GUIDES.domain.steps}
+        tips={SITUS_PAGE_GUIDES.domain.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
 
       <Card className="space-y-4 p-5">
         <h3 className="text-sm font-semibold text-slate-700">Subdomain SekolahPro</h3>

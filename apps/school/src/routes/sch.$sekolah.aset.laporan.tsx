@@ -2,8 +2,11 @@ import { useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, SectionCard, StatCard, Badge, IconLayers, IconCheck, IconClock, IconSettings } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
+import { PageGuide } from "../components/guide";
+import { ASET_PAGE_GUIDES } from "../components/aset/pageGuides";
 import { computeAsetStats, countByStatus, type AsetRow, type PeminjamanRow } from "../lib/aset/stats";
 import { peminjamanStatusTone } from "../lib/aset/badges";
+import { ROLE_LABEL } from "../lib/aset/role";
 
 const ASET_FIELDS = ["name", "kategori", "kondisi", "status", "jumlah_total", "jumlah_tersedia"];
 const PINJAM_FIELDS = ["name", "status"];
@@ -43,6 +46,16 @@ function LaporanPage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Manajemen Aset" title="Laporan Aset" description="Rekap inventaris dan sirkulasi aset." />
+
+      <PageGuide
+        storageId="aset-laporan"
+        storageNamespace="aset-guide:"
+        title={ASET_PAGE_GUIDES.laporan.title}
+        intro={ASET_PAGE_GUIDES.laporan.intro}
+        steps={ASET_PAGE_GUIDES.laporan.steps}
+        tips={ASET_PAGE_GUIDES.laporan.tips}
+        roleLabels={ROLE_LABEL}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total Aset" value={stats.totalAset} hint={`${stats.totalUnit} unit`} icon={<IconLayers />} accent="brand" urgency="normal" />

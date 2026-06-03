@@ -3,6 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { AnggotaRombelFormModal } from "../components/siswa/AnggotaRombelFormModal";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; siswa: string; rombongan_belajar?: string; tahun_ajaran?: string; nomor_absen?: number };
 
@@ -18,6 +21,17 @@ function RombelPage() {
   const [showCreate, setShowCreate] = useState(false);
   return (
     <>
+      <div className="mb-4">
+        <PageGuide
+          storageNamespace="siswa-guide:"
+          storageId="rombel"
+          title={SISWA_PAGE_GUIDES.rombel.title}
+          intro={SISWA_PAGE_GUIDES.rombel.intro}
+          steps={SISWA_PAGE_GUIDES.rombel.steps}
+          tips={SISWA_PAGE_GUIDES.rombel.tips}
+          roleLabels={SCHOOL_ROLE_LABEL}
+        />
+      </div>
       <ResourceListPage<Row>
         eyebrow="Siswa"
         title="Anggota Rombel"

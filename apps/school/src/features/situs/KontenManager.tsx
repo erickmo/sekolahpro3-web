@@ -19,6 +19,9 @@ import {
   type KontenRow,
 } from "../../data/situs";
 import type { KontenField, KontenSchema } from "./schemas";
+import { PageGuide } from "../../components/guide";
+import { SITUS_PAGE_GUIDES, type SitusGuideId } from "../../components/situs/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../../lib/schoolGuideRole";
 
 type FormState = Record<string, unknown>;
 
@@ -51,7 +54,16 @@ function FieldInput({ field, value, onChange }: { field: KontenField; value: unk
 }
 
 /** Generic list + create/edit/delete for one situs content doctype. */
-export function KontenManager({ sekolah, schema }: { sekolah: string; schema: KontenSchema }) {
+export function KontenManager({
+  sekolah,
+  schema,
+  guideId,
+}: {
+  sekolah: string;
+  schema: KontenSchema;
+  /** Optional page-guide id; renders the "Cara pakai" panel under the header. */
+  guideId?: SitusGuideId;
+}) {
   const list = useKontenList(sekolah, schema.doctype);
   const save = useSaveKonten(sekolah, schema.doctype);
   const remove = useDeleteKonten(sekolah, schema.doctype);
@@ -101,6 +113,7 @@ export function KontenManager({ sekolah, schema }: { sekolah: string; schema: Ko
   ];
 
   const isNew = form != null && !form.name;
+  const guide = guideId ? SITUS_PAGE_GUIDES[guideId] : null;
 
   return (
     <div className="space-y-4">
@@ -109,6 +122,18 @@ export function KontenManager({ sekolah, schema }: { sekolah: string; schema: Ko
         description={`Kelola ${schema.singular.toLowerCase()} yang tampil di situs sekolah.`}
         actions={<Button onClick={() => open()}>+ Tambah {schema.singular}</Button>}
       />
+
+      {guide && guideId ? (
+        <PageGuide
+          storageNamespace="situs-guide:"
+          storageId={guideId}
+          title={guide.title}
+          intro={guide.intro}
+          steps={guide.steps}
+          tips={guide.tips}
+          roleLabels={SCHOOL_ROLE_LABEL}
+        />
+      ) : null}
 
       <DataTable
         data={list.data ?? []}

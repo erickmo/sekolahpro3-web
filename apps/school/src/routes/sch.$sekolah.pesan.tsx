@@ -33,6 +33,9 @@ import {
   useResourceUpdate,
 } from "@sekolahpro/api-client";
 import { PesanComposeModal } from "../components/pesan/PesanComposeModal";
+import { PageGuide } from "../components/guide";
+import { MISC_PAGE_GUIDES } from "../components/guide/miscPageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // Wired to backend DocTypes:
 //  - inbox: "Contact Inbox SekolahPro"
@@ -176,6 +179,16 @@ function PesanPage() {
             </Button>
           </>
         }
+      />
+
+      <PageGuide
+        storageNamespace="school-guide:"
+        storageId="pesan"
+        title={MISC_PAGE_GUIDES.pesan.title}
+        intro={MISC_PAGE_GUIDES.pesan.intro}
+        steps={MISC_PAGE_GUIDES.pesan.steps}
+        tips={MISC_PAGE_GUIDES.pesan.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

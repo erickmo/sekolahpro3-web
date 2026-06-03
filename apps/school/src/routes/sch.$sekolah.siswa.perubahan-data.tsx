@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -68,7 +71,17 @@ function PerubahanDataPage() {
 
   const navigate = useNavigate();
   return (
-    <ResourceListPage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="perubahan-data"
+        title={SISWA_PAGE_GUIDES["perubahan-data"].title}
+        intro={SISWA_PAGE_GUIDES["perubahan-data"].intro}
+        steps={SISWA_PAGE_GUIDES["perubahan-data"].steps}
+        tips={SISWA_PAGE_GUIDES["perubahan-data"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <ResourceListPage<Row>
       eyebrow="Siswa"
       title="Perubahan Data Siswa"
       doctype="Perubahan Data Siswa"
@@ -99,7 +112,8 @@ function PerubahanDataPage() {
       ]}
       addLabel="Ajukan Perubahan"
       onAdd={() => navigate({ to: "/sch/$sekolah/siswa/perubahan-data/new", params: { sekolah } })}
-    />
+      />
+    </div>
   );
 }
 

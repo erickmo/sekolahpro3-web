@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { INFRASTRUKTUR_PAGE_GUIDES } from "../components/infrastruktur/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // Read-only. Pembuatan/edit Lantai dilakukan lewat modul terkait; di sini hanya
 // untuk melihat & menelusuri. Klik baris membuka detail gedung pemiliknya.
@@ -17,7 +20,17 @@ function LantaiPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const navigate = useNavigate();
   return (
-    <ResourceListPage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="infrastruktur-guide:"
+        storageId="lantai"
+        title={INFRASTRUKTUR_PAGE_GUIDES.lantai.title}
+        intro={INFRASTRUKTUR_PAGE_GUIDES.lantai.intro}
+        steps={INFRASTRUKTUR_PAGE_GUIDES.lantai.steps}
+        tips={INFRASTRUKTUR_PAGE_GUIDES.lantai.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <ResourceListPage<Row>
       eyebrow="Infrastruktur"
       title="Lantai"
       description="Read-only. Klik baris untuk membuka detail gedung."
@@ -31,7 +44,8 @@ function LantaiPage() {
         r.gedung &&
         navigate({ to: "/sch/$sekolah/infrastruktur/daftar-gedung/$gedungId", params: { sekolah, gedungId: r.gedung } })
       }
-    />
+      />
+    </div>
   );
 }
 

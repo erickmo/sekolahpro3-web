@@ -4,6 +4,9 @@ import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { JADWAL_PELAJARAN_FIELDS } from "../data/create-schemas";
+import { PageGuide } from "../components/guide";
+import { JADWAL_PAGE_GUIDES } from "../components/jadwal/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // TODO(/jadwal/daftar): Jadwal Pelajaran header doctype only has
 // {name, rombel, semester, tahun_ajaran, kurikulum, is_aktif}.
@@ -37,7 +40,16 @@ const COLUMNS: Column<Row>[] = [
 function JadwalDaftarPage() {
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="jadwal-guide:"
+        storageId="daftar"
+        title={JADWAL_PAGE_GUIDES.daftar.title}
+        intro={JADWAL_PAGE_GUIDES.daftar.intro}
+        steps={JADWAL_PAGE_GUIDES.daftar.steps}
+        tips={JADWAL_PAGE_GUIDES.daftar.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Akademik"
         title="Jadwal Pelajaran"
@@ -58,7 +70,7 @@ function JadwalDaftarPage() {
         description="Buat header jadwal. Slot per-jam diisi via halaman detail/desk."
         fields={JADWAL_PELAJARAN_FIELDS}
       />
-    </>
+    </div>
   );
 }
 

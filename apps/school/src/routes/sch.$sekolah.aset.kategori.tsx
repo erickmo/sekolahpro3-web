@@ -3,6 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { KategoriFormModal } from "../components/aset/KategoriFormModal";
+import { PageGuide } from "../components/guide";
+import { ASET_PAGE_GUIDES } from "../components/aset/pageGuides";
+import { ROLE_LABEL } from "../lib/aset/role";
 
 type Row = { name: string; nama_kategori: string; kode?: string; deskripsi?: string };
 
@@ -18,7 +21,16 @@ const COLUMNS: Column<Row>[] = [
 function KategoriPage() {
   const [showCreate, setShowCreate] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageId="aset-kategori"
+        storageNamespace="aset-guide:"
+        title={ASET_PAGE_GUIDES.kategori.title}
+        intro={ASET_PAGE_GUIDES.kategori.intro}
+        steps={ASET_PAGE_GUIDES.kategori.steps}
+        tips={ASET_PAGE_GUIDES.kategori.tips}
+        roleLabels={ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Manajemen Aset"
         title="Kategori Aset"
@@ -33,7 +45,7 @@ function KategoriPage() {
         addLabel="Tambah Kategori"
       />
       <KategoriFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    </div>
   );
 }
 

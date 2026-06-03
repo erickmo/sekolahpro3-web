@@ -22,6 +22,9 @@ import {
 import { useResourceList } from "@sekolahpro/api-client";
 import { DonutChart, HBarChart, DistributionBar, ProgressRing } from "../components/viz";
 import type { ChartDatum, DistributionSegment } from "../components/viz/charts";
+import { PageGuide } from "../components/guide";
+import { STAFF_PAGE_GUIDES } from "../components/staff/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import {
   roleDonut,
   statusKepegawaianBars,
@@ -234,6 +237,16 @@ export function StaffDashboardView({
   return (
     <div className="space-y-6">
       {header}
+
+      <PageGuide
+        storageNamespace="staff-guide:"
+        storageId="dashboard"
+        title={STAFF_PAGE_GUIDES.dashboard.title}
+        intro={STAFF_PAGE_GUIDES.dashboard.intro}
+        steps={STAFF_PAGE_GUIDES.dashboard.steps}
+        tips={STAFF_PAGE_GUIDES.dashboard.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
 
       {isError ? (
         <Badge tone="danger">Gagal memuat data pegawai: {errorMessage ?? "kesalahan tidak diketahui"}</Badge>

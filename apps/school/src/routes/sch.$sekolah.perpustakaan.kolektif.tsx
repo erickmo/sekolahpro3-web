@@ -6,6 +6,7 @@
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 type Row = {
   name: string;
@@ -50,6 +51,7 @@ function KolektifListPage() {
         </Link>
         <span className="rounded bg-brand px-3 py-1.5 text-sm text-white">Kolektif Kelas</span>
       </div>
+      <PerpPageGuide id="kolektif" />
       <ResourceListPage<Row>
         eyebrow="Perpustakaan"
         title="Pinjam Kolektif Kelas"

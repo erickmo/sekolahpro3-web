@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import { GedungFormModal } from "../components/infrastruktur/GedungFormModal";
+import { PageGuide } from "../components/guide";
+import { INFRASTRUKTUR_PAGE_GUIDES } from "../components/infrastruktur/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import {
   AttentionList,
   type AttentionItem,
@@ -150,6 +153,16 @@ function InfraDashboardPage() {
             </Button>
           </>
         }
+      />
+
+      <PageGuide
+        storageNamespace="infrastruktur-guide:"
+        storageId="dashboard"
+        title={INFRASTRUKTUR_PAGE_GUIDES.dashboard.title}
+        intro={INFRASTRUKTUR_PAGE_GUIDES.dashboard.intro}
+        steps={INFRASTRUKTUR_PAGE_GUIDES.dashboard.steps}
+        tips={INFRASTRUKTUR_PAGE_GUIDES.dashboard.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

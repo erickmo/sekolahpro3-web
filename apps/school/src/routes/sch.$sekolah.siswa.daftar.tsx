@@ -8,6 +8,9 @@ import {
 import { useResourceList } from "@sekolahpro/api-client";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { SiswaImportDialog } from "../components/SiswaImportDialog";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -107,7 +110,17 @@ function SiswaListPage() {
   const tahunOpts = withSemua((tahunQ.data ?? []).map((r) => r.name));
 
   return (
-    <ResourceListPage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="daftar"
+        title={SISWA_PAGE_GUIDES.daftar.title}
+        intro={SISWA_PAGE_GUIDES.daftar.intro}
+        steps={SISWA_PAGE_GUIDES.daftar.steps}
+        tips={SISWA_PAGE_GUIDES.daftar.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <ResourceListPage<Row>
       eyebrow="Direktori"
       title="Siswa"
       description="Kelola data siswa, profil, dan kelas."
@@ -143,7 +156,8 @@ function SiswaListPage() {
       addLabel="Tambah Siswa"
       onAdd={() => navigate({ to: "/sch/$sekolah/siswa/new", params: { sekolah } })}
       onRowClick={(s) => navigate({ to: "/sch/$sekolah/siswa/$nis", params: { sekolah, nis: s.name } })}
-    />
+      />
+    </div>
   );
 }
 

@@ -2,6 +2,9 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { STAFF_PAGE_GUIDES } from "../components/staff/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import {
   MAPEL_PENGAMPU_BASE_VALUES,
@@ -21,7 +24,16 @@ const COLUMNS: Column<Row>[] = [
 function MapelPengampuPage() {
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="staff-guide:"
+        storageId="mapel-pengampu"
+        title={STAFF_PAGE_GUIDES["mapel-pengampu"].title}
+        intro={STAFF_PAGE_GUIDES["mapel-pengampu"].intro}
+        steps={STAFF_PAGE_GUIDES["mapel-pengampu"].steps}
+        tips={STAFF_PAGE_GUIDES["mapel-pengampu"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Guru"
         title="Mapel Pengampu"
@@ -44,7 +56,7 @@ function MapelPengampuPage() {
         fields={MAPEL_PENGAMPU_GURU_FIELDS}
         baseValues={MAPEL_PENGAMPU_BASE_VALUES}
       />
-    </>
+    </div>
   );
 }
 

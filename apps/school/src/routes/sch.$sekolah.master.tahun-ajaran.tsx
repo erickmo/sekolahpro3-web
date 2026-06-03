@@ -14,6 +14,9 @@ import {
 import { useResourceList } from "@sekolahpro/api-client";
 import { MasterCreateModal } from "../components/master/MasterCreateModal";
 import { TAHUN_AJARAN_FIELDS } from "../components/master/schemas";
+import { PageGuide } from "../components/guide";
+import { MASTER_PAGE_GUIDES } from "../components/master/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // ── Relation diagram ────────────────────────────────────────────────────────
 
@@ -158,6 +161,16 @@ function TahunAjaranCardListPage() {
         title="Tahun Ajaran"
         description="Kelola tahun ajaran. Semester dikelola di dalam tiap tahun ajaran."
         actions={<Button onClick={() => setOpen(true)}>Tambah TA</Button>}
+      />
+
+      <PageGuide
+        storageNamespace="master-guide:"
+        storageId="tahun-ajaran"
+        title={MASTER_PAGE_GUIDES["tahun-ajaran"].title}
+        intro={MASTER_PAGE_GUIDES["tahun-ajaran"].intro}
+        steps={MASTER_PAGE_GUIDES["tahun-ajaran"].steps}
+        tips={MASTER_PAGE_GUIDES["tahun-ajaran"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <RelationDiagram />

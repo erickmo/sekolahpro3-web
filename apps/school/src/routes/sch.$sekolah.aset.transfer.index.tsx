@@ -3,6 +3,9 @@ import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router"
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { TransferFormModal } from "../components/aset/TransferFormModal";
+import { PageGuide } from "../components/guide";
+import { ASET_PAGE_GUIDES } from "../components/aset/pageGuides";
+import { ROLE_LABEL } from "../lib/aset/role";
 
 type Row = {
   name: string;
@@ -29,7 +32,16 @@ function TransferListPage() {
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageId="aset-transfer"
+        storageNamespace="aset-guide:"
+        title={ASET_PAGE_GUIDES.transfer.title}
+        intro={ASET_PAGE_GUIDES.transfer.intro}
+        steps={ASET_PAGE_GUIDES.transfer.steps}
+        tips={ASET_PAGE_GUIDES.transfer.tips}
+        roleLabels={ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Manajemen Aset"
         title="Transfer Aset"
@@ -53,7 +65,7 @@ function TransferListPage() {
         onRowClick={(r) => navigate({ to: "/sch/$sekolah/aset/transfer/$name", params: { sekolah, name: r.name } })}
       />
       <TransferFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    </div>
   );
 }
 

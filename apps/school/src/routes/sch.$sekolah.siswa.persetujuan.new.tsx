@@ -13,6 +13,9 @@ import {
   DatePicker,
   type SearchableOption,
 } from "@sekolahpro/ui";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Purpose = "Publikasi Foto" | "Data Dapodik" | "Sharing Mitra" | "Medis Darurat";
 type Method = "Tatap Muka" | "Tanda Tangan Digital" | "WhatsApp" | "Email" | "Portal Wali";
@@ -124,6 +127,16 @@ function PersetujuanNewPage() {
         ⚠ Konfirmasi langsung dengan wali sebelum menyimpan. Default consent = OFF; gunakan form ini
         hanya untuk mencatat persetujuan eksplisit yang sudah diberikan.
       </div>
+
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="persetujuan-baru"
+        title={SISWA_PAGE_GUIDES["persetujuan-baru"].title}
+        intro={SISWA_PAGE_GUIDES["persetujuan-baru"].intro}
+        steps={SISWA_PAGE_GUIDES["persetujuan-baru"].steps}
+        tips={SISWA_PAGE_GUIDES["persetujuan-baru"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
 
       <SectionCard title="Pihak">
         <div className="grid gap-4 md:grid-cols-2">

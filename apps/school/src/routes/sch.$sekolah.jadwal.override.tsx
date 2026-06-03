@@ -4,6 +4,9 @@ import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { JADWAL_OVERRIDE_FIELDS } from "../data/create-schemas";
+import { PageGuide } from "../components/guide";
+import { JADWAL_PAGE_GUIDES } from "../components/jadwal/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; tanggal: string; alasan?: string; tipe?: string; tipe_override?: string; status?: string };
 
@@ -19,7 +22,16 @@ const COLUMNS: Column<Row>[] = [
 function JadwalOverridePage() {
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="jadwal-guide:"
+        storageId="override"
+        title={JADWAL_PAGE_GUIDES.override.title}
+        intro={JADWAL_PAGE_GUIDES.override.intro}
+        steps={JADWAL_PAGE_GUIDES.override.steps}
+        tips={JADWAL_PAGE_GUIDES.override.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Jadwal"
         title="Jadwal Override"
@@ -40,7 +52,7 @@ function JadwalOverridePage() {
         title="Tambah Jadwal Override"
         fields={JADWAL_OVERRIDE_FIELDS}
       />
-    </>
+    </div>
   );
 }
 

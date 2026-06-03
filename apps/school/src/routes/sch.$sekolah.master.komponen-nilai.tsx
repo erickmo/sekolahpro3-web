@@ -4,6 +4,9 @@ import { Badge, SectionCard, type Column } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { CreateResourceModal, type FieldSpec } from "../components/akademik/CreateResourceModal";
+import { PageGuide } from "../components/guide";
+import { MASTER_PAGE_GUIDES } from "../components/master/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -151,6 +154,15 @@ function KomponenNilaiPage() {
 
   return (
     <div className="space-y-4">
+      <PageGuide
+        storageNamespace="master-guide:"
+        storageId="komponen-nilai"
+        title={MASTER_PAGE_GUIDES["komponen-nilai"].title}
+        intro={MASTER_PAGE_GUIDES["komponen-nilai"].intro}
+        steps={MASTER_PAGE_GUIDES["komponen-nilai"].steps}
+        tips={MASTER_PAGE_GUIDES["komponen-nilai"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <BobotSummary rows={rows} />
       <ResourceListPage<Row>
         eyebrow="Akademik"

@@ -13,6 +13,9 @@ import {
   DatePicker,
   type SearchableOption,
 } from "@sekolahpro/ui";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type StatusKelulusan = "Lulus" | "Tidak Lulus";
 
@@ -110,6 +113,16 @@ function KelulusanNewPage() {
         eyebrow="Siswa › Kelulusan"
         title="Proses Kelulusan Baru"
         description="Catat pengesahan kelulusan siswa. Setelah approved, Arsip Ijazah akan dibuat otomatis (retensi 25 tahun)."
+      />
+
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="kelulusan-baru"
+        title={SISWA_PAGE_GUIDES["kelulusan-baru"].title}
+        intro={SISWA_PAGE_GUIDES["kelulusan-baru"].intro}
+        steps={SISWA_PAGE_GUIDES["kelulusan-baru"].steps}
+        tips={SISWA_PAGE_GUIDES["kelulusan-baru"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <SectionCard title="Data Siswa & Status">

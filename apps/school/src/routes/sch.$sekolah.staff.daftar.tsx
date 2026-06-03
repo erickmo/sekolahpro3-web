@@ -14,6 +14,9 @@ import {
   type SortState,
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
+import { PageGuide } from "../components/guide";
+import { STAFF_PAGE_GUIDES } from "../components/staff/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { RoleBadges } from "../features/pegawai/RoleBadges";
 import { PegawaiFormModal } from "../features/pegawai/PegawaiFormModal";
 import { apiRoleBadges, apiIsGuru, apiIsStaff, apiIsDualRole, type PegawaiApi } from "../features/pegawai/roles";
@@ -145,6 +148,16 @@ function DaftarPegawai() {
             Tambah Pegawai
           </Button>
         }
+      />
+
+      <PageGuide
+        storageNamespace="staff-guide:"
+        storageId="daftar"
+        title={STAFF_PAGE_GUIDES.daftar.title}
+        intro={STAFF_PAGE_GUIDES.daftar.intro}
+        steps={STAFF_PAGE_GUIDES.daftar.steps}
+        tips={STAFF_PAGE_GUIDES.daftar.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <FilterBar

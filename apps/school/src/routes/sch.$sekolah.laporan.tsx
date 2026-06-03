@@ -4,6 +4,9 @@ import { Badge, ModuleFlow, type Column, type ModuleFlowStep } from "@sekolahpro
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { LAPORAN_TERJADWAL_FIELDS } from "../data/create-schemas";
+import { PageGuide } from "../components/guide";
+import { MISC_PAGE_GUIDES } from "../components/guide/miscPageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // Wired to backend DocType: "Laporan Terjadwal"
 // /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro/sekolahpro/laporan/doctype/laporan_terjadwal
@@ -61,7 +64,16 @@ function LaporanPage() {
   const [open, setOpen] = useState(false);
   return (
     <>
-    <div className="px-6 pt-6">
+    <div className="px-6 pt-6 space-y-6">
+      <PageGuide
+        storageNamespace="school-guide:"
+        storageId="laporan"
+        title={MISC_PAGE_GUIDES.laporan.title}
+        intro={MISC_PAGE_GUIDES.laporan.intro}
+        steps={MISC_PAGE_GUIDES.laporan.steps}
+        tips={MISC_PAGE_GUIDES.laporan.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ModuleFlow
         title="Alur Penjadwalan Laporan"
         description="Langkah menjadwalkan laporan otomatis."

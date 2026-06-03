@@ -17,6 +17,9 @@ import {
   IconWallet,
 } from "@sekolahpro/ui";
 import { useOnboardingSteps } from "../data/onboarding";
+import { PageGuide } from "../components/guide";
+import { MISC_PAGE_GUIDES } from "../components/guide/miscPageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 const ONBOARDING_DISMISS_KEY = "sekolahpro:onboarding-dismissed";
 
@@ -235,6 +238,15 @@ function Home() {
             </>
           }
         />
+          <PageGuide
+            storageNamespace="school-guide:"
+            storageId="dashboard"
+            title={MISC_PAGE_GUIDES.dashboard.title}
+            intro={MISC_PAGE_GUIDES.dashboard.intro}
+            steps={MISC_PAGE_GUIDES.dashboard.steps}
+            tips={MISC_PAGE_GUIDES.dashboard.tips}
+            roleLabels={SCHOOL_ROLE_LABEL}
+          />
         </div>
       }
       stats={stats.map((s) => (

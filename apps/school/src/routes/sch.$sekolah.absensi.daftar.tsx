@@ -3,6 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { AbsensiHarianFormModal } from "../components/absensi/AbsensiHarianFormModal";
+import { PageGuide } from "../components/guide";
+import { ABSENSI_PAGE_GUIDES } from "../components/absensi/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; tanggal: string; kelas?: string; jumlah_hadir?: number; jumlah_izin?: number; jumlah_sakit?: number; jumlah_alpa?: number; status?: string };
 
@@ -23,6 +26,15 @@ function HarianPage() {
   const [showCreate, setShowCreate] = useState(false);
   return (
     <>
+      <PageGuide
+        storageNamespace="absensi-guide:"
+        storageId="daftar"
+        title={ABSENSI_PAGE_GUIDES.daftar.title}
+        intro={ABSENSI_PAGE_GUIDES.daftar.intro}
+        steps={ABSENSI_PAGE_GUIDES.daftar.steps}
+        tips={ABSENSI_PAGE_GUIDES.daftar.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Absensi"
         title="Absensi Harian"
