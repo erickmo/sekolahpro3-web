@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Badge,
   Button,
+  Card,
   DataTable,
   EmptyState,
   FormField,
@@ -9,6 +10,7 @@ import {
   Modal,
   PageHeader,
   Select,
+  SkeletonText,
   Textarea,
   type Column,
 } from "@sekolahpro/ui";
@@ -19,6 +21,7 @@ import {
   type KontenRow,
 } from "../../data/situs";
 import type { KontenField, KontenSchema } from "./schemas";
+import { ImageInput } from "./ImageInput";
 
 type FormState = Record<string, unknown>;
 
@@ -28,26 +31,37 @@ function emptyForm(schema: KontenSchema): FormState {
   return f;
 }
 
-function FieldInput({ field, value, onChange }: { field: KontenField; value: unknown; onChange: (v: unknown) => void }) {
+function FieldInput({ field, id, value, onChange }: { field: KontenField; id: string; value: unknown; onChange: (v: unknown) => void }) {
   const str = value == null ? "" : String(value);
   if (field.type === "select") {
     return (
-      <Select value={str} onChange={(e) => onChange(e.target.value)}>
+      <Select id={id} value={str} onChange={(e) => onChange(e.target.value)}>
         <option value="">—</option>
         {(field.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
       </Select>
     );
   }
   if (field.type === "textarea" || field.type === "richtext") {
-    return <Textarea rows={field.type === "richtext" ? 6 : 3} value={str} onChange={(e) => onChange(e.target.value)} />;
+    return <Textarea id={id} rows={field.type === "richtext" ? 6 : 3} value={str} onChange={(e) => onChange(e.target.value)} />;
   }
   if (field.type === "check") {
     return (
-      <input type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked ? 1 : 0)} className="h-5 w-5" />
+      <input id={id} type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked ? 1 : 0)} className="h-5 w-5" />
     );
   }
+  if (field.type === "image") {
+    return <ImageInput id={id} value={str} onChange={onChange} alt={field.label} />;
+  }
   const inputType = field.type === "date" ? "date" : field.type === "datetime" ? "datetime-local" : field.type === "number" ? "number" : "text";
-  return <Input type={inputType} value={str} onChange={(e) => onChange(e.target.value)} />;
+  return <Input id={id} type={inputType} value={str} onChange={(e) => onChange(e.target.value)} />;
+}
+
+/** Names of required fields whose current value is blank (null/empty/whitespace). */
+function missingRequired(schema: KontenSchema, form: FormState): string[] {
+  return schema.fields
+    .filter((f) => f.required)
+    .filter((f) => String(form[f.name] ?? "").trim() === "")
+    .map((f) => f.name);
 }
 
 /** Generic list + create/edit/delete for one situs content doctype. */
@@ -56,12 +70,26 @@ export function KontenManager({ sekolah, schema }: { sekolah: string; schema: Ko
   const save = useSaveKonten(sekolah, schema.doctype);
   const remove = useDeleteKonten(sekolah, schema.doctype);
   const [form, setForm] = useState<FormState | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const open = (row?: KontenRow) => setForm(row ? { ...row } : emptyForm(schema));
-  const close = () => setForm(null);
+  const open = (row?: KontenRow) => { setErrors({}); setForm(row ? { ...row } : emptyForm(schema)); };
+  const close = () => { setErrors({}); setForm(null); };
+
+  // Clear one field's error as the user types so the inline message disappears immediately.
+  const setField = (name: string, v: unknown) => {
+    setForm((f) => (f ? { ...f, [name]: v } : f));
+    setErrors((e) => (e[name] ? { ...e, [name]: "" } : e));
+  };
 
   const submit = () => {
     if (!form) return;
+    // Client-side required check so the user sees which fields are missing before a
+    // round-trip; the server still validates as the source of truth.
+    const missing = missingRequired(schema, form);
+    if (missing.length > 0) {
+      setErrors(Object.fromEntries(missing.map((n) => [n, "Wajib diisi"])));
+      return;
+    }
     save.mutate(form, { onSuccess: close });
   };
 
@@ -110,12 +138,21 @@ export function KontenManager({ sekolah, schema }: { sekolah: string; schema: Ko
         actions={<Button onClick={() => open()}>+ Tambah {schema.singular}</Button>}
       />
 
-      <DataTable
-        data={list.data ?? []}
-        columns={columns}
-        rowKey={(r) => r.name}
-        empty={<EmptyState title={`Belum ada ${schema.singular.toLowerCase()}`} description="Klik tombol Tambah untuk membuat yang pertama." />}
-      />
+      {list.isLoading ? (
+        <Card className="p-5"><SkeletonText lines={5} /></Card>
+      ) : list.isError ? (
+        <Card className="space-y-3 p-5">
+          <p className="text-sm text-rose-600">Gagal memuat data. Coba muat ulang.</p>
+          <Button variant="ghost" onClick={() => list.refetch()}>Muat ulang</Button>
+        </Card>
+      ) : (
+        <DataTable
+          data={list.data ?? []}
+          columns={columns}
+          rowKey={(r) => r.name}
+          empty={<EmptyState title={`Belum ada ${schema.singular.toLowerCase()}`} description="Klik tombol Tambah untuk membuat yang pertama." />}
+        />
+      )}
 
       <Modal
         open={form != null}
@@ -131,11 +168,14 @@ export function KontenManager({ sekolah, schema }: { sekolah: string; schema: Ko
       >
         {form ? (
           <div className="grid gap-4">
-            {schema.fields.map((field) => (
-              <FormField key={field.name} label={field.label} required={field.required}>
-                <FieldInput field={field} value={form[field.name]} onChange={(v) => setForm({ ...form, [field.name]: v })} />
-              </FormField>
-            ))}
+            {schema.fields.map((field) => {
+              const fieldId = `kf-${field.name}`;
+              return (
+                <FormField key={field.name} label={field.label} htmlFor={fieldId} required={field.required} error={errors[field.name] || undefined}>
+                  <FieldInput field={field} id={fieldId} value={form[field.name]} onChange={(v) => setField(field.name, v)} />
+                </FormField>
+              );
+            })}
             {save.isError ? <p className="text-sm text-rose-600">Gagal menyimpan. Periksa isian wajib.</p> : null}
           </div>
         ) : null}

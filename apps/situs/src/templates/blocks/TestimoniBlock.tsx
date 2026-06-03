@@ -13,15 +13,19 @@ const DEFAULT_TITLE = "Apa Kata Mereka";
 /**
  * Render the testimoni grid.
  * @param block - Layout block; judul overrides the heading, subjudul the eyebrow.
- * @returns A section of quote cards, or null when no testimoni are configured.
+ * @returns A section of quote cards; a muted "belum diisi" hint when empty.
  */
 export function TestimoniBlock({ block }: BlockProps) {
   const { testimoni } = useSite();
-  if (!testimoni.length) return null;
   return (
     <section className="situs-section situs-soft-bg">
       <Container>
         <SectionHeading eyebrow={block.subjudul ?? "Testimoni"} title={block.judul || DEFAULT_TITLE} align="center" />
+        {!testimoni.length ? (
+          <p className="mt-6 text-center text-sm" style={{ color: "var(--situs-muted)" }}>
+            Testimoni sekolah belum diisi.
+          </p>
+        ) : (
         <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {testimoni.map((t, i) => (
             <figure key={`${t.nama}-${i}`} className="situs-card situs-round-lg flex flex-col p-7">
@@ -38,6 +42,7 @@ export function TestimoniBlock({ block }: BlockProps) {
             </figure>
           ))}
         </div>
+        )}
       </Container>
     </section>
   );

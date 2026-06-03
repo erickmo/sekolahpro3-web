@@ -77,4 +77,24 @@ describe("ChildArrayManager", () => {
     const [, args] = saveMock.mock.calls[0]!;
     expect((args as { values: { keunggulan: KeunggulanRow[] } }).values.keunggulan[0]!.judul).toBe("Baru");
   });
+
+  it("keeps unsaved edits when the parent re-supplies the same server rows", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = (rowsProp: Record<string, unknown>[]) => (
+      <QueryClientProvider client={qc}>
+        <ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={rowsProp} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(tree(rows));
+    // Edit row 0's title locally (commit the modal draft, but do NOT click Simpan).
+    fireEvent.click(screen.getAllByRole("button", { name: /^Ubah$/i })[0]!);
+    fireEvent.change(await screen.findByLabelText(/Judul/), { target: { value: "Diedit" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Simpan baris$/i }));
+    expect(screen.getByText("Diedit")).toBeInTheDocument();
+    // A background refetch hands back a fresh array with identical server values.
+    rerender(tree(rows.map((r) => ({ ...r }))));
+    // The unsaved local edit must survive (no clobber from the re-sync effect).
+    expect(screen.getByText("Diedit")).toBeInTheDocument();
+    expect(screen.queryByText("Pertama")).toBeNull();
+  });
 });

@@ -11,29 +11,28 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 const saveMock = vi.fn(async (_method: string, _args: unknown) => ({}));
+const defaultFetch = (method: string, args: unknown): Promise<unknown> => {
+  if (method.endsWith("get_situs")) {
+    return Promise.resolve({
+      sekolah: "smp-demo",
+      layout_blocks: [
+        { tipe: "hero", variant: "split", aktif: 1, judul: "Selamat Datang" },
+        { tipe: "berita", variant: "default", aktif: 1, judul: "Kabar" },
+      ],
+    });
+  }
+  return saveMock(method, args);
+};
+const fetchMock = vi.fn(defaultFetch);
 vi.mock("@sekolahpro/api-client", async () => {
   const actual = await vi.importActual<typeof import("@sekolahpro/api-client")>("@sekolahpro/api-client");
-  return {
-    ...actual,
-    frappeFetch: vi.fn((method: string, args: unknown) => {
-      if (method.endsWith("get_situs")) {
-        return Promise.resolve({
-          sekolah: "smp-demo",
-          layout_blocks: [
-            { tipe: "hero", variant: "split", aktif: 1, judul: "Selamat Datang" },
-            { tipe: "berita", variant: "default", aktif: 1, judul: "Kabar" },
-          ],
-        });
-      }
-      return saveMock(method, args);
-    }),
-  };
+  return { ...actual, frappeFetch: vi.fn((method: string, args: unknown) => fetchMock(method, args)) };
 });
 
 import { TataLetakPage } from "../sch.$sekolah.situs.tataletak";
 import type { LayoutBlockRow } from "../../data/situs";
 
-afterEach(() => { cleanup(); saveMock.mockClear(); });
+afterEach(() => { cleanup(); saveMock.mockClear(); fetchMock.mockImplementation(defaultFetch); });
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -87,5 +86,17 @@ describe("TataLetakPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Simpan Tata Letak$/i }));
     await waitFor(() => expect(saveMock).toHaveBeenCalled());
     expect(saved()[0]!.variant).toBe("playful");
+  });
+
+  it("shows a loading skeleton while the layout is fetching", () => {
+    fetchMock.mockImplementation(() => new Promise<unknown>(() => {})); // get_situs never resolves
+    render(wrap(<TataLetakPage sekolah="smp-demo" />));
+    expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
+  });
+
+  it("shows an error state when the layout fails to load", async () => {
+    fetchMock.mockImplementation(() => Promise.reject(new Error("boom")));
+    render(wrap(<TataLetakPage sekolah="smp-demo" />));
+    await waitFor(() => expect(screen.getByText(/gagal memuat/i)).toBeInTheDocument());
   });
 });
