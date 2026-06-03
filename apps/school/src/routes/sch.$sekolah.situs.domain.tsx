@@ -5,8 +5,8 @@ import { useSitus, useSetDomain } from "../data/situs";
 
 const MAIN_DOMAIN = (import.meta.env.VITE_SITUS_MAIN_DOMAIN as string | undefined) ?? "sekolahpro.id";
 
-function DomainCms() {
-  const { sekolah } = Route.useParams();
+/** Domain & SSL settings: subdomain, custom domain, DNS hints, verify/SSL badges. */
+export function DomainPage({ sekolah }: { sekolah: string }) {
   const { data } = useSitus(sekolah);
   const setDomain = useSetDomain(sekolah);
   const [subdomain, setSub] = useState("");
@@ -69,6 +69,11 @@ function DomainCms() {
       </div>
     </div>
   );
+}
+
+function DomainCms() {
+  const { sekolah } = Route.useParams();
+  return <DomainPage sekolah={sekolah} />;
 }
 
 export const Route = createFileRoute("/sch/$sekolah/situs/domain")({ component: DomainCms });
