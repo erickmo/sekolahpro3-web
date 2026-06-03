@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manajemen Aset — Dokumentasi Domain</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+<h1>Manajemen Aset</h1>
+<p class="muted">Modul terintegrasi untuk inventaris aset sekolah: registry master, kategori, lokasi penyimpanan, peminjaman dengan approval workflow, tiket maintenance, dan transfer antar lokasi. Kuantitatif (jumlah unit) dengan status siklus hidup (Tersedia, Maintenance, Hilang, Dihapus) dan kondisi fisik (Baik, Rusak Ringan, Rusak Berat).</p>
+
+<h2>Arsitektur</h2>
+<ul>
+<li><strong>Backend Frappe App:</strong> <code>sekolahpro.manajemen_aset</code> (repo terpisah: <code>sekolahpro</code>) — modul transaksional dengan 8 doctype terdaftar di tenant registry (Sekolah-scoped), constants lintas-validator, dan 3 API layer untuk action endpoints (peminjaman, maintenance, transfer)</li>
+<li><strong>Web Routes:</strong> <code>/sch/$sekolah/aset/*</code> — 13 file rute Tanstack React Router (layout + list/detail sibling pattern)</li>
+<li><strong>Lib & Komponen:</strong> <code>apps/school/src/lib/aset/</code> (role derivation, stats aggregation, badges, nav) + 6 komponen form modal + AsetContextBar</li>
+<li><strong>Paket Bersama:</strong> <code>@sekolahpro/api-client</code> (useFrappeMutation, useResourceDoc), <code>@sekolahpro/auth</code> (useSession), <code>@sekolahpro/ui</code> (Badge, Button, SearchableSelect, Tabs)</li>
+</ul>
+
+<h2>Doctypes / Entitas</h2>
+<table>
+<thead>
+<tr>
+<th>Doctype (Bahasa)</th>
+<th>Peran</th>
+<th>Field Kunci</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Aset</code></td>
+<td>Master inventaris kuantitatif per jenis barang — source of truth stok tersedia. Tenant-scoped via <code>sekolah</code>. Autoname: <code>{sekolah}-{kode}</code>.</td>
+<td><code>nama</code>, <code>kode</code>, <code>kategori</code>, <code>lokasi</code>, <code>jumlah_total</code>, <code>jumlah_tersedia</code>, <code>kondisi</code> (enum: Baik/Rusak Ringan/Rusak Berat), <code>status</code> (enum: Tersedia/Maintenance/Hilang/Dihapus)</td>
+</tr>
+<tr>
+<td><code>Kategori Aset</code></td>
+<td>Master pengelompokan aset (mis. Alat Olahraga, Elektronik, Furnitur). Tenant-scoped.</td>
+<td><code>nama</code>, <code>kode</code>, <code>deskripsi</code></td>
+</tr>
+<tr>
+<td><code>Lokasi Aset</code></td>
+<td>Master gudang / ruang penyimpanan. Tenant-scoped. Link opsional ke <code>Ruangan</code> (infrastruktur).</td>
+<td><code>nama</code>, <code>kode</code>, <code>jenis_lokasi</code> (enum: Gudang/Ruang Penyimpanan/Lapangan/Lab/Kelas/Lainnya), <code>ruangan</code> (link opsional)</td>
+</tr>
+<tr>
+<td><code>Permintaan Peminjaman Aset</code></td>
+<td>Workflow peminjaman: Diajukan → Ditolak/Dipinjam → (Terlambat) → Dikembalikan. Memanggil <code>reserve()</code> saat setujui; <code>release()</code> saat kembalikan. Tenant-scoped.</td>
+<td><code>pemohon</code> (Link Pengguna Sekolah), <code>peran_pemohon</code> (enum: Guru/Siswa/Staff/Ekskul/Lainnya), <code>kontak</code>, <code>tanggal_pinjam</code>, <code>tanggal_kembali_rencana</code>, <code>tanggal_kembali_aktual</code>, <code>status</code>, <code>items</code> (child: Item Peminjaman Aset)</td>
+</tr>
+<tr>
+<td><code>Item Peminjaman Aset</code></td>
+<td>Baris peminjaman (many: 1 permintaan peminjaman). Child doctype; tidak independently tenant-scoped (warisi dari parent).</td>
+<td><code>aset</code> (Link), <code>nama_aset</code> (fetch_from), <code>jumlah</code>, <code>jumlah_dikembalikan</code> (trackingKembalian)</td>
+</tr>
+<tr>
+<td><code>Permintaan Maintenance Aset</code></td>
+<td>Tiket servis/perbaikan: Dilaporkan → Dijadwalkan → Dikerjakan → Selesai/Dibatalkan. Saat dikerjakan, aset di-<code>set_maintenance()</code> (terkunci dari peminjaman). Tenant-scoped.</td>
+<td><code>aset</code> (Link), <code>nama_aset</code> (fetch_from), <code>tanggal_laporan</code>, <code>tanggal_jadwal</code>, <code>deskripsi_masalah</code>, <code>prioritas</code> (enum: Rendah/Sedang/Tinggi/Kritis), <code>jenis_maintenance</code> (enum: Perbaikan/Servis Rutin/Penggantian Part/Inspeksi), <code>teknisi</code>, <code>status</code>, <code>biaya</code>, <code>tindakan</code>, <code>kondisi_baru</code></td>
+</tr>
+<tr>
+<td><code>Transfer Aset</code></td>
+<td>Mutasi aset antar lokasi: Draft → Selesai (pindahkan lokasi master aset ke tujuan). Tenant-scoped.</td>
+<td><code>aset</code> (Link), <code>nama_aset</code> (fetch_from), <code>lokasi_asal</code>, <code>lokasi_tujuan</code>, <code>tanggal_transfer</code>, <code>status</code> (enum: Draft/Selesai), <code>catatan</code></td>
+</tr>
+<tr>
+<td><code>Pengaturan Manajemen Aset</code></td>
+<td>Konfigurasi global per-sekolah (Single doctype): durasi pinjam default, prefix kode aset, notifikasi terlambat. TIDAK tenant-scoped (skala Sekolah, bukan Organisasi).</td>
+<td><code>maks_durasi_pinjam_aset_hari</code> (default 7), <code>prefix_kode_aset</code> (default "AST"), <code>notifikasi_terlambat_aktif</code>, <code>notifikasi_penerima</code></td>
+</tr>
+</tbody>
+</table>
+
+<h2>Alur Utama</h2>
+<ol>
+<li><strong>Inventarisasi Aset:</strong> Admin/Manajer memasukkan Aset baru (nama, kode unik per sekolah, kategori, lokasi, jumlah_total=jumlah_tersedia). Sistem guard kondisi enum, jumlah ≥ 1, kode unik.</li>
+<li><strong>Peminjaman:</strong> Petugas/pengguna ajukan Permintaan Peminjaman (pilih aset, jumlah, peran pemohon, tanggal rencana kembali). Manajer review → setujui (reserve stok, status Dipinjam) atau tolak (notif pemohon). Saat kembali, catat jumlah_dikembalikan; jika lewat tanggal, scheduler 08:15 tandai Terlambat. Pengembalian release stok → status Dikembalikan.</li>
+<li><strong>Maintenance:</strong> Petugas/pengguna laporkan kerusakan (Permintaan Maintenance Aset: aset, deskripsi, prioritas, jenis). Manajer jadwalkan (status Dijadwalkan, opsional assign teknisi). Teknisi mulai (status Dikerjakan; aset di-lock set_maintenance() → tidak bisa dipinjam). Selesai (clear_maintenance(), opsional catatkan biaya & kondisi baru). Status Selesai/Dibatalkan keluar dari terbuka.</li>
+<li><strong>Transfer:</strong> Manajer buat Transfer Aset (pilih aset, lokasi asal, lokasi tujuan, catatan). Draft → selesaikan (pindahkan lokasi master aset). Perubahan lokasi tercatat di audit log.</li>
+<li><strong>Reporting:</strong> Pengguna lihat dashboard (stat unit tersedia, aset rusak, overdue peminjaman), daftar aset dengan kondisi & status, laporan distribusi (chart status/kondisi), dan daftar peminjaman/maintenance/transfer untuk tracking status.</li>
+</ol>
+
+<h2>Aturan &amp; Kebijakan</h2>
+<ul>
+<li><strong>Invariant Stok:</strong> 0 ≤ jumlah_tersedia ≤ jumlah_total, dijaga via validator Aset + controller reserve()/release(). Tidak ada patch field langsung dari UI — hanya via whitelisted action endpoint.</li>
+<li><strong>Kode Unik:</strong> Kode aset &amp; kategori &amp; lokasi wajib unik per sekolah (enforce saat insert via assert_kode_unik_per_sekolah()). Autoname Aset = {sekolah}-{kode}.</li>
+<li><strong>Kondisi Enum (3 level):</strong> Baik (layak pakai), Rusak Ringan (perlu servis, masih pinjamable), Rusak Berat (tidak layak, kandidat penghapusan / maintenance). Set saat insert atau saat selesai maintenance.</li>
+<li><strong>Status Lock (Terkunci):</strong> Aset berstatus Maintenance/Hilang/Dihapus TIDAK boleh dipinjam (guard di reserve() → throw ValidationError). Clear via clear_maintenance() (maintenance selesai) atau admin ubah status manual.</li>
+<li><strong>Durasi Pinjam Default:</strong> Tanggal kembali rencana dihitung dari Pengaturan Manajemen Aset (maks_durasi_pinjam_aset_hari, default 7 hari). Scheduler 08:15 tandai terlambat (status Terlambat) untuk peminjaman Dipinjam lewat tanggal kembali.</li>
+<li><strong>Role-Adaptive UI:</strong> Petugas lihat aksi peminjaman/report daily, Manajer lihat approval + maintenance scheduling, Admin lihat master setup. Semua role tetap full-access backend (permissive); framing UI saja per primary role.</li>
+<li><strong>Tenant Isolation:</strong> 6 doctype (Aset, Kategori Aset, Lokasi Aset, Permintaan Peminjaman Aset, Permintaan Maintenance Aset, Transfer Aset) registered di <code>tenant_registry.DOCTYPES["SCHOOL"]</code>; ownership field <code>sekolah</code> → organisasi di-infer dari sekolah link. Read-scoped by organisasi via row-level security.</li>
+</ul>
+
+<h2>Cross-Domain Events</h2>
+
+<h3>Triggers (memicu)</h3>
+<p>Domain Manajemen Aset tidak emit custom Frappe doc_events yang di-listen oleh domain lain (per audit codebase). Action workflow (setujui peminjaman, selesai maintenance, selesaikan transfer) memanggil method controller langsung via UI action; tidak ada async hooks ke pubsub.</p>
+
+<h3>Listens (bereaksi)</h3>
+<p>Domain Manajemen Aset tidak subscribe doc_events dari domain lain. Scheduler background-job (08:15 tandai_peminjaman_terlambat) adalah internal self-service, tidak cross-domain trigger.</p>
+
+<p class="muted"><strong>Alasan:</strong> Domain cukup self-contained (lifecycle aset dari master → peminjaman → return/maintenance → out-of-service). Integrasi infrastruktur (Ruangan untuk lokasi, Pengguna Sekolah untuk pemohon) adalah link data statis, bukan event-driven.</p>
+
+<h2>Batas Ruang Lingkup (YAGNI)</h2>
+<ul>
+<li><strong>Notifikasi Terlambat (follow-up):</strong> Pengaturan mendukung toggle notifikasi &amp; daftar penerima, tapi implementation SMS/Email router belum; defer ke sprint berikutnya. Scheduler hanya update status Terlambat.</li>
+<li><strong>Asuransi / Garansi Aset:</strong> Tracking masa berlaku garansi tidak di-model (field tidak ada di Aset). Candidate untuk future module Aset Tracking v2.</li>
+<li><strong>Laporan Depresiasi / Kondisi Trend:</strong> Laporan sekarang hanya snapshot (distribusi kondisi/status current). Trend historis (berapa aset hilang/rusak per bulan?) belum di-track. Defer ke future analytics module.</li>
+<li><strong>Auto-Assign Teknisi:</strong> Maintenance scheduler bisa opsional isi teknisi (nama, email). Auto-matching dari job description / skill belum; admin assign manual saat jadwalkan.</li>
+<li><strong>Multi-Location Stock Allocation:</strong> Saat peminjaman, item pilih aset namun lokasi donee tidak di-filter (sistem assume aset bisa pickup dari mana saja). Future: constrain peminjaman ke lokasi terdekat pengguna atau by-intent allocation.</li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Situs Sekolah (Website + CMS) — Domain README</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+
+<h1>Situs Sekolah (Website + CMS)</h1>
+<p class="muted">Per-school public website + no-code block-driven CMS. Every school gets a branded website on custom/subdomain with template selection and live content management.</p>
+
+<h2>Arsitektur</h2>
+<ul>
+  <li><strong>Backend module:</strong> <code>website_sekolah</code> (repo terpisah: <code>sekolahpro</code>). 11 doctypes: Template Situs, Situs Sekolah, Situs Layout Block, Situs Keunggulan, Situs Statistik, Situs Testimoni, Berita Sekolah, Halaman Situs, Agenda Sekolah, Galeri Sekolah, Prestasi Sekolah.</li>
+  <li><strong>Web SPA:</strong> <code>apps/situs</code> (this repo). Offline-runnable demo at port 5184. Block-driven composer renders <code>layoutBlocks</code> from Situs Sekolah via blockRegistry.</li>
+  <li><strong>CMS (Admin):</strong> <code>apps/school</code> routes <code>sch.$sekolah.situs.*</code> (this repo). Tab-based interface: Ringkasan, Tampilan (template/brand), Tata Letak (block ordering), Sorotan (child-array editors), Berita/Halaman/Agenda/Galeri/Prestasi/Domain.</li>
+  <li><strong>Routes prefix:</strong> <code>/sch/$sekolah/situs</code> (school-admin CMS) and <code>/situs.*</code> for content editors (Berita/Halaman/etc.).</li>
+  <li><strong>Shared packages:</strong> <code>@sekolahpro/ui</code> (component library), <code>@sekolahpro/api-client</code> (Frappe API wrapper).</li>
+  <li><strong>APIs:</strong> Guest: <code>sekolahpro.api.situs.{resolve_site, get_site, list_berita, list_agenda, list_galeri, list_prestasi, get_ppdb_info, submit_kontak, submit_pendaftaran}</code>. Admin: <code>sekolahpro.api.situs_admin.{get_situs, save_situs, list_template, publish, set_domain, list_konten, save_konten, delete_konten}</code>.</li>
+</ul>
+
+<h2>Doctypes / Entitas</h2>
+<table>
+  <tr>
+    <th>Doctype</th>
+    <th>Peran</th>
+    <th>Field kunci</th>
+  </tr>
+  <tr>
+    <td><code>Situs Sekolah</code> (parent)</td>
+    <td>Per-school public website configuration & CMS state. Single doc per Sekolah. Status: Draft/Terbit.</td>
+    <td><code>sekolah</code> (link), <code>template</code>, <code>subdomain</code>, <code>custom_domain</code>, <code>layout_blocks</code> (child table), <code>brand_color</code>, <code>hero_judul</code>, <code>hero_subjudul</code>, <code>hero_eyebrow</code>, <code>hero_cta_label</code>, <code>hero_cta_url</code>, <code>hero_cta2_label</code>, <code>hero_cta2_url</code>, <code>keunggulan</code>, <code>statistik</code>, <code>testimoni</code>, visibility toggles (<code>tampilkan_berita</code>, <code>tampilkan_agenda</code>, etc.)</td>
+  </tr>
+  <tr>
+    <td><code>Template Situs</code></td>
+    <td>Global provider-managed template catalog. Admin adds rows to make new templates available; schools pick one per Situs Sekolah.</td>
+    <td><code>key</code> (klasik/modern/ceria/aurora), <code>nama</code>, <code>deskripsi</code>, <code>status</code>, <code>hero_variant</code>, <code>radius</code>, <code>font_heading</code>, <code>font_body</code>, <code>shadow</code>, <code>section_style</code>, <code>default_layout</code> (JSON seed)</td>
+  </tr>
+  <tr>
+    <td><code>Situs Layout Block</code> (child, istable)</td>
+    <td>One row per homepage block (hero, keunggulan, berita, etc.). Ordered, toggleable, renderable via blockRegistry. Parent: Situs Sekolah.</td>
+    <td><code>tipe</code> (hero/keunggulan/statistik/testimoni/profil/berita/agenda/galeri/prestasi/ppdb/cta/kontak/richtext), <code>variant</code>, <code>aktif</code>, <code>judul</code>, <code>subjudul</code>, <code>cta_label</code>, <code>cta_url</code>, <code>konten</code></td>
+  </tr>
+  <tr>
+    <td><code>Situs Keunggulan</code> (child, istable)</td>
+    <td>School strengths/features shown in keunggulan block. Parent: Situs Sekolah.</td>
+    <td><code>ikon</code> (emoji), <code>judul</code>, <code>deskripsi</code></td>
+  </tr>
+  <tr>
+    <td><code>Situs Statistik</code> (child, istable)</td>
+    <td>Statistics (student count, alumni, etc.) shown in statistik block. Parent: Situs Sekolah.</td>
+    <td><code>label</code>, <code>nilai</code>, <code>satuan</code></td>
+  </tr>
+  <tr>
+    <td><code>Situs Testimoni</code> (child, istable)</td>
+    <td>Testimonials from parents/alumni shown in testimoni block. Parent: Situs Sekolah.</td>
+    <td><code>nama</code>, <code>peran</code>, <code>foto</code>, <code>kutipan</code></td>
+  </tr>
+  <tr>
+    <td><code>Berita Sekolah</code></td>
+    <td>School news items. Published rows shown in Berita block. Scoped by sekolah + status=Terbit.</td>
+    <td><code>sekolah</code> (link), <code>judul</code>, <code>slug</code>, <code>kategori</code>, <code>status</code>, <code>tanggal_terbit</code>, <code>isi</code></td>
+  </tr>
+  <tr>
+    <td><code>Halaman Situs</code></td>
+    <td>Static pages (profil, kontak detail). Linked from nav. Scoped by sekolah.</td>
+    <td><code>sekolah</code>, <code>judul</code>, <code>slug</code>, <code>isi</code>, <code>status</code>, <code>urutan</code>, <code>tampilkan_di_nav</code></td>
+  </tr>
+  <tr>
+    <td><code>Agenda Sekolah</code></td>
+    <td>School events. Shown in agenda block ordered by tanggal_mulai. Scoped by sekolah.</td>
+    <td><code>sekolah</code>, <code>judul</code>, <code>tanggal_mulai</code>, <code>tanggal_selesai</code>, <code>lokasi</code>, <code>status</code></td>
+  </tr>
+  <tr>
+    <td><code>Galeri Sekolah</code></td>
+    <td>Photo gallery. Shown in galeri block ordered by urutan. Scoped by sekolah.</td>
+    <td><code>sekolah</code>, <code>judul</code>, <code>gambar</code>, <code>kategori</code>, <code>urutan</code>, <code>status</code></td>
+  </tr>
+  <tr>
+    <td><code>Prestasi Sekolah</code></td>
+    <td>School achievements. Shown in prestasi block ordered by tahun desc. Scoped by sekolah.</td>
+    <td><code>sekolah</code>, <code>judul</code>, <code>tingkat</code>, <code>tahun</code>, <code>peraih</code>, <code>status</code></td>
+  </tr>
+</table>
+
+<h2>Alur utama</h2>
+<ol>
+  <li><strong>Sekolah admin masuk CMS:</strong> Buka <code>/sch/{sekolah}/situs</code> (ringkasan + quick links).</li>
+  <li><strong>Pilih template & brand:</strong> Tab Tampilan: pilih Template Situs (klasik/modern/ceria/aurora), set brand_color, hero_judul, hero_subjudul, hero_eyebrow, hero_cta_label/url, hero_cta2_label/url. Simpan via <code>save_situs</code>.</li>
+  <li><strong>Atur tata letak:</strong> Tab Tata Letak: susun blok (hero, keunggulan, statistik, testimoni, profil, berita, agenda, galeri, prestasi, ppdb, cta, kontak, richtext). Per-blok dapat dipilih variant (split/centered/fullbleed/overlay/playful untuk hero, cards/grid untuk keunggulan, dll.), toggle aktif/nonaktif, set heading override + CTA text. Simpan array <code>layout_blocks</code>.</li>
+  <li><strong>Kelola sorotan:</strong> Tab Sorotan: edit child-array Keunggulan (ikon emoji + judul + deskripsi), Statistik (label + nilai + satuan), Testimoni (nama + peran + foto + kutipan). Simpan per-tabel.</li>
+  <li><strong>Kelola konten:</strong> Tabs Berita/Halaman/Agenda/Galeri/Prestasi (per-sekolah CRUD via <code>save_konten</code>/<code>delete_konten</code>). Status: Draft/Terbit. Hanya Terbit rows ditampilkan publik.</li>
+  <li><strong>Atur domain:</strong> Tab Domain: set subdomain (clash-detected cross-table dengan Organisasi) atau custom_domain (verified via DNS CNAME). Gerakkan slider dari Draft → Terbit untuk publish publik.</li>
+  <li><strong>Pengunjung akses situs publik:</strong> Browser ke <code>smp-pelita.sekolahpro.id</code> (atau custom domain) → resolver <code>situs.resolve_site(host)</code> → load <code>Situs Sekolah</code> + <code>Template Situs</code> → SPA <code>mapSite()</code> → <code>Composer</code> render <code>layoutBlocks</code> → block registry resolve per-variant renderer (HeroBlock, KeunggulanBlock, BeritaSection, etc.) → tema tokens dari <code>Template Situs</code> diaplikasikan via CSS vars.</li>
+</ol>
+
+<h2>Aturan & Kebijakan</h2>
+<ul>
+  <li><strong>Tenancy:</strong> Situs Sekolah scoped to single Sekolah. Child tables (layout_blocks, keunggulan, statistik, testimoni) inherit tenant scope dari parent—tidak ada field tenant sendiri, tidak masuk tenant_registry. Subdomain uniqueness enforced cross-table vs Organisasi.</li>
+  <li><strong>Status gating:</strong> Only Situs Sekolah with status=Terbit visible to guests. Draft sites resolve to null in public API.</li>
+  <li><strong>Guest read security:</strong> Public reads NOT auto-scoped by permission_query_conditions. Every guest endpoint (<code>situs.resolve_site</code>, <code>list_berita</code>, etc.) explicitly filters <code>{sekolah, status:"Terbit"}</code> with <code>ignore_permissions</code> and re-checks row ownership in code.</li>
+  <li><strong>PPDB anti-tamper:</strong> <code>submit_pendaftaran</code> asserts gelombang belongs to the resolved school before accepting registration.</li>
+  <li><strong>Contact/PPDB inbox isolation:</strong> Contact Inbox & PPDB Lead (legacy) lost guest-read permission; now tenant-registered to block cross-tenant leak.</li>
+  <li><strong>Template extensibility:</strong> No existing template changes when adding new template—open/closed. Provider adds Template Situs row + registers in backend constants + adds SPA blockRegistry renderer. Contract test (constant sync) prevents drift between backend TEMPLATE_KEYS and SPA.</li>
+  <li><strong>Block variants:</strong> Per-block variant list locked in CMS blockSchemas.ts (mirrors SPA registry.ts). Unknown variant saved as-is (data), validated in SPA; fallback renderer prevents crash.</li>
+  <li><strong>Default layout fallback:</strong> School without <code>layout_blocks</code> renders per-template HomeBody (backward-compat) or template's <code>default_layout</code> seed from fixture.</li>
+  <li><strong>Role gating:</strong> CMS /situs routes gated to kepala_sekolah + admin_sekolah roles (existing gating). Guests cannot access admin APIs.</li>
+</ul>
+
+<h2>Cross-Domain Events</h2>
+
+<h3>Triggers (memicu)</h3>
+<ul>
+  <li><strong>Situs Sekolah.save:</strong> When a school publishes (status Draft→Terbit), invalidate resolver Redis caches for host→Situs lookup. Triggered by <code>situs_admin.publish()</code>.</li>
+  <li><strong>Situs Sekolah.save:</strong> Domain verification callback (custom_domain DNS validated) → update <code>domain_verified</code> flag + SSL status. (Implementation pending; follows Caddy/Frappe SSL flow.)</li>
+</ul>
+
+<h3>Listens (bereaksi)</h3>
+<ul>
+  <li><strong>Pendaftaran PPDB.submit:</strong> When guest calls <code>submit_pendaftaran</code>, backend validates gelombang.sekolah matches resolved Situs Sekolah. Blocks cross-school PPDB submission.</li>
+  <li><strong>Contact Inbox.insert:</strong> When guest submits contact form via <code>submit_kontak</code>, Contact Inbox row is tenant-registered (not guest-readable) to block cross-tenant data leak.</li>
+</ul>
+
+<h2>Batas ruang lingkup (YAGNI)</h2>
+<ul>
+  <li><strong>apps/landing:</strong> Global product site (sekolahpro.id marketing). Not touched; Situs Sekolah is per-school only.</li>
+  <li><strong>Drag-drop visual WYSIWYG:</strong> Block order via up/down buttons (no DnD library added). Visual WYSIWYG builder deferred.</li>
+  <li><strong>Server-side SEO meta injection:</strong> `vite-react-ssg` pre-renders routes (not tenants), so &lt;meta&gt; set client-side. Real crawler SEO needs small Caddy/Frappe server meta-injection middleware (documented as follow-up, not implemented).</li>
+  <li><strong>Fasilitas block content:</strong> Fasilitas doctype not yet created; block type registered but no renderer (skip in CMS pick until content model defined).</li>
+  <li><strong>Dark mode / multi-bahasa:</strong> Not in scope. Situs renders in light mode, Indonesian only (Localization module in SekolahPro is separate).</li>
+  <li><strong>Berita vs News Article unification:</strong> Berita Sekolah is module-local doctype. Merger with global News Article deferred pending backend refactor.</li>
+  <li><strong>Shared PPDB-wizard component:</strong> PPDB form UI in apps/situs is local. Extract to @sekolahpro/components deferred.</li>
+  <li><strong>Caddy on-demand-TLS automation:</strong> Custom domain SSL provisioning can auto-request certs when domain added. Deferred pending DevOps integration.</li>
+</ul>
+
+</body>
+</html>

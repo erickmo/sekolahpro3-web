@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dokumentasi Domain Koperasi — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+
+<h1>Koperasi</h1>
+<p class="muted">Domain manajemen koperasi terintegrasi di SekolahPro, mencakup operasional simpanan-pinjaman (konvensional & syariah), layanan sosial (ZIS & wakaf), pengelolaan kas teller, persetujuan, dan pelaporan. Mendukung two modes operasi: Konvensional (bunga) dan Syariah/BMT (akad syariah + baitul maal).</p>
+
+<h2>Arsitektur</h2>
+<ul>
+  <li><strong>Backend:</strong> Frappe app <code>sekolahpro</code>, module <code>koperasi</code> (repo terpisah, tidak dalam web repo ini)</li>
+  <li><strong>Frontend (web):</strong> Package <code>@sekolahpro/app-school</code>, shell <code>/kop/$sekolah</code> (TanStack Router, React 18)</li>
+  <li><strong>Routes prefix:</strong> <code>/kop/$sekolah/*</code> (mis. <code>/kop/sd-maju/transaksi</code>)</li>
+  <li><strong>Shared packages:</strong> <code>@sekolahpro/api-client</code> (Frappe resource hooks), <code>@sekolahpro/ui</code> (primitives + layout)</li>
+  <li><strong>Mode runtime:</strong> Hook <code>useKoperasiMode()</code> membaca singleton Frappe <code>Pengaturan Koperasi</code> (field <code>mode_koperasi</code>: "Konvensional" vs "Syariah (BMT)")</li>
+</ul>
+
+<h2>Doctypes / Entitas</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Doctype (Frappe)</th>
+      <th>Peran / Fungsi</th>
+      <th>Field Kunci</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Pengaturan Koperasi</code></td>
+      <td>Singleton konfigurasi global koperasi per sekolah</td>
+      <td><code>mode_koperasi</code> (Select: "Konvensional" | "Syariah (BMT)")</td>
+    </tr>
+    <tr>
+      <td><code>Anggota Koperasi</code></td>
+      <td>Master anggota / nasabah koperasi</td>
+      <td><code>nama</code>, <code>status</code> (Aktif/Nonaktif/Dormant), <code>tanggal_daftar</code></td>
+    </tr>
+    <tr>
+      <td><code>Rekening Simpanan</code></td>
+      <td>Rekening tabungan anggota (simpanan pokok, wajib, sukarela)</td>
+      <td><code>anggota</code>, <code>saldo</code>, <code>status</code>, <code>produk_simpanan</code></td>
+    </tr>
+    <tr>
+      <td><code>Transaksi Simpanan</code></td>
+      <td>Log setor, tarik, transfer, bagi hasil, koreksi</td>
+      <td><code>jenis</code> (Setor/Tarik/Transfer/Bagi Hasil/Koreksi), <code>rekening_simpanan</code>, <code>jumlah</code>, <code>tanggal</code></td>
+    </tr>
+    <tr>
+      <td><code>Akad Pembiayaan</code></td>
+      <td>Pinjaman/pembiayaan (konvensional: bunga; syariah: akad)</td>
+      <td><code>anggota</code>, <code>jumlah_pokok</code>, <code>status</code> (Berjalan/Selesai/Macet), <code>produk_pembiayaan</code>, <code>akad_type</code></td>
+    </tr>
+    <tr>
+      <td><code>Jadwal Angsuran</code></td>
+      <td>Cicilan akad pembiayaan per periode</td>
+      <td><code>akad_pembiayaan</code>, <code>tenor</code>, <code>pokok</code>, <code>bunga/margin</code>, <code>status</code></td>
+    </tr>
+    <tr>
+      <td><code>Produk Simpanan</code></td>
+      <td>Master produk tabungan (pokok, wajib, sukarela)</td>
+      <td><code>nama_produk</code>, <code>jenis</code>, <code>bagi_hasil_pct</code></td>
+    </tr>
+    <tr>
+      <td><code>Produk Pembiayaan</code></td>
+      <td>Master produk pinjaman (konvensional: bunga; syariah: akad + margin)</td>
+      <td><code>nama_produk</code>, <code>mode</code> (Konvensional/Syariah), <code>margin_pa</code>, <code>skema_angsuran</code>, <code>maksimal_tenor</code></td>
+    </tr>
+    <tr>
+      <td><code>Sesi Kas Teller</code></td>
+      <td>Shift kas teller (buka/tutup dengan denomi, selisih)</td>
+      <td><code>teller</code>, <code>shift</code>, <code>status</code> (Draft/Aktif/Pending Approval/Selesai), <code>modal_kas</code>, <code>denominasi_buka</code>, <code>denominasi_tutup</code></td>
+    </tr>
+    <tr>
+      <td><code>Kartu</code> (RFID)</td>
+      <td>Kartu identitas RFID anggota untuk transaksi</td>
+      <td><code>nomor_kartu</code>, <code>anggota</code>, <code>status</code>, <code>tanggal_terbit</code></td>
+    </tr>
+    <tr>
+      <td><code>Transaksi Kartu</code></td>
+      <td>Log transaksi via RFID e-money / prepaid card</td>
+      <td><code>kartu</code>, <code>jenis</code>, <code>jumlah</code>, <code>merchant</code>, <code>tanggal</code></td>
+    </tr>
+    <tr>
+      <td><code>Penerimaan ZIS</code></td>
+      <td>Penerimaan zakat, infak, sedekah (syariah only)</td>
+      <td><code>jenis_dana</code> (Zakat/Infak/Sedekah/Wakaf Tunai), <code>nasabah</code>, <code>jumlah</code>, <code>status</code>, <code>tanggal</code></td>
+    </tr>
+    <tr>
+      <td><code>Aset Wakaf</code></td>
+      <td>Aset wakaf yang dikelola koperasi (syariah only)</td>
+      <td><code>nama_aset</code>, <code>jenis_wakaf</code>, <code>nilai</code>, <code>wakif</code>, <code>status</code> (Produktif/Tidak Produktif)</td>
+    </tr>
+    <tr>
+      <td><code>Pembagian SHU</code></td>
+      <td>Periode pembagian Sisa Hasil Usaha tahunan</td>
+      <td><code>periode</code>, <code>shu_total</code>, <code>status</code> (Dibuat/Disahkan/Dibagikan), <code>tanggal_rat</code></td>
+    </tr>
+    <tr>
+      <td><code>Permohonan Buka Rekening</code></td>
+      <td>Permohonan pembukaan rekening baru (workflow approval)</td>
+      <td><code>anggota</code>, <code>status</code> (Draft/Diajukan/Disetujui/Ditolak), <code>alasan_penolakan</code></td>
+    </tr>
+    <tr>
+      <td><code>Permohonan Tutup Rekening</code></td>
+      <td>Permohonan penutupan rekening (workflow approval)</td>
+      <td><code>rekening</code>, <code>status</code>, <code>alasan_penolakan</code></td>
+    </tr>
+    <tr>
+      <td><code>Permohonan Blokir Rekening</code></td>
+      <td>Permohonan pemblokiran akses rekening (workflow approval)</td>
+      <td><code>rekening</code>, <code>status</code>, <code>alasan_penolakan</code></td>
+    </tr>
+    <tr>
+      <td><code>Permohonan Unblokir Rekening</code></td>
+      <td>Permohonan pembukaan kembali rekening terblokir (workflow approval)</td>
+      <td><code>rekening</code>, <code>status</code>, <code>alasan_penolakan</code></td>
+    </tr>
+    <tr>
+      <td><code>Permohonan Aktivasi Dormant</code></td>
+      <td>Permohonan aktivasi kembali rekening dormant (workflow approval)</td>
+      <td><code>rekening</code>, <code>status</code>, <code>alasan_penolakan</code></td>
+    </tr>
+    <tr>
+      <td><code>Periode Tutup Koperasi</code></td>
+      <td>Periode penutupan (closing) operasional koperasi</td>
+      <td><code>periode</code>, <code>tanggal_tutup</code>, <code>status</code></td>
+    </tr>
+    <tr>
+      <td><code>Laporan PPATK</code></td>
+      <td>Laporan PPATK (Due Diligence / transaksi mencurigakan)</td>
+      <td><code>nomor_laporan</code>, <code>periode</code>, <code>status</code>, <code>tanggal_kirim</code></td>
+    </tr>
+    <tr>
+      <td><code>Fatwa DSN-MUI</code></td>
+      <td>Referensi fatwa DSN-MUI untuk akad syariah (master config)</td>
+      <td><code>nomor</code>, <code>kategori</code> (Akad Pembiayaan/Akad Simpanan/Multiguna/Lainnya), <code>tahun</code>, <code>aktif</code></td>
+    </tr>
+    <tr>
+      <td><code>Denominasi Uang</code></td>
+      <td>Daftar denominasi uang (Rp 1rb, 5rb, dll) untuk kas teller</td>
+      <td><code>nama</code>, <code>nilai</code>, <code>jenis</code> (Kertas/Koin), <code>urutan</code></td>
+    </tr>
+    <tr>
+      <td><code>Sanctions List Entry</code></td>
+      <td>List sanction internasional (DTTOT, PEP, OFAC, dll)</td>
+      <td><code>nama</code>, <code>tipe</code>, <code>sumber</code>, <code>tanggal_input</code>, <code>aktif</code></td>
+    </tr>
+    <tr>
+      <td><code>Merchant</code></td>
+      <td>Master merchant e-money / QRIS untuk transaksi kartu</td>
+      <td><code>nama_merchant</code>, <code>nasabah</code>, <code>kategori</code> (kantin/toko/lainnya), <code>status</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Alur Utama</h2>
+<ol>
+  <li><strong>Onboarding Anggota:</strong> Calon anggota → form pendaftaran → dokumen upload → verifikasi → created <code>Anggota Koperasi</code> (status: Pending) → approval → Aktif</li>
+  <li><strong>Pembukaan Rekening:</strong> Anggota aktif → pilih produk simpanan → create <code>Rekening Simpanan</code> (Pokok/Wajib/Sukarela) → link dengan anggota</li>
+  <li><strong>Transaksi Simpanan:</strong> Teller via kasir / RFID → pilih jenis (Setor/Tarik/Transfer) → validate saldo &amp; nominal → create <code>Transaksi Simpanan</code> → update rekening saldo</li>
+  <li><strong>Pembiayaan (Akad):</strong> Anggota apply → pilih produk &amp; tenor → sistem generate <code>Jadwal Angsuran</code> → create <code>Akad Pembiayaan</code> (status: Draft) → approval by supervisor → Berjalan (dilepas dana) → cicilan masuk via transaksi atau bayar langsung</li>
+  <li><strong>Sesi Kas Teller:</strong> Teller buka shift → input modal kas &amp; denominasi → sistem track transaksi → end-of-shift tutup sesi → validate denominasi fisik vs sistem → selisih dicatat &amp; approval</li>
+  <li><strong>Persetujuan:</strong> Supervisor inbox menampilkan permohonan (Buka/Tutup/Blokir/Unblokir/Aktivasi Dormant) → review nasabah/rekening → approve (Disetujui) atau reject (Ditolak, mandatory <code>alasan_penolakan</code>)</li>
+  <li><strong>ZIS / Wakaf (syariah only):</strong> Catat penerimaan ZIS (jenis: Zakat/Infak/Sedekah/Wakaf Tunai) → atau catat aset wakaf (properti, tanah, dll) dengan jenis &amp; wakif → track status produktivitas</li>
+  <li><strong>Pembagian SHU:</strong> RAT meeting → input total SHU &amp; tanggal RAT → sistem generate baris per anggota (partisipasi) → status Disahkan → distribusi ke rekening anggota → Dibagikan</li>
+</ol>
+
+<h2>Aturan &amp; Kebijakan</h2>
+<ul>
+  <li><strong>Mode adaptif:</strong> Menu sidebar &amp; halaman menyesuaikan berdasarkan jenis koperasi (Konvensional vs Syariah). BMT melihat menu "Baitul Maal" (ZIS + Wakaf) dan label "Akad"; Konvensional melihat "Suku Bunga" read-only dan label "Pinjaman". Hook <code>useKoperasiMode()</code> membaca <code>Pengaturan Koperasi.mode_koperasi</code> dengan fallback syariah (superset) saat loading/error.</li>
+  <li><strong>Sesi Kas guard:</strong> Transaksi simpanan hanya diizinkan jika ada <code>Sesi Kas Teller</code> aktif (status = "Aktif") untuk teller ybs. Helper <code>hasActiveSession(sessions, tellerEmail)</code> memvalidasi.</li>
+  <li><strong>Transaksi validation:</strong> Setor/Tarik/Transfer nominal harus &gt; 0, rekening harus valid. Transfer tidak boleh ke rekening yang sama. Tarik tidak boleh melebihi saldo (jika diketahui). Rule <code>validateTransaksi()</code> pure function.</li>
+  <li><strong>Sesi Kas balance:</strong> Buka: <code>sum(denominasi_buka) == modal_kas</code> (mandatory). Tutup: <code>selisih = sum(denominasi_tutup) - saldo_seharusnya</code>; jika <code>selisih != 0</code> maka <code>catatan_selisih</code> mandatory.</li>
+  <li><strong>Akad Pembiayaan locks:</strong> Field <code>akad_type</code> (Murabaha/Musharaka/Qard/dll) read-only setelah submission (role-based). Jika mode konvensional, hanya bunga (interest), tidak ada akad syariah.</li>
+  <li><strong>Permohonan approval:</strong> Setiap permohonan (Buka/Tutup/Blokir/dll) lifecycle: Draft → Diajukan → (Disetujui | Ditolak). Ditolak wajib isi <code>alasan_penolakan</code>. Trigger backend hooks untuk update status rekening/anggota.</li>
+  <li><strong>ZIS / Wakaf (syariah only):</strong> Penerimaan ZIS status dapat "Diterima" (verified) atau "Pending". Aset Wakaf status "Produktif" (menghasilkan) vs "Tidak Produktif" (disimpan). Halaman ZIS &amp; Wakaf hidden untuk mode Konvensional.</li>
+  <li><strong>SHU read-only render:</strong> Halaman laporan SHU menampilkan total simpanan, pembiayaan berjalan, macet, &amp; anggota aktif via aggregates dari list queries. Detail laporan syariah (PSAK 101-110), mutasi kas, rekonsiliasi deferred (Phase 3).</li>
+  <li><strong>E-money / Kartu RFID:</strong> Transaksi kartu via merchant → log <code>Transaksi Kartu</code> → update rekening saldo. Card activation via anggota profil. Lost/damaged card request new via supervisor.</li>
+  <li><strong>Suku Bunga (konvensional only):</strong> Halaman read-only daftar <code>Produk Pembiayaan</code> dengan <code>margin_pa</code>, <code>skema_angsuran</code>, <code>maksimal_tenor</code>. Tidak ada form edit di frontend (editing via Frappe desk backend).</li>
+</ul>
+
+<h2>Cross-Domain Events</h2>
+
+<h3>Triggers (memicu)</h3>
+<ul>
+  <li><code>Anggota Koperasi</code> status change Aktif → firevent untuk init default <code>Rekening Simpanan</code> (pokok wajib) jika belum exist</li>
+  <li><code>Akad Pembiayaan</code> status change Draft → Berjalan → backend trigger pencairan dana (debit account pembiayaan, kredit rekening simpanan anggota)</li>
+  <li><code>Jadwal Angsuran</code> due date past &amp; unpaid → backend trigger overdue notification / status change Terlambat</li>
+  <li><code>Sesi Kas Teller</code> status change Aktif → Pending Approval → supervisor notification (inbox persetujuan)</li>
+  <li><code>Pembagian SHU</code> status change → Disahkan → Dibagikan → backend trigger distribusi ke rekening (batch journal entries)</li>
+</ul>
+
+<h3>Listens (bereaksi)</h3>
+<ul>
+  <li><code>Periode Tutup Koperasi</code> status closed → freeze transaksi baru (guard: transaksi periode lalu ditolak), allow reversal hanya untuk adjustment</li>
+  <li><code>Pengaturan Koperasi.mode_koperasi</code> change → frontend re-render sidebar <code>filterKoperasiNav()</code>, halaman ZIS/Wakaf toggle visibility</li>
+  <li>E-money / Merchant activation → <code>Transaksi Kartu</code> acceptance (validation merchant aktif sebelum posting)</li>
+</ul>
+
+<h2>Batas Ruang Lingkup (YAGNI)</h2>
+<ul>
+  <li><strong>Suku Bunga editing:</strong> Frontend read-only hanya; editing via Frappe desk. Tidak ada form CRUD client-side.</li>
+  <li><strong>Laporan detail syariah:</strong> PSAK 101-110 (neraca syariah), detail SHU per kategori (mudharabah/musharaka/dll), mutasi kas teller per shift, rekonsiliasi → Phase 3 (out-of-scope sprint ini).</li>
+  <li><strong>Anggota approval workflow:</strong> Draft → Aktif onboarding via wizard simpel, bukan full approval inbox (approval inbox hanya untuk permohonan transaksi: Buka/Tutup/Blokir rekening).</li>
+  <li><strong>Batch operasi:</strong> Bulk close rekening, bulk freeze anggota → deferred; frontend list hanya render, no multi-select action.</li>
+  <li><strong>SHU calculation engine:</strong> Backend pure; frontend hanya tampilkan hasil. Tidak ada client-side calculation / simulasi SHU (complex formula, must be server).</li>
+  <li><strong>Sanctions match / AML:</strong> Manual add ke <code>Sanctions List Entry</code> master; system alerts anggota baru nama match (Phase 3 auto-sync dengan DTTOT API).</li>
+</ul>
+
+</body>
+</html>

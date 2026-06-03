@@ -25,7 +25,7 @@
     <li><strong>Konsumen</strong>: 6 app (school, parent, student, merchant, landing, situs) dibungkus <code>&lt;AdsProvider&gt;</code> + memasang <code>&lt;AdBanner&gt;</code> di slot bernama.</li>
   </ul>
 
-  <h2>Doctypes</h2>
+  <h2>Doctypes / Entitas</h2>
   <table>
     <tr><th>Doctype</th><th>Peran</th><th>Field kunci</th></tr>
     <tr><td>Property</td><td>Satu aplikasi/situs penayang</td><td><code>property_name</code> (PK), <code>status</code>, <code>platform</code>, <code>property_group</code>, <code>url</code>, <code>api_key</code> (auto <code>secrets.token_hex</code>, read-only)</td></tr>
@@ -42,7 +42,7 @@
     <li><code>&lt;AdBanner slot="school-dashboard-top"&gt;</code> mount → <code>GET get_ad?slot&amp;property_key</code>.</li>
     <li>Backend <code>select_creative</code>: Property(api_key, Active) → Ad Slot(slot_key, property) → Campaign aktif (property_group, tanggal) → Ad Creative cocok (ad_type, ukuran, Active) → pilih acak. Balikan: creative + token HMAC + url track/klik.</li>
     <li>Banner tampil. Saat ≥50% terlihat → <code>POST track {token}</code> (Impression, sekali).</li>
-    <li>Klik → <code>GET click?token</code> → catat Click → <code>window.open(redirect)</code>.</li>
+    <li>Klik → <code>GET click?token</code> → catat Click → <code>window.open(redirect)</code> (skema http(s) saja, cegah XSS).</li>
   </ol>
 
   <h2>Endpoint analitik</h2>
@@ -60,6 +60,7 @@
     <li><code>api_key</code> = read-key publik (serve guest), aman ditaruh di env app.</li>
     <li>CORS dibatasi ke origin landing/situs, bukan <code>*</code>.</li>
     <li><code>body_html</code> tidak dirender di FE ronde ini (banner gambar saja) → tanpa permukaan XSS.</li>
+    <li><code>window.open</code> dibatasi ke skema <code>http:</code> atau <code>https:</code> (commit a3a5054) — cegah <code>javascript:</code> dan <code>data:</code> schemes.</li>
   </ul>
 
   <h2>Cross-Domain Events</h2>
