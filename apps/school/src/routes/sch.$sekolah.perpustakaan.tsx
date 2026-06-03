@@ -5,8 +5,8 @@
  */
 import { createFileRoute, Link, Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { IconBook } from "@sekolahpro/ui";
-import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
-import { ModuleHeader } from "../components/ModuleHeader";
+import { ModuleShell } from "../components/shell/ModuleShell";
+import type { NavTabGroup } from "../components/GroupedNavTabs";
 import { PerpustakaanContextBar } from "../components/perpustakaan/PerpustakaanContextBar";
 
 // Navigation reorganized around the circulation staff's day, not the data model:
@@ -45,6 +45,8 @@ const NAV_GROUPS: NavTabGroup[] = [
   },
 ];
 
+// Layout chrome via the shared ModuleShell; the role-framed PerpustakaanContextBar
+// is passed as the custom context node (it stays in use by its own test).
 function PerpustakaanLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
@@ -64,13 +66,13 @@ function PerpustakaanLayout() {
   );
 
   return (
-    <div className="space-y-4">
-      <ModuleHeader
-        context={<PerpustakaanContextBar cta={terminalCta} />}
-        nav={<GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="header" />}
-      />
+    <ModuleShell
+      navGroups={NAV_GROUPS}
+      pathname={pathname}
+      context={<PerpustakaanContextBar cta={terminalCta} />}
+    >
       <Outlet />
-    </div>
+    </ModuleShell>
   );
 }
 

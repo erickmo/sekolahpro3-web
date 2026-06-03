@@ -1,26 +1,50 @@
-import { createFileRoute, Link, Outlet, useParams, useRouterState } from "@tanstack/react-router";
-import { Tabs, type TabItem } from "@sekolahpro/ui";
-import { ASET_TABS, isTabActive } from "../lib/aset/nav";
-import { AsetContextBar } from "../components/aset/AsetContextBar";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import type { NavTabGroup } from "../components/GroupedNavTabs";
+import { ModuleShell } from "../components/shell/ModuleShell";
+import { useAsetRole } from "../lib/aset/role";
 
-/** Layout route for the Manajemen Aset module: role context bar + tab subnav. */
+/** Grouped sub-navigation for the Manajemen Aset module (all 8 tabs preserved). */
+const NAV_GROUPS: NavTabGroup[] = [
+  {
+    label: "Ringkasan",
+    items: [{ to: "/sch/$sekolah/aset", label: "Dashboard", exact: true }],
+  },
+  {
+    label: "Operasi",
+    items: [
+      { to: "/sch/$sekolah/aset/daftar", label: "Daftar Aset" },
+      { to: "/sch/$sekolah/aset/peminjaman", label: "Peminjaman" },
+      { to: "/sch/$sekolah/aset/maintenance", label: "Maintenance" },
+      { to: "/sch/$sekolah/aset/transfer", label: "Transfer" },
+    ],
+  },
+  {
+    label: "Kelola",
+    items: [
+      { to: "/sch/$sekolah/aset/kategori", label: "Kategori" },
+      { to: "/sch/$sekolah/aset/lokasi", label: "Lokasi" },
+    ],
+  },
+  {
+    label: "Laporan",
+    items: [{ to: "/sch/$sekolah/aset/laporan", label: "Laporan" }],
+  },
+];
+
+/** Layout route for the Manajemen Aset module: ModuleShell with role context bar. */
 function AsetLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { sekolah } = useParams({ from: "/sch/$sekolah/aset" });
-  const items: TabItem[] = ASET_TABS.map((t) => ({
-    key: t.to,
-    label: t.label,
-    active: isTabActive(t.to, sekolah, pathname, t.exact),
-    render: ({ className, children }) => (
-      <Link to={t.to} className={className}>{children}</Link>
-    ),
-  }));
+  const aset = useAsetRole();
   return (
-    <div className="space-y-4">
-      <AsetContextBar />
-      <Tabs items={items} />
+    <ModuleShell
+      label="Aset"
+      framing={aset.framing}
+      roleLabel={aset.label}
+      navGroups={NAV_GROUPS}
+      pathname={pathname}
+    >
       <Outlet />
-    </div>
+    </ModuleShell>
   );
 }
 

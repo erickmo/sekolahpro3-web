@@ -1,49 +1,44 @@
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import {
-  Tabs,
-  type TabItem,
-  IconHome,
-  IconSettings,
-  IconFile,
-  IconBook,
-  IconCalendar,
-  IconLayers,
-  IconFlag,
-  IconMapPin,
-} from "@sekolahpro/ui";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import { ModuleShell } from "../components/shell/ModuleShell";
+import type { NavTabGroup } from "../components/GroupedNavTabs";
 
-const TABS: { to: string; label: string; icon: ReactNode; exact?: boolean }[] = [
-  { to: "/sch/$sekolah/situs", label: "Ringkasan", icon: <IconHome />, exact: true },
-  { to: "/sch/$sekolah/situs/tampilan", label: "Tampilan", icon: <IconSettings /> },
-  { to: "/sch/$sekolah/situs/tataletak", label: "Tata Letak", icon: <IconLayers /> },
-  { to: "/sch/$sekolah/situs/sorotan", label: "Sorotan", icon: <IconFlag /> },
-  { to: "/sch/$sekolah/situs/berita", label: "Berita", icon: <IconFile /> },
-  { to: "/sch/$sekolah/situs/halaman", label: "Halaman", icon: <IconBook /> },
-  { to: "/sch/$sekolah/situs/agenda", label: "Agenda", icon: <IconCalendar /> },
-  { to: "/sch/$sekolah/situs/galeri", label: "Galeri", icon: <IconLayers /> },
-  { to: "/sch/$sekolah/situs/prestasi", label: "Prestasi", icon: <IconFlag /> },
-  { to: "/sch/$sekolah/situs/domain", label: "Domain", icon: <IconMapPin /> },
+/** Grouped sub-navigation for the Situs (school website CMS) module. */
+const NAV_GROUPS: NavTabGroup[] = [
+  {
+    label: "Ringkasan",
+    items: [{ to: "/sch/$sekolah/situs", label: "Ringkasan", exact: true }],
+  },
+  {
+    label: "Tampilan",
+    items: [
+      { to: "/sch/$sekolah/situs/tampilan", label: "Tampilan" },
+      { to: "/sch/$sekolah/situs/tataletak", label: "Tata Letak" },
+    ],
+  },
+  {
+    label: "Konten",
+    items: [
+      { to: "/sch/$sekolah/situs/sorotan", label: "Sorotan" },
+      { to: "/sch/$sekolah/situs/berita", label: "Berita" },
+      { to: "/sch/$sekolah/situs/halaman", label: "Halaman" },
+      { to: "/sch/$sekolah/situs/agenda", label: "Agenda" },
+      { to: "/sch/$sekolah/situs/galeri", label: "Galeri" },
+      { to: "/sch/$sekolah/situs/prestasi", label: "Prestasi" },
+    ],
+  },
+  {
+    label: "Pengaturan",
+    items: [{ to: "/sch/$sekolah/situs/domain", label: "Domain" }],
+  },
 ];
 
+/** Situs module layout: config-only shell (no context bar) wrapping the route outlet. */
 export function SitusLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items: TabItem[] = TABS.map((t) => ({
-    key: t.to,
-    label: t.label,
-    icon: t.icon,
-    active: t.exact ? pathname.endsWith("/situs") : pathname.includes(t.to.replace("/sch/$sekolah", "")),
-    render: ({ className, children }) => (
-      <Link to={t.to} className={className}>
-        {children}
-      </Link>
-    ),
-  }));
   return (
-    <div className="space-y-4">
-      <Tabs items={items} />
+    <ModuleShell navGroups={NAV_GROUPS} pathname={pathname}>
       <Outlet />
-    </div>
+    </ModuleShell>
   );
 }
 

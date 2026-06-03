@@ -24,10 +24,11 @@ import { useSetupBannerActive } from "../lib/setupBanner";
 /**
  * Sticky module header wrapping a context row and a sub-nav row as one panel.
  *
- * @param context konteks/role-framing content (already padded by the caller)
+ * @param context konteks/role-framing content (already padded by the caller);
+ *                omit it for config-only modules that have no context row.
  * @param nav     sub-navigation node (use GroupedNavTabs variant="header")
  */
-export function ModuleHeader({ context, nav }: { context: ReactNode; nav: ReactNode }) {
+export function ModuleHeader({ context, nav }: { context?: ReactNode; nav: ReactNode }) {
   // Skip the top bleed when the global setup banner sits above us, otherwise the
   // negative margin would pull the sticky header up over the banner.
   const bannerActive = useSetupBannerActive();
@@ -38,8 +39,9 @@ export function ModuleHeader({ context, nav }: { context: ReactNode; nav: ReactN
         !bannerActive && "-mt-6 lg:-mt-8",
       )}
     >
-      {/* Divider between konteks and nav; the panel's outer border closes the bottom. */}
-      <div className="border-b border-border">{context}</div>
+      {/* Divider between konteks and nav; the panel's outer border closes the
+          bottom. Skipped when there is no context (config-only modules). */}
+      {context != null ? <div className="border-b border-border">{context}</div> : null}
       <div className="px-4 py-2 sm:px-6 lg:px-8">{nav}</div>
     </div>
   );

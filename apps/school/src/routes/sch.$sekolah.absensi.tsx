@@ -1,26 +1,37 @@
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Tabs, type TabItem } from "@sekolahpro/ui";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import { ModuleShell } from "../components/shell/ModuleShell";
+import type { NavTabGroup } from "../components/GroupedNavTabs";
+import { useGenericRoleLabel } from "../lib/genericRole";
 
-const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/sch/$sekolah/absensi", label: "Dashboard", exact: true },
-  { to: "/sch/$sekolah/absensi/daftar", label: "Harian Siswa" },
-  { to: "/sch/$sekolah/absensi/pelajaran", label: "Per Pelajaran" },
-  { to: "/sch/$sekolah/absensi/guru", label: "Absensi Guru" },
+// Grouped nav for the Absensi module shell; preserves all original tab routes/labels.
+const NAV_GROUPS: NavTabGroup[] = [
+  {
+    label: "Ringkasan",
+    items: [{ to: "/sch/$sekolah/absensi", label: "Dashboard", exact: true }],
+  },
+  {
+    label: "Kehadiran",
+    items: [
+      { to: "/sch/$sekolah/absensi/daftar", label: "Harian Siswa" },
+      { to: "/sch/$sekolah/absensi/pelajaran", label: "Per Pelajaran" },
+      { to: "/sch/$sekolah/absensi/guru", label: "Absensi Guru" },
+    ],
+  },
 ];
 
+// Layout shell for the Absensi module; renders grouped nav + role context bar.
 function AbsensiLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items: TabItem[] = TABS.map((t) => ({
-    key: t.to,
-    label: t.label,
-    active: t.exact ? pathname === t.to : pathname === t.to || pathname.startsWith(t.to + "/"),
-    render: ({ className, children }) => <Link to={t.to} className={className}>{children}</Link>,
-  }));
   return (
-    <div className="space-y-4">
-      <Tabs items={items} />
+    <ModuleShell
+      label="Absensi"
+      framing="Pantau dan catat kehadiran harian siswa dan guru."
+      roleLabel={useGenericRoleLabel()}
+      navGroups={NAV_GROUPS}
+      pathname={pathname}
+    >
       <Outlet />
-    </div>
+    </ModuleShell>
   );
 }
 
