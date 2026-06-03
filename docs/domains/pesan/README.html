@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pesan — Dokumentasi Domain SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Pesan</h1>
+  <p class="muted">Modul komunikasi internal sekolah dengan sistem inbox/outbox untuk pesan masuk dari formulir kontak publik, kanal terjadwal, serta reply inline. Hub operasional di <code>/sch/:sekolah/pesan</code> (school) dan <code>/pesan</code> (parent/student).</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend Frappe module:</strong> <code>sekolahpro.api.parent.list_pesan</code> (inferred backend logic; repo terpisah)</li>
+    <li><strong>Web routes:</strong>
+      <ul>
+        <li><code>/sch/:sekolah/pesan</code> — school staff: inbox dengan search/filter, reply per pesan, mark-all-done</li>
+        <li><code>/pesan</code> — parent/student: list kotak masuk read-only</li>
+      </ul>
+    </li>
+    <li><strong>Shared packages:</strong> <code>@sekolahpro/ui</code> (PageHeader, SectionCard, StatCard, Avatar, Badge, Button, Modal, SearchableSelect, Textarea), <code>@sekolahpro/api-client</code> (useResourceList, useResourceCreate, useResourceUpdate, useFrappeMethod)</li>
+    <li><strong>Backend doctypes:</strong> "Contact Inbox SekolahPro" (inbox), "Mobile Outbox Entry" (outbox queue) — inferred dari kode FE, tidak ada definisi di repo web</li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Doctype</th>
+        <th>Peran</th>
+        <th>Field Kunci</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Contact Inbox SekolahPro (inferred)</td>
+        <td>Terima & track pesan publik</td>
+        <td><code>nama</code> (pengirim), <code>email</code>, <code>telepon</code>, <code>pesan</code> (HTML text editor), <code>status</code> (Baru | Dibalas | Selesai), <code>submitted_at</code>, <code>creation</code></td>
+      </tr>
+      <tr>
+        <td>Mobile Outbox Entry (inferred)</td>
+        <td>Queue reply yang dikirim ke pengirim</td>
+        <td><code>op</code> (mis. "reply_contact_inbox"), <code>status</code> (received/sent), <code>response</code> (JSON payload {to, inbox, body}), <code>idempotency_key</code></td>
+      </tr>
+      <tr>
+        <td>PesanItem (parent app mock)</td>
+        <td>DTO untuk pesan masuk ke orangtua/siswa</td>
+        <td><code>id</code>, <code>nis</code> (opsional, link siswa), <code>pengirim</code>, <code>judul</code>, <code>isi</code>, <code>dikirim</code>, <code>dibaca</code> (bool)</td>
+      </tr>
+      <tr>
+        <td>InboxRow (school app)</td>
+        <td>DTO inbox staff</td>
+        <td><code>name</code> (PK), <code>nama</code>, <code>email</code>, <code>telepon</code>, <code>pesan</code>, <code>status</code>, <code>submitted_at</code>, <code>creation</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Alur Utama</h2>
+  
+  <h3>1. School Staff — Pesan Masuk & Reply</h3>
+  <ol>
+    <li><strong>List inbox:</strong> fetch <code>Contact Inbox SekolahPro</code> (order by creation desc, limit 100). Display grid dengan nama pengirim, preview pesan, status badge, waktu.</li>
+    <li><strong>Filter:</strong> filter by status (Baru | Dibalas | Selesai) dan search text-match (nama + email + pesan).</li>
+    <li><strong>Select pesan:</strong> klik inbox row → tampilkan detail & textarea reply di side panel kanan.</li>
+    <li><strong>Reply:</strong> tulis balasan → klik "Kirim" → insert <code>Mobile Outbox Entry</code> dengan <code>op="reply_contact_inbox"</code> + response payload (to, inbox name, body) → jika status <code>Baru</code>, update inbox <code>status=Dibalas</code>.</li>
+    <li><strong>Mark done:</strong> tombol "Tandai Semua Selesai" → batch update semua status <code>Baru</code> → <code>Selesai</code>.</li>
+    <li><strong>Refresh:</strong> invalidate query cache setelah CREATE/UPDATE.</li>
+  </ol>
+
+  <h3>2. Parent / Student — Inbox Read-only</h3>
+  <ol>
+    <li><strong>Fetch list:</strong> call <code>sekolahpro.api.parent.list_pesan</code> (requires auth, filtered per user children).</li>
+    <li><strong>Enrich:</strong> map <code>nis</code> → child name dari active children list untuk context.</li>
+    <li><strong>Display:</strong> list dengan judul, pengirim, isi, waktu, status dibaca (optional styling).</li>
+    <li><strong>No reply:</strong> read-only view (placeholder di student app).</li>
+  </ol>
+
+  <h3>3. Compose New Message (School)</h3>
+  <ol>
+    <li>Staff klik "Pesan Baru" → modal dialog.</li>
+    <li>Isi form: nama pengirim, email, telepon (opsional), status awal (default Baru), pesan (textarea).</li>
+    <li>Validasi: nama, email, pesan wajib; email format check (HTML5).</li>
+    <li>Submit → insert <code>Contact Inbox SekolahPro</code> → refresh list query → close modal.</li>
+  </ol>
+
+  <h2>Aturan &amp; Kebijakan</h2>
+  <ul>
+    <li><strong>Status workflow:</strong> Inbox dimulai Baru → dapat diubah jadi Dibalas (otomatis saat reply) → Selesai (manual atau batch mark-all). Tidak ada rollback status.</li>
+    <li><strong>Reply immutability:</strong> Outbox entry bersifat append-only (queue). Tidak ada edit/delete reply.</li>
+    <li><strong>Search case-insensitive:</strong> global text search pada nama, email, pesan (after HTML strip).</li>
+    <li><strong>HTML stripping:</strong> backend menyimpan pesan sebagai HTML (Text Editor). Frontend strip tags untuk safe text rendering di list/detail.</li>
+    <li><strong>Time format:</strong> tampil sebagai ID-IN locale (day, month abbr, HH:mm).</li>
+    <li><strong>Idempotency:</strong> Outbox entries diberi unique <code>idempotency_key</code> (timestamp + random) untuk deduplikasi retry.</li>
+    <li><strong>Parent app:</strong> pesan filtered per authenticated user (children). Jika <code>nis=null</code>, pesan adalah broadcast (Kepala Sekolah announcements).</li>
+    <li><strong>StatCard metrics:</strong> hitung per status saat load untuk dashboard overview (Total, Baru, Dibalas, Selesai).</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+
+  <h3>Triggers (memicu)</h3>
+  <p>Tidak ada integrase event terdeteksi yang berangkat dari Pesan domain menuju domain lain dalam codebase web.</p>
+
+  <h3>Listens (bereaksi)</h3>
+  <p>Tidak ada integrase event terdeteksi yang masuk ke Pesan dari domain lain. Modul Pesan adalah self-contained: fetch &amp; mutate Contact Inbox + Outbox, invalidate cache lokal, tidak ada hook pub/sub atau trigger ke akademik/keuangan/absensi.</p>
+
+  <p class="muted"><strong>Catatan:</strong> Modul ini adalah pure messaging—tidak ada sinkronisasi data dengan master akademik, evaluasi siswa, atau entri keuangan. Jika di masa depan ada skenario seperti "kirim notif otomatis saat nilai diubah", itu akan memerlukan event listener baru (belum ada).</p>
+
+  <h2>Batas Ruang Lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Attachment support:</strong> belum ada uploader file di reply. Pesan hanya teks + metadata.</li>
+    <li><strong>Conversation threads:</strong> modul saat ini list-based (flat), bukan tree/thread. Setiap inbox row adalah percakapan tunggal (asumsi 1:1).</li>
+    <li><strong>Message signature:</strong> tidak ada template/footer otomatis di reply.</li>
+    <li><strong>Scheduling:</strong> outbox queue asumsinya synchronous / near-real-time; belum ada delayed/scheduled send.</li>
+    <li><strong>Archive / soft-delete:</strong> tidak ada fitur archive message; mark Selesai adalah proxy "resolved".</li>
+    <li><strong>Two-way SMS/WhatsApp integration:</strong> outbox queue terstruktur untuk SMS/WA (response.to, op enum), tapi actual gateway integration di backend (repo terpisah).</li>
+    <li><strong>Master data (Tahun Ajaran, Sekolah):</strong> sudah didokumentasikan di domain akademik/master; Pesan tidak perlu duplikasi.</li>
+  </ul>
+
+</body>
+</html>

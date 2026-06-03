@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dokumentasi Domain Pengaturan - SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+
+<h1>Domain Pengaturan</h1>
+<p class="muted">Mengelola konfigurasi tenant sekolah meliputi identitas institusi, akademik, peran pengguna, integrasi, notifikasi, keamanan, billing, dan branding. Dashboard komprehensif yang disesuaikan dengan peran, dilengkapi dengan audit trail.</p>
+
+<h2>Arsitektur</h2>
+<ul>
+  <li><strong>Backend Frappe Module:</strong> <code>sekolahpro.pengaturan</code> (repo terpisah: sekolahpro). Doctypes: <code>Feature Flag</code>, <code>Modul Aktif</code>, <code>Sekolah</code>, <code>Organisasi</code>, <code>Tahun Ajaran</code>, <code>Semester</code>.</li>
+  <li><strong>Web Route Prefix:</strong> <code>/sch/$sekolah/pengaturan</code> (tenant-scoped). Layout wrapper mengelola tab navigasi.</li>
+  <li><strong>Frontend Pages:</strong> <code>sch.$sekolah.pengaturan.index</code> (dashboard utama 9 tab), <code>sch.$sekolah.pengaturan.modul</code> (list modul aktif), <code>sch.$sekolah.pengaturan.feature-flag</code> (list feature flag dengan toggle inline).</li>
+  <li><strong>Packages Shared:</strong> <code>@sekolahpro/ui</code> (Tabs, SectionCard, DataTable, Modal, etc.), <code>@sekolahpro/api-client</code> (useResourceList, useResourceDoc, useResourceDelete), <code>@sekolahpro/auth</code> (useSession untuk gating role).</li>
+  <li><strong>Data Scoping:</strong> Feature Flag dan Modul Aktif adalah doctypes global (tidak per-sekolah), namun dikontrol oleh master data yang berada di blokir global (TENANT_BLOCKLIST).</li>
+</ul>
+
+<h2>Doctypes / Entitas</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Doctype</th>
+      <th>Peran</th>
+      <th>Field Kunci</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Feature Flag</code></td>
+      <td>Gating fitur per tenant via flag boolean + rollout % + audience filter</td>
+      <td><code>key</code> (unique), <code>enabled</code> (checkbox), <code>rollout_pct</code> (0–100), <code>audience_json</code> (roles, sites filter)</td>
+    </tr>
+    <tr>
+      <td><code>Modul Aktif</code> (child table)</td>
+      <td>Toggle modul per tenant; child dari Organisasi</td>
+      <td><code>nama_modul</code> (select: Akademik, Keuangan, Kepegawaian, Asrama, Kurikulum Pesantren, Perpustakaan, Kesehatan, Ekstrakurikuler), <code>aktif</code> (checkbox default=1)</td>
+    </tr>
+    <tr>
+      <td><code>Sekolah</code></td>
+      <td>Identitas institusi primer</td>
+      <td><code>nama</code>, <code>npsn</code>, <code>nsm</code>, <code>jenis</code> (TK/SD/SMP/SMA/SMK/Ma'had/Lainnya), <code>status</code>, <code>akreditasi</code></td>
+    </tr>
+    <tr>
+      <td><code>Organisasi</code></td>
+      <td>Entitas kepemilikan/pembayaran; parent dari Modul Aktif</td>
+      <td><code>nama</code>, <code>jenis_organisasi</code>, <code>subdomain</code>, <code>custom_domain</code>, <code>modul_aktif</code> (table), <code>owner_user</code></td>
+    </tr>
+    <tr>
+      <td><code>Tahun Ajaran</code></td>
+      <td>Academic calendar; parent dari Semester</td>
+      <td><code>nama</code>, <code>sekolah</code>, <code>tanggal_mulai</code>, <code>tanggal_selesai</code>, <code>aktif</code>, <code>status</code></td>
+    </tr>
+    <tr>
+      <td><code>Semester</code></td>
+      <td>Child dari Tahun Ajaran</td>
+      <td><code>nama</code>, <code>tahun_ajaran</code>, <code>tanggal_mulai</code>, <code>tanggal_selesai</code>, <code>status</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Alur Utama</h2>
+<ol>
+  <li><strong>Load Pengaturan Index:</strong> Route <code>/sch/$sekolah/pengaturan/</code> render PengaturanPage. Komponen wrapper (sch.$sekolah.pengaturan.tsx) menampilkan tab navigasi utama (Umum, Modul Aktif, Feature Flag) dan menghitung badge count menggunakan <code>useResourceList</code> dengan filter aktif.</li>
+  <li><strong>View Tab Modul Aktif:</strong> Route <code>/sch/$sekolah/pengaturan/modul</code> memanggil MasterResourcePage dengan doctype="Modul Aktif". Menampilkan tabel dengan inline toggle (InlineToggle component) untuk mengaktifkan/menonaktifkan modul per baris.</li>
+  <li><strong>View Tab Feature Flag:</strong> Route <code>/sch/$sekolah/pengaturan/feature-flag</code> memanggil MasterResourcePage dengan doctype="Feature Flag". Inline toggle untuk <code>enabled</code> field.</li>
+  <li><strong>Detail Modul/Flag:</strong> Click pada row menuju <code>/sch/$sekolah/pengaturan/modul/$name</code> atau <code>feature-flag/$name</code>. MasterDetailPage menampilkan read-only fields + edit modal (MODUL_FIELDS / FEATURE_FLAG_FIELDS).</li>
+  <li><strong>Dashboard Sekolah Tab:</strong> Tab "Sekolah" di index menampilkan 3 sections: Identitas Sekolah, Alamat & Kontak, Domain & Tenant. Tab "Akademik" menampilkan Tahun Ajaran Aktif, Skala Penilaian, Jam Operasional. Tab "Peran" untuk manajemen peran pengguna. Tab "Integrasi" menampilkan status koneksi eksternal. Tab "Notifikasi" untuk preferensi channel. Tab "Keamanan" untuk kebijakan password, autentikasi, audit. Tab "Billing" untuk paket dan tagihan. Tab "Branding" untuk logo dan warna. Tab "Log Konfigurasi" untuk riwayat perubahan.</li>
+  <li><strong>Toggle Inline & Save:</strong> Klik toggle pada Modul/Feature Flag → InlineToggle component memanggil updateResourceDoc via API → revalidate cache → badge update otomatis.</li>
+</ol>
+
+<h2>Aturan & Kebijakan</h2>
+<ul>
+  <li><strong>Feature Flag Gating:</strong> Backend menggunakan <code>is_enabled(key: str, user: str | None)</code> dari <code>sekolahpro.utils.feature_flags</code>. Evaluasi: cek DB → enabled=False → False; audience filter (roles/sites) → jika no match → False; rollout_pct >= 100 → True; rollout_pct <= 0 → False; else stable hash bucket &lt; rollout_pct → True. Cache TTL 60s per flag.</li>
+  <li><strong>Modul Aktif Scope:</strong> Modul Aktif adalah child table dalam Organisasi doctype. Setiap organisasi (tenant) memiliki daftar modul aktif sendiri. Frontend hanya toggle aktif/nonaktif per modul per tenant.</li>
+  <li><strong>Role-Based Access:</strong> Edit Identitas Sekolah hanya untuk roles: SekolahPro Admin, SekolahPro Manager, System Manager. Lainnya read-only. Feature Flag list hanya readable oleh SekolahPro Admin + System Manager; full CRUD hanya System Manager. Modul Aktif: System Manager full CRUD; others read-only.</li>
+  <li><strong>Tenant Scoping:</strong> Dashboard per sekolah via param <code>$sekolah</code>. Data yang ditampilkan disesuaikan dengan sekolah aktif, kecuali Feature Flag dan Modul Aktif yang global tetapi difilter per tenant konteks.</li>
+  <li><strong>Audit Log:</strong> Tab "Log Konfigurasi" menampilkan riwayat perubahan (aktor, aksi, waktu, tone). Data dalam component state; integrasi actual audit log dengan backend bisa melalui new API endpoint GET /api/resource/audit-log atau sejenisnya.</li>
+  <li><strong>Export Konfigurasi:</strong> Button di PageHeader mengekspor semua settings sebagai JSON file (client-side download).</li>
+  <li><strong>Global vs Per-Tenant:</strong> Feature Flag dan Modul Aktif adalah master data global (tidak per-sekolah dalam DB), namun gating/enablement logic dapat mempertimbangkan konteks tenant via audience_json (roles/sites filter).</li>
+</ul>
+
+<h2>Cross-Domain Events</h2>
+
+<h3>Triggers (memicu)</h3>
+<ul>
+  <li><strong>Feature Flag Change (Pengaturan → Mobile PWA / Backend Features):</strong> Saat Feature Flag row di-update (enabled/rollout_pct berubah), pada_update hook memanggil <code>invalidate_cache(key)</code>. Backend route dapat menggunakan flag state untuk gating akses fitur. Mobile/Backend ensure_enabled() memanggil <code>is_enabled(key)</code>; jika false → fitur disabled.</li>
+  <li><strong>Modul Aktif Change (Pengaturan → Akademik / Keuangan / dll):</strong> Saat modul di-toggle di Organisasi, frontend bisa dispatch event ke akademik/keuangan modules untuk enable/disable UI sections atau backend endpoints. Implementasi actual event dispatcher belum terintegrasi; saat ini hanya toggle state lokal.</li>
+</ul>
+
+<h3>Listens (bereaksi)</h3>
+<ul>
+  <li><strong>Dari Akademik (Tahun Ajaran / Semester):</strong> Pengaturan dashboard menampilkan Tahun Ajaran Aktif + Skala Penilaian (KKM). Saat akademik domain mengubah tahun ajaran, Pengaturan tab akademik perlu refresh <code>tahun</code> state. Implementasi: polling via useResourceDoc atau webhook.</li>
+  <li><strong>Dari Integrasi (Dapodik / EMIS / Payment Gateway):</strong> Status koneksi integrasi (Terhubung/Belum/Error) ditampilkan di tab Integrasi. Saat backend integrasi sync selesai, status berubah + timestamp terakhir_sinkron update. Frontend dapat mendengarkan via polling atau server-sent event.</li>
+  <li><strong>Dari Auth / User Management:</strong> Saat user role berubah, Pengaturan badge dan access control perlu refresh. Tidak ada event eksplisit; saat ini rely pada session state dan role cache.</li>
+</ul>
+
+<h2>Batas Ruang Lingkup (YAGNI)</h2>
+<ul>
+  <li><strong>Advanced Audience Targeting:</strong> Feature Flag audience_json mendukung roles + sites filter; tidak ada filter per user, per IP, per geography, atau per custom attribute. Deferred untuk fase rollout lebih lanjut.</li>
+  <li><strong>Dependency Management:</strong> Jika modul A memerlukan modul B aktif, tidak ada validasi atau blocking. Deferred untuk rule engine dedicated.</li>
+  <li><strong>Scheduled Flag Rollout:</strong> Rollout % manual; tidak ada scheduled gradual rollout (mis. 10% hari 1 → 50% hari 7). Deferred.</li>
+  <li><strong>SSO / SAML Config UI:</strong> Keamanan tab menyediakan field SSO (dropdown), tetapi form actual setup SAML config belum di-implement. Deferred ke authentication domain.</li>
+  <li><strong>Backup Restore UI:</strong> Keamanan tab menampilkan "Backup Otomatis" status + retensi, tetapi restore wizard belum ada. Deferred.</li>
+  <li><strong>Real-time Collab Sync:</strong> Tidak ada live collaboration untuk edit pengaturan (mis. dua admin edit bersamaan). Deferred.</li>
+  <li><strong>Wizard Onboarding Pengaturan Umum:</strong> Dashboard menampilkan semua tab; tidak ada guided wizard untuk setup awal tenant. Wizard hanya ada untuk PPDB setup (route terpisah). Deferred untuk pengaturan sekolah.</li>
+</ul>
+
+</body>
+</html>

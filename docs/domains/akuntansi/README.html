@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dokumentasi Domain Akuntansi</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+
+<h1>Akuntansi</h1>
+<p class="muted">Modul akuntansi terpadu yang mengelola buku besar, anggaran, dan pajak Indonesia dalam satu hub. Bagian dari redesain Keuangan terpadu; backend di <code>vernon_accounting</code> (Frappe, repo terpisah), frontend di SkolahPro web app dengan scoping per-company (bukan per-sekolah).</p>
+
+<h2>Arsitektur</h2>
+<ul>
+  <li><strong>Backend:</strong> Frappe app <code>vernon_accounting</code> (repo terpisah) — doctype akuntansi scoped by <code>company</code> field, bukan <code>sekolah</code>. Penamaan Company mengikuti doc-id Sekolah (misal <code>sd-aletheia-malang</code>).</li>
+  <li><strong>Frontend:</strong> Web route prefix <code>/sch/$sekolah/akuntansi/*</code> (34 routes) — part of unified Keuangan hub (<code>/keuangan</code> + <code>/akuntansi</code>).</li>
+  <li><strong>Shared packages:</strong> <code>@sekolahpro/api-client</code> (<code>useResourceList</code>, <code>useResourceCreate</code>, <code>frappeFetch</code>), <code>@sekolahpro/auth</code> (<code>useSessionStore</code>), <code>@sekolahpro/ui</code> (komponen UI).</li>
+  <li><strong>Company scoping:</strong> Hook <code>useActiveCompany()</code> dari <code>akuntansi-scope.ts</code> — auto-derive company dari Sekolah aktif. Utility <code>withCompanyFilter()</code> — inject <code>["company", "=", value]</code> filter kecuali sudah ada company filter.</li>
+  <li><strong>TENANT_BLOCKLIST:</strong> Semua doctype akuntansi listed di <code>packages/api-client/src/frappeResource.ts</code> — skip auto-inject sekolah filter (caranya, caller harus pass company filter eksplisit).</li>
+</ul>
+
+<h2>Doctypes / Entitas</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Doctype</th>
+      <th>Peran (Fungsi Operasional)</th>
+      <th>Field Kunci</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Account</code></td>
+      <td>Chart of Accounts — hierarki akun aset, liabilitas, ekuitas, pendapatan, biaya</td>
+      <td><code>account_name</code>, <code>parent_account</code>, <code>root_type</code>, <code>company</code>, <code>is_group</code></td>
+    </tr>
+    <tr>
+      <td><code>Journal Entry</code></td>
+      <td>Posting jurnal umum manual — debit/kredit harus seimbang</td>
+      <td><code>posting_date</code>, <code>company</code>, <code>accounts[]</code> (child), <code>docstatus</code></td>
+    </tr>
+    <tr>
+      <td><code>Journal Entry Account</code></td>
+      <td>Baris jurnal (child table) — satu line debit atau kredit</td>
+      <td><code>account</code>, <code>debit</code>, <code>credit</code>, <code>party_type</code>, <code>party</code>, <code>cost_center</code></td>
+    </tr>
+    <tr>
+      <td><code>Payment Entry</code></td>
+      <td>Pembayaran masuk (Receive) / keluar (Pay) / transfer internal</td>
+      <td><code>payment_type</code>, <code>posting_date</code>, <code>company</code>, <code>party_type</code>, <code>party</code>, <code>paid_amount</code>, <code>references[]</code></td>
+    </tr>
+    <tr>
+      <td><code>GL Entry</code></td>
+      <td>General Ledger — posting ledger otomatis dari Journal Entry / Payment Entry</td>
+      <td><code>posting_date</code>, <code>account</code>, <code>debit</code>, <code>credit</code>, <code>voucher_type</code>, <code>voucher_no</code>, <code>company</code></td>
+    </tr>
+    <tr>
+      <td><code>Budget</code></td>
+      <td>Anggaran per cost center &amp; tahun fiskal — monthly allocation per akun</td>
+      <td><code>fiscal_year</code>, <code>company</code>, <code>cost_center</code>, <code>accounts[]</code> (child), <code>status</code></td>
+    </tr>
+    <tr>
+      <td><code>Budget Account</code></td>
+      <td>Baris anggaran (child table) — monthly amounts per akun</td>
+      <td><code>account</code>, <code>jan</code>, <code>feb</code>, ..., <code>dec</code>, <code>overspend_action</code></td>
+    </tr>
+    <tr>
+      <td><code>Budget Amendment</code></td>
+      <td>Amandemen anggaran — revisi monthly allocation dengan approval workflow</td>
+      <td><code>budget</code>, <code>fiscal_year</code>, <code>company</code>, <code>workflow_state</code>, <code>details[]</code> (child)</td>
+    </tr>
+    <tr>
+      <td><code>Cost Center</code></td>
+      <td>Dimensi akuntansi — pusat biaya/profit center (misal: Admin, Akademik, Koperasi)</td>
+      <td><code>cost_center_name</code>, <code>parent_cost_center</code>, <code>company</code>, <code>is_group</code></td>
+    </tr>
+    <tr>
+      <td><code>Accounting Dimension</code></td>
+      <td>Dimensi pelaporan custom — metaadata untuk slicing GL (misal: Departemen, Proyek)</td>
+      <td><code>dimension_name</code>, <code>document_type</code>, <code>mandatory</code></td>
+    </tr>
+    <tr>
+      <td><code>SPT Masa PPN</code></td>
+      <td>Pelaporan PPN masa (bulanan) ke DJP — status Lunas, selisih PPn output/input</td>
+      <td><code>tax_period</code>, <code>company</code>, <code>status</code>, <code>efaktur_export</code>, <code>ppn_keluaran</code>, <code>ppn_masukan</code></td>
+    </tr>
+    <tr>
+      <td><code>e-Faktur Export</code></td>
+      <td>Export faktur ke format DJP Coretax XML — sumber untuk e-Faktur app</td>
+      <td><code>tax_period</code>, <code>export_date</code>, <code>status</code>, <code>nsfp_from</code>, <code>nsfp_to</code>, <code>file</code></td>
+    </tr>
+    <tr>
+      <td><code>Withholding Tax Entry</code></td>
+      <td>Pemotongan pajak (PPh 21/22/23/4(2)) — per supplier/customer</td>
+      <td><code>tax_type</code>, <code>party_type</code>, <code>party</code>, <code>npwp</code>, <code>company</code>, <code>base_amount</code>, <code>tax_rate</code>, <code>status</code></td>
+    </tr>
+    <tr>
+      <td><code>Tax Period</code></td>
+      <td>Master periode pajak — month/year anchor untuk SPT, e-Faktur, withholding</td>
+      <td><code>period_name</code>, <code>tax_type</code>, <code>month</code>, <code>year</code>, <code>company</code>, <code>is_closed</code></td>
+    </tr>
+    <tr>
+      <td><code>Tax Template</code></td>
+      <td>Template pajak — configurasi PPN rate, PPh kategori per company</td>
+      <td><code>template_name</code>, <code>company</code>, <code>is_default</code>, <code>details[]</code> (child)</td>
+    </tr>
+    <tr>
+      <td><code>PPh 21 TER Rate</code></td>
+      <td>Tarif PPh 21 TER (non-resident) per kategori income — A, B, C</td>
+      <td><code>category</code>, <code>income_from</code>, <code>income_to</code>, <code>rate</code></td>
+    </tr>
+    <tr>
+      <td><code>PPh 4a2 Rate</code></td>
+      <td>Tarif PPh 4(2) (Pasal 4 ayat 2) — per kategori penerima (misal Desainer, Pengajar)</td>
+      <td><code>kategori</code>, <code>rate</code>, <code>keterangan</code></td>
+    </tr>
+    <tr>
+      <td><code>Fiscal Year</code></td>
+      <td>Master tahun fiskal — scope untuk budget, periode akuntansi, laporan tahunan</td>
+      <td><code>year_name</code>, <code>year_start_date</code>, <code>year_end_date</code>, <code>company</code>, <code>is_closed</code></td>
+    </tr>
+    <tr>
+      <td><code>Accounting Period</code></td>
+      <td>Periode akuntansi (bulanan/custom) — scope untuk posting dan closing</td>
+      <td><code>period_name</code>, <code>fiscal_year</code>, <code>start_date</code>, <code>end_date</code>, <code>company</code>, <code>is_closed</code></td>
+    </tr>
+    <tr>
+      <td><code>Currency Exchange</code></td>
+      <td>Kurs tukar valas harian — untuk multi-currency posting</td>
+      <td><code>date</code>, <code>from_currency</code>, <code>to_currency</code>, <code>exchange_rate</code></td>
+    </tr>
+    <tr>
+      <td><code>Opening Balance Entry</code></td>
+      <td>Entry saldo pembuka — initial balance per akun saat start tahun fiskal</td>
+      <td><code>posting_date</code>, <code>company</code>, <code>accounts[]</code> (child), <code>remarks</code></td>
+    </tr>
+    <tr>
+      <td><code>Period Closing Voucher</code></td>
+      <td>Voucher tutup periode — freeze posting, pindahkan saldo akun temporary</td>
+      <td><code>fiscal_year</code>, <code>period_closing_date</code>, <code>company</code>, <code>closing_account</code></td>
+    </tr>
+    <tr>
+      <td><code>Vernon Accounting Settings</code></td>
+      <td>Pengaturan global — default currency, PPN rate, NSFP prefix, PPh rates</td>
+      <td><code>default_currency</code>, <code>ppn_rate</code>, <code>pph21_ter_rates[]</code>, <code>pph4a2_rates[]</code>, <code>company_npwp</code></td>
+    </tr>
+    <tr>
+      <td><code>School Fee Invoice</code> (inferred)</td>
+      <td>Tagihan SPP — invoice ke siswa; on_submit auto-post GL Dr Piutang Cr Pendapatan</td>
+      <td><code>student</code>, <code>jumlah</code>, <code>due_date</code>, <code>status</code>, <code>company</code></td>
+    </tr>
+    <tr>
+      <td><code>School Expense</code> (inferred)</td>
+      <td>Pengeluaran sekolah — on_submit auto-post GL; workflow approval</td>
+      <td><code>kategori</code>, <code>jumlah</code>, <code>penerima</code>, <code>approver</code>, <code>status</code>, <code>company</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Alur Utama</h2>
+<ol>
+  <li><strong>Setup Fondasi:</strong> Admin siapkan Fiscal Year → Accounting Period → Chart of Accounts (Account, Cost Center) → Accounting Dimension (opsional).</li>
+  <li><strong>Entry Harian:</strong> Akuntan posting Journal Entry (manual) atau Payment Entry (terima/bayar) → auto-generate GL Entry.</li>
+  <li><strong>Pajak Indonesia:</strong> Setiap bulan, kelola Tax Period → SPT Masa PPN (reconcile output/input) → e-Faktur Export (kirim ke DJP) + Withholding Tax entries (PPh 21/22/23/4(2)).</li>
+  <li><strong>Anggaran &amp; Monitoring:</strong> Bendahara/Kepala buat Budget per tahun fiskal &amp; cost center → Akuntan track vs realisasi GL → amend Budget jika perlu (Budget Amendment workflow).</li>
+  <li><strong>Period Close:</strong> Akuntan lock Accounting Period → submit Period Closing Voucher → freeze posting untuk periode tertutup.</li>
+</ol>
+
+<h2>Aturan &amp; Kebijakan</h2>
+<ul>
+  <li><strong>Company Scoping:</strong> Semua doctype akuntansi harus punya <code>company</code> field terisi. Frontend route meng-enforce via <code>useActiveCompany()</code> + <code>withCompanyFilter()</code>. Walau Sekolah adalah unit operasional, akuntansi di-anchor ke Company agar modular (multi-tenant per company).</li>
+  <li><strong>Journal Balance Rule:</strong> Journal Entry hanya bisa di-submit jika <code>total_debit == total_credit</code> (dalam account currency); enforced di frontend validation + backend doctype controller.</li>
+  <li><strong>GL Auto-Generation:</strong> Submitting Journal Entry atau Payment Entry auto-trigger GL Entry posting via <code>on_submit</code> controller (Vernon backend).</li>
+  <li><strong>Budget Overspend Guard:</strong> Budget Account punya <code>overspend_action</code> (None/Warn/Stop) — block atau warn Payment/Journal Entry jika biaya melampaui monthly budget untuk akun tertentu.</li>
+  <li><strong>Tax Period Closure:</strong> Tax Period harus di-close sebelum bisa file SPT Masa; e-Faktur Export tidak bisa dilakukan sebelum dokumen jurnal/invoice final.</li>
+  <li><strong>Role-Adaptive UI:</strong> Dashboard menampilkan guide per-peran (Akuntan vs Kepala); keuangan module tidak sembunyikan fitur, hanya highlight fokus. Backend Frappe tetap menjaga akses per role.</li>
+  <li><strong>Multi-Currency:</strong> Journal Entry/Payment Entry support <code>multi_currency</code> flag; exchange rate dari Currency Exchange master; GL Entry track both account currency dan company currency.</li>
+  <li><strong>Period Lock:</strong> Accounting Period bisa di-mark <code>is_closed</code>; sistem tidak prevent posting ke periode tertutup (guidance via UI), backend policy diatur per implementasi.</li>
+  <li><strong>NPWP &amp; Withholding:</strong> Withholding Tax Entry track supplier/customer NPWP; withholding amount dihitung dari base_amount × tax_rate; dapat di-reverse jika dokumen di-cancel.</li>
+</ul>
+
+<h2>Cross-Domain Events</h2>
+
+<h3>Triggers (Akuntansi memicu domain lain)</h3>
+<p>Tidak ada. Akuntansi adalah modul backend-heavy; event outgoing (misal GL posting dari transaksi operasional keuangan) dikelola di level backend Vernon Accounting, bukan di sini.</p>
+
+<h3>Listens (Akuntansi bereaksi terhadap event dari domain lain)</h3>
+<p>Tidak ada. Akuntansi bersifat standalone — tidak subscribe ke akademik, koperasi, atau keuangan events. Keterkaitan dengan Keuangan operasional adalah UI-level (shared hub nav) bukan event/subscription.</p>
+
+<p class="muted"><strong>Alasan:</strong> Scoping akuntansi per-company (bukan per-sekolah) dan ketiadaan Sekolah↔Company mapping yang fully-wired membuat event subscription lintas-tenant sulit sampai mapping clear. Integrasi backend akan dilakukan melalui direct API call atau job queue (tidak via pub/sub frontend).</p>
+
+<h2>Batas Ruang Lingkup (YAGNI)</h2>
+<ul>
+  <li><strong>Intercompany Transactions:</strong> Tidak ada support multi-company/consolidation dalam scope. Budget Amendment workflow approval process (workflow state: Draft → Pending Approval → Approved) ada di model tapi UI belum full implementasi.</li>
+  <li><strong>Sekolah↔Company Mapping:</strong> Saat ini, admin harus ensure Company doc-id matches Sekolah name. Auto-discovery/mapping engine deferred.</li>
+  <li><strong>Cash Flow Statement / Financial Reports:</strong> GL Entry ada, tapi frontend tidak render standar Neraca/Laba-Rugi/Cash Flow statements. Chart doang (DonutChart, GaugeChart di dashboard).</li>
+  <li><strong>Audit Trail / Document History:</strong> Frappe native tracking (owner, creation, modified, modified_by) ada; custom audit log untuk sensitive operations deferred.</li>
+  <li><strong>Period Closing Logic:</strong> Period Closing Voucher doctype ada; auto-reversing temporary account ke retained earnings tidak yet implemented.</li>
+  <li><strong>Master Data Reuse:</strong> Tahun Ajaran, Mapel, KKM documented di akademik domain — tidak duplikasi di sini.</li>
+</ul>
+
+</body>
+</html>
