@@ -19,7 +19,7 @@ import {
   showContextBar,
   showPeriodeIntro,
   isPeriodeSelfManaged,
-} from "../sch.$sekolah.akademik";
+} from "../../lib/akademikNav";
 
 describe("isPeriodeSelfManaged", () => {
   it("is true only on the grid editor route", () => {
