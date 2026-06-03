@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perpustakaan Domain — SekolahPro Frappe</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Perpustakaan — Manajemen Koleksi dan Sirkulasi Buku</h1>
+  <p class="muted">Domain manajemen perpustakaan sekolah mencakup sirkulasi buku (peminjaman/pengembalian), pengelolaan koleksi, inventaris, pengadaan, reservasi, denda, dan laporan. Diakses melalui rute /perpustakaan dengan navigasi berbasis alur kerja harian untuk petugas sirkulasi, kepala perpustakaan, dan administrator.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend:</strong> Frappe app <code>sekolahpro</code> (repo terpisah <code>apps/sekolahpro</code>). Modul <code>perpustakaan</code> menyediakan doctype, hook, dan whitelisted API method.</li>
+    <li><strong>Frontend:</strong> Web app <code>apps/school</code>. Rute perpustakaan disusun di <code>apps/school/src/routes/sch.$sekolah.perpustakaan*</code> dengan komponen di <code>apps/school/src/components/perpustakaan/</code>.</li>
+    <li><strong>Web routes prefix:</strong> <code>/sch/{sekolah}/perpustakaan</code></li>
+    <li><strong>Shared packages:</strong> <code>@sekolahpro/api-client</code> (Frappe resource hooks), <code>@sekolahpro/ui</code> (komponen design system), <code>@sekolahpro/auth</code> (session).</li>
+    <li><strong>Pola arsitektur:</strong> Role-framed UI (peran hanya membingkai tampilan, bukan menyembunyikan akses); PageGuide per halaman; komponen visualisasi reusable; segregasi god-file (satu route, komponen, dan utilitas &lt;300 baris).</li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Doctype</th>
+        <th>Peran (Backend)</th>
+        <th>Field Kunci</th>
+        <th>Catatan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Peminjaman Buku</code></td>
+        <td>Submittal; list + detail menjadi hub utama sirkulasi</td>
+        <td>anggota, buku, kopi, tanggal_pinjam, tanggal_rencana_kembali, status (Aktif|Terlambat|Selesai|Hilang|Batal)</td>
+        <td>Merger peminjaman/pengembalian/denda (PERP-ADR-0001). Kembalikan lewat doctype Pengembalian Buku (submit), bukan db.set_value.</td>
+      </tr>
+      <tr>
+        <td><code>Pengembalian Buku</code></td>
+        <td>Submittal; create + submit auto-generate Denda, release eksemplar, update Peminjaman status</td>
+        <td>peminjaman, tanggal_kembali_aktual, kondisi_kembali (Baik|Rusak Ringan|Rusak Berat|Hilang), catatan, petugas</td>
+        <td>Dipicu dari ReturnModal (list/detail peminjaman). Hook on_submit: _kembalikan_eksemplar, _buat_denda_jika_terlambat, _update_status_peminjaman, _promosi_reservasi.</td>
+      </tr>
+      <tr>
+        <td><code>Denda Perpustakaan</code></td>
+        <td>Updateable; Lunas/Diputihkan via PATCH status_bayar</td>
+        <td>peminjaman (denormalized, field baru v0.6.0), pengembalian, hari_terlambat, denda_per_hari, total_denda, status_bayar (Belum Lunas|Lunas|Diputihkan), tanggal_lunas</td>
+        <td>Backend hook di Pengembalian.on_submit menjadi satu-satunya sumber kebenaran. Backfill historical peminjaman dari pengembalian_buku. List aggregation via whitelisted sekolahpro.perpustakaan.api.denda.get_denda_summary(names).</td>
+      </tr>
+      <tr>
+        <td><code>Buku</code></td>
+        <td>Read; lihat di katalog, dipilih saat pinjam/reservasi</td>
+        <td>judul, pengarang, penerbit, tahun_terbit, kategori, isbn, jumlah_kopi, kopiTersedia</td>
+        <td>Detail buku menampilkan section "Sedang Dipinjam" dengan return trigger cross-context (PERP-ADR-0001).</td>
+      </tr>
+      <tr>
+        <td><code>Eksemplar Buku</code></td>
+        <td>Read; nomor_inventaris dipilih saat pinjam, dirilis saat return</td>
+        <td>nomor_inventaris, buku, kondisi (Baik|Rusak Ringan|Rusak Berat|Hilang), lokasi, status (Tersedia|Dipinjam|Dipesan|Hilang)</td>
+        <td>Pengadaan.on_submit auto-generate N eksemplar per item (PERP-ADR-0005). Return memicu kondisi_kembali → status update.</td>
+      </tr>
+      <tr>
+        <td><code>Anggota Perpustakaan</code></td>
+        <td>Read; list + detail; quick-action return</td>
+        <td>nama_lengkap, no_induk, status (Aktif|Tidak Aktif), pembaca_sejak, denda_terhutang (computed)</td>
+        <td>Detail menampilkan section "Peminjaman Aktif" dengan row-level return trigger. Role-framed untuk petugas.</td>
+      </tr>
+      <tr>
+        <td><code>Reservasi Buku</code></td>
+        <td>Submittal; FIFO queue per title</td>
+        <td>buku, anggota, tanggal_reservasi, berlaku_sampai, posisi_antrian, status (Aktif|Dipenuhi|Kedaluwarsa|Batal)</td>
+        <td>Tab terpisah. Return route promote reservasi berikutnya lewat hook. Backend: Pengembalian.on_submit → _promosi_reservasi.</td>
+      </tr>
+      <tr>
+        <td><code>Pengadaan Buku</code></td>
+        <td>Submittal; mencatat pembelian/hibah/sumbangan</td>
+        <td>tanggal_pengadaan, sumber (Pembelian|Hibah|Sumbangan), vendor, nomor_dokumen, total_biaya, item (child: buku, jumlah_eksemplar)</td>
+        <td>Submit auto-generate Eksemplar Buku. Admin role. Detail page untuk edit / approve.</td>
+      </tr>
+      <tr>
+        <td><code>Kategori Buku</code></td>
+        <td>Read; filter katalog, agregasi dashboard</td>
+        <td>nama, deskripsi</td>
+        <td>Setup wizard—jarang berubah. Simpel master data.</td>
+      </tr>
+      <tr>
+        <td><code>Stock Opname</code></td>
+        <td>Submittal; audit terjadwal</td>
+        <td>tanggal, hasil (scan + reconcile eksemplar), tanggal_selesai, status (Draft|Submit|Batal)</td>
+        <td>Detail page dengan OpnameScanInputBar (barcode input) → OpnameResultTable. Admin/Pustakawan. Muncul di dashboard "Perlu Perhatian" kalau draft tertinggal.</td>
+      </tr>
+      <tr>
+        <td><code>Berita Acara Kerusakan</code></td>
+        <td>Submittal; ad-hoc incident report</td>
+        <td>tanggal_kejadian, eksemplar, kondisi_ditemukan, catatan, petugas_pelapor, status_approval (Draft|Approval Pending|Approved|Ditolak)</td>
+        <td>Detail page dengan photo capture. Muncul di dashboard "Perlu Perhatian" kalau pending approval. Pustakawan review.</td>
+      </tr>
+      <tr>
+        <td><code>Pengaturan Perpustakaan</code></td>
+        <td>Read; single doc, setup wizard</td>
+        <td>denda_per_hari, maks_eksemplar_pinjam, maks_durasi_pinjam, maks_reservasi_aktif, blokir_pinjam_ada_denda</td>
+        <td>Shared config untuk validasi dan perhitungan. Denda = max(0, (return_date - planned_return_date) / days) * denda_per_hari.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Alur Utama</h2>
+  <ol>
+    <li><strong>Pinjam Baru:</strong> Petugas navigasi ke Peminjaman → tombol "Peminjaman Baru" → PerpCreateModal (anggota + buku + kopi + tanggal rencana) → frappe.client.insert Peminjaman Buku (draf) → auto-invalidate list.</li>
+    <li><strong>Kembalikan:</strong> List/detail Peminjaman atau detail Anggota/Buku → tombol "Kembalikan" → ReturnModal (tanggal kembali + catatan) → frappe.client.insert Pengembalian Buku → frappe.client.submit → backend on_submit runs: (a) release eksemplar, (b) generate Denda jika terlambat, (c) update Peminjaman status="Selesai", (d) promote reservasi → invalidate Peminjaman list/doc + Denda list → toast dengan total denda jika ada.</li>
+    <li><strong>Bayar Denda:</strong> List/detail Peminjaman → "Bayar Denda" row action atau section Denda → DendaDrawer (query Denda Perpustakaan by peminjaman) → "Tandai Lunas" → PATCH status_bayar="Lunas", tanggal_lunas=today → invalidate Denda list.</li>
+    <li><strong>Reservasi:</strong> Tab Reservasi → daftar queue per buku → "Reservasi Baru" modal → create Reservasi Buku → auto-sort by tanggal_reservasi asc. Return hook promote status="Dipenuhi" untuk posisi #1 jika ada eksemplar baru tersedia.</li>
+    <li><strong>Inventaris Opname:</strong> Tab Inventaris (segmented) → Stock Opname sub-tab → list draft/submit → "Buat Opname Baru" → OpnameScanPanel (barcode input, reconcile eksemplar) → tombol Submit → backend validate + update eksemplar status.</li>
+    <li><strong>Berita Acara:</strong> Tab Inventaris → Berita Acara sub-tab → "Lapor Kerusakan" → form (eksemplar + foto + kondisi) → draft → Pustakawan review di dashboard → "Approve" / "Tolak".</li>
+    <li><strong>Pengadaan:</strong> Tab Pengadaan → list pengadaan → "Pengadaan Baru" → form (sumber + vendor + item table buku+qty) → submit → backend auto-generate Eksemplar Buku N per item.</li>
+    <li><strong>Dashboard:</strong> Beranda → stats (hari ini jatuh tempo, overdue, ada denda), "Perlu Perhatian" list (BA pending, opname draft), dan visualisasi (donut status, progress ring on-time%, bar kategori, line tren 7 hari).</li>
+  </ol>
+
+  <h2>Navigasi Berbasis Alur Kerja</h2>
+  <p>Tab diorganisir dalam grup berdasarkan alur kerja harian petugas, bukan model data:</p>
+  <ul>
+    <li><strong>Operasi Harian:</strong> Dashboard, Terminal Sirkulasi, Peminjaman, Reservasi</li>
+    <li><strong>Koleksi:</strong> Katalog Buku, Kategori, Inventaris</li>
+    <li><strong>Pengadaan & Anggota:</strong> Pengadaan, Anggota</li>
+    <li><strong>Laporan:</strong> Laporan</li>
+  </ul>
+  <p>Pengembalian & Denda bukan tab terpisah—per PERP-ADR-0001 keduanya adalah tampilan terfilter dari hub terpadu Peminjaman, dijangkau dari "Perlu Perhatian" di dashboard dan dari filter di hub itu sendiri.</p>
+
+  <h2>Aturan & Kebijakan</h2>
+  <ul>
+    <li><strong>Sirkulasi hub unified:</strong> Peminjaman adalah satu-satunya entry point untuk pinjam/kembali/denda. Rute lama /perpustakaan/pengembalian dan /perpustakaan/denda jadi redirect (client-side TanStack redirect).</li>
+    <li><strong>Return harus melalui Pengembalian Buku:</strong> Tidak boleh db.set_value(status="Selesai") di detail peminjaman—backend hook tidak jalan, denda tidak generate, eksemplar tidak release. UI hanya menyediakan ReturnModal yang insert+submit.</li>
+    <li><strong>Denda otomatis:</strong> Backend hook Pengembalian.on_submit._buat_denda_jika_terlambat (jika tanggal_kembali_aktual > tanggal_rencana_kembali). Formula: hari_terlambat = days(actual−planned), total_denda = max(0, hari_terlambat × denda_per_hari dari Pengaturan).</li>
+    <li><strong>Blokir pinjam jika ada denda:</strong> Pengaturan Perpustakaan.blokir_pinjam_ada_denda → validasi Peminjaman.on_validate throw error jika anggota punya denda Belum Lunas.</li>
+    <li><strong>Reservasi FIFO + promosi:</strong> Posisi antrian = count(Reservasi where buku={} and status=Aktif and tanggal_reservasi &lt;= self.tanggal). Return hook promotes status="Dipenuhi" untuk posisi #1 ketika eksemplar baru tersedia.</li>
+    <li><strong>Denormalized peminjaman di Denda:</strong> Field baru v0.6.0 diisi di hook _buat_denda_jika_terlambat dari pengembalian_buku.peminjaman. Backfill patch idempotent (skip kalau sudah ada). Menjaga konsistensi via test coverage di backend test_denda.py + test_pengembalian_buku.py.</li>
+    <li><strong>Denda summary API capped:</strong> Whitelisted method sekolahpro.perpustakaan.api.denda.get_denda_summary(names: list[str], limit=100) return dict[peminjaman_name, {total_denda, status_bayar}]. List page call setelah fetch Peminjaman rows → decorateRows post-process.</li>
+    <li><strong>Role framing, bukan gating:</strong> Petugas / Pustakawan / Admin peran hanya membingkai UI (PageGuide steps, ContextBar label, dashboard emphasis). Kontrol akses sesungguhnya Frappe backend. Permissive fallback: kalau peran tak terdeteksi, semua bucket granted, default primary="petugas".</li>
+    <li><strong>PageGuide per halaman:</strong> Onboarding hint dibuka/tutup & status disimpan per route. Komponen PerpPageGuide render konten dari pageGuides.ts. Langkah ditag peran agar relevan untuk yang view.</li>
+    <li><strong>Invalidation contract:</strong> Return submit invalidate resource:list Peminjaman Buku + resource:doc Peminjaman Buku {name} + resource:list Denda Perpustakaan. Denda mark-lunas invalidate resource:list Denda Perpustakaan.</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  
+  <h3>Triggers (Perpustakaan memicu)</h3>
+  <ul>
+    <li><strong>Pengembalian.on_submit → _kembalikan_eksemplar:</strong> Release Eksemplar Buku (status="Tersedia"), unblock anggota untuk pinjam baru (kalau Pengaturan.blokir_pinjam_ada_denda aktif).</li>
+    <li><strong>Pengembalian.on_submit → _buat_denda_jika_terlambat:</strong> Insert Denda Perpustakaan jika return late. Denormalize peminjaman field.</li>
+    <li><strong>Pengembalian.on_submit → _update_status_peminjaman:</strong> Set Peminjaman Buku status="Selesai".</li>
+    <li><strong>Pengembalian.on_submit → _promosi_reservasi:</strong> Update Reservasi posisi #1 status="Dipenuhi" jika ada eksemplar baru tersedia untuk buku yang sama.</li>
+    <li><strong>Pengadaan.on_submit → _generate_eksemplar:</strong> Insert N Eksemplar Buku per item dalam pengadaan. (PERP-ADR-0005, backend).</li>
+  </ul>
+
+  <h3>Listens (Perpustakaan bereaksi)</h3>
+  <ul>
+    <li><strong>Tidak ada.</strong> Perpustakaan domain saat ini tidak subscribe ke event dari domain lain (Akademik, Keuangan, dll). Integrasi potensial di masa depan: Siswa create/delete trigger Anggota Perpustakaan suspend, atau Keuangan payment trigger denda mark-lunas otomatis—belum diimplementasi (YAGNI).</li>
+  </ul>
+
+  <h2>Batas Ruang Lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Denda multi-method payment:</strong> Hanya toggle Lunas / Diputihkan. Tidak ada cicilan, voucher, atau integrasi pembayaran (Keuangan modul). Future: daftar whitelisted method untuk auto-mark-lunas.</li>
+    <li><strong>Kontrol akses fine-grain:</strong> Peran hanya framing. Otorisasi dokumen (siapa boleh submit Opname vs edit Pengadaan) dipegang Frappe default roles + custom Frappe role-based access. Tidak ada domain-level ACL.</li>
+    <li><strong>Kolaborasi multi-petugas:</strong> Tidak ada lock/checkout untuk kerja paralel scan opname atau return. Async update saat ini toleran—last write wins (Frappe default). Opname session useOpnameSession.ts track lokal-saja.</li>
+    <li><strong>Analytics & BI:</strong> Laporan tab punya statistik dasar (pinjam/minggu, kategori terpopuler, anggota teraktif). Tidak ada export ke data warehouse atau dashboard analytics third-party. Frappe Report API ad-hoc query saja.</li>
+    <li><strong>Multi-sekolah:</strong> Rute threading sekolah param, API query filter by sekolah. Shared Pengaturan Perpustakaan per sekolah atau global—belum diputuskan (PERP-GAP-06).</li>
+    <li><strong>Barcode generation/printing:</strong> Eksemplar barcode assumption sudah ada (external system / pre-printed). Scan input via TerminalScanPanel text input. Tidak ada internal barcode generator.</li>
+    <li><strong>Lokasi fisik granular:</strong> Eksemplar.lokasi adalah text sederhana (Rak A, Rak B, dll). Tidak ada peta warehouse atau sistem lokasi hirarki.</li>
+  </ul>
+
+</body>
+</html>
