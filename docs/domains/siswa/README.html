@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domain: Siswa (Data Induk) - SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Siswa (Data Induk)</h1>
+  <p class="muted">Domain manajemen data induk siswa di SekolahPro, mencakup pendaftaran, status aktif, mutasi, kelulusan, dan administrasi dokumen persetujuan serta perubahan data. Berfungsi sebagai hub data siswa yang terintegrasi dengan modul akademik, kepegawaian (wali), dan administrasi sekolah.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend Frappe module:</strong> Siswa, Mutasi Siswa, Kelulusan Siswa, Perubahan Data Siswa, Persetujuan Wali, Arsip Ijazah (repo terpisah: <code>apps/sekolahpro</code>)</li>
+    <li><strong>Web route prefix:</strong> <code>/sch/$sekolah/siswa</code> (tenant-scoped)</li>
+    <li><strong>Package / UI shared:</strong> @sekolahpro/api-client (useResourceList, useResourceDoc, useFrappeMutation), @sekolahpro/ui (Badge, Avatar, DataTable, WorkflowStepper, ApprovalBar)</li>
+    <li><strong>Pure logic layer:</strong> <code>apps/school/src/lib/orang/</code> — siswaStats, nav, glossary (unit-tested, no hooks)</li>
+    <li><strong>Navigation grouping:</strong> Routes organized by task intent (Ringkasan, Data Pokok, Penerimaan, Kelulusan &amp; Keluar, Administrasi) via <code>SISWA_NAV_GROUPS</code> di <code>lib/orang/nav.ts</code></li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Doctype</th>
+        <th>Peran</th>
+        <th>Field Kunci</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Siswa</code> (inferred)</td>
+        <td>Master data siswa: identitas, identitas nasional, status, agama, jenjang, rombel, wali, foto</td>
+        <td>nis (NIS), nisn (NISN), nama_lengkap, status, jenjang, tahun_masuk, jenis_kelamin, agama, no_kk (wajib sebelum Aktif)</td>
+      </tr>
+      <tr>
+        <td><code>Wali Siswa</code> (inferred)</td>
+        <td>Data orang tua/wali siswa — hubungan, kontak, pekerjaan, penghasilan</td>
+        <td>hubungan (Ayah/Ibu/Wali), nama, nik, telepon, email, is_primary (1 per siswa)</td>
+      </tr>
+      <tr>
+        <td><code>Mutasi Siswa</code> (inferred)</td>
+        <td>Perpindahan siswa antar rombel/status (naik kelas, pindah keluar, DO, masuk)</td>
+        <td>siswa, jenis_mutasi, tanggal_efektif, workflow_state (Draft/Pending Ka-TU/Pending Kepsek/Approved/Rejected)</td>
+      </tr>
+      <tr>
+        <td><code>Kelulusan Siswa</code> (inferred)</td>
+        <td>Pengesahan kelulusan siswa tingkat akhir — hasil (Lulus/Tidak Lulus), no ijazah, skhun</td>
+        <td>siswa, tahun_ajaran, status_kelulusan, workflow_state, no_ijazah, no_skhun, tanggal_pengesahan, melanjutkan_pendidikan</td>
+      </tr>
+      <tr>
+        <td><code>Perubahan Data Siswa</code> (inferred)</td>
+        <td>Audit trail untuk perubahan data siswa — mencatat field, nilai lama/baru, approval</td>
+        <td>siswa, field_diubah, nilai_lama, nilai_baru, workflow_state (Draft/Pending Ka-TU/Pending Kepsek/Approved/Rejected)</td>
+      </tr>
+      <tr>
+        <td><code>Persetujuan Wali</code> (inferred)</td>
+        <td>Consent data siswa per GDPR/UU PDP — publikasi foto, data Dapodik, sharing mitra, medis</td>
+        <td>siswa, purpose (Publikasi Foto/Data Dapodik/Sharing Mitra/Medis Darurat), status (Granted/Withdrawn/Expired/Pending), granted_method</td>
+      </tr>
+      <tr>
+        <td><code>Arsip Ijazah</code> (inferred)</td>
+        <td>Penyimpanan dokumen ijazah asli — nomor ijazah, penerbit, tahun, lokasi penyimpanan</td>
+        <td>siswa, no_ijazah, tahun_lulus, lokasi_arsip</td>
+      </tr>
+      <tr>
+        <td><code>Rombel</code> (external ref)</td>
+        <td>Rombongan belajar (satu kelas dalam satu tahun ajaran) — documented di domain akademik</td>
+        <td>tahun_ajaran, tingkat, nomer, wali_kelas</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Alur Utama</h2>
+  <ol>
+    <li><strong>Pendaftaran → Siswa Aktif:</strong> Calon siswa daftar via <code>/pendaftaran</code> (status=Calon), TU verifikasi data via <code>/daftar</code>, ubah status menjadi Aktif. Kurir action queue di dashboard menunjukkan calon menunggu aktivasi.</li>
+    <li><strong>Mutasi (Naik Kelas / Pindah / DO):</strong> TU/Guru membuat record via <code>/mutasi/new</code>, submit → Pending Ka-TU → Pending Kepsek → Approved. Jenis mutasi: Naik Kelas (rombel change), Tinggal Kelas (repeat), Pindah Keluar (transfer out), DO (drop out). Workflow state di-track via <code>workflow_state</code> field; setiap approve/reject dicatat di audit trail.</li>
+    <li><strong>Kelulusan:</strong> Tingkat akhir (jenjang terakhir), TU/Guru masukkan hasil (Lulus/Tidak Lulus) via <code>/kelulusan/new</code> → Submit (Draft) → Pending Ka-TU approval → Pending Kepsek approval → Approved. Data hasil, no ijazah, skhun dicatat. Dashboard action queue menunjukkan pending approvals.</li>
+    <li><strong>Ijazah &amp; Arsip:</strong> Post-approval kelulusan, ijazah diterbitkan &amp; diarsipkan via <code>/ijazah</code> (Arsip Ijazah doctype). Field no_ijazah, no_skhun, tanggal_pengesahan dicatat. Dapodik sync (jika ada) adalah tanggung jawab domain Integrasi Dapodik (separate module).</li>
+    <li><strong>Persetujuan Wali (Consent):</strong> Wali grant/revoke persetujuan untuk publikasi foto, sharing data ke Dapodik, dll via <code>/persetujuan</code>. Status: Pending → Granted (via mobile/web) → Withdrawn/Expired. Foto siswa dikunci hingga consent granted.</li>
+    <li><strong>Perubahan Data:</strong> Request perubahan field siswa (nama, NIK, alamat, dll) via <code>/perubahan-data/new</code> → Draft → Pending Ka-TU → Pending Kepsek → Approved. Setiap approval step mencatat field_diubah, nilai_lama, nilai_baru di audit trail. Post-approval, nilai baru diterapkan ke Siswa master record.</li>
+    <li><strong>Wali &amp; Rombel:</strong> <code>/wali</code> daftar semua wali dengan hubungan, kontak; <code>/rombel</code> daftar anggota rombel per tahun ajaran (read-only, edit via mutasi).</li>
+  </ol>
+
+  <h2>Aturan &amp; Kebijakan</h2>
+  <ul>
+    <li><strong>Status siswa:</strong> Domain nilai — Calon, Aktif, Alumni, Pindah Keluar, DO. Progression: Calon → Aktif → (Alumni | Pindah Keluar | DO). Status Aktif = siswa terdaftar dalam rombel saat ini; Calon = belum verifikasi; Pindah Keluar/DO = keluar dari sekolah.</li>
+    <li><strong>Workflow approval:</strong> Kelulusan Siswa &amp; Mutasi Siswa (jenis Pindah Keluar / DO) memerlukan multi-step approval: Draft (TU/creator) → Pending Ka-TU (review) → Pending Kepsek (final approval) → Approved atau Rejected. Rejection dihapus dan kembali Draft. Workflow dikelola via Frappe Model Workflow (backend).</li>
+    <li><strong>Perubahan Data approval:</strong> Perubahan field tertentu (identitas, NIK, alamat) memerlukan approval sebelum applied. Draft disubmit → approval chain → approved values diterapkan ke Siswa record.</li>
+    <li><strong>Consent requirements:</strong> Publikasi foto siswa memerlukan explicit wali grant (Persetujuan Wali, purpose=Publikasi Foto, status=Granted). Foto URL dikunci di FE (ConsentGate) jika no consent. Data Dapodik sharing juga explicit consent (purpose=Data Dapodik).</li>
+    <li><strong>Dapodik submission:</strong> NISN status: Belum Diajukan → Diajukan (batch submit) → Diterbitkan (returned dari Kemendikbud) atau Ditolak. No KK wajib sebelum siswa status Aktif (Dapodik requirement). Tanggal request NISN dicatat. Sinkronisasi kelulusan &amp; mutasi keluar ke Dapodik adalah tanggung jawab modul Integrasi Dapodik terpisah.</li>
+    <li><strong>Role-based guards:</strong> Kepala Tata Usaha (Ka-TU) dapat approve mutasi/kelulusan di Pending Ka-TU; Kepala Sekolah (Kepsek) final approval di Pending Kepsek. System Manager bypass semua guards. TU operator dapat create &amp; edit Calon/Aktif records; Guru baca-only Daftar Siswa.</li>
+    <li><strong>Rombel assignment:</strong> Siswa jenjang baru (tahun masuk) masuk ke rombel initial via pendaftaran/mutasi masuk; Naik Kelas mutasi → rombel baru tahun ajaran berikutnya. Field rombel on Siswa adalah current rombel; history di Mutasi records.</li>
+    <li><strong>Action queue visibility:</strong> Dashboard menampilkan items hanya saat count &gt; 0 (Calon menunggu aktivasi, Pindah Keluar menunggu finalisasi). No fabricated stub metrics; derived strictly dari data actual.</li>
+    <li><strong>PII safeguards:</strong> Field sensitif (foto, NIK, alamat, kontak wali) masked di list views. Detail akses di profil via ConsentGate (foto) &amp; PII_ROLES (System Manager, TU, Ka-TU, Kepsek, Operator Dapodik). PII access logged via logPiiAccess untuk audit (backend integration planned).</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  
+  <h3>Triggers (memicu)</h3>
+  <ul>
+    <li><strong>Kelulusan Siswa approved:</strong> Event <code>kelulusan.finalized</code> dipublikasikan dengan payload (siswa, status_kelulusan, tanggal_pengesahan, jenjang). Listener di modul Integrasi Dapodik bisa menangkap event ini untuk sinkronisasi no ijazah, skhun ke Dapodik. Note: actual Dapodik sync bukan tanggung jawab Siswa domain.</li>
+    <li><strong>Mutasi Pindah Keluar approved:</strong> Event <code>mutasi.applied</code> dipublikasikan dengan payload (siswa, jenis_mutasi, tanggal_efektif, sekolah_asal, sekolah_tujuan). Listener di modul Integrasi Dapodik bisa tangkap event untuk transfer out. Rombel sekolah asal diupdate untuk menghapus siswa dari anggota (handled dalam on_submit).</li>
+    <li><strong>Mutasi Naik Kelas:</strong> Mengubah assignment Siswa.rombel untuk tahun ajaran baru, kemungkinan trigger reassignment di Penugasan Guru (guru assignment ke rombel baru).</li>
+    <li><strong>Persetujuan Wali granted (publikasi foto):</strong> Unlock foto di profil siswa dan daftar siswa (FE ConsentGate removed). FotoUrl visible untuk dirender di dashboard/rapor.</li>
+    <li><strong>Siswa status diubah:</strong> Event <code>siswa.status.diubah</code> dipublikasikan setiap kali siswa.status berubah (via mutasi, kelulusan, atau manual edit). Payload: siswa, old_status, new_status.</li>
+  </ul>
+
+  <h3>Listens (bereaksi)</h3>
+  <ul>
+    <li><strong>Tahun Ajaran created/updated:</strong> Backend (jika hook ada) likely triggers recompute Rombel (academic domain). FE dashboard siswa menampilkan filter/segmentasi per tahun ajaran — filtering hanya, no auto-trigger tercatat.</li>
+    <li><strong>Rombel membership change (dari Akademik domain):</strong> Wali Kelas view di <code>/rombel</code> refresh untuk tampilkan current anggota (FE list is read-only, anggota edits via mutasi/pendaftaran).</li>
+    <li><strong>KKM / Kurikulum updated:</strong> Tidak directly impact Siswa records. Entri Nilai (profil akademik tab) di-render per KKM threshold untuk pass/fail assessment (Akademik domain).</li>
+  </ul>
+
+  <h2>Batas Ruang Lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Pembayaran Siswa doctype:</strong> Ditunda. Keuangan siswa (tagihan, pembayaran, cicilan) dikelola di domain Keuangan terpisah. Siswa profile tab Keuangan saat ini hanya stub UI.</li>
+    <li><strong>Catatan Siswa doctype:</strong> Ditunda. Guru &amp; BK notes per siswa. Modul tab Aktivitas (audit trail) ada, tapi notes structured belum di-backend.</li>
+    <li><strong>Absensi Siswa &amp; Nilai:</strong> Dikelola di domain Akademik (Entri Nilai, Absensi). Siswa profile tabs hanya menampilkan data (read-only lists dari akademik doctype).</li>
+    <li><strong>Berkas/Dokumen siswa:</strong> Ditunda. Upload &amp; versioning dokumen fisik/digital (KTP, KK, akta, rapor, sertifikat). Saat ini Dokumen list adalah stub data.</li>
+    <li><strong>Mutasi masuk dari sekolah lain:</strong> Basic flow ada (Mutasi Masuk doctype + route). Detail verifikasi dokumen asal &amp; NISN lookup via Dapodik (sekolahpro.integrasi.dapodik.verify_siswa) — implemented.</li>
+    <li><strong>Pengiriman Ijazah (logistics):</strong> Ditunda. Tracking &amp; delivery status ijazah asli post-cetak. Arsip Ijazah saat ini cuma metadata, belum ada history pengiriman.</li>
+    <li><strong>Dapodik sync (Kelulusan &amp; Mutasi):</strong> Outsourced ke modul Integrasi Dapodik terpisah. Siswa domain publishes events; Integrasi modul listens &amp; handles sync (no Dapodik API calls dalam siswa.py).</li>
+  </ul>
+
+</body>
+</html>

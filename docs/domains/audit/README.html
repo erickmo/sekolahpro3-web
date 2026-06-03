@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Audit Log Domain — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+
+<h1>Audit Log</h1>
+<p class="muted">Sistem pencatatan aktivitas append-only untuk melacak perubahan dokumen, akses pengguna, dan kejadian kritis sistem di lingkungan multi-tenant. Setiap entri tidak dapat diubah dan menyimpan konteks permintaan lengkap (request ID, session ID, trace ID) untuk investigasi keamanan dan audit kepatuhan.</p>
+
+<h2>Arsitektur</h2>
+<ul>
+  <li><strong>Backend Frappe module:</strong> <code>sekolahpro.pengaturan.services.*</code> + <code>sekolahpro.utils.audit</code> (in sekolahpro app)</li>
+  <li><strong>Web route prefix:</strong> <code>/sch/{sekolah}/audit</code> → <code>sch.$sekolah.audit.tsx</code> (read-only list page)</li>
+  <li><strong>Frontend framework:</strong> React + Tanstack Router, menggunakan komponen <code>ResourceListPage</code> generic</li>
+  <li><strong>Shared packages:</strong> <code>@sekolahpro/ui</code> (Badge, DataTable, FilterBar, Pagination); <code>@sekolahpro/api-client</code> (useResourceList, listResource)</li>
+  <li><strong>Doctype:</strong> <code>Audit Log SekolahPro</code> (InnoDB, tenant-scoped via <code>sekolah</code> field)</li>
+  <li><strong>Core entry point:</strong> <code>sekolahpro.utils.audit.log_event()</code> + <code>log_business_action()</code></li>
+</ul>
+
+<h2>Doctypes / Entitas</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Doctype</th>
+      <th>Peran</th>
+      <th>Field kunci</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Audit Log SekolahPro</code></td>
+      <td>Entri log immutable, append-only. Pivot central untuk tracking aktivitas.</td>
+      <td><code>timestamp</code> (datetime, PK), <code>user</code> (Link → User), <code>action</code> (Select: Create/Update/Submit/Cancel/Delete/Login/Logout/Override/Custom + business verbs: reverse/approve/restructure/writeoff/supersede/finalize/issue/block/replace/grant/revoke), <code>severity</code> (Select: info/warning/error/critical), <code>doctype_name</code>, <code>docname</code>, <code>sekolah</code> (Link, tenant anchor), <code>organisasi</code> (Link, inferred/reserved), <code>changes</code> (JSON diff), <code>reason</code> (for overrides), <code>is_override</code> (flag), <code>request_id</code>, <code>session_id</code>, <code>trace_id</code>, <code>ip_address</code>, <code>user_agent</code>, <code>archived_at</code></td>
+    </tr>
+    <tr>
+      <td><code>Has Role</code></td>
+      <td>Perubahan role pengguna yang harus diaudit (grant/revoke hook).</td>
+      <td>parent (user), role, audit_reason (flags)</td>
+    </tr>
+    <tr>
+      <td><code>Entri Nilai</code> (actions: create, update, submit, override)</td>
+      <td>Auditable doctype per AUDITABLE_ACTIONS matrix.</td>
+      <td>Per doctype (see audit_constants.AUDITABLE_ACTIONS)</td>
+    </tr>
+    <tr>
+      <td><code>Raport</code> (actions: create, submit, finalize, supersede)</td>
+      <td>Auditable doctype per AUDITABLE_ACTIONS matrix.</td>
+      <td>Per doctype</td>
+    </tr>
+    <tr>
+      <td><code>Transaksi Simpanan</code> (actions: create, reverse)</td>
+      <td>Auditable doctype per AUDITABLE_ACTIONS matrix.</td>
+      <td>Per doctype</td>
+    </tr>
+    <tr>
+      <td><code>Akad Pembiayaan</code> (actions: create, approve, restructure, writeoff)</td>
+      <td>Auditable doctype per AUDITABLE_ACTIONS matrix.</td>
+      <td>Per doctype</td>
+    </tr>
+    <tr>
+      <td><code>Kartu</code> (actions: issue, block, replace)</td>
+      <td>Auditable doctype per AUDITABLE_ACTIONS matrix.</td>
+      <td>Per doctype</td>
+    </tr>
+    <tr>
+      <td><code>Pengaturan Sekolah Pro</code> (actions: update)</td>
+      <td>Auditable doctype per AUDITABLE_ACTIONS matrix.</td>
+      <td>Per doctype</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Alur utama</h2>
+<ol>
+  <li><strong>Capture on doc lifecycle:</strong> Hooks Frappe (<code>after_insert</code>, <code>on_update</code>, <code>on_submit</code>, <code>on_cancel</code>, <code>on_trash</code>) route doc events ke <code>sekolahpro.utils.audit.on_doc_create/update/submit/cancel/delete()</code>.</li>
+  <li><strong>Tenant auto-population:</strong> Sebelum insert, hook <code>auto_set_tenant</code> (ADR-0042) menetapkan <code>sekolah</code> dari session tenant sehingga audit entry selalu merekam tenant owner. Audit hook berjalan SETELAH ini. (Catatan: field <code>organisasi</code> ada di schema tetapi tidak diset oleh writer; reserved untuk sweep tenant 2026-05-31.)</li>
+  <li><strong>Skip list check:</strong> <code>_should_skip()</code> menyaring Frappe internals (DocType, DocField, Role, Activity Log, dll.) dan <code>Audit Log SekolahPro</code> dirinya sendiri untuk menghindari infinite recursion atau noise.</li>
+  <li><strong>Diff extraction:</strong> <code>_diff_from_doc()</code> membandingkan <code>_doc_before_save</code> dengan state sekarang, menghasilkan JSON delta; dimuat ke field <code>changes</code>.</li>
+  <li><strong>Writer dispatch:</strong> <code>log_event()</code> memanggil <code>sekolahpro.pengaturan.services.audit_writer.write()</code> yang menjalankan redaksi (SENSITIVE_FIELD_PATTERNS), validasi reason (BR-3), dan insert dokumen dengan <code>ignore_permissions=True</code>.</li>
+  <li><strong>Severity resolution:</strong> Auto-derive severity dari action (Override/Delete/Cancel → warning; business verb dalam REASON_REQUIRED → warning; else info) atau gunakan explicit caller value.</li>
+  <li><strong>Request context capture:</strong> Writer menangkap <code>request_id</code>, <code>session_id</code> (W3C trace-id dari header traceparent), <code>ip_address</code>, <code>user_agent</code> untuk full observability.</li>
+  <li><strong>Business action dispatch:</strong> <code>log_business_action()</code> memvalidasi (doctype, action) terhadap AUDITABLE_ACTIONS matrix; enforce reason jika dalam REASON_REQUIRED; throw jika tidak auditable.</li>
+  <li><strong>Auth events:</strong> <code>on_login()</code> + <code>on_logout()</code> hooks merekam Login/Logout events tanpa reason requirement.</li>
+  <li><strong>Fail-safe semantics:</strong> Untuk STRICT_AUDIT_DOCTYPES (semua AUDITABLE_ACTIONS entries), audit insert failure propagate dan block host transaction (BR-6). Doc_event handlers gunakan best-effort (swallow error, emit SEV1 alert). Explicit calls re-throw.</li>
+  <li><strong>Archive + purge:</strong> Scheduled jobs (audit_archiver.archive_old_entries) upload entries >365 hari ke S3, set archived_at. Setelah itu, purge_after_retention() delete entries >5 tahun dengan @audit_purge_bypass flag untuk bypass DELETE trigger (BR-1).</li>
+</ol>
+
+<h2>Aturan &amp; Kebijakan</h2>
+<ul>
+  <li><strong>Immutability (BR-1):</strong> Semua fields read-only pasca-insert. Database trigger (patches/v0_2_1/add_audit_delete_trigger.py) reject raw DELETE kecuali @audit_purge_bypass=1 flag (for retention purge only).</li>
+  <li><strong>Reason enforcement (BR-3):</strong> Business action dalam REASON_REQUIRED matrix HARUS memiliki reason text non-empty. Override action wajib reason. Validation terjadi di audit_writer.write() sebelum insert. Doc_event actions (Create/Update/Submit/Cancel/Delete/Login/Logout) tidak memerlukan reason.</li>
+  <li><strong>Fail-safe for sensitive doctypes (BR-6):</strong> Jika insert audit untuk STRICT_AUDIT_DOCTYPES (AUDITABLE_ACTIONS keys) gagal, exception propagate dan block host transaction. Best-effort handlers (doc_events) emit SEV1 log alert ke SekolahPro Admin recipients.</li>
+  <li><strong>Redaction:</strong> Field matches SENSITIVE_FIELD_PATTERNS (password, token, secret, api_key, credit_card, cvv, dll.) di-redact jadi "***REDACTED***" di field changes JSON sebelum insert.</li>
+  <li><strong>Severity auto-derive:</strong> Business verb dalam REASON_REQUIRED atau Override → warning; Delete/Cancel → warning; else info. Explicit caller severity wins.</li>
+  <li><strong>Doctype skip list:</strong> _SKIP_DOCTYPES includes Frappe internals (DocType, DocField, Custom Field, Property Setter, Print Format, Report, Page, Module Def, Role, Role Permission, Communication, Version, View Log, Route History, Notification Log, Energy Point Log, Webhook Request Log) + logs (Error Log, Activity Log, Access Log, Scheduled Job Log, Email Queue, etc.) untuk reduce noise. Has Role excluded (handled by explicit grant/revoke handlers).</li>
+  <li><strong>Tenant scoping (sekolah):</strong> Setiap audit entry menyimpan sekolah tenant anchor untuk multi-tenant sweep. (Field organisasi reserved tetapi belum diisi oleh writer.) Read permissions: System Manager (create/read/report/export), SekolahPro Admin (read/report), Auditor (read/report/export).</li>
+  <li><strong>Role grant/revoke auditing:</strong> Has Role doctype capture grant/revoke dengan role name + user name di keterangan field. Reason wajib (BR-3). audit_reason flag pada doc diteruskan ke reason field.</li>
+  <li><strong>Retention policy:</strong> Archive setelah 365 hari ke S3. Purge setelah 5 tahun (1825 hari). Scheduled tasks run daily (inferred dari archiver/exporter code patterns).</li>
+  <li><strong>Login/Logout tracking:</strong> Best-effort (no reason required). Emit via on_login/on_logout hooks tanpa doc_event validation. Swallow errors, log to frappe.log_error.</li>
+</ul>
+
+<h2>Cross-Domain Events</h2>
+
+<h3>Triggers (memicu)</h3>
+<ul>
+  <li><strong>Doc lifecycle events (all doctypes except skip list):</strong> Setiap Create/Update/Submit/Cancel/Delete pada tracked doctype → audit entry dengan action name matching + diff JSON.</li>
+  <li><strong>Business actions (Entri Nilai, Raport, Transaksi Simpanan, Akad Pembiayaan, Kartu, Has Role, Pengaturan Sekolah Pro):</strong> Custom verbs (reverse, supersede, finalize, approve, restructure, writeoff, issue, block, replace, grant, revoke) via explicit <code>log_business_action()</code> calls di domain-specific code. See AUDITABLE_ACTIONS matrix for which (doctype, action) pairs are valid.</li>
+  <li><strong>Auth events:</strong> Login/Logout via Frappe hooks (on_login, on_logout) → Login/Logout actions.</li>
+  <li><strong>Override action:</strong> Explicit call to <code>log_event(action="Override", reason=...)</code> untuk merekam privilege escalation atau bypass (misal, admin override nilai siswa).</li>
+</ul>
+
+<h3>Listens (bereaksi)</h3>
+<ul>
+  <li><strong>Tidak ada direct listeners di Audit Log domain:</strong> Domain ini append-only, immutable, dan tidak emit events ke domains lain. Consumers (forensics, monitoring, compliance reporting) read dari Audit Log SekolahPro doctype untuk investigasi post-hoc, bukan real-time event subscription.</li>
+  <li><strong>Archive/purge scheduled tasks:</strong> Inferred dari audit_archiver.py struktur, likely dipicu oleh Frappe scheduled jobs. No inter-domain event coupling.</li>
+  <li><strong>SEV1 alerting (on failure):</strong> Email ke SekolahPro Admin role pada audit insert failure (intra-domain error handling, bukan inter-domain event).</li>
+</ul>
+
+<h2>Batas ruang lingkup (YAGNI)</h2>
+<ul>
+  <li><strong>Real-time alerting on suspicious patterns:</strong> Bulk-delete detector (audit_constants.BULK_DELETE_THRESHOLD=50, BULK_DELETE_WINDOW_SECONDS=60) defined dalam constants tetapi belum diintegrasikan ke live alert system di audit insert. Deferred untuk monitoring phase.</li>
+  <li><strong>Audit search by content (full-text):</strong> UI support ada (searchFields di route), API support via listResource query builder, tetapi FTS indexing pada changes JSON belum didokumentasikan dan mungkin terbatas. Deferred pending query performance tuning.</li>
+  <li><strong>Audit report export advanced filtering:</strong> Exporter (audit_exporter.py) code exists; UI export button ada di ResourceListPage (exportConfig interface), tetapi advanced field selection + formatting deferred.</li>
+  <li><strong>Real-time audit stream (WebSocket/SSE):</strong> Not in scope; audit is historical investigation tool, not live event feed.</li>
+  <li><strong>Hierarchical access control (view limited audit by role within sekolah):</strong> Current permissions (System Manager, SekolahPro Admin, Auditor) are global. Intra-school read restrictions deferred (likely ADR candidate if business requirement confirms).</li>
+</ul>
+
+</body>
+</html>

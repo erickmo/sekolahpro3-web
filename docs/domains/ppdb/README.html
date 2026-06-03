@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PPDB (Penerimaan Peserta Didik Baru) — Dokumentasi Domain</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>PPDB (Penerimaan Peserta Didik Baru)</h1>
+  <p class="muted">Modul penerimaan peserta didik baru dengan alur role-adaptive (staff/manajer), antrian kerja real-time, visualisasi funnel/quota/pembayaran, dan integrasi pembayaran. Didesain untuk operasional harian dan oversight manajemen dengan dashboard KPI, analytics murni, dan work-queue derivation.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend Frappe module:</strong> <code>sekolahpro.ppdb</code> (repo terpisah); API whitelisted di <code>sekolahpro.ppdb.api.ppdb</code></li>
+    <li><strong>Web route prefix:</strong> <code>/sch/$sekolah/ppdb</code> dengan 9 halaman tab-based</li>
+    <li><strong>Shared packages:</strong> <code>@sekolahpro/api-client</code> (useResourceList, frappeFetch), <code>@sekolahpro/auth</code> (useSession), <code>@sekolahpro/ui</code> (komponen, chart primitives)</li>
+    <li><strong>Foundation libraries:</strong> <code>ppdbRole.ts</code> (derivasi peran staff/manajer), <code>ppdbAnalytics.ts</code> (agregasi murni), <code>ppdbPaymentAnalytics.ts</code> (metrik pembayaran), <code>ppdbQueue.ts</code> (antrean kerja 4-grup)</li>
+    <li><strong>Mock fallback:</strong> <code>data/ppdb.ts</code> fixture calon peserta; wired via <code>listPpdbForSekolah(sekolah)</code> untuk preview sebelum backend siap. Mock menggunakan status internal (Terkirim, Verifikasi, Tes, Lulus, Tidak Lulus, Daftar Ulang) yang ditranslasi ke backend pipeline saat commit</li>
+    <li><strong>State management:</strong> TanStack Query untuk resource list/doc + mutations dengan auto-invalidation per doctype</li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <tr>
+      <th>Doctype</th>
+      <th>Peran dalam alur</th>
+      <th>Field kunci</th>
+    </tr>
+    <tr>
+      <td><code>Gelombang PPDB</code> (inferred)</td>
+      <td>Batch pendaftaran terikat tahun ajaran, jenjang, kuota, tanggal buka-tutup</td>
+      <td>name, nama, tahun_ajaran, tingkat, kuota, tanggal_buka, tanggal_tutup, biaya_pendaftaran, status</td>
+    </tr>
+    <tr>
+      <td><code>Pendaftaran PPDB</code> (inferred)</td>
+      <td>Record calon siswa per batch; hub biodata, dokumen, pembayaran, hasil seleksi</td>
+      <td>name, calon_siswa, gelombang_ppdb, status (Draft→Diajukan→Diverifikasi→Seleksi→Diterima/Ditolak→Selesai), tanggal_daftar, jalur, asalSekolah</td>
+    </tr>
+    <tr>
+      <td><code>Seleksi PPDB</code> (inferred)</td>
+      <td>Hasil tes/wawancara, ranking, keputusan lulus/tidak lulus per calon</td>
+      <td>name, pendaftaran_ppdb, skor_tes, skor_wawancara, hasil (Lulus/Tidak Lulus), ranking</td>
+    </tr>
+    <tr>
+      <td><code>Pembayaran PPDB</code> (inferred)</td>
+      <td>Tagihan + pencatatan pembayaran (biaya pendaftaran, uang pangkal, SPP, seragam, buku)</td>
+      <td>name, pendaftaran_ppdb, status (Lunas/Cicilan/Tertunda), jumlah, tanggal, metode (Transfer/QRIS/Tunai/Virtual Account)</td>
+    </tr>
+    <tr>
+      <td><code>Daftar Ulang PPDB</code> (inferred)</td>
+      <td>Konfirmasi calon diterima, data siswa baru, pemisahan alur lulus vs ditolak</td>
+      <td>name, pendaftaran_ppdb, status (Selesai/Tertunda), siswa_baru (link ke Siswa setelah finalisasi)</td>
+    </tr>
+  </table>
+
+  <h2>Alur utama</h2>
+  <ol>
+    <li><strong>Buat Gelombang:</strong> Manajer setup <code>Gelombang PPDB</code> (tanggal, kuota, biaya) → halaman <code>Pengaturan</code></li>
+    <li><strong>Pendaftaran:</strong> Calon siswa ajukan aplikasi via formulir public/staff entry → ciptakan <code>Pendaftaran PPDB</code> (status: Draft→Diajukan). Biaya pendaftaran auto-generate <code>Pembayaran PPDB</code> baris pertama</li>
+    <li><strong>Verifikasi Dokumen:</strong> Staff periksa berkas (KK, Akta, Rapor, dll) di halaman <code>Calon Siswa</code>; set status per dokumen (Belum→Diterima/Ditolak). Antrean dokumen di work-queue</li>
+    <li><strong>Pembayaran:</strong> Calon bayar biaya pendaftaran + uang pangkal + SPP via payment gateway (QRIS/Virtual Account) → <code>Pembayaran PPDB</code> status Lunas/Cicilan/Tertunda. Halaman <code>Pembayaran</code> track aging tagihan</li>
+    <li><strong>Seleksi:</strong> Panitia input skor tes akademik/wawancara di halaman <code>Seleksi</code> → ciptakan/update <code>Seleksi PPDB</code>. Ranking otomatis per jalur (zonasi, prestasi, dll). Tetapkan hasil lulus/tidak lulus via aksi di tabel yang sama</li>
+    <li><strong>Pengumuman:</strong> Manajer tekan tombol <code>Umumkan Hasil</code> pada halaman <code>Seleksi</code> → broadcast ke calon siswa. <code>Pendaftaran PPDB</code> status maju dari Seleksi → Diterima/Ditolak</li>
+    <li><strong>Daftar Ulang:</strong> Calon diterima konfirmasi kehadiran + submit data final (nama, alamat, dll) di halaman <code>Daftar Ulang</code>. Set status Selesai → trigger finalisasi</li>
+    <li><strong>Finalisasi:</strong> System convert <code>Pendaftaran PPDB</code> Selesai → ciptakan doctype <code>Siswa</code> baru (masuk akademik domain), link di <code>Daftar Ulang PPDB</code>. Selesai</li>
+  </ol>
+
+  <h2>Aturan &amp; Kebijakan</h2>
+  <ul>
+    <li><strong>Status pendaftaran pipeline (backend):</strong> Draft → Diajukan → Diverifikasi → Seleksi → Diterima/Ditolak → Selesai (atau Mengundurkan Diri). Hanya maju; tidak boleh mundur</li>
+    <li><strong>Status internal frontend (mock):</strong> Draft, Terkirim, Verifikasi, Tes, Lulus, Tidak Lulus, Daftar Ulang, Diterima, Mengundurkan Diri — digunakan di fixture mock data sebelum backend siap</li>
+    <li><strong>Jalur pendaftaran:</strong> Reguler, Prestasi Akademik, Prestasi Non-Akademik, Afirmasi, Zonasi, Mutasi Orang Tua — pisah kuota, ranking, kriteria</li>
+    <li><strong>Verifikasi dokumen wajib:</strong> KK, Akta, KTP Ortu, Foto, Rapor, Ijazah, SKHU (jika ada), Surat Sehat, Sertifikat Prestasi (jika ada). Calon tidak boleh lanjut sampai semua "Diterima" (atau dipetakan ke "Ditolak")</li>
+    <li><strong>Pembayaran tanggungan:</strong> Cicilan diperbolehkan hingga batas tanggal tertentu; setelah itu status jadi Tertunda (flagged untuk follow-up aging di staff queue). Payment aging report ≥14 hari</li>
+    <li><strong>Ranking zonasi:</strong> Auto-rank berdasarkan jarak sekolah (jika tersedia) + nilai rata-rata rapor. Scoring logic per gelombang (configurable)</li>
+    <li><strong>Kuota hard limit:</strong> Manajer set kuota per batch, per jalur. Sistem tidak bisa terima lebih dari kuota (reject otomatis atau queue untuk reserve)</li>
+    <li><strong>Role-adaptive framing:</strong> Staff PPDB (operator, bendahara, admin_sekolah) → default view Antrian Kerja (apa yg harus dikerjakan). Manajer PPDB (kepala_sekolah) → default view Ringkasan (KPI + funnel + trend). Toggle di halaman Beranda membolehkan switch view tanpa batas. Access control tetap di backend</li>
+    <li><strong>Permissive fallback:</strong> Jika session unavailable atau user punya peran tidak cocok, grant semua PPDB role agar UI tidak gated</li>
+    <li><strong>Work queue (4 grup):</strong> Dokumen (belum/ditolak) → Seleksi (skor tes undefined) → Pembayaran (Tertunda) → Daftar Ulang (lulus/diterima belum selesai). Previewed di Beranda Antrian + deeplinks ke page terkait. Pure derivation dari list Pendaftar</li>
+    <li><strong>Tahun Ajaran filter:</strong> Setiap Gelombang terikat <code>tahun_ajaran</code> master (akademik domain). UI auto-filter pendaftar per tahun aktif</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  <h3>Triggers (memicu domain lain)</h3>
+  <ul>
+    <li><strong>Finalisasi Pendaftaran (→ akademik):</strong> Saat <code>Pendaftaran PPDB</code> status Selesai, system membuat doctype <code>Siswa</code> baru di domain akademik, auto-populate biodata (nama, nik, tempat lahir, dll). Parent link set ke <code>Daftar Ulang PPDB</code></li>
+    <li><strong>Tahun Ajaran reference:</strong> PPDB membaca <code>Tahun Ajaran</code> master dari akademik (filter batch, default tahun aktif)</li>
+  </ul>
+  <h3>Listens (bereaksi pada event domain lain)</h3>
+  <ul>
+    <li><code>Tahun Ajaran.on_change</code> → PPDB auto-refresh dropdown gelombang aktif (UI-side TanStack Query invalidation)</li>
+    <li><code>Kurikulum, Mapel, KKM</code> → read-only reference untuk tampil di preview calon (tidak mutate)</li>
+  </ul>
+
+  <h2>Batas ruang lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Kanban board:</strong> Desain awal (2025) punya kanban card view; redesain 2026 hapus (simplify ke table + queue)</li>
+    <li><strong>Ujian online terintegrasi:</strong> Scope PPDB tidak cover test engine; skor tes diinput manual atau dari third-party LMS</li>
+    <li><strong>SMS/Email bulk campaign:</strong> Notifikasi hasil (pengumuman, reminder pembayaran) dihandle di job queue terpisah, bukan di PPDB module</li>
+    <li><strong>Advanced ML ranking:</strong> Zonasi ranking pakai logika sederhana (jarak + GPA); model ML future phase</li>
+    <li><strong>Integrasi NISN real-time:</strong> NISN lookup dari data central saat registrasi (optional; user entry juga boleh)</li>
+    <li><strong>Live payment reconciliation:</strong> Payment aging di UI pakai pull manual (reconcile button), bukan webhook otomatis (future: add webhook listener)</li>
+  </ul>
+</body>
+</html>

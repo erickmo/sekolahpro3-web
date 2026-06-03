@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domain Infrastruktur / Sarpras — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+
+<h1>Infrastruktur / Sarpras</h1>
+<p class="muted">Mengelola struktur fisik sekolah: gedung, lantai, ruangan (dengan fasilitas terlampir), dan utilitas publik (listrik, air, internet, gas). Mendukung CRUD lengkap dengan konteks hierarki dan tenancy per sekolah.</p>
+
+<h2>Arsitektur</h2>
+<ul>
+  <li><strong>Backend module:</strong> <code>sekolahpro</code> (repo terpisah) — mendefinisikan doctype Gedung, Lantai, Ruangan, Fasilitas Ruangan (child, istable=1), Utilitas Gedung, dengan kontrol tenancy dan autoname</li>
+  <li><strong>Frontend route prefix:</strong> <code>/sch/{sekolah}/infrastruktur</code> — landing page (<code>infrastruktur.index</code>), daftar gedung (<code>daftar-gedung</code>), detail gedung CRUD inline (<code>daftar-gedung.{gedungId}</code>), plus route modul terpisah per entitas (lantai, ruangan, utilitas)</li>
+  <li><strong>Shared packages:</strong> <code>@sekolahpro/ui</code> (komponen Modal, DataTable, Button, FormField, Badge, SectionCard), <code>@sekolahpro/api-client</code> (useResourceCreate, useResourceUpdate, useResourceDoc, useResourceList, useResourceDelete), TanStack Router, TanStack Query (React Query)</li>
+  <li><strong>File location:</strong> FE code di <code>apps/school/src</code> (routes, komponenmodal, lib helper). Backend doctype + hook di repo <code>sekolahpro</code> (tidak di repo ini)</li>
+</ul>
+
+<h2>Doctypes / Entitas</h2>
+<table>
+  <tr>
+    <th>Doctype</th>
+    <th>Peran</th>
+    <th>Field Kunci</th>
+  </tr>
+  <tr>
+    <td><code>Gedung</code></td>
+    <td>Entitas induk infrastruktur sekolah; akar hierarki</td>
+    <td><code>nama</code> (Data, reqd), <code>kode</code> (Data), <code>tahun_dibangun</code> (Int), <code>sekolah</code> (Link, tenancy scope)</td>
+  </tr>
+  <tr>
+    <td><code>Lantai</code></td>
+    <td>Struktur vertikal di dalam gedung; induk Ruangan</td>
+    <td><code>nama</code> (Data, reqd), <code>nomor_lantai</code> (Int, reqd), <code>gedung</code> (Link, reqd), <code>sekolah</code> (denorm, readonly)</td>
+  </tr>
+  <tr>
+    <td><code>Ruangan</code></td>
+    <td>Unit ruang (kelas, lab, aula, dll) dengan kapasitas dan status; induk Fasilitas</td>
+    <td><code>nama</code> (Data, reqd), <code>kode</code> (Data, reqd), <code>lantai</code> (Link, reqd), <code>jenis_ruangan</code> (Select, reqd), <code>kapasitas</code> (Int), <code>luas_m2</code> (Float), <code>status</code> (Select: Tersedia/Dipakai/Maintenance, default Tersedia), <code>gedung</code> (denorm), <code>sekolah</code> (denorm)</td>
+  </tr>
+  <tr>
+    <td><code>Fasilitas Ruangan</code></td>
+    <td>Child table (istable=1) pada Ruangan — item peralatan/furnitur; scoped via parent</td>
+    <td><code>parent</code> (parent doc name), <code>parenttype</code> (Ruangan), <code>nama_fasilitas</code> (Data, reqd), <code>jumlah</code> (Int, default 1), <code>kondisi</code> (Select: Baik/Rusak, default Baik)</td>
+  </tr>
+  <tr>
+    <td><code>Utilitas Gedung</code></td>
+    <td>Layanan publik di gedung (listrik, air, internet, gas) dengan catatan riwayat</td>
+    <td><code>jenis</code> (Select, reqd), <code>provider</code> (Data), <code>kapasitas</code> (Float), <code>satuan</code> (Data), <code>nomor_pelanggan</code> (Data), <code>status</code> (Select: Aktif/Nonaktif, default Aktif), <code>gedung</code> (Link, reqd), <code>sekolah</code> (denorm, readonly)</td>
+  </tr>
+</table>
+
+<h2>Alur Utama</h2>
+<ol>
+  <li><strong>Landing Page Infrastruktur:</strong> User masuk <code>/infrastruktur</code> → dashboard dengan flow 4 tahap (Daftar Gedung → Lantai → Ruangan → Utilitas), aksi cepat, alert fasilitas rusak, dan tombol Tambah Gedung</li>
+  <li><strong>Daftar Gedung:</strong> List semua gedung per sekolah, search/filter, aksi buka detail atau buat baru via modal</li>
+  <li><strong>Detail Gedung + CRUD Inline:</strong> Tampilkan info gedung, 3 tab (Lantai / Ruangan & Fasilitas / Utilitas); tiap tab memuat list ter-filter per gedung; tombol Tambah membuka modal create; baris tabel punya aksi Edit (buka modal dengan edit mode) dan Hapus (konfirmasi, lalu delete); setelah mutasi, refresh tabel</li>
+  <li><strong>Modal Hierarchical Awareness:</strong> Modal Lantai menerima <code>defaultGedung</code> → terkunci ke gedung itu, tidak perlu pilih; Modal Ruangan menerima <code>defaultGedung</code> → filter Lantai dropdown per gedung, sembunyikan select Gedung/Sekolah (denorm BE); Modal Utilitas idem. Backward-compatible: caller lama tanpa prop = create lama</li>
+  <li><strong>Child Table Edit (Fasilitas via Ruangan):</strong> Ruangan memiliki grid fasilitas inline di modal — user klik Edit Ruangan → lihat grid + tombol Tambah/Hapus baris. Saat submit, kirim array fasilitas lengkap (full replace, Frappe REST spec)</li>
+  <li><strong>Query Invalidation:</strong> Setelah create/update/delete, query client panggil <code>invalidateQueries({ queryKey: ["resource:list", "Lantai"] })</code> dll, TanStack Query auto-refetch</li>
+</ol>
+
+<h2>Aturan &amp; Kebijakan</h2>
+<ul>
+  <li><strong>Tenancy:</strong> Semua entitas terscope ke <code>sekolah</code> aktif session (filter FE, verifikasi BE). Child table Fasilitas tidak punya field <code>sekolah</code> sendiri — scoped via induk Ruangan</li>
+  <li><strong>Autoname backend:</strong> Lantai = <code>{gedung}-L{nomor_lantai}</code> (BE side), Ruangan = <code>{lantai}-{kode}</code>, Utilitas Gedung = <code>{gedung}-{jenis}</code>. Duplikat → DuplicateEntryError BE, ditampilkan di banner modal</li>
+  <li><strong>Denormalisasi:</strong> Ruangan.gedung dan Ruangan.sekolah auto-set dari Lantai (hook BE), FE tidak kirim saat create/update. Utilitas Gedung.sekolah auto-set dari Gedung (hook BE)</li>
+  <li><strong>Default status:</strong> Ruangan.status = "Tersedia" (default), Fasilitas Ruangan.kondisi = "Baik", Utilitas Gedung.status = "Aktif"</li>
+  <li><strong>Delete constraints:</strong> Lantai tidak bisa dihapus jika ada Ruangan anak (LinkExistsError BE) — UI tangkap &amp; tampilkan pesan error; Ruangan tidak bisa dihapus jika ada Fasilitas (child delete cascade BE, atau error jika diasingkan)</li>
+  <li><strong>Permission:</strong> Saat ini hanya role System Manager di backend yang punya akses. Non-System-Manager REST call → 403. Keputusan deferred: buka untuk role sekolah (Sekolah Admin, Tata Usaha) via task follow-up BE (di repo <code>sekolahpro</code>)</li>
+  <li><strong>Modal edit mode:</strong> Prop <code>editName</code> trigger <code>useResourceDoc</code> fetch, effect populate form, submit kirim <code>patch</code> dengan field yang berubah (tidak full doc). Backward-compat: caller tanpa editName = create only mode lama</li>
+</ul>
+
+<h2>Cross-Domain Events</h2>
+
+<h3>Triggers (memicu domain lain)</h3>
+<p>Tidak ada. Domain infrastruktur tidak mengambil atau menginisiasi aksi di domain akademik (Kurikulum, Mapel, KKM, Tahun Ajaran), keuangan, atau administrasi. Struktur fisik berdiri independen.</p>
+
+<h3>Listens (bereaksi)</h3>
+<p>Tidak ada. Perubahan di domain lain (akademik, keuangan) tidak trigger reaksi infrastruktur. Jika master data akademik perlu tahu ruangan/kapasitas, itu diquery saat aplikasi akademik butuh (bukan event-driven).</p>
+
+<p><strong>Alasan:</strong> Infrastruktur adalah domain master-data (metadata sekolah). Sumber kebenaran untuk struktur fisik. Domain fungsional (akademik: penjadwalan, manajemen kelas; keuangan: invoicing ruang) query dan cache infrastruktur data saat dibutuhkan, tapi tidak mengirim event balik. Decopling sengaja untuk menghindari cascading updates dan memudahkan evolusi schema terpisah.</p>
+
+<h2>Batas Ruang Lingkup (YAGNI)</h2>
+<ul>
+  <li><strong>Child Riwayat pada Utilitas:</strong> Spec desain menyebut <code>Riwayat Utilitas</code> (child table, istable=1) di Utilitas Gedung untuk catat nilai meteran historis. Implementasi saat ini belum buat UI modal edit Utilitas dgn grid Riwayat inline — deferred ke task follow-up. Data model backend sudah siap; FE cukup extend modal UtilitasGedungFormModal dgn grid row editor jika diperlukan</li>
+  <li><strong>Bulk import Gedung/Lantai/Ruangan:</strong> Dashboard saat ini support create one-by-one. Jika sekolah butuh setup 100+ ruangan, buat import CSV task terpisah (migrasi data, bukan CRUD inline)</li>
+  <li><strong>Fasilitas Ruangan inventory tracking:</strong> Saat ini hanya catat nama, jumlah, kondisi. Tidak ada: nomor seri, tanggal pembelian, nilai aset, depreciation. Jika dibutuhkan, perluas schema + modal terpisah</li>
+  <li><strong>Perencanaan Kapasitas (akademik-infrastruktur integration):</strong> Sistem akademik (penjadwalan) bisa query kapasitas ruangan dari infrastruktur. Tapi tidak ada fitur "cek konflik ruangan" atau "alokasi otomatis berdasarkan kapasitas" di infrastruktur sendiri — itu responsibility akademik module</li>
+  <li><strong>Role-based permission UI:</strong> Saat ini asumsikan System Manager. Untuk non-admin access, follow-up task backend (repo <code>sekolahpro</code>) set permission di doctype, lalu FE auto-grant modal access (no UI change needed)</li>
+</ul>
+
+</body>
+</html>

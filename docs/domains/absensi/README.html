@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dokumentasi Domain Absensi — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Absensi — Kehadiran dan Pencatatan Siswa</h1>
+  <p class="muted">Sistem pencatatan kehadiran siswa, guru, dan staf terpadu dengan stasiun absensi online/offline. Mendukung kartu RFID, QR dinamis dari aplikasi siswa, dan input manual; menghasilkan ringkasan harian dan per pelajaran untuk pelaporan dan tindak lanjut.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend Frappe:</strong> <code>sekolahpro/attendance</code> (modul baru, repo terpisah) — JWT Ed25519, pairing station, pencatatan tap, derivasi ringkasan, dispatch notifikasi.</li>
+    <li><strong>Web Frontend:</strong> Route prefix <code>/sch/$sekolah/absensi/*</code> di <code>sekolahpro-web/apps/school</code> — dashboard, daftar harian, per pelajaran, guru.</li>
+    <li><strong>Stasiun PWA:</strong> <code>sekolahpro-web/apps/attendance_station</code> (paket baru) — kiosk/tablet/perangkat guru; tap card + QR online/offline.</li>
+    <li><strong>Paket bersama:</strong> <code>@sekolahpro/api-client</code> (resource list, field resolvers), <code>@sekolahpro/ui</code> (cards, modals, tables).</li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Doctype</th>
+        <th>Peran</th>
+        <th>Field Kunci</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Attendance Station</code> (inferred)</td>
+        <td>Perangkat terdaftar (kiosk, tablet, laptop guru)</td>
+        <td>mode (gate/classroom/event), sekolah, device_fingerprint, api_key_hash, status (active/revoked)</td>
+      </tr>
+      <tr>
+        <td><code>Attendance Station Pairing</code> (inferred)</td>
+        <td>Kode satu-kali device (8 char, TTL 10 menit)</td>
+        <td>code, mode, sekolah, expires_at, consumed_by_station</td>
+      </tr>
+      <tr>
+        <td><code>Attendance Card</code> (inferred)</td>
+        <td>Pemetaan UID kartu RFID/NFC → subjek (Siswa/Guru/Staff)</td>
+        <td>uid (unik), subject_type, subject_id, sekolah, revoked_at</td>
+      </tr>
+      <tr>
+        <td><code>Attendance Event</code> (inferred)</td>
+        <td>Log tap mentah (audit trail), status accepted/rejected/duplicate</td>
+        <td>station, subject_type, subject_id, method (card/qr/manual), direction (in/out), event_type (gate/class/event), tapped_at, jti (replay cache)</td>
+      </tr>
+      <tr>
+        <td><code>Daily Attendance</code></td>
+        <td>Ringkasan harian per orang/hari (derivasi dari gate event, fase 7)</td>
+        <td>subject_type, subject_id, date, sekolah, first_in, last_out, gate_status (hadir/terlambat/alpha)</td>
+      </tr>
+      <tr>
+        <td><code>Class Attendance</code></td>
+        <td>Ringkasan per sesi jadwal (derivasi dari class event, fase 7)</td>
+        <td>jadwal_pelajaran, date, status (hadir/izin/sakit/alpha), in_at, source (station/manual)</td>
+      </tr>
+      <tr>
+        <td><code>Absensi Harian</code> (akademik, ada)</td>
+        <td>Ringkasan harian per kelas (akan diwirkan dengan Daily Attendance di Fase 7)</td>
+        <td>tanggal, kelas, rombel, total_hadir, total_alpa, total_izin, total_sakit, status</td>
+      </tr>
+      <tr>
+        <td><code>Absensi Pelajaran</code> (akademik, ada)</td>
+        <td>Ringkasan per pelajaran/sesi (akan diwirkan dengan Class Attendance di Fase 7)</td>
+        <td>tanggal, mata_pelajaran, kelas, guru, status</td>
+      </tr>
+      <tr>
+        <td><code>Absensi Guru</code> (akademik, ada)</td>
+        <td>Pencatatan kehadiran guru dan staf</td>
+        <td>tanggal, guru, jam_masuk, jam_pulang, status (Hadir/Izin/Sakit/Alpa)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Alur Utama</h2>
+  <ol>
+    <li><strong>Pairing Stasiun (Fase 1):</strong> Admin jalankan <code>start_pairing</code> (mode/lokasi/sekolah), bagikan kode 8-char ke perangkat → device klaim dengan <code>claim_pairing</code> (fingerprint+pubkey) → dapatkan api_key unik.</li>
+    <li><strong>Tap Card Online (Gate/Classroom, Fase 1):</strong> Operator tap kartu RFID ke reader HID → stasiun lookup UID lokal → validasi sekolah/status → POST <code>record_tap</code> ke backend → backend verifikasi ulang, insert Attendance Event (accepted/rejected).</li>
+    <li><strong>Tap QR Online (Fase 3):</strong> Siswa buka "Tampilkan QR" di app → app mint JWT Ed25519 (30s TTL) via <code>mint_qr</code> setiap 25 detik → stasiun scan QR → verifikasi sig + exp lokal → POST ke <code>record_tap</code> dengan token.</li>
+    <li><strong>Offline Queue (Fase 4):</strong> Stasiun offline → tap (card/QR) masuk IndexedDB → tombol "Sinkronisasi" atau otomatis saat reconnect → flush batch dengan server → server verifikasi sig + jti dedup + timestamp skew → accept/reject dengan alasan.</li>
+    <li><strong>Derivasi Ringkasan (Fase 7):</strong> Setelah <code>Attendance Event</code> diterima, background job <code>derive_summaries</code> → upsert <code>Daily Attendance</code> (gate), <code>Class Attendance</code> (class) → hitung status hadir/terlambat/alpha; wirkan ke akademik <code>Absensi Harian</code>/<code>Absensi Pelajaran</code>.</li>
+    <li><strong>Notifikasi Wali (Fase 8):</strong> Setelah derivasi, jika <code>event_type=gate</code> dan wali berlangganan paid tier → dispatch push notification via notification service.</li>
+  </ol>
+
+  <h2>Aturan &amp; Kebijakan</h2>
+  <ul>
+    <li><strong>Sekolah Scoping:</strong> Semua entitas (station, card, event) terikat sekolah; tap lintas-sekolah ditolak dengan REJECT_CROSS_SEKOLAH.</li>
+    <li><strong>Revokasi Kartu:</strong> Card dengan revoked_at != null ditolak; stasiun sinkronisasi delta setiap 5 menit.</li>
+    <li><strong>Replay JTI:</strong> Setiap QR token memiliki jti unik (uuid-v7); Redis cache NX (first-write-wins) 10 menit; QR kedua ditolak REJECT_REPLAY.</li>
+    <li><strong>Clock Skew:</strong> <code>tapped_at</code> diterima jika dalam [now-24h, now+5min]; verifikasi skew ±60s untuk exp token; exp 30s (TTL JWT).</li>
+    <li><strong>Classroom Mode Binding:</strong> Guru login stasiun classroom → tap keras-terikat ke jadwal aktif mereka saat ini; tap kelas lain ditolak NO_ACTIVE_JADWAL.</li>
+    <li><strong>Manual Override:</strong> Admin edit Absensi Harian/Pelajaran langsung → source flip ke manual; derivasi otomatis skip baris manual berikutnya (YAGNI: batch reconcile).</li>
+    <li><strong>Derivasi Idempoten:</strong> Keyed (subject, date) untuk daily; (jadwal, subject_id) untuk class — re-run derivasi aman.</li>
+    <li><strong>Anti-Spam:</strong> UID sama dalam 5s pada stasiun sama → debounce, tidak ada event.</li>
+    <li><strong>Adapter Card Independen:</strong> HID keyboard, Web NFC, external bridge → masing-masing emit ke unified handler; stasiun pilih satu/beberapa saat pairing.</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  <h3>Triggers (Memicu)</h3>
+  <ul>
+    <li><strong>Attendance Event accepted (Fase 7)</strong> → background job <code>derive_summaries</code> untuk upsert Daily/Class Attendance.</li>
+    <li><strong>Daily/Class Attendance upsert (Fase 7)</strong> → derive gate_status hadir/terlambat/alpha berdasarkan jadwal sekolah jam_masuk.</li>
+    <li><strong>Daily Attendance gate_status="hadir" + event_type=gate (Fase 8)</strong> → jika wali tier paid, dispatch push notification.</li>
+    <li><strong>Absensi Harian/Pelajaran manually edited</strong> → set source=manual; derivasi auto skip baris ini berikutnya.</li>
+  </ul>
+  <h3>Listens (Bereaksi)</h3>
+  <ul>
+    <li><strong>Daily Attendance:</strong> Bereaksi pada scheduled reconciliation (23:00, Fase 7) — rows tanpa event in → gate_status=alpha; rows expected (per jadwal) tanpa station event → gate_status=alpha (jika source≠manual).</li>
+    <li><strong>Class Attendance:</strong> Bereaksi pada created/updated dengan source=station → operator tap confirm UI menampilkan ✓ + sound.</li>
+    <li><strong>Siswa alpa beruntun >3 hari:</strong> Dashboard index deteksi dari Daily Attendance aggregate (Cross-domain READ).</li>
+  </ul>
+
+  <h2>Batas Ruang Lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Visitor/Tamu Attendance (Fase non-prioritas):</strong> Deferred — belum ada flow tamu (tidak ada Student ID card).</li>
+    <li><strong>Geo-Fencing / Face Recognition (Fase non-prioritas):</strong> Deferred — fokus card + QR dulu.</li>
+    <li><strong>Key Rotation + Emergency Revoke (Fase 7+):</strong> Phase 1 hanya single key "k1"; quarterly rotation + JWKS staleness handling nanti.</li>
+    <li><strong>External Reader Bridge Detail (Fase 5 spike):</strong> Phase 1 placeholder; mechanism (loopback HTTP via SW vs companion process vs WebSocket) deferred.</li>
+    <li><strong>Wali Subscription Doctype (Fase 8 audit):</strong> Name TBD — Phase 1 tidak create, hanya infrastructure untuk check di fase 8.</li>
+    <li><strong>Batch Reconciliation via Cron (YAGNI, manual weekly audit):</strong> Tidak otomatis batch-fix missing events — admin audit Absensi Harian draft/incomplete, manual input jika perlu.</li>
+    <li><strong>Master Data Cross-Check (akademik domain):</strong> Tahun Ajaran, Mapel, Kurikulum, KKM — dokumentasikan di akademik, bukan duplikasi di sini.</li>
+  </ul>
+
+</body>
+</html>
