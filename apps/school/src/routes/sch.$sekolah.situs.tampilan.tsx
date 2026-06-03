@@ -15,6 +15,7 @@ import { PageGuide } from "../components/guide";
 import { SITUS_PAGE_GUIDES } from "../components/situs/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { useUnsavedChanges } from "../lib/useUnsavedChanges";
+import { buildPreviewUrl } from "../lib/situsPreview";
 
 const TOGGLES: { name: keyof SitusDoc; label: string }[] = [
   { name: "tampilkan_berita", label: "Berita" },
@@ -38,6 +39,22 @@ export function TampilanPage({ sekolah }: { sekolah: string }) {
 
   const set = (k: keyof SitusDoc, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
   const str = (k: keyof SitusDoc) => (form[k] == null ? "" : String(form[k]));
+
+  // Open the situs preview app with the current (unsaved) appearance overlaid.
+  const openPreview = () =>
+    window.open(
+      buildPreviewUrl(sekolah, {
+        template: form.template ?? null,
+        brand_color: form.brand_color ?? null,
+        brand_color_2: form.brand_color_2 ?? null,
+        tagline: form.tagline ?? null,
+        hero_judul: form.hero_judul ?? null,
+        hero_subjudul: form.hero_subjudul ?? null,
+        hero_eyebrow: form.hero_eyebrow ?? null,
+      }),
+      "_blank",
+      "noopener",
+    );
 
   // Warn on tab close while edits diverge from the loaded config. Hook stays above
   // the loading/error early returns to keep call order stable (rules-of-hooks).
@@ -69,9 +86,12 @@ export function TampilanPage({ sekolah }: { sekolah: string }) {
         title="Tampilan Situs"
         description="Pilih template, atur warna brand, dan tentukan bagian yang tampil."
         actions={
-          <Button onClick={() => save.mutate(form)} disabled={save.isPending}>
-            {save.isPending ? "Menyimpan…" : "Simpan Perubahan"}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={openPreview}>Pratinjau ↗</Button>
+            <Button onClick={() => save.mutate(form)} disabled={save.isPending}>
+              {save.isPending ? "Menyimpan…" : "Simpan Perubahan"}
+            </Button>
+          </div>
         }
       />
 

@@ -14,6 +14,7 @@ import {
 } from "@sekolahpro/ui";
 import { useSitus, useSaveSitus, type BlockTipe, type LayoutBlockRow } from "../data/situs";
 import { useUnsavedChanges } from "../lib/useUnsavedChanges";
+import { buildPreviewUrl } from "../lib/situsPreview";
 import {
   BLOCK_TIPE_OPTIONS,
   BLOCK_TIPE_LABELS,
@@ -84,6 +85,10 @@ export function TataLetakPage({ sekolah }: { sekolah: string }) {
   const remove = (i: number) => setBlocks(blocks.filter((_, idx) => idx !== i));
   const add = () => setBlocks([...blocks, newBlock(pick)]);
 
+  // Open the situs preview app with the current (unsaved) layout overlaid.
+  const openPreview = () =>
+    window.open(buildPreviewUrl(sekolah, { layout_blocks: blocks }), "_blank", "noopener");
+
   // Warn on tab close while the layout diverges from the loaded blocks. Hook sits
   // above the loading/error early returns to keep call order stable.
   useUnsavedChanges(!!data?.layout_blocks && JSON.stringify(blocks) !== JSON.stringify(data.layout_blocks));
@@ -114,9 +119,12 @@ export function TataLetakPage({ sekolah }: { sekolah: string }) {
         title="Tata Letak"
         description="Susun urutan, aktif/nonaktif, dan varian tiap bagian beranda situs."
         actions={
-          <Button onClick={() => save.mutate({ layout_blocks: blocks })} disabled={save.isPending}>
-            {save.isPending ? "Menyimpan…" : "Simpan Tata Letak"}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={openPreview}>Pratinjau ↗</Button>
+            <Button onClick={() => save.mutate({ layout_blocks: blocks })} disabled={save.isPending}>
+              {save.isPending ? "Menyimpan…" : "Simpan Tata Letak"}
+            </Button>
+          </div>
         }
       />
 
