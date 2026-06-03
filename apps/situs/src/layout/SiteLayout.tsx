@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { AdBanner } from "@sekolahpro/ads";
 import { SiteProvider } from "../SiteContext";
-import { useSiteData } from "../lib/site";
+import { useSiteData, readPreviewDraft } from "../lib/site";
 import { useSeo } from "../lib/seo";
 import { applyTheme } from "../theme";
 import { getTemplate } from "../templates/registry";
@@ -15,9 +15,19 @@ import { applyDemoTemplate } from "../demo/templatePresets";
 import { isDemoMode } from "../demo/demoMode";
 import { DemoSwitcher } from "../demo/DemoSwitcher";
 
+/** Fixed banner shown when the page renders an unsaved-edit preview overlay. */
+function PreviewBanner() {
+  return (
+    <div className="sticky top-0 z-50 bg-amber-500 px-4 py-2 text-center text-sm font-semibold text-amber-950">
+      Mode Pratinjau — menampilkan perubahan yang belum disimpan.
+    </div>
+  );
+}
+
 /** Resolves the per-school site from the host, then renders its template. */
 export function SiteLayout() {
   const { data: site, isLoading } = useSiteData();
+  const preview = readPreviewDraft() != null;
   if (isLoading || !site) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -25,7 +35,12 @@ export function SiteLayout() {
       </div>
     );
   }
-  return <SiteShell site={site} />;
+  return (
+    <>
+      {preview ? <PreviewBanner /> : null}
+      <SiteShell site={site} />
+    </>
+  );
 }
 
 function SiteShell({ site }: { site: SiteData }) {

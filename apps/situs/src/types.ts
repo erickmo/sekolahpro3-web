@@ -146,6 +146,8 @@ export interface SiteData {
   theme: SiteTheme;
   /** True when this is the offline/demo fallback (no live backend). */
   isDemo?: boolean;
+  /** True when an unsaved-edit preview overlay is applied (CMS preview mode). */
+  isPreview?: boolean;
 }
 
 export interface Berita {

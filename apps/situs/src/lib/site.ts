@@ -217,18 +217,76 @@ export function currentHost(): string {
   return typeof window !== "undefined" ? window.location.host : "";
 }
 
+/**
+ * Unsaved-draft overlay carried in the `?preview=` query param by the school CMS
+ * (flat snake_case subset of Situs Sekolah). Lets an admin preview edits before
+ * saving. Only a curated, low-drift subset is supported.
+ */
+export interface PreviewDraft {
+  template?: string;
+  brand_color?: string;
+  brand_color_2?: string;
+  tagline?: string;
+  hero_judul?: string;
+  hero_subjudul?: string;
+  hero_eyebrow?: string;
+  layout_blocks?: Array<Record<string, unknown>>;
+}
+
+/** Parse the `?preview=` param from a location.search string; null when absent/invalid. */
+export function parsePreviewParam(search: string): PreviewDraft | null {
+  const raw = new URLSearchParams(search).get("preview");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? (parsed as PreviewDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Read the preview draft from the current browser URL (null on server/none). */
+export function readPreviewDraft(): PreviewDraft | null {
+  return typeof window !== "undefined" ? parsePreviewParam(window.location.search) : null;
+}
+
+/** Overlay an unsaved draft onto a resolved site; marks the result as preview. */
+export function applyPreviewDraft(site: SiteData, draft: PreviewDraft): SiteData {
+  return {
+    ...site,
+    isPreview: true,
+    templateKey: draft.template ? validTemplate(draft.template) : site.templateKey,
+    brand: {
+      ...site.brand,
+      color: draft.brand_color ?? site.brand.color,
+      color2: draft.brand_color_2 ?? site.brand.color2,
+    },
+    profil: {
+      ...site.profil,
+      tagline: draft.tagline ?? site.profil.tagline,
+      heroJudul: draft.hero_judul ?? site.profil.heroJudul,
+      heroSubjudul: draft.hero_subjudul ?? site.profil.heroSubjudul,
+      heroEyebrow: draft.hero_eyebrow ?? site.profil.heroEyebrow,
+    },
+    layoutBlocks: draft.layout_blocks ? mapLayoutBlocks(draft.layout_blocks) : site.layoutBlocks,
+  };
+}
+
 /** Resolve the site, falling back to the offline demo when the backend is down. */
 export async function resolveSiteData(): Promise<SiteData> {
   const host = currentHost();
   const override = resolveOverride();
+  const draft = readPreviewDraft();
+  // Apply any unsaved-edit overlay on top of whatever base we resolve.
+  const withDraft = (site: SiteData) => (draft ? applyPreviewDraft(site, draft) : site);
   try {
     const raw = await call<ApiSite | null>("situs.resolve_site", { host, sekolah: override ?? "" });
-    if (raw && raw.sekolah) return mapSite(raw);
+    if (raw && raw.sekolah) return withDraft(mapSite(raw));
   } catch {
     // fall through to demo
   }
   // Offline/demo: tweak the demo name if an override was supplied.
-  return override ? { ...demoSite, nama: override, sekolah: override } : demoSite;
+  return withDraft(override ? { ...demoSite, nama: override, sekolah: override } : demoSite);
 }
 
 export function useSiteData() {
