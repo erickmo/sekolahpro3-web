@@ -14,6 +14,15 @@ export function SitusOverviewPage({ sekolah }: { sekolah: string }) {
   const terbit = data?.status === "Terbit";
   const previewUrl = situsPreviewUrl(data?.subdomain ?? null, sekolah);
 
+  // Publishing flips public visibility, so confirm before toggling either way to
+  // avoid an accidental publish/unpublish.
+  const togglePublish = () => {
+    const msg = terbit
+      ? "Jadikan situs draft? Situs tidak lagi terlihat publik."
+      : "Terbitkan situs? Situs akan dapat diakses publik.";
+    if (window.confirm(msg)) publish.mutate({ status: terbit ? "Draft" : "Terbit" });
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -26,7 +35,7 @@ export function SitusOverviewPage({ sekolah }: { sekolah: string }) {
               <Button variant="ghost">Lihat Situs ↗</Button>
             </a>
             <Button
-              onClick={() => publish.mutate({ status: terbit ? "Draft" : "Terbit" })}
+              onClick={togglePublish}
               disabled={publish.isPending || isLoading}
             >
               {terbit ? "Jadikan Draft" : "Terbitkan"}

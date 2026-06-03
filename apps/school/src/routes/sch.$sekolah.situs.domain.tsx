@@ -58,6 +58,11 @@ export function DomainPage({ sekolah }: { sekolah: string }) {
             <Badge tone={sslTone}>SSL: {data?.ssl_status ?? "Pending"}</Badge>
           </div>
         </div>
+        {data?.ssl_status === "Failed" ? (
+          <p className="text-xs text-rose-600">
+            Penerbitan sertifikat SSL gagal. Pastikan DNS sudah mengarah dengan benar, lalu hubungi tim SekolahPro bila masih gagal.
+          </p>
+        ) : null}
         <FormField label="Domain Kustom" hint="Mis. www.namasekolah.sch.id">
           <Input value={customDomain} onChange={(e) => setCustom(e.target.value)} placeholder="www.namasekolah.sch.id" />
         </FormField>

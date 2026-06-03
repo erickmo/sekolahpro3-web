@@ -48,7 +48,34 @@ describe("TataLetakPage", () => {
   it("lists current blocks in order", async () => {
     render(wrap(<TataLetakPage sekolah="smp-demo" />));
     await waitFor(() => expect(screen.getByDisplayValue("Selamat Datang")).toBeInTheDocument());
-    expect(screen.getByDisplayValue("Kabar")).toBeInTheDocument();
+    // The berita (adapter) block has no editable text fields, so assert it via its card header.
+    expect(screen.getByText("#2 · Berita")).toBeInTheDocument();
+  });
+
+  it("shows only the fields a richtext block actually uses", async () => {
+    fetchMock.mockImplementation((m: string) =>
+      m.endsWith("get_situs")
+        ? Promise.resolve({ sekolah: "smp-demo", layout_blocks: [{ tipe: "richtext", variant: "default", aktif: 1, konten: "<p>x</p>" }] })
+        : saveMock(m, undefined));
+    render(wrap(<TataLetakPage sekolah="smp-demo" />));
+    await waitFor(() => expect(screen.getByText("#1 · Teks Bebas")).toBeInTheDocument());
+    expect(screen.getByText("Konten")).toBeInTheDocument();
+    expect(screen.getByText("Judul Section")).toBeInTheDocument();
+    expect(screen.queryByText("Label Tombol")).toBeNull();
+    expect(screen.queryByText("URL Tombol")).toBeNull();
+  });
+
+  it("shows no presentational fields for an adapter block (berita)", async () => {
+    fetchMock.mockImplementation((m: string) =>
+      m.endsWith("get_situs")
+        ? Promise.resolve({ sekolah: "smp-demo", layout_blocks: [{ tipe: "berita", variant: "default", aktif: 1 }] })
+        : saveMock(m, undefined));
+    render(wrap(<TataLetakPage sekolah="smp-demo" />));
+    await waitFor(() => expect(screen.getByText("#1 · Berita")).toBeInTheDocument());
+    expect(screen.queryByText("Judul Section")).toBeNull();
+    expect(screen.queryByText("Konten")).toBeNull();
+    // The variant picker is still present.
+    expect(screen.getByLabelText("Varian")).toBeInTheDocument();
   });
 
   it("reorder down then save swaps block order", async () => {

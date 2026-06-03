@@ -38,13 +38,25 @@ describe("SitusOverviewPage", () => {
     expect(screen.getByText("smp-demo")).toBeInTheDocument();
   });
 
-  it("publishes a draft site when the publish button is clicked", async () => {
+  it("publishes a draft site after the user confirms", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(wrap(<SitusOverviewPage sekolah="smp-demo" />));
     // Wait for the config to load so the publish button is no longer disabled.
     await waitFor(() => expect(screen.getByText("klasik")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: /Terbitkan/ }));
     await waitFor(() => expect(publishCalls()).toHaveLength(1));
     expect((publishCalls()[0]![1] as { status: string }).status).toBe("Terbit");
+    confirmSpy.mockRestore();
+  });
+
+  it("does not publish when the user cancels the confirmation", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(wrap(<SitusOverviewPage sekolah="smp-demo" />));
+    await waitFor(() => expect(screen.getByText("klasik")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /Terbitkan/ }));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(publishCalls()).toHaveLength(0);
+    confirmSpy.mockRestore();
   });
 
   it("offers to revert to draft and flags the live badge once published", async () => {
