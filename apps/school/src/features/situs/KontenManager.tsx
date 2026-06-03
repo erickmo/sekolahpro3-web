@@ -25,6 +25,7 @@ import { PageGuide } from "../../components/guide";
 import { SITUS_PAGE_GUIDES, type SitusGuideId } from "../../components/situs/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../../lib/schoolGuideRole";
 import { ImageInput } from "./ImageInput";
+import { RichTextEditor } from "./RichTextEditor";
 
 type FormState = Record<string, unknown>;
 
@@ -44,8 +45,11 @@ function FieldInput({ field, id, value, onChange }: { field: KontenField; id: st
       </Select>
     );
   }
-  if (field.type === "textarea" || field.type === "richtext") {
-    return <Textarea id={id} rows={field.type === "richtext" ? 6 : 3} value={str} onChange={(e) => onChange(e.target.value)} />;
+  if (field.type === "richtext") {
+    return <RichTextEditor id={id} value={str} onChange={onChange} />;
+  }
+  if (field.type === "textarea") {
+    return <Textarea id={id} rows={3} value={str} onChange={(e) => onChange(e.target.value)} />;
   }
   if (field.type === "check") {
     return (
