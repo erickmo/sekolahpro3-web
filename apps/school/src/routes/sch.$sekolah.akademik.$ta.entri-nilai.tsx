@@ -275,7 +275,7 @@ function WorkflowCard(): ReactNode {
 }
 
 function EntriNilaiPage() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/entri-nilai" });
 
   const navigate = useNavigate();
   const ctx = useAkademikContextOptional();
@@ -306,7 +306,7 @@ function EntriNilaiPage() {
     const search: Record<string, string> = {};
     if (ctx?.semester) search.semester = ctx.semester;
     if (ctx?.tahunAjaran) search.ta = ctx.tahunAjaran;
-    navigate({ to: "/sch/$sekolah/akademik/entri-nilai/edit", params: { sekolah }, search });
+    navigate({ to: "/sch/$sekolah/akademik/$ta/entri-nilai/edit", params: { sekolah, ta }, search });
   };
 
   return (
@@ -359,4 +359,4 @@ function EntriNilaiPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/entri-nilai")({ component: EntriNilaiPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/entri-nilai")({ component: EntriNilaiPage });

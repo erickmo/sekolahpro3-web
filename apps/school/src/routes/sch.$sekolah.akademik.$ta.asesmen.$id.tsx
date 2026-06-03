@@ -7,10 +7,10 @@ import { AsesmenInput } from "../components/akademik/AsesmenInput";
  * second PageGuide here would duplicate it, so the route only resolves params.
  */
 function AsesmenInputPage() {
-  const { sekolah, id } = useParams({ from: "/sch/$sekolah/akademik/asesmen/$id" });
-  return <AsesmenInput asesmenId={id} sekolah={sekolah} />;
+  const { sekolah, ta, id } = useParams({ from: "/sch/$sekolah/akademik/$ta/asesmen/$id" });
+  return <AsesmenInput asesmenId={id} sekolah={sekolah} ta={ta} />;
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/asesmen/$id")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/asesmen/$id")({
   component: AsesmenInputPage,
 });

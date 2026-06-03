@@ -186,7 +186,17 @@ const GUIDE_TIPS = [
   "Tanda centang hijau = tersimpan, 'menyimpan…' = sedang dikirim, badge merah = gagal/keliru.",
 ];
 
-export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekolah?: string }) {
+export function AsesmenInput({
+  asesmenId,
+  sekolah,
+  ta,
+}: {
+  asesmenId: string;
+  sekolah?: string;
+  // Active Tahun Ajaran path segment ($ta) — links back to the asesmen list must
+  // carry it now that the list lives under the per-TA workspace.
+  ta?: string;
+}) {
   const qc = useQueryClient();
   const [doc, setDoc] = useState<AsesmenDoc | null>(null);
   const [cells, setCells] = useState<SiswaCell[]>([]);
@@ -323,7 +333,7 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
           {
             label: "Input Nilai Test",
             render: ({ className, children }) => (
-              <Link to="/sch/$sekolah/akademik/asesmen" params={{ sekolah: sekolah ?? "" }} className={className}>
+              <Link to="/sch/$sekolah/akademik/$ta/asesmen" params={{ sekolah: sekolah ?? "", ta: ta ?? "" }} className={className}>
                 {children}
               </Link>
             ),
@@ -338,8 +348,8 @@ export function AsesmenInput({ asesmenId, sekolah }: { asesmenId: string; sekola
         description={`${doc.mata_pelajaran} · ${doc.komponen} · ${doc.semester} · ${doc.tahun_ajaran}`}
         actions={
           <Link
-            to="/sch/$sekolah/akademik/asesmen"
-            params={{ sekolah: sekolah ?? "" }}
+            to="/sch/$sekolah/akademik/$ta/asesmen"
+            params={{ sekolah: sekolah ?? "", ta: ta ?? "" }}
             className="inline-flex items-center justify-center rounded-md border border-border h-10 px-4 text-sm font-medium hover:bg-muted"
           >
             <IconArrowLeft className="h-4 w-4 mr-1.5 shrink-0" />

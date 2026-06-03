@@ -48,6 +48,44 @@ export function taPath(name: string): string {
   return encodeURIComponent(name);
 }
 
+/** Active sub-page label for the workspace breadcrumb, derived from pathname. */
+export function workspaceSubLabel(pathname: string): string {
+  if (pathname.includes("/entri-nilai/edit")) return "Editor Entri Nilai";
+  if (pathname.includes("/asesmen")) return "Input Nilai Test";
+  if (pathname.includes("/entri-nilai")) return "Entri Nilai";
+  if (pathname.includes("/raport")) return "Raport";
+  return "Dashboard";
+}
+
+/**
+ * Split a Tahun Ajaran list into the running ones (`is_current`) and the archive
+ * (everything else), for the hub's two sections.
+ */
+export function splitTaList<T extends { is_current?: number }>(
+  list: readonly T[],
+): { berjalan: T[]; arsip: T[] } {
+  const berjalan: T[] = [];
+  const arsip: T[] = [];
+  for (const t of list) {
+    if (t.is_current) berjalan.push(t);
+    else arsip.push(t);
+  }
+  return { berjalan, arsip };
+}
+
+/**
+ * Pick the TA to auto-redirect into from the hub: the stored TA when it is still
+ * present in the list, else null (render the hub). This keeps the hub as the entry
+ * point only when there is no valid remembered period to jump straight into.
+ */
+export function pickAutoRedirectTa(
+  storedTa: string | undefined,
+  list: readonly { name: string }[],
+): string | null {
+  if (!storedTa) return null;
+  return list.some((t) => t.name === storedTa) ? storedTa : null;
+}
+
 // Subset of TA fields needed for the distribution summary (structural so it does
 // not depend on the exact TahunAjaranRow shape from lib akademikPeriode).
 type TaStatusRow = { is_current?: number; status?: string };

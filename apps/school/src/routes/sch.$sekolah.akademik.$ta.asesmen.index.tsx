@@ -250,7 +250,7 @@ function RoleFocus({ role, active, text }: { role: AkademikRole; active: boolean
 }
 
 function AsesmenListPage() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/asesmen/" });
   const navigate = useNavigate();
   const ctx = useAkademikContextOptional();
   const { primary, isGuru, isAdmin, isKepala } = useAkademikRole();
@@ -425,8 +425,8 @@ function AsesmenListPage() {
                 {rows.map((r) => (
                   <li key={r.name} className="py-2.5">
                     <Link
-                      to="/sch/$sekolah/akademik/asesmen/$id"
-                      params={{ sekolah, id: r.name }}
+                      to="/sch/$sekolah/akademik/$ta/asesmen/$id"
+                      params={{ sekolah, ta, id: r.name }}
                       className="group flex items-center justify-between gap-3"
                     >
                       <div className="flex min-w-0 items-center gap-3">
@@ -462,7 +462,7 @@ function AsesmenListPage() {
         sekolah={sekolah}
         onCreated={(id) => {
           setOpenCreate(false);
-          navigate({ to: "/sch/$sekolah/akademik/asesmen/$id", params: { sekolah, id } });
+          navigate({ to: "/sch/$sekolah/akademik/$ta/asesmen/$id", params: { sekolah, ta, id } });
         }}
       />
     </div>
@@ -641,4 +641,4 @@ function CreateTestModal({ open, onClose, rombel, mapel, defaultTa, roleLabel, s
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/asesmen/")({ component: AsesmenListPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/asesmen/")({ component: AsesmenListPage });

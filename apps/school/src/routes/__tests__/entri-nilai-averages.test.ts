@@ -11,7 +11,7 @@ vi.mock("@sekolahpro/api-client", () => ({
   listResource: vi.fn().mockResolvedValue([]),
 }));
 
-import { buildMapelAverages } from "../sch.$sekolah.akademik.entri-nilai";
+import { buildMapelAverages } from "../sch.$sekolah.akademik.$ta.entri-nilai";
 
 describe("buildMapelAverages", () => {
   it("averages nilai_akhir per mapel, highest first", () => {

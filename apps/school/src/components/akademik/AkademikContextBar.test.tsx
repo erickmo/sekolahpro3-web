@@ -13,10 +13,10 @@ const base: AkademikContextValue = {
   isPastPeriod: false, noActiveTa: false, dirty: false, setDirty: vi.fn(),
 };
 
-function renderBar(over: Partial<AkademikContextValue> = {}) {
+function renderBar(over: Partial<AkademikContextValue> = {}, taLabel?: string) {
   return render(
     <AkademikContextProvider value={{ ...base, ...over }}>
-      <AkademikContextBar />
+      <AkademikContextBar {...(taLabel ? { taLabel } : {})} />
     </AkademikContextProvider>,
   );
 }
@@ -26,7 +26,12 @@ describe("AkademikContextBar", () => {
 
   it("banner muncul saat periode lampau/ditutup", () => {
     renderBar({ isPastPeriod: true });
-    expect(screen.getByText(/mengedit periode lampau/i)).toBeTruthy();
+    expect(screen.getByText(/membuka periode lampau/i)).toBeTruthy();
+  });
+
+  it("menampilkan label Tahun Ajaran read-only saat diberi taLabel", () => {
+    renderBar({}, "2024/2025");
+    expect(screen.getByText("2024/2025")).toBeTruthy();
   });
 
   it("nudge muncul saat tak ada TA aktif", () => {

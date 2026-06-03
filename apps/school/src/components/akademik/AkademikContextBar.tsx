@@ -1,7 +1,9 @@
-// AkademikContextBar — periode selector (Tahun Ajaran + Semester) untuk halaman
-// operasional Akademik: label peran pengguna aktif, indikator status periode
-// (berjalan / lampau / belum aktif), dan selector. Logika periode (guarded
-// switch, dirty confirm, setTahunAjaran/setSemester, banner) DIPERTAHANKAN.
+// AkademikContextBar — period chrome for the Akademik workspace (per Tahun Ajaran).
+//
+// Period-first IA: the Tahun Ajaran is now chosen on the hub and fixed by the
+// route path, so this bar no longer carries a TA dropdown. It shows the active TA
+// as a read-only label, the period status (berjalan / lampau), the user role
+// badge, and the Semester selector (the only period axis still switched in place).
 //
 // Renders inner content only (konteks row + optional banner); the sticky,
 // full-bleed panel chrome lives in ModuleHeader so the bar and the sub-nav read
@@ -14,10 +16,9 @@ import {
   IconUsers,
   IconClock,
   IconCheck,
-  cn,
+  IconCalendar,
   type SearchableOption,
 } from "@sekolahpro/ui";
-import { listResource } from "@sekolahpro/api-client";
 import { useAkademikContext } from "../../lib/akademikContext";
 import { useAkademikRole, ROLE_LABEL } from "../../lib/akademikRole";
 
@@ -26,11 +27,7 @@ const SEMESTER_OPTIONS: SearchableOption[] = [
   { value: "Genap", label: "Genap" },
 ];
 
-const TA_FIELDS = ["name", "nama", "is_current", "status"];
-const TA_PAGE = 50;
-const SWITCH_CONFIRM = "Pindah periode? Perubahan yang belum disimpan akan hilang.";
-
-type TahunAjaranRow = { name: string; nama?: string; is_current?: 0 | 1; status?: string };
+const SWITCH_CONFIRM = "Ganti semester? Perubahan yang belum disimpan akan hilang.";
 
 /** Status periode terpilih → menentukan warna & label indikator di bar. */
 type PeriodeStatus = "aktif" | "lampau" | "belum-aktif";
@@ -85,26 +82,14 @@ function RoleBadge() {
   );
 }
 
-export function AkademikContextBar() {
-  const { tahunAjaran, semester, setTahunAjaran, setSemester, isPastPeriod, noActiveTa, dirty } =
-    useAkademikContext();
+/**
+ * Period context bar for a TA workspace. `taLabel` is the active Tahun Ajaran's
+ * display name (read-only here — switching TA happens on the hub/breadcrumb).
+ */
+export function AkademikContextBar({ taLabel }: { taLabel?: string }) {
+  const { semester, setSemester, isPastPeriod, noActiveTa, dirty } = useAkademikContext();
 
-  const loadTA = useCallback(async (q: string): Promise<SearchableOption[]> => {
-    const filters: Array<[string, string, string]> = q ? [["nama", "like", `%${q}%`]] : [];
-    const rows = await listResource<TahunAjaranRow>("Tahun Ajaran", {
-      fields: TA_FIELDS, filters, order_by: "`nama` desc", limit_page_length: TA_PAGE,
-    });
-    return rows.map((r): SearchableOption => {
-      const opt: SearchableOption = { value: r.name, label: r.nama ?? r.name };
-      const tags: string[] = [];
-      if (r.is_current) tags.push("Berjalan");
-      if (r.status && r.status !== "Aktif") tags.push(r.status);
-      if (tags.length > 0) opt.hint = tags.join(" · ");
-      return opt;
-    });
-  }, []);
-
-  // Konfirmasi sebelum ganti periode bila ada edit belum tersimpan.
+  // Konfirmasi sebelum ganti semester bila ada edit belum tersimpan.
   const guarded = useCallback(
     (fn: (v: string) => void) => (v: string) => {
       if (dirty && !globalThis.confirm(SWITCH_CONFIRM)) return;
@@ -114,7 +99,6 @@ export function AkademikContextBar() {
   );
 
   const periodeStatus = resolvePeriodeStatus(noActiveTa, isPastPeriod);
-  const readOnlyHint = periodeStatus !== "aktif";
 
   return (
     <Fragment>
@@ -126,17 +110,16 @@ export function AkademikContextBar() {
           <PeriodeStatusBadge status={periodeStatus} />
         </div>
 
-        <div className="flex items-center gap-2 min-w-0">
-          <label className="text-xs text-muted-fg shrink-0" htmlFor="akademik-ta">Tahun Ajaran</label>
-          <SearchableSelect
-            id="akademik-ta"
-            value={tahunAjaran}
-            onChange={guarded(setTahunAjaran)}
-            loadOptions={loadTA}
-            placeholder="Pilih TA…"
-            className={cn("w-48", readOnlyHint && "ring-1 ring-amber-300/60 rounded-md")}
-          />
-        </div>
+        {/* Tahun Ajaran aktif — read-only; ganti TA lewat menu/breadcrumb Akademik. */}
+        {taLabel ? (
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs text-muted-fg shrink-0">Tahun Ajaran</span>
+            <Badge tone="neutral" className="gap-1 max-w-[12rem]">
+              <IconCalendar className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="truncate">{taLabel}</span>
+            </Badge>
+          </div>
+        ) : null}
 
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted-fg shrink-0" htmlFor="akademik-semester">Semester</label>
@@ -167,8 +150,8 @@ export function AkademikContextBar() {
           ) : (
             <SetupBanner
               tone="warning"
-              title="Anda mengedit periode lampau/ditutup"
-              description="Tahun Ajaran ini sudah ditutup atau di luar rentang tanggalnya. Pastikan periode benar sebelum input."
+              title="Anda membuka periode lampau/ditutup"
+              description="Tahun Ajaran ini sudah ditutup atau di luar rentang tanggalnya. Dibuka read-only untuk audit & cetak ulang."
             />
           )}
         </div>
