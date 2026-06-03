@@ -56,6 +56,29 @@ describe("ChildArrayManager", () => {
       .toEqual(["Kedua", "Pertama"]);
   });
 
+  it("reorder down moves the first row below the second", async () => {
+    render(wrap(<ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={rows} />));
+    fireEvent.click(screen.getAllByRole("button", { name: /Turunkan/i })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: /^Simpan$/i }));
+    await waitFor(() => expect(saveMock).toHaveBeenCalled());
+    const [, args] = saveMock.mock.calls[0]!;
+    expect((args as { values: { keunggulan: KeunggulanRow[] } }).values.keunggulan.map((r) => r.judul))
+      .toEqual(["Kedua", "Pertama"]);
+  });
+
+  it("disables up on the first row and down on the last row", () => {
+    render(wrap(<ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={rows} />));
+    expect(screen.getAllByRole("button", { name: /Naikkan/i })[0]).toBeDisabled();
+    const turun = screen.getAllByRole("button", { name: /Turunkan/i });
+    expect(turun[turun.length - 1]).toBeDisabled();
+  });
+
+  it("disables both reorder buttons when there is only one row", () => {
+    render(wrap(<ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={[rows[0]!]} />));
+    expect(screen.getByRole("button", { name: /Naikkan/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Turunkan/i })).toBeDisabled();
+  });
+
   it("delete removes the row from the saved payload", async () => {
     render(wrap(<ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={rows} />));
     fireEvent.click(screen.getAllByRole("button", { name: /Hapus/i })[0]!);

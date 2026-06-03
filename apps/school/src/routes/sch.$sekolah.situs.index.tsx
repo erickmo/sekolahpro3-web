@@ -3,8 +3,8 @@ import { Badge, Button, Card, PageHeader, StatCard } from "@sekolahpro/ui";
 import { useSitus, usePublish } from "../data/situs";
 import { situsPreviewUrl } from "../lib/situsPreview";
 
-function SitusOverview() {
-  const { sekolah } = Route.useParams();
+/** Situs overview: publish toggle, preview link, and status/template/domain stats. */
+export function SitusOverviewPage({ sekolah }: { sekolah: string }) {
   const { data, isLoading } = useSitus(sekolah);
   const publish = usePublish(sekolah);
 
@@ -72,6 +72,11 @@ function SitusOverview() {
       </Card>
     </div>
   );
+}
+
+function SitusOverview() {
+  const { sekolah } = Route.useParams();
+  return <SitusOverviewPage sekolah={sekolah} />;
 }
 
 export const Route = createFileRoute("/sch/$sekolah/situs/")({ component: SitusOverview });
