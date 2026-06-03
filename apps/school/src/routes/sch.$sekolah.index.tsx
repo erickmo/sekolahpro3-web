@@ -345,7 +345,7 @@ function Home() {
                 { label: "Tambah Siswa", to: "/sch/$sekolah/siswa/new" },
                 { label: "Catat Pembayaran", to: "/sch/$sekolah/keuangan" },
                 { label: "Buat Pengumuman", to: "/sch/$sekolah/pesan" },
-                { label: "Cetak Rapor", to: "/sch/$sekolah/akademik/raport" },
+                { label: "Cetak Rapor", to: "/sch/$sekolah/akademik" },
               ] as const).map((q) => (
                 <Link
                   key={q.label}

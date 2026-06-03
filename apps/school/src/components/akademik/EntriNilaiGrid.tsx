@@ -30,6 +30,9 @@ interface Props {
   selection: Selection;
   onChangeSelection: () => void;
   sekolah?: string;
+  // Active Tahun Ajaran path segment ($ta) — the "Entri Nilai" breadcrumb links
+  // back into the per-TA workspace, so it must carry the TA param.
+  ta?: string;
 }
 
 interface RombelDoc {
@@ -266,7 +269,7 @@ async function fetchEntri(selection: Selection, siswaNames: string[]): Promise<E
   return enriched;
 }
 
-export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props) {
+export function EntriNilaiGrid({ selection, onChangeSelection, sekolah, ta }: Props) {
   const qc = useQueryClient();
   const [rombel, setRombel] = useState<RombelDoc | null>(null);
   const [anggota, setAnggota] = useState<AnggotaRombel[]>([]);
@@ -519,7 +522,7 @@ export function EntriNilaiGrid({ selection, onChangeSelection, sekolah }: Props)
           {
             label: "Entri Nilai",
             render: ({ className, children }) => (
-              <Link to={sekolah ? "/sch/$sekolah/akademik/entri-nilai" : "/akademik/entri-nilai" as "/sch/$sekolah/akademik/entri-nilai"} params={{ sekolah: sekolah ?? "" }} className={className}>
+              <Link to="/sch/$sekolah/akademik/$ta/entri-nilai" params={{ sekolah: sekolah ?? "", ta: ta ?? "" }} className={className}>
                 {children}
               </Link>
             ),

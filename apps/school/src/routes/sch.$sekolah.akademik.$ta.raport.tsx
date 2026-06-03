@@ -346,7 +346,7 @@ function usePeriodFilters(ctx: ReturnType<typeof useAkademikContextOptional>) {
 }
 
 function RaportPage() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/raport" });
   const navigate = useNavigate();
   const ctx = useAkademikContextOptional();
   const role = useAkademikRole();
@@ -489,7 +489,7 @@ function RaportPage() {
           sort={sort}
           onSortChange={setSort}
           onRowClick={(r) =>
-            navigate({ to: "/sch/$sekolah/akademik/raport/$id", params: { sekolah, id: r.name } })
+            navigate({ to: "/sch/$sekolah/akademik/$ta/raport/$id", params: { sekolah, ta, id: r.name } })
           }
           empty={
             <div>
@@ -526,4 +526,4 @@ function RaportPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/raport")({ component: RaportPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/raport")({ component: RaportPage });

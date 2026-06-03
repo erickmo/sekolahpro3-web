@@ -99,7 +99,7 @@ const STATUS_TONE: Record<string, "neutral" | "warning" | "success" | "brand"> =
 };
 
 function RaportDetailPage() {
-  const { sekolah, id } = useParams({ from: "/sch/$sekolah/akademik/raport/$id" });
+  const { sekolah, ta, id } = useParams({ from: "/sch/$sekolah/akademik/$ta/raport/$id" });
   const qc = useQueryClient();
   const docQuery = useResourceDoc<RaportDoc>("Raport", id);
   const [alasan, setAlasan] = useState("");
@@ -130,7 +130,7 @@ function RaportDetailPage() {
     return (
       <Alert tone="danger" title="Gagal memuat raport">
         Dokumen raport tidak ditemukan.{" "}
-        <Link to="/sch/$sekolah/akademik/raport" params={{ sekolah }} className="underline">
+        <Link to="/sch/$sekolah/akademik/$ta/raport" params={{ sekolah, ta }} className="underline">
           Kembali ke daftar
         </Link>
       </Alert>
@@ -154,7 +154,7 @@ function RaportDetailPage() {
             <Link to="/sch/$sekolah/akademik" params={{ sekolah }} className={className}>{children}</Link>
           ) },
           { label: "Raport", render: ({ className, children }) => (
-            <Link to="/sch/$sekolah/akademik/raport" params={{ sekolah }} className={className}>{children}</Link>
+            <Link to="/sch/$sekolah/akademik/$ta/raport" params={{ sekolah, ta }} className={className}>{children}</Link>
           ) },
           { label: doc.name },
         ]}
@@ -228,4 +228,4 @@ function RaportDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/raport/$id")({ component: RaportDetailPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/raport/$id")({ component: RaportDetailPage });

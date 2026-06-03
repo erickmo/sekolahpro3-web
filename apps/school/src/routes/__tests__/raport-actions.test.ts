@@ -11,7 +11,7 @@ vi.mock("@sekolahpro/api-client", () => ({
   frappeFetch: vi.fn(),
 }));
 
-import { availableRaportActions } from "../sch.$sekolah.akademik.raport.$id";
+import { availableRaportActions } from "../sch.$sekolah.akademik.$ta.raport.$id";
 
 const keys = (status: string | undefined) => availableRaportActions(status).map((a) => a.key);
 

@@ -72,9 +72,9 @@ const GUIDE_TIPS: string[] = [
 
 function EntriNilaiEditPage() {
   const ctx = useAkademikContextOptional();
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
-  const search = useSearch({ from: "/sch/$sekolah/akademik/entri-nilai/edit" });
-  const navigate = useNavigate({ from: "/sch/$sekolah/akademik/entri-nilai/edit" });
+  const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/entri-nilai/edit" });
+  const search = useSearch({ from: "/sch/$sekolah/akademik/$ta/entri-nilai/edit" });
+  const navigate = useNavigate({ from: "/sch/$sekolah/akademik/$ta/entri-nilai/edit" });
 
   const onStart = useCallback(
     (sel: EntriNilaiSelection) => {
@@ -115,6 +115,7 @@ function EntriNilaiEditPage() {
           }}
           onChangeSelection={onChangeSelection}
           sekolah={sekolah}
+          ta={ta}
         />
       </div>
     );
@@ -159,7 +160,7 @@ function EditorGuide() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/akademik/entri-nilai/edit")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/entri-nilai/edit")({
   component: EntriNilaiEditPage,
   validateSearch: (s: Record<string, unknown>): EditSearch => {
     const out: EditSearch = {};

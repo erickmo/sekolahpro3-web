@@ -16,7 +16,7 @@ vi.mock("@sekolahpro/api-client", () => ({
 }));
 vi.mock("@sekolahpro/auth", () => ({ useSessionStore: vi.fn(() => undefined) }));
 
-import { resolveAsesmenTenant } from "../sch.$sekolah.akademik.asesmen.index";
+import { resolveAsesmenTenant } from "../sch.$sekolah.akademik.$ta.asesmen.index";
 
 describe("resolveAsesmenTenant", () => {
   it("prefers the explicit session school", () => {
