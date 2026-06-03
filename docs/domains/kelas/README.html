@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domain Kelas & Rombel — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Kelas & Rombel — Pengelompokan & Manajemen Siswa Akademik</h1>
+  <p class="muted">Domain Kelas & Rombel mengelola pengelompokan siswa akademik mulai dari pembentukan rombongan belajar, penugasan wali kelas, manajemen daftar siswa per rombel, hingga monitoring kapasitas dan kondisi kelas. Menyediakan dashboard operasional dan alur setup struktural dari pembentukan rombel hingga penjadwalan mata pelajaran.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend Frappe module:</strong> <code>sekolahpro.siswa</code> (repo terpisah: <code>sekolahpro</code>) — doctypes Rombongan Belajar, Anggota Rombel</li>
+    <li><strong>Web routes prefix:</strong> <code>/sch/$sekolah/kelas</code> — dashboard, daftar kelas, rombongan belajar, anggota rombel, detail kelas per <code>$kodeKelas</code></li>
+    <li><strong>Shared packages:</strong> <code>@sekolahpro/api-client</code> (resource CRUD dengan Frappe REST), <code>@sekolahpro/ui</code> (komponen UI modular), <code>@sekolahpro/auth</code> (session & role mapping)</li>
+    <li><strong>Foundation data files:</strong>
+      <ul>
+        <li><code>apps/school/src/data/kelas.ts</code> — mock data generator untuk development (siswa, guru, jadwal, nilai, absensi)</li>
+        <li><code>apps/school/src/lib/glossary.ts</code> — definisi istilah akademik (Rombel, PPDB, TA, NIS, NIP)</li>
+      </ul>
+    </li>
+    <li><strong>Komponen UI domain:</strong> <code>components/kelas/RombelFormModal</code> (create/edit rombel), <code>components/kelas/AnggotaRombelFormModal</code> (manage anggota), <code>components/ResourceListPage</code> (generic list CRUD)</li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Doctype</th>
+        <th>Peran</th>
+        <th>Field Kunci</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Rombongan Belajar</code></td>
+        <td>Master kelas/rombel untuk satu tahun ajaran. Menyimpan struktur, wali kelas, kapasitas, dan roster siswa via child table Anggota Rombel. Autoname <code>format:{tahun_ajaran}-{nama_rombel}</code>.</td>
+        <td><code>nama_rombel</code> (reqd), <code>tahun_ajaran</code> (Link, reqd), <code>jenjang</code> (Link Unit Jenjang, reqd), <code>tingkat</code> (Int, 1–12, reqd), <code>sekolah</code> (Link, reqd), <code>wali_kelas</code> (Link User, optional), <code>kapasitas</code> (Int, default 32, >0), <code>ruangan</code> (Link, optional), <code>status</code> (Select: Aktif/Ditutup, default Aktif), <code>jumlah_siswa</code> (Int, read-only denorm count), <code>anggota</code> (Table child: Anggota Rombel), <code>organisasi</code> (Link, read-only tenant anchor)</td>
+      </tr>
+      <tr>
+        <td><code>Anggota Rombel</code></td>
+        <td>Child table: satu row = satu siswa dalam rombel. Status Aktif berarti siswa terdaftar; Keluar untuk historical record (mutasi, drop-out, dll).</td>
+        <td><code>siswa</code> (Link Siswa, reqd), <code>no_urut</code> (Int, optional, >0 saat diset), <code>tanggal_masuk_rombel</code> (Date, optional), <code>status</code> (Select: Aktif/Keluar, default Aktif)</td>
+      </tr>
+      <tr>
+        <td><code>Tahun Ajaran</code></td>
+        <td>Master periode akademik per sekolah. Linked dari Rombongan Belajar (required). Satu per sekolah aktif via <code>is_current=1</code>. Dokumentasi di domain akademik.</td>
+        <td><code>nama</code>, <code>status</code>, <code>is_current</code>, <code>tanggal_mulai</code>, <code>tanggal_selesai</code>, <code>semester_ganjil_mulai/akhir</code>, <code>semester_genap_mulai/akhir</code>, <code>sekolah</code></td>
+      </tr>
+      <tr>
+        <td><code>Unit Jenjang</code></td>
+        <td>Master tipe jenjang (TK, SD, SMP, SMA, etc). Linked dari Rombongan Belajar (required). Setup di domain master data.</td>
+        <td><code>nama</code>, <code>kode</code>, <code>sekolah</code></td>
+      </tr>
+      <tr>
+        <td><code>Ruangan</code></td>
+        <td>Master ruangan fisik sekolah. Optional link dari Rombongan Belajar untuk tracking lokasi kelas.</td>
+        <td><code>nama_ruangan</code>, <code>sekolah</code>, <code>kapasitas</code> (optional)</td>
+      </tr>
+      <tr>
+        <td><code>Siswa</code> (inferred)</td>
+        <td>Master data siswa per sekolah. Linked dari Anggota Rombel (required). Detail siswa (NIS, nama, gender, etc) di domain siswa. Status: Calon, Aktif, Alumni, Pindah Keluar, DO.</td>
+        <td><code>nama</code>, <code>nis</code>, <code>jenis_kelamin</code>, <code>sekolah</code>, <code>status</code> (Calon, Aktif, Alumni, Pindah Keluar, DO)</td>
+      </tr>
+      <tr>
+        <td><code>User</code> (Frappe native)</td>
+        <td>Pengguna sistem. Linked sebagai <code>wali_kelas</code> di Rombongan Belajar. Typically role "Wali Kelas" atau "Pegawai Guru".</td>
+        <td><code>email</code>, <code>first_name</code>, <code>roles</code></td>
+      </tr>
+      <tr>
+        <td><code>Jadwal Pelajaran</code></td>
+        <td>Penjadwalan mata pelajaran per rombel. Linked optional dari dashboard kelas untuk cek jadwal aktif. Detail di domain akademik.</td>
+        <td><code>rombel</code> (Link), <code>is_aktif</code> (Check), <code>tahun_ajaran</code>, <code>semester</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Alur Utama</h2>
+  <ol>
+    <li><strong>Setup Rombel:</strong> Admin/Tata Usaha membuat Rombongan Belajar dengan nama, tahun ajaran, jenjang, tingkat, kapasitas, dan ruangan. Controller validasi kapasitas>0, tingkat dalam range 1–12, status enum valid.</li>
+    <li><strong>Penugasan Wali Kelas:</strong> Tata Usaha menunjuk User (role Wali Kelas/Guru) ke field <code>wali_kelas</code> di rombel. Dashboard menampilkan warning "Rombel Tanpa Wali Kelas" untuk follow-up.</li>
+    <li><strong>Enrollment Siswa:</strong> Tata Usaha menambah Siswa ke rombel via tab Anggota Rombel. Controller Pendaftaran Siswa (domain siswa) menambah row Anggota Rombel + recount <code>jumlah_siswa</code> saat siswa lulus PPDB. Validasi: siswa tidak boleh Aktif dua kali dalam satu rombel (spec rule 4).</li>
+    <li><strong>Monitoring Kapasitas:</strong> Dashboard otomatis menghitung stat: rombel tanpa wali, rombel >100% kapasitas, rombel penuh (jumlah_siswa >= kapasitas), rombel tanpa jadwal aktif. Attention list highlight masalah.</li>
+    <li><strong>Penjadwalan:</strong> User navigasi dari dashboard ke modul Jadwal Pelajaran (/sch/$sekolah/jadwal/daftar) untuk set jadwal per rombel. Dashboard warn jika rombel aktif belum ada jadwal aktif.</li>
+    <li><strong>Detail Kelas:</strong> Wali kelas / admin akses kelas detail (/sch/$sekolah/kelas/$kodeKelas) melihat roster siswa, jadwal mapel, rekap nilai, absensi, jurnal kelas, aktivitas audit log. Tab-based interface (Ringkasan, Siswa, Jadwal, Nilai, Absensi, Jurnal, Aktivitas).</li>
+  </ol>
+
+  <h2>Aturan & Kebijakan</h2>
+  <ul>
+    <li><strong>Kapasitas enforcement:</strong> Rombongan Belajar harus kapasitas > 0. Validasi di on_submit + recount_jumlah_siswa() alert (non-throwing) jika aktif anggota > kapasitas pasca-mutasi.</li>
+    <li><strong>Grade-level bounds:</strong> Tingkat harus 1–12 (SD 1–6, SMP 7–9, SMA 10–12). Defensive guard di Rombongan Belajar._validate_tingkat().</li>
+    <li><strong>Unique active enrollment (spec rule 4):</strong> Satu siswa tidak boleh Aktif lebih dari satu kali dalam satu Rombongan Belajar. Anggota lama yang keluar (status=Keluar) tidak memblok re-enrolment. Validasi di Rombongan Belajar._validate_unique_anggota().</li>
+    <li><strong>Denormalization: jumlah_siswa:</strong> Count of Aktif anggota disimpan di field read-only <code>jumlah_siswa</code>. Diupdate oleh recount_jumlah_siswa() setelah insert/delete/update anggota (dijalankan dari Pendaftaran Siswa, Mutasi Siswa, Kelulusan Siswa).</li>
+    <li><strong>Status rombel:</strong> Select: Aktif (siap pembelajaran), Ditutup (archived/tidak aktif). Validasi enum di controller.</li>
+    <li><strong>Role-based access:</strong> System Manager, Tata Usaha — full CRUD; Kepala Sekolah — read-only; Wali Kelas — read saja; Pegawai Guru — read saja.</li>
+    <li><strong>Tenant scoping:</strong> <code>organisasi</code> field (read-only, fetch dari sekolah.organisasi) anchor rombel ke organisasi utama untuk multi-tenant query filtering.</li>
+    <li><strong>Dashboard alerts:</strong> "Tanpa Wali Kelas" (critical), ">100% Kapasitas" (critical), "Penuh" (warning), "Tanpa Jadwal Aktif" (warning) — link aksi cepat ke form yang bisa di-edit.</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  <h3>Triggers (memicu)</h3>
+  <ul>
+    <li><strong>Rombongan Belajar.on_insert / after_insert:</strong> Set <code>jumlah_siswa = 0</code> (denorm initial count). Tenant scoping <code>organisasi</code> fetch dari <code>sekolah.organisasi</code>.</li>
+    <li><strong>Anggota Rombel.validate():</strong> Per-row checks (status enum, no_urut > 0 jika set). Trigger sebelum Rombongan Belajar.validate().</li>
+    <li><strong>Rombongan Belajar.validate():</strong> Cross-row checks: unique_anggota, kapasitas_vs_anggota, tingkat range, status enum.</li>
+  </ul>
+  <h3>Listens (bereaksi)</h3>
+  <ul>
+    <li><strong>Pendaftaran Siswa (domain siswa).on_submit():</strong> Menambah row ke Anggota Rombel child table + call rombel.recount_jumlah_siswa() → db_set("jumlah_siswa", count) tanpa re-validate.</li>
+    <li><strong>Mutasi Siswa.on_submit():</strong> Update status anggota dari Aktif → Keluar (mutasi keluar) atau insert baru (mutasi masuk) + recount. Detail di spec siswa.</li>
+    <li><strong>Kelulusan Siswa.on_submit():</strong> Update status anggota → Keluar (siswa lulus) + recount.</li>
+    <li><strong>Web dashboard kelas (/sch/$sekolah/kelas):</strong> Query "Rombongan Belajar" + "Jadwal Pelajaran" untuk compute attention items. Jika rombel aktif tanpa jadwal is_aktif=1 maka warning "Tanpa Jadwal".</li>
+  </ul>
+
+  <h2>Batas Ruang Lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Nilai siswa per mapel:</strong> Deferred ke domain akademik (Entri Nilai, Asesmen, Raport). Kelas detail page menampilkan mock/linked data setelah BE siap.</li>
+    <li><strong>Absensi harian & rekapan:</strong> Deferred ke domain akademik (Absensi Pelajaran, Absensi Harian). Dashboard kelas menampilkan % kehadiran mock. Join dengan actual data via Absensi doctype post-sprint.</li>
+    <li><strong>Jurnal kelas & aktivitas:</strong> Mock data di kelas.ts. Audit Log SekolahPro doctype (backend) akan supply real action history post-integration.</li>
+    <li><strong>Perpindahan rombel dalam tahun ajaran:</strong> Tidak support. Siswa assign ke rombel sekali per tahun via Pendaftaran. Mutasi keluar = siswa keluar sistem, tidak re-assign rombel lain.</li>
+    <li><strong>Konfigurasi kapasitas default per Unit Jenjang:</strong> Hardcoded 32 di Rombongan Belajar JSON. Future: inherit dari Unit Jenjang.default_kapasitas (YAGNI).</li>
+    <li><strong>Role permissions granular per rombel:</strong> Not implemented. Wali Kelas role read-only semua rombel. Future: scope wali kelas ke rombel-nya saja (low priority, low ROI).</li>
+  </ul>
+</body>
+</html>

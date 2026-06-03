@@ -12,6 +12,7 @@
     "test": "VITE_USE_MOCKS=true vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@sekolahpro/ads": "workspace:*",
     "@sekolahpro/api-client": "workspace:*",
     "@sekolahpro/auth": "workspace:*",
     "@sekolahpro/config": "workspace:*",

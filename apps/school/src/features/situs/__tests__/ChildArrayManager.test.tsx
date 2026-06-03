@@ -56,6 +56,29 @@ describe("ChildArrayManager", () => {
       .toEqual(["Kedua", "Pertama"]);
   });
 
+  it("reorder down moves the first row below the second", async () => {
+    render(wrap(<ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={rows} />));
+    fireEvent.click(screen.getAllByRole("button", { name: /Turunkan/i })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: /^Simpan$/i }));
+    await waitFor(() => expect(saveMock).toHaveBeenCalled());
+    const [, args] = saveMock.mock.calls[0]!;
+    expect((args as { values: { keunggulan: KeunggulanRow[] } }).values.keunggulan.map((r) => r.judul))
+      .toEqual(["Kedua", "Pertama"]);
+  });
+
+  it("disables up on the first row and down on the last row", () => {
+    render(wrap(<ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={rows} />));
+    expect(screen.getAllByRole("button", { name: /Naikkan/i })[0]).toBeDisabled();
+    const turun = screen.getAllByRole("button", { name: /Turunkan/i });
+    expect(turun[turun.length - 1]).toBeDisabled();
+  });
+
+  it("disables both reorder buttons when there is only one row", () => {
+    render(wrap(<ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={[rows[0]!]} />));
+    expect(screen.getByRole("button", { name: /Naikkan/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Turunkan/i })).toBeDisabled();
+  });
+
   it("delete removes the row from the saved payload", async () => {
     render(wrap(<ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={rows} />));
     fireEvent.click(screen.getAllByRole("button", { name: /Hapus/i })[0]!);
@@ -76,5 +99,25 @@ describe("ChildArrayManager", () => {
     await waitFor(() => expect(saveMock).toHaveBeenCalled());
     const [, args] = saveMock.mock.calls[0]!;
     expect((args as { values: { keunggulan: KeunggulanRow[] } }).values.keunggulan[0]!.judul).toBe("Baru");
+  });
+
+  it("keeps unsaved edits when the parent re-supplies the same server rows", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = (rowsProp: Record<string, unknown>[]) => (
+      <QueryClientProvider client={qc}>
+        <ChildArrayManager sekolah="SMP Demo" schema={SCHEMA} rows={rowsProp} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(tree(rows));
+    // Edit row 0's title locally (commit the modal draft, but do NOT click Simpan).
+    fireEvent.click(screen.getAllByRole("button", { name: /^Ubah$/i })[0]!);
+    fireEvent.change(await screen.findByLabelText(/Judul/), { target: { value: "Diedit" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Simpan baris$/i }));
+    expect(screen.getByText("Diedit")).toBeInTheDocument();
+    // A background refetch hands back a fresh array with identical server values.
+    rerender(tree(rows.map((r) => ({ ...r }))));
+    // The unsaved local edit must survive (no clobber from the re-sync effect).
+    expect(screen.getByText("Diedit")).toBeInTheDocument();
+    expect(screen.queryByText("Pertama")).toBeNull();
   });
 });

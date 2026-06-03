@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domain Akademik — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Akademik — Manajemen Penilaian Operasional</h1>
+  <p class="muted">Domain Akademik mengelola operasional penilaian siswa mulai dari input nilai asesmen, entri nilai per komponen, hingga penyusunan raport. Dirancang dalam tiga peran utama (Admin/Operator, Guru/Wali Kelas, Kepala Sekolah) dengan konteks periode Tahun Ajaran + Semester yang persisten dan aman dari kesalahan input periode.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend Frappe module:</strong> <code>sekolahpro.akademik</code> (repo terpisah: <code>sekolahpro</code>)</li>
+    <li><strong>Web routes prefix:</strong> <code>/sch/$sekolah/akademik</code> — operasional saja. Setup (Tahun Ajaran, Kurikulum, Mapel, KKM, Komponen Nilai, Konfigurasi) pindah ke <code>/sch/$sekolah/master</code> (Master Data)</li>
+    <li><strong>Shared packages:</strong> <code>@sekolahpro/api-client</code> (resource CRUD), <code>@sekolahpro/ui</code> (komponen UI), <code>@sekolahpro/auth</code> (session & role mapping)</li>
+    <li><strong>Foundation libraries:</strong>
+      <ul>
+        <li><code>lib/akademikContext.tsx</code> — React context untuk periode (TA + Semester) + flag keamanan (<code>isPastPeriod</code>, <code>noActiveTa</code>, <code>dirty</code>)</li>
+        <li><code>lib/akademikPeriode.ts</code> — Pure resolver periode (URL → localStorage → is_current → status Aktif + window → terbaru)</li>
+        <li><code>lib/akademikRole.ts</code> — Role mapper Frappe → 3 academic buckets (admin, guru, kepala)</li>
+        <li><code>lib/akademikTrend.ts</code> — Aggregator trend nilai per periode (sparkline data)</li>
+        <li><code>lib/predikatFromKehadiran.ts</code> — Pure helper predikat ekstrakurikuler dari % kehadiran</li>
+      </ul>
+    </li>
+    <li><strong>Komponen UI:</strong> <code>AkademikContextBar</code> (periode selector + warning banner + guard dirty), <code>AsesmenInput</code> (grid input nilai autosave), <code>EntriNilaiGrid</code> (rekap nilai per komponen), <code>PageGuide</code> (panduan per-halaman), viz components (<code>DistributionBar</code>, <code>HBarChart</code>)</li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Doctype</th>
+        <th>Peran</th>
+        <th>Field Kunci</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Tahun Ajaran</code></td>
+        <td>Master periode akademik per sekolah. Satu aktif per sekolah via <code>is_current=1</code>.</td>
+        <td><code>is_current</code>, <code>status</code> (Draft/Aktif/Closed), <code>tanggal_mulai</code>, <code>tanggal_selesai</code>, <code>semester_ganjil_mulai/akhir</code>, <code>semester_genap_mulai/akhir</code>, <code>sekolah</code></td>
+      </tr>
+      <tr>
+        <td><code>Asesmen</code></td>
+        <td>Input nilai test satu kelas per satu mapel. Feeder ke Entri Nilai.</td>
+        <td><code>judul</code>, <code>komponen</code> (link), <code>mata_pelajaran</code>, <code>rombel</code>, <code>semester</code>, <code>tahun_ajaran</code>, <code>tanggal</code>, <code>nilai[]</code> (child: siswa, nilai)</td>
+      </tr>
+      <tr>
+        <td><code>Entri Nilai</code></td>
+        <td>Rekap nilai per siswa × mapel × semester. Editor grid per komponen penilaian (UH, UTS, UAS, Tugas, dll).</td>
+        <td><code>siswa</code>, <code>mata_pelajaran</code>, <code>semester</code>, <code>tahun_ajaran</code>, <code>nilai_akhir</code>, <code>predikat</code>, <code>nilai_komponen[]</code> (child: komponen, nilai)</td>
+      </tr>
+      <tr>
+        <td><code>Raport</code></td>
+        <td>Dokumen raport siswa per semester. Workflow: Draft → Review → Submitted → Final → Locked/Tercetak.</td>
+        <td><code>siswa</code>, <code>tahun_ajaran</code>, <code>semester</code>, <code>status</code> (DocType workflow), <code>raport_mapel[]</code> (child), <code>created_by</code></td>
+      </tr>
+      <tr>
+        <td><code>Komponen Nilai</code></td>
+        <td>Master tipe komponen penilaian (UH, UTS, UAS, Tugas, Proyek, etc). Difilter per mapel.</td>
+        <td><code>nama_komponen</code>, <code>kode_komponen</code>, <code>mata_pelajaran</code> (link), <code>bobot</code> (%)</td>
+      </tr>
+      <tr>
+        <td><code>Mata Pelajaran</code></td>
+        <td>Master mapel sekolah. Linked dari Asesmen & Entri Nilai.</td>
+        <td><code>nama_mapel</code>, <code>kode_mapel</code>, <code>jenis</code> (Wajib/Pilihan)</td>
+      </tr>
+      <tr>
+        <td><code>Rombongan Belajar</code></td>
+        <td>Master kelas/rombel. Linked dari Asesmen; filtered status Aktif untuk input.</td>
+        <td><code>nama_rombel</code>, <code>tingkat</code>, <code>status</code> (Aktif/Tutup), <code>guru_kelas</code></td>
+      </tr>
+      <tr>
+        <td><code>KKM</code></td>
+        <td>Kriteria Ketuntasan Minimal per mapel × tingkat. Ditampilkan di dashboard untuk referensi.</td>
+        <td><code>mata_pelajaran</code>, <code>tingkat</code>, <code>kkm</code> (nilai minimum)</td>
+      </tr>
+      <tr>
+        <td><code>Kurikulum</code></td>
+        <td>Master kurikulum sekolah (K-13, Merdeka, etc). Referensi master setup.</td>
+        <td><code>nama_kurikulum</code>, <code>kode</code></td>
+      </tr>
+      <tr>
+        <td><code>Konfigurasi Penilaian</code></td>
+        <td>Setting perilaku penilaian per sekolah (scale nilai, predikat mapping, dll). Inferred dalam kode.</td>
+        <td><code>sekolah</code> (link), settingan penilaian</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Alur Utama</h2>
+  <ol>
+    <li><strong>Setup Master Data (di /sch/$sekolah/master):</strong> Admin atur Tahun Ajaran (tandai is_current=1 untuk TA aktif), Mata Pelajaran, Komponen Nilai, KKM, Kurikulum, Konfigurasi.</li>
+    <li><strong>Resolusi Periode Otomatis:</strong> Saat guru buka /akademik/entri-nilai tanpa parameter, sistem resolusi chain (URL → localStorage → is_current → status Aktif + window → terbaru) memilih TA + semester, redirect URL, persist ke localStorage.</li>
+    <li><strong>Input Asesmen (Input Nilai Test):</strong> Guru pilih kelas (rombel status Aktif) & mapel → daftar test tampil → buat test baru modal (judul, tanggal, komponen, semester) → input nilai per siswa grid (autosave on-blur, validasi 0–100).</li>
+    <li><strong>Entri Nilai (Rekap Per Komponen):</strong> Guru pilih rombel/mapel/semester → editor grid nilai per siswa × komponen → grid lapor dirty ke context → autosave per baris → ringkasan simpan echo periode.</li>
+    <li><strong>Raport (Penyusunan & Cetak):</strong> Guru buka daftar raport siswa → filter per semester/TA → pilih status (Draft/Review/Submitted/Final/Locked) → cetak atau kirim ke siswa.</li>
+    <li><strong>Monitoring (Dashboard):</strong> Kepala Sekolah & Admin lihat ringkasan distribusi TA (Berjalan/Aktif/Ditutup), progres pengisian nilai, dan tren capaian akademik.</li>
+  </ol>
+
+  <h2>Aturan & Kebijakan</h2>
+  <ul>
+    <li><strong>Satu Tahun Ajaran Aktif Per Sekolah:</strong> Field <code>is_current=1</code> hanya boleh satu per sekolah. Resolusi chain gunakan <code>is_current</code> sebagai sinyal utama TA berjalan.</li>
+    <li><strong>Periode Terbuka vs Lampau:</strong> TA dianggap "lampau/ditutup" jika <code>status=Closed</code> ATAU hari ini di luar <code>[tanggal_mulai, tanggal_selesai]</code>. Saat periode lampau, banner kuning "Anda mengedit periode lampau/ditutup" tampil untuk perhatian operator.</li>
+    <li><strong>Semester Otomatis dari Window:</strong> Jika TA punya <code>semester_ganjil_mulai/akhir</code> dan <code>semester_genap_mulai/akhir</code>, sistem hitung semester dari acuan hari ini (dalam window Ganjil → "Ganjil", dalam window Genap → "Genap"). Fallback: Jul–Des → Ganjil, Jan–Jun → Genap.</li>
+    <li><strong>Guard Perubahan Periode saat Dirty:</strong> Halaman entri nilai (grid) lapor status <code>dirty</code> via context. Saat user coba ganti periode & dirty=true, konfirmasi muncul: "Pindah periode? Perubahan belum disimpan akan hilang."</li>
+    <li><strong>Validasi Asesmen Input:</strong> Nilai 0–100, kosong = belum dinilai. Autosave on-blur mengirim seluruh array <code>nilai</code> (Frappe ganti child rows, baris kosong di-drop). Status per-sel: idle → dirty → saving → saved | error.</li>
+    <li><strong>Komponen Nilai Difilter Per Mapel:</strong> Modal "Test Baru" hanya tampil komponen yang link ke mapel terpilih.</li>
+    <li><strong>Persistence Periode:</strong> URL search params <code>?ta=&semester=</code> sumber kebenaran utama (shareable, bookmarkable). Perubahan sinkron ke localStorage key <code>akademik:periode:$sekolah</code>. Jika localStorage unavailable/corrupt, abaikan, lanjut resolusi (jangan throw).</li>
+    <li><strong>Role Framing (Presentasi, Bukan Gating):</strong> Helper <code>useAkademikRole</code> map Frappe roles ke 3 buckets (admin, guru, kepala). UI frame label & guidance per peran; akses kontrol tetap di backend. Permissive fallback: jika session unavailable atau tak ada role cocok, grant semua peran.</li>
+    <li><strong>Echo Periode di Setiap Halaman:</strong> Header operasional (entri-nilai, asesmen, raport) tampilkan periode aktif suffix (e.g., "· Periode: 2024/2025 Ganjil"). Toast simpan juga echo periode.</li>
+    <li><strong>Tidak Ada TA Aktif:</strong> Resolusi jangan pernah return empty TA; fallback TA terbaru + flag <code>noActiveTa=true</code>. Bar tampilkan nudge info: "Belum ada Tahun Ajaran aktif — atur di Master Data" (link ke list TA). Halaman operasional tampilkan empty-state setup, bukan filter kosong.</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  
+  <h3>Triggers (Domain Akademik memicu events lain)</h3>
+  <ul>
+    <li><strong>Raport on_submit:</strong> Saat dokumen Raport di-submit, backend hook <code>"Raport": { "on_submit": "sekolahpro.notifikasi.services.subscribers.on_raport_submit" }</code> mengirim notifikasi (WA/email) ke siswa & wali. Domain Akademik mengeluarkan event ini; domain Notifikasi mendengarkan dan mengirim pesan.</li>
+  </ul>
+
+  <h3>Listens (Domain Akademik bereaksi)</h3>
+  <p>Tidak ada. Domain Akademik merupakan leaf consumer dalam graph dependensi.</p>
+
+  <h2>Batas Ruang Lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Manajemen <code>is_current</code> dari UI web:</strong> Tetap di Master Data backend. Fixture setup dan admin manual di Frappe desktop/mobile.</li>
+    <li><strong>Periode default di modul non-Akademik:</strong> Resolusi periode hanya di Akademik. Modul lain (Absensi, Kesiswaan, Perpustakaan) yang butuh periode punya mekanisme tersendiri (atau tidak ada periode).</li>
+    <li><strong>Modifikasi doctype / menambah field backend:</strong> Semua doctype (Asesmen, Entri Nilai, Raport, dll) dikelola sepenuhnya di backend Frappe. Web hanya CRUD via API.</li>
+    <li><strong>Custom predikat mapping:</strong> Predikat ekstrakurikuler (<code>Sangat Baik / Baik / Cukup / Kurang</code>) dari % kehadiran adalah helper pure <code>predikatFromKehadiran()</code>. Predikat nilai akademik (A/B/C/D) adalah konfigurasi backend Frappe.</li>
+    <li><strong>Laporan akademik kompleks (trend per siswa, analisis gap KKM, etc):</strong> Backend laporan Frappe atau BI tools. Web hanya dashboard ringkas + sparkline trend dasar.</li>
+  </ul>
+</body>
+</html>

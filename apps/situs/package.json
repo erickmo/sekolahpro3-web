@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
+    "@sekolahpro/ads": "workspace:*",
     "@sekolahpro/api-client": "workspace:*",
     "@sekolahpro/config": "workspace:*",
     "@sekolahpro/ui": "workspace:*",

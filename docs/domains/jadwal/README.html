@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domain: Jadwal Pelajaran — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Jadwal Pelajaran</h1>
+  <p class="muted">Mengelola jadwal pelajaran mingguan per rombel (kelas), hari libur, dan penyesuaian sementara per slot waktu atau seluruh hari tanpa mengubah data induk. Mendukung override tingkat hari (hari libur, penggantian, tambahan), dengan resolusi prioritas harian untuk KBM yang fleksibel.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend Frappe module:</strong> <code>sekolahpro.akademik</code> (repo terpisah)</li>
+    <li><strong>Web route prefix:</strong> <code>/sch/$sekolah/jadwal</code> (sekolahpro-web)</li>
+    <li><strong>Shared packages:</strong> <code>@sekolahpro/api-client</code>, <code>@sekolahpro/ui</code> (Tabs, Badge, ResourceListPage, ResourceCreateModal)</li>
+    <li><strong>Sub-modul frontend:</strong> Dashboard, Daftar Jadwal, Slot Jadwal, Jadwal Override, Slot Override</li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <tr>
+      <th>Doctype</th>
+      <th>Peran</th>
+      <th>Field Kunci</th>
+    </tr>
+    <tr>
+      <td><code>Jadwal Pelajaran</code></td>
+      <td>Header jadwal mingguan tetap untuk 1 rombel per semester + tahun ajaran</td>
+      <td><code>rombel</code>, <code>semester</code>, <code>tahun_ajaran</code>, <code>kurikulum</code>, <code>is_aktif</code>, <code>slots</code> (child table)</td>
+    </tr>
+    <tr>
+      <td><code>Slot Jadwal</code> (child)</td>
+      <td>1 baris = 1 slot mingguan (hari + jam mulai/selesai + mapel + guru)</td>
+      <td><code>hari</code>, <code>jam_mulai</code>, <code>jam_selesai</code>, <code>mata_pelajaran</code>, <code>guru</code>, <code>ruangan</code></td>
+    </tr>
+    <tr>
+      <td><code>Jadwal Override</code></td>
+      <td>Override jadwal pada tanggal spesifik (libur, penggantian, tambahan) — prioritas tinggi dari jadwal tetap</td>
+      <td><code>rombel</code>, <code>tanggal</code>, <code>tipe</code> (Libur/Pengganti/Tambahan), <code>alasan</code>, <code>slots</code> (child table)</td>
+    </tr>
+    <tr>
+      <td><code>Slot Override</code> (child)</td>
+      <td>Slot pengganti dalam 1 hari override — jika tipe "Libur" maka kosong; tipe lain wajib ≥1 slot</td>
+      <td><code>jam_mulai</code>, <code>jam_selesai</code>, <code>mata_pelajaran</code>, <code>guru</code>, <code>ruangan</code></td>
+    </tr>
+  </table>
+
+  <h2>Alur Utama</h2>
+  <ol>
+    <li><strong>Definisi Slot Waktu:</strong> Admin/Kepala Sekolah membuat master <code>Slot Jadwal</code> yang akan digunakan sebagai template pelajaran (jam pelajaran, istirahat, upacara).</li>
+    <li><strong>Susun Jadwal Mingguan:</strong> Guru/Staff Akademik membuat <code>Jadwal Pelajaran</code> header, mengisi <code>rombel</code>, <code>semester</code>, <code>tahun_ajaran</code>, <code>kurikulum</code>, lalu menambahkan slot per hari (hari, jam, mapel, guru).</li>
+    <li><strong>Aktifkan Jadwal:</strong> Ketika jadwal mingguan siap, set <code>is_aktif=1</code>. Sistem memastikan hanya 1 jadwal aktif per (rombel, semester, tahun_ajaran).</li>
+    <li><strong>Override per Hari:</strong> Untuk tanggal tertentu, buat <code>Jadwal Override</code>:
+      <ul>
+        <li>Tipe "Libur" → tidak ada KBM, slot kosong</li>
+        <li>Tipe "Pengganti"/"Tambahan" → wajib minimal 1 slot pengganti di child <code>Slot Override</code></li>
+      </ul>
+    </li>
+    <li><strong>Resolusi Harian:</strong> Sistem resolver (backend) mengecek <code>Jadwal Override</code> dulu untuk tanggal tertentu; jika tidak ada, fallback ke <code>Jadwal Pelajaran</code> aktif.</li>
+  </ol>
+
+  <h2>Aturan &amp; Kebijakan</h2>
+  <ul>
+    <li><strong>Unikness Jadwal Aktif:</strong> Hanya 1 jadwal aktif per kombinasi (rombel, semester, tahun_ajaran). Sebelum mengaktifkan jadwal baru, jadwal lama harus dinonaktifkan terlebih dahulu.</li>
+    <li><strong>Validasi Jam Slot:</strong> Setiap slot: <code>jam_selesai &gt; jam_mulai</code> (sanity check).</li>
+    <li><strong>Pencegahan Overlap Kelas:</strong> Tidak boleh ada 2 slot rombel yang sama dengan jam overlap pada hari yang sama dalam 1 jadwal mingguan.</li>
+    <li><strong>Pencegahan Overlap Guru (Internal):</strong> Satu guru tidak boleh punya 2 slot overlap di hari yang sama dalam jadwal yang sama.</li>
+    <li><strong>Pencegahan Overlap Guru (Silang Jadwal):</strong> Guru tidak boleh dijadwalkan dengan jam overlap di 2 rombel berbeda pada tahun + semester yang sama (konflik lintas jadwal aktif).</li>
+    <li><strong>Pencegahan Konflik Kelas (Silang Jadwal):</strong> Rombel tidak boleh punya 2 jadwal aktif dengan slot overlap (safety-net).</li>
+    <li><strong>Validasi Override per Tipe:</strong>
+      <ul>
+        <li>Tipe "Libur" → <code>slots</code> harus kosong (tidak ada KBM)</li>
+        <li>Tipe "Pengganti"/"Tambahan" → <code>slots</code> wajib minimal 1 baris</li>
+      </ul>
+    </li>
+    <li><strong>Unikness Override:</strong> Hanya 1 override per (rombel, tanggal). Tanggal tidak boleh duplikat.</li>
+    <li><strong>Pencegahan Overlap Guru (Override):</strong> Guru tidak boleh bentrok jam di 2 override berbeda pada tanggal yang sama.</li>
+    <li><strong>Tenant Scoping (ADR-0042):</strong> Field <code>sekolah</code> adalah tenant owner; <code>organisasi</code> adalah anchor (fetch dari sekolah).</li>
+    <li><strong>Role-Based Access:</strong>
+      <ul>
+        <li><code>System Manager</code>: Full CRUD</li>
+        <li><code>Pegawai Guru</code>: Read-only (lihat jadwal untuk persiapan KBM)</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Keamanan &amp; Validasi</h2>
+  <ul>
+    <li><strong>Validasi Konflk Guru:</strong> Backend menjalankan <code>Jadwal Override._validasi_konflik_silang()</code> saat insert/update untuk mendeteksi guru bentrok jam di 2 override berbeda pada tanggal yang sama, atau vs jadwal aktif. Raised <code>ValidationError</code> jika conflict ditemukan.</li>
+    <li><strong>Cascading Validation:</strong> Saat Jadwal Pelajaran diaktifkan (<code>is_aktif=1</code>), sistem scan semua slot untuk memastikan tidak ada overlap kelas/guru. Validasi ini dilakukan di <code>jadwal_pelajaran.validate_and_activate()</code>.</li>
+    <li><strong>Data Integrity Tenancy:</strong> Setiap doctype di domain ini (Jadwal Pelajaran, Jadwal Override, Slot Jadwal, Slot Override) mempunyai field <code>sekolah</code> (tenant owner) dan <code>organisasi</code> (anchor dari sekolah). Query otomatis di-filter per sekolah aktif pengguna.</li>
+    <li><strong>Audit Trail:</strong> Frappe <code>track_changes</code> otomatis di-enable untuk semua doctype domain ini. Perubahan header (rombel, is_aktif, tipe) dan child table dicatat dengan user + timestamp.</li>
+    <li><strong>No Client-Side Trust:</strong> Semua validasi konflik (overlap guru, jam slot, duplicate override) dijalankan di server backend, bukan di frontend. Frontend hanya display + UX hint.</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  
+  <h3>Triggers (memicu)</h3>
+  <ul>
+    <li><strong>Jadwal Pelajaran save (is_aktif=1):</strong> Bisa memicu alert atau notifikasi ke modul Penugasan Guru untuk verifikasi bahwa semua guru dalam slot sudah punya SK Mengajar aktif.</li>
+    <li><strong>Jadwal Override insert:</strong> Bisa memicu alert/notifikasi ke Absensi Guru jika tipe "Libur" (hari non-KBM, guru tidak perlu masuk), atau jika tipe "Pengganti" (guru berubah, perlu update presensi).</li>
+    <li><strong>Slot guru atau mapel berubah:</strong> Potensial impact ke Entri Nilai (nilai siswa terkait mapel) dan Absensi Pelajaran (presensi per pelajaran).</li>
+  </ul>
+
+  <h3>Listens (bereaksi)</h3>
+  <ul>
+    <li><strong>Dari Penugasan Guru:</strong> Ketika SK Mengajar guru dihapus atau di-nonaktifkan, dashboard Jadwal bisa menampilkan alert bahwa guru sudah tidak berhak mengajar (kontrol preventif di Jadwal Override/penggantian).</li>
+    <li><strong>Dari Absensi Guru:</strong> Dashboard Jadwal menerima info guru izin → dashboard menampilkan alert "Guru Izin → Kelas Terdampak" (stub untuk future linking ke fitur cari pengganti).</li>
+    <li><strong>Dari Konfigurasi Tahun Ajaran/Semester:</strong> Ketika semester ditutup atau tahun ajaran aktif berubah, jadwal non-aktif semester lama tidak lagi dijadwalkan, dan filter di frontend otomatis switch ke tahun/semester aktif baru.</li>
+  </ul>
+
+  <h2>Batas Ruang Lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Jadwal per-rombel saja (per 2026-06-03):</strong> Tidak ada dukungan jadwal by-guru (guru pribadi mengambil kelas ad-hoc). Guru dijadwalkan melalui Penugasan Guru yang di-assign ke rombel.</li>
+    <li><strong>Template Slot Jadwal (master) masih dalam desain:</strong> Fitur "copy-paste" slot dari template belum diimplementasikan. Saat ini slot diisi manual per jadwal.</li>
+    <li><strong>Konflik ruangan:</strong> Tidak ada pencegahan overlap ruangan (2 rombel di ruangan sama jam yang sama). Kontrol ini ditangguhkan per fitur pengaturan fasilitas & room scheduling v2.</li>
+    <li><strong>Bulk edit slot:</strong> Fitur edit batch slot (mis. shift semua jam +30 menit) belum ada; direncanakan post-v1.</li>
+    <li><strong>Export/Import jadwal:</strong> Belum ada fitur import dari file Excel atau export ke format ical. Ditangguhkan post-v1.</li>
+    <li><strong>Historisasi perubahan jadwal:</strong> Tracking perubahan slot (audit log detail) tidak tersedia per 2026-06-03; sistem hanya track `modified` header. Detail historisasi ditangguhkan v2.</li>
+    <li><strong>Integrasi Sistem Informasi Sekolah (real-time):</strong> Sinkronisasi dua-arah dengan sistem SIS pihak ketiga tidak ada; hanya fallback ke Frappe REST API standar.</li>
+  </ul>
+</body>
+</html>

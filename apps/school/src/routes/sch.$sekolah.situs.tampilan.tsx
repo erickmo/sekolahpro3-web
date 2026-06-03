@@ -6,6 +6,7 @@ import {
   FormField,
   Input,
   PageHeader,
+  SkeletonText,
   Switch,
   Textarea,
 } from "@sekolahpro/ui";
@@ -13,6 +14,7 @@ import { useSitus, useSaveSitus, useTemplates, type SitusDoc } from "../data/sit
 import { PageGuide } from "../components/guide";
 import { SITUS_PAGE_GUIDES } from "../components/situs/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
+import { useUnsavedChanges } from "../lib/useUnsavedChanges";
 
 const TOGGLES: { name: keyof SitusDoc; label: string }[] = [
   { name: "tampilkan_berita", label: "Berita" },
@@ -25,7 +27,7 @@ const TOGGLES: { name: keyof SitusDoc; label: string }[] = [
 ];
 
 export function TampilanPage({ sekolah }: { sekolah: string }) {
-  const { data } = useSitus(sekolah);
+  const { data, isLoading, isError, refetch } = useSitus(sekolah);
   const templates = useTemplates();
   const save = useSaveSitus(sekolah);
   const [form, setForm] = useState<Partial<SitusDoc>>({});
@@ -36,6 +38,30 @@ export function TampilanPage({ sekolah }: { sekolah: string }) {
 
   const set = (k: keyof SitusDoc, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
   const str = (k: keyof SitusDoc) => (form[k] == null ? "" : String(form[k]));
+
+  // Warn on tab close while edits diverge from the loaded config. Hook stays above
+  // the loading/error early returns to keep call order stable (rules-of-hooks).
+  useUnsavedChanges(!!data && JSON.stringify(form) !== JSON.stringify(data));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Tampilan Situs" description="Memuat konfigurasi situs…" />
+        <Card className="p-5"><SkeletonText lines={6} /></Card>
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Tampilan Situs" description="Pilih template, atur warna brand, dan tentukan bagian yang tampil." />
+        <Card className="space-y-3 p-5">
+          <p className="text-sm text-rose-600">Gagal memuat konfigurasi situs. Coba muat ulang.</p>
+          <Button variant="ghost" onClick={() => refetch()}>Muat ulang</Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

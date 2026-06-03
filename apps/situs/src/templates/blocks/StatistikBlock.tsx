@@ -11,17 +11,21 @@ import type { BlockProps } from "./registry";
 /**
  * Render the statistik band.
  * @param block - Layout block; optional judul renders as a centered heading.
- * @returns A gradient stat band, or null when no statistik are configured.
+ * @returns A gradient stat band; a muted "belum diisi" hint when empty.
  */
 export function StatistikBlock({ block }: BlockProps) {
   const { statistik } = useSite();
-  if (!statistik.length) return null;
   return (
     <section className="situs-section" style={{ background: BRAND_GRADIENT }}>
       <Container>
         {block.judul ? (
           <h2 className="mb-12 text-center text-2xl font-bold sm:text-3xl" style={{ color: "var(--situs-brand-fg)" }}>{block.judul}</h2>
         ) : null}
+        {!statistik.length ? (
+          <p className="text-center text-sm" style={{ color: "var(--situs-brand-fg)", opacity: 0.85 }}>
+            Statistik sekolah belum diisi.
+          </p>
+        ) : (
         <div className="grid gap-8 text-center sm:grid-cols-2 lg:grid-cols-4">
           {statistik.map((s, i) => (
             <div key={`${s.label}-${i}`}>
@@ -33,6 +37,7 @@ export function StatistikBlock({ block }: BlockProps) {
             </div>
           ))}
         </div>
+        )}
       </Container>
     </section>
   );

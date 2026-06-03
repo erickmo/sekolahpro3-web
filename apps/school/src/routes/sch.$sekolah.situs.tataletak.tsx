@@ -8,10 +8,12 @@ import {
   Input,
   PageHeader,
   Select,
+  SkeletonText,
   Switch,
   Textarea,
 } from "@sekolahpro/ui";
 import { useSitus, useSaveSitus, type BlockTipe, type LayoutBlockRow } from "../data/situs";
+import { useUnsavedChanges } from "../lib/useUnsavedChanges";
 import {
   BLOCK_TIPE_OPTIONS,
   BLOCK_TIPE_LABELS,
@@ -65,7 +67,7 @@ function BlockEditor({ block, onChange }: { block: LayoutBlockRow; onChange: (b:
 
 /** Layout builder: order/toggle/configure the situs section blocks. */
 export function TataLetakPage({ sekolah }: { sekolah: string }) {
-  const { data } = useSitus(sekolah);
+  const { data, isLoading, isError, refetch } = useSitus(sekolah);
   const save = useSaveSitus(sekolah);
   const [blocks, setBlocks] = useState<LayoutBlockRow[]>([]);
   const [pick, setPick] = useState<BlockTipe>(BLOCK_TIPE_OPTIONS[0]);
@@ -77,6 +79,30 @@ export function TataLetakPage({ sekolah }: { sekolah: string }) {
   const reorder = (i: number, dir: -1 | 1) => setBlocks(move(blocks, i, i + dir));
   const remove = (i: number) => setBlocks(blocks.filter((_, idx) => idx !== i));
   const add = () => setBlocks([...blocks, newBlock(pick)]);
+
+  // Warn on tab close while the layout diverges from the loaded blocks. Hook sits
+  // above the loading/error early returns to keep call order stable.
+  useUnsavedChanges(!!data?.layout_blocks && JSON.stringify(blocks) !== JSON.stringify(data.layout_blocks));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <PageHeader title="Tata Letak" description="Memuat tata letak situs…" />
+        <Card className="p-4"><SkeletonText lines={5} /></Card>
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="space-y-4">
+        <PageHeader title="Tata Letak" description="Susun urutan, aktif/nonaktif, dan varian tiap bagian beranda situs." />
+        <Card className="space-y-3 p-4">
+          <p className="text-sm text-rose-600">Gagal memuat tata letak. Coba muat ulang.</p>
+          <Button variant="ghost" onClick={() => refetch()}>Muat ulang</Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

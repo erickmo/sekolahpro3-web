@@ -83,7 +83,7 @@ export const SITUS_PAGE_GUIDES: Record<SitusGuideId, SitusGuideContent> = {
     steps: [
       { title: "Tentukan subdomain", detail: "Isi subdomain (huruf kecil, angka, tanda hubung) untuk alamat <subdomain>.sekolahpro.id.", roles: ["operator", "admin"] },
       { title: "Tambah domain kustom", detail: "Isi domain sekolah sendiri, mis. www.namasekolah.sch.id.", roles: ["admin"] },
-      { title: "Arahkan DNS & simpan", detail: "Ikuti petunjuk CNAME lalu klik Simpan Domain; verifikasi & SSL diproses otomatis.", roles: ["operator", "admin"] },
+      { title: "Sambungkan DNS & simpan", detail: "Ikuti petunjuk CNAME lalu klik tombol simpan; verifikasi & SSL diproses otomatis.", roles: ["operator", "admin"] },
     ],
     tips: [
       "Subdomain harus unik — bila gagal, coba nama lain.",

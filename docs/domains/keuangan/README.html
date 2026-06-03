@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domain Keuangan - SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Keuangan (Keuangan & Akuntansi)</h1>
+  <p class="muted">Domain terpadu untuk manajemen operasional keuangan harian (kas, tagihan, pembayaran, pengeluaran) dan akuntansi formal (jurnal, buku besar, anggaran, pajak) di SekolahPro. Menyediakan UI role-adaptive untuk Bendahara, Kasir, Akuntan, dan Kepala Sekolah dengan visualisasi penuh dan integrasi langsung ke doctype vernon_accounting.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend:</strong> Frappe module <code>vernon_accounting</code> (repo terpisah) — 3 doctype baru: <code>School Fee Invoice</code> (Tagihan), <code>School Expense</code> (Pengeluaran), dan <code>School Fee Payment</code> (Pembayaran, derivatif Payment Entry)</li>
+    <li><strong>Frontend:</strong> SekolahPro web app (<code>apps/school</code>) — satu hub "Keuangan" menyatukan dua route-tree: <code>/keuangan/*</code> (operasional, TanStack file-based) dan <code>/akuntansi/*</code> (accounting, 35 halaman redesain)</li>
+    <li><strong>Route prefix operasional:</strong> <code>/sch/$sekolah/keuangan</code> → Tagihan, Pembayaran, Pengeluaran, Buku Kas, Dashboard</li>
+    <li><strong>Route prefix akuntansi:</strong> <code>/sch/$sekolah/akuntansi</code> → Buku Besar, Anggaran, Pajak, Referensi</li>
+    <li><strong>Shared packages:</strong> <code>@sekolahpro/ui</code> (Badge, Button, DataTable, Select, Modal), <code>@sekolahpro/api-client</code> (<code>useResourceList</code>, <code>useResourceCreate</code>, <code>useResourceDoc</code>), <code>@sekolahpro/auth</code> (<code>useSession</code>, peran Frappe)</li>
+    <li><strong>Company scoping:</strong> Vernon Accounting doctypes ditenanti oleh <code>company</code> (bukan <code>sekolah</code>). Konvensi: Company doc-id sama dengan Sekolah doc-id (misal: <code>sd-aletheia-malang</code>). Semua rute akuntansi memanggil <code>useActiveCompany()</code> dari <code>lib/akuntansi-scope.ts</code>.</li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Doctype</th>
+        <th>Peran utama</th>
+        <th>Field kunci (backend)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>School Fee Invoice</code></td>
+        <td>Bendahara, Kasir</td>
+        <td>student, posting_date, due_date, judul, jumlah, dibayar, status (Draft|Belum Dibayar|Sebagian|Lunas|Dibatalkan), kelas, tahun_ajaran, company</td>
+        <td>Live (vernon_accounting)</td>
+      </tr>
+      <tr>
+        <td><code>School Fee Payment</code> (inferred)</td>
+        <td>Kasir, Bendahara</td>
+        <td>student, posting_date, metode, jumlah, ref, penerima, invoice (link to Invoice), company</td>
+        <td>Live (vernon_accounting), derivatif Payment Entry</td>
+      </tr>
+      <tr>
+        <td><code>School Expense</code></td>
+        <td>Bendahara, Akuntan</td>
+        <td>posting_date, kategori, deskripsi, jumlah, penerima, metode, approver, status (Draft|Approval|Disetujui|Ditolak|Dibayar), company</td>
+        <td>Live (vernon_accounting)</td>
+      </tr>
+      <tr>
+        <td>Buku Kas (Cash Book)</td>
+        <td>Kasir, Bendahara</td>
+        <td>Derived dari GL (report, bukan input manual)</td>
+        <td>Derived dari live payments &amp; expenses (data/keuangan-live.ts)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Alur utama</h2>
+  <ol>
+    <li><strong>Operasional harian Bendahara:</strong> Masuki <code>/keuangan</code> → lihat Dashboard (tren kas 12 bulan, realisasi vs anggaran, komposisi pengeluaran, waterfall kas) → akses Tagihan untuk issue/track SPP siswa → view Pembayaran terima → kelola Pengeluaran dengan approval chain (Draft → Approval → Disetujui/Ditolak → Dibayar) → konsultasi Buku Kas untuk arus kas harian.</li>
+    <li><strong>Operasional Kasir:</strong> Terima pembayaran via Pembayaran page → reconcile terhadap tagihan siswa → catat metode bayar (Tunai, Transfer, QRIS, Virtual Account, EDC) → lihat Buku Kas real-time.</li>
+    <li><strong>Akuntansi Akuntan:</strong> Masuki <code>/akuntansi</code> (terintegrasi dalam hub yang sama) → verifikasi Buku Besar (akun, jurnal, GL entries, payment rec) → planning & monitoring Anggaran (budget vs actual gauge) → kelola Pajak (PPN, PPh, e-Faktur) → atur Referensi (tahun fiskal, chart of accounts, setelan).</li>
+    <li><strong>Oversight Kepala Sekolah:</strong> Dashboard hub keuangan untuk ringkasan AR aging, budget health, cash position → approve Pengeluaran tinggi → audit via Buku Besar.</li>
+    <li><strong>Data source strategy:</strong> Tagihan &amp; Pengeluaran live via <code>useTagihanLive()</code> dan <code>usePengeluaranLive()</code> ke vernon_accounting. Pembayaran live via <code>usePembayaranLive()</code>. Buku Kas derived from live data (summed by date). All scoped by <code>useActiveCompany()</code>.</li>
+  </ol>
+
+  <h2>Aturan & Kebijakan</h2>
+  <ul>
+    <li><strong>Peran presentasi (bukan akses):</strong> <code>bendahara</code>, <code>kasir</code>, <code>akuntan</code>, <code>kepala</code> diturunkan dari Frappe roles untuk MENEKANKAN UI (label, guidance, section visibility), tidak pernah MENYEMBUNYIKAN fitur. Akses kontrol tetap di backend (Frappe permission pada vernon_accounting doctypes).</li>
+    <li><strong>Pencocokan Frappe role:</strong> Fungsi <code>mapFrappeRolesToKeuangan()</code> menormalisasi dan mencari substring di raw Frappe roles. Contoh: "Bendahara", "Bendahara Sekolah", "treasurer" → peran <code>bendahara</code>. Prioritas primary: <code>kepala</code> &gt; <code>bendahara</code> &gt; <code>akuntan</code> &gt; <code>kasir</code>. Fallback permisif: tanpa sesi atau tanpa match → semua peran aktif.</li>
+    <li><strong>Company scoping:</strong> Dokumen School Fee Invoice, School Expense, School Fee Payment disaring oleh <code>company = useActiveCompany()</code> dari session aktif (<code>activeSekolah.name</code>). Admin backend harus memastikan Company dengan nama sama ada untuk setiap Sekolah.</li>
+    <li><strong>Akun GL balans:</strong> On submit Tagihan → Dr Piutang (AR), Cr Pendapatan. On submit Pengeluaran → posting sesuai kategori (Gaji → Expense Gaji, dll) dengan saldo debit/kredit terjaga.</li>
+    <li><strong>Status workflow Pengeluaran:</strong> Draft → Approval → Disetujui/Ditolak → Dibayar (final). Pengeluaran Draft dapat diedit; setelah submit tidak boleh edit tanpa cancel-resubmit.</li>
+    <li><strong>Visibilitas halaman per hub section:</strong> Operasional (Tagihan, Pembayaran, Pengeluaran, Buku Kas) menyorot bendahara/kasir; Akuntansi (Buku Besar, Anggaran, Pajak, Referensi) menyorot akuntan/kepala. Dashboard Ringkasan untuk semua. Navigasi hub (KeuanganHubNav) dipesan role via <code>isItemEmphasized()</code>.</li>
+    <li><strong>Panduan role-aware:</strong> Setiap halaman menggunakan <code>KeuanganPageGuide</code> dengan langkah-langkah bertingkat peran (bendahara lihat prosedur approval, kasir lihat prosedur penerimaan, dll). Storage terpisah per halaman via <code>storageId</code> (localStorage namespace <code>keuangan-guide:</code>).</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  
+  <h3>Triggers (memicu)</h3>
+  <ul>
+    <li><strong>On-submit School Fee Invoice:</strong> Trigger GL entries (Dr Piutang, Cr Pendapatan) di vernon_accounting backend. No UI event published.</li>
+    <li><strong>On-submit School Expense:</strong> Trigger GL entries sesuai kategori (Gaji → Payroll Accrual, ATK → Supplies Expense, dll). No UI event published.</li>
+    <li><strong>On-submit School Fee Payment:</strong> Update parent School Fee Invoice: dekremen <code>dibayar</code> field, update status ke "Cicilan" (jika partial) atau "Lunas" (jika full). No UI event published.</li>
+  </ul>
+
+  <h3>Listens (bereaksi)</h3>
+  <ul>
+    <li><strong>Akademik:</strong> Keuangan membaca <code>kelas</code> dan <code>tahun_ajaran</code> dari School Fee Invoice untuk konteks halaman dan filter. Tidak ada listener aktif; join pada Student/Kelas/Tahun Ajaran di backend. Master data Tahun Ajaran, Kelas, KKM tetap di domain akademik.</li>
+    <li><strong>Siswa:</strong> Keuangan membaca <code>student</code> field dari School Fee Invoice/Payment. Tidak ada listener; relasi di backend.</li>
+    <li><strong>Koperasi / Logistik:</strong> Tidak ada integrasi langsung. Pengeluaran kategori "Kegiatan" dapat mereferensikan order koperasi secara manual via field <code>deskripsi</code>.</li>
+  </ul>
+
+  <p class="muted"><strong>Catatan:</strong> Tidak ada event bus atau pub-sub aktif dalam domain Keuangan. Integrasi antar domain melalui foreign keys dan data read pada form load, bukan real-time updates.</p>
+
+  <h2>Batas ruang lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Dunning &amp; notifikasi otomatis:</strong> Kirim email reminder tagihan jatuh tempo → deferred. Notifikasi akan diimplementasikan saat email service tersedia.</li>
+    <li><strong>Reconciliation engine:</strong> Match Pembayaran ke Invoice otomatis → deferred. Sekarang manual via UI (select invoice dari dropdown saat create Pembayaran).</li>
+    <li><strong>Multi-currency support:</strong> Semua nilai in IDR. Multi-currency → future (enterprise).</li>
+    <li><strong>Advanced tax automation:</strong> PPN, PPh, e-Faktur ditangani via form manual di halaman Pajak. Perhitungan otomatis per kategori pengeluaran → deferred.</li>
+    <li><strong>Audit trail UI:</strong> Backend menyimpan changelog via Frappe versioning; UI audit-log page → deferred.</li>
+    <li><strong>Budget forecasting:</strong> Proyeksi anggaran Q2-Q4 berdasarkan tren realisasi → deferred. Sekarang hanya budget vs actual per bulan.</li>
+    <li><strong>Integrasi bank:</strong> Auto-import dari bank API (BCA, Mandiri, dll) → future (phase 2, memerlukan TLS & SDKs bank).</li>
+    <li><strong>Buku Kas manual:</strong> Currently derived dari GL. Manual entry form untuk adjustment → deferred.</li>
+  </ul>
+
+</body>
+</html>

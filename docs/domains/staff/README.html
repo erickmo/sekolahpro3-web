@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domain Guru & Staf — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+
+<h1>Guru & Staf (Kepegawaian)</h1>
+<p class="muted">
+Modul kelola data pegawai (guru dan staff) sekolah, mencakup profil, penugasan mengajar, SK legal (SK Mengajar/SK Jabatan), dan 
+berkas kepegawaian dengan tracking masa berlaku otomatis. Mendukung dual-role (guru yang juga staff). Peran: admin TU / operator kepegawaian.
+</p>
+
+<h2>Arsitektur</h2>
+<ul>
+  <li><strong>Backend modul Frappe:</strong> <code>sekolahpro.akademik.*</code> (repo terpisah <code>/frappe/apps/sekolahpro/</code>)</li>
+  <li><strong>Web route prefix:</strong> <code>/sch/$sekolah/staff</code> — single hub untuk guru & staff (merge dari dua menu lama)</li>
+  <li><strong>Shared packages:</strong> <code>@sekolahpro/api-client</code> (frappeFetch, useResourceList), <code>@sekolahpro/ui</code> (DataTable, Badge, modals)</li>
+  <li><strong>Pure logic layer:</strong> <code>lib/orang/</code> — staffStats, nav, glossary (testable tanpa hooks/I/O)</li>
+  <li><strong>Sub-navigasi:</strong> <code>GroupedNavTabs</code> + <code>STAFF_NAV_GROUPS</code> (lib/orang/nav.ts) — task-intent groups: Ringkasan, Data Pokok, Penugasan Mengajar, Kepegawaian</li>
+</ul>
+
+<h2>Doctypes / Entitas</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Doctype</th>
+      <th>Peran</th>
+      <th>Field kunci</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>Pegawai</code></td>
+      <td>Master guru & staff; identitas, status kepegawaian, sertifikasi, role</td>
+      <td>name (NIP), nama_lengkap, nip, status_kepegawaian (PNS|PPPK|GTY|...), is_aktif (0|1), jenis_kelamin, sudah_sertifikasi (0|1), roles[] (Pegawai Guru|Pegawai Staff)</td>
+    </tr>
+    <tr>
+      <td><code>Mapel Pengampu Guru</code></td>
+      <td>Mana mapel yang diampu guru per tingkat; relasi n:m guru↔mapel↔rombel</td>
+      <td>guru, mapel, rombel, jenjang</td>
+    </tr>
+    <tr>
+      <td><code>Penugasan Guru</code></td>
+      <td>Assignment guru mengajar per TA/semester; JJM agregat; dasar SK Mengajar</td>
+      <td>name (ID), guru, tahun_ajaran, semester, total_jjm, status (Aktif|...)</td>
+    </tr>
+    <tr>
+      <td><code>SK Mengajar</code></td>
+      <td>Dokumen legal surat keputusan mengajar; 1:1 ke Penugasan Guru; workflow multi-status</td>
+      <td>name (ID), guru, penugasan_guru, nomor_sk_manual, tanggal_sk, tanggal_mulai_berlaku, tanggal_berakhir, status (Draft|Diajukan|Disetujui Kepsek|Diterbitkan|Dicabut), qr_verifikasi, sk_pencabutan_ref</td>
+    </tr>
+    <tr>
+      <td><code>Jenis Jabatan</code></td>
+      <td>Master jenis-jenis jabatan struktural (Kepala Sekolah, Kaur Kurikulum, ...)</td>
+      <td>name (ID), nama_jabatan, level, deskripsi</td>
+    </tr>
+    <tr>
+      <td><code>SK Jabatan</code></td>
+      <td>Dokumen legal surat keputusan posisi/jabatan staff; 1:1 ke Jenis Jabatan × Pegawai</td>
+      <td>name (ID), guru, jenis_jabatan, nomor_sk_manual, tanggal_sk, tanggal_mulai_berlaku, status, qr_verifikasi</td>
+    </tr>
+    <tr>
+      <td><code>Berkas Guru</code></td>
+      <td>Dokumen compliance (STR, sertifikat, SIM, KTP, ...); tracking tanggal_kadaluarsa + auto-expire flag; renewal notif H-30</td>
+      <td>name (ID), guru, jenis_berkas, tanggal_kadaluarsa, status_expire (Aktif|Expired|Renewed), tanggal_renewal_notif</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Alur utama</h2>
+<ol>
+  <li><strong>Dashboard Ringkasan:</strong> Stat cards (total, aktif, sertifikasi %), donut role (Guru|Staff|Dual), bar status kepegawaian, gender dist, attention queue (pegawai non-aktif, guru belum sertifikasi)</li>
+  <li><strong>Daftar Pegawai:</strong> List + filter (role/status/cari) → klik → detail $nip dengan tab adaptif (Profil, Mengajar, Kepegawaian, Berkas, Kehadiran)</li>
+  <li><strong>Jalur Guru (Penugasan Mengajar):</strong>
+    <ul>
+      <li>Mapel Pengampu — tetapkan guru ↔ mapel ↔ kelas</li>
+      <li>Penugasan — buat penugasan (JJM); row aktif → tombol "Buat SK" (1:1) atau bulk generate per TA</li>
+      <li>SK Mengajar — list SK; workflow: Draft → Diajukan → Disetujui Kepsek → Diterbitkan / Dicabut; QR generated saat Diterbitkan</li>
+    </ul>
+  </li>
+  <li><strong>Jalur Staff (Kepegawaian):</strong>
+    <ul>
+      <li>Jabatan — master jenis jabatan (tambah/edit)</li>
+      <li>SK Jabatan — terbitkan SK posisi (sama workflow SK Mengajar)</li>
+    </ul>
+  </li>
+  <li><strong>Berkas (cross-role):</strong> List berkass guru; per-baris tombol "Perpanjang" extend masa berlaku; scheduler daily 09:00 flag-expired + publish renewal alert H-30 via realtime + Notification Log</li>
+</ol>
+
+<h2>Aturan & Kebijakan</h2>
+<ul>
+  <li><strong>Role classification:</strong> <code>Pegawai.roles[]</code> contains <code>{"role": "Pegawai Guru"}</code> and/or <code>{"role": "Pegawai Staff"}</code> — dual-role didukung penuh. Helper: <code>apiIsGuru(p) / apiIsStaff(p) / apiIsDualRole(p)</code></li>
+  <li><strong>UI adaptivity:</strong> Mapel Pengampu & Penugasan hanya tampil untuk guru; SK Jabatan & tab Kepegawaian hanya untuk staff; tab Mengajar + SK Mengajar hanya untuk guru</li>
+  <li><strong>Status kepegawaian domain:</strong> PNS, PPPK, GTY, GTT, Tetap Yayasan, Kontrak, Honorer — PNS/PPPK wajib punya NIP; PNS wajib punya Nomor Karpeg</li>
+  <li><strong>Sertifikasi scope:</strong> Coverage computed atas guru saja (incl. dual-role); pure staff excluded agar % meaningful; divide-by-zero guard (pct=0 kalau no guru)</li>
+  <li><strong>Penugasan aktif guard:</strong> Guru dengan Penugasan Aktif tidak boleh dihapus — operator wajib nonaktifkan penugasan dulu</li>
+  <li><strong>SK Mengajar workflow:</strong> Hanya boleh Diterbitkan kalau Penugasan Guru berstatus Aktif; SK Diterbitkan immutable (R-AKD-SK-01) — pembatalan via SK Pencabutan baru (field <code>sk_pencabutan_ref</code> wajib)</li>
+  <li><strong>Berkas kadaluarsa:</strong> Scheduler sync stale flags (tanggal_kadaluarsa < today tapi status != Expired); notify renewal H-30; idempotent (tanggal_renewal_notif guard); dokumen tanpa tanggal_kadaluarsa (Ijazah) skip otomatis</li>
+  <li><strong>Nomor SK auto-fill:</strong> Sebelum SK Mengajar diterbitkan, nomor_sk_manual di-auto-fill dari Konfigurasi Nomor Surat kalau kosong (idempotent — manual override menang)</li>
+</ul>
+
+<h2>Cross-Domain Events</h2>
+
+<h3>Triggers (memicu)</h3>
+<ul>
+  <li><strong><code>akademik.sk_mengajar.diterbitkan</code></strong> — published saat SK Mengajar.on_submit() (Diterbitkan). Payload: <code>{name, guru}</code>. Use case: downstream sistem (mis. payroll, absensi) subscribe untuk tracking periode mengajar legal. Published via Frappe realtime dengan <code>after_commit=True</code></li>
+</ul>
+
+<h3>Listens (bereaksi)</h3>
+<ul>
+  <li><strong>Berkas Guru renewal alert</strong> (internal scheduler event) — daily 09:00 via scheduler hook <code>flag_expired_and_notify</code>. Publish realtime <code>berkas_renewal_alert</code> ke channel <code>koperasi.berkas.expire</code> + insert Notification Log. NOT sebuah Frappe event — adalah scheduled aggregation + multi-channel broadcast (realtime + notif log)</li>
+</ul>
+
+<h2>Batas ruang lingkup (YAGNI)</h2>
+<ul>
+  <li>Master data Tahun Ajaran, Mapel, Kurikulum, KKM — documented under <code>akademik</code> domain; tidak di-duplikasi di sini</li>
+  <li>Absensi guru — tersendiri di modul <code>absensi</code>; kepegawaian hanya track keterkaitan. Jadwal mengajar — di modul <code>jadwal</code></li>
+  <li>Mobile app guru (apps/guru) — separate codebase; reuses backend <code>mobile/v1/</code> endpoints; chat/nilai/absensi via separate auth flow</li>
+  <li>Payroll, kompensasi — tidak di-scope modul ini; hanya data identitas & legal basis (SK)</li>
+  <li>Dapodik sync — integration_dapodik modul; pegawai hanya data source</li>
+</ul>
+
+</body>
+</html>

@@ -54,3 +54,25 @@ describe("content blocks", () => {
     expect(screen.getByText("Halo Dunia")).toBeInTheDocument();
   });
 });
+
+// Empty-state contract: a block placed in the layout but with no rows must show a
+// muted "belum diisi" hint (matching BeritaPreview), not vanish — so a CMS author
+// sees the block is active but empty instead of a confusing blank gap.
+describe("content blocks — empty state", () => {
+  const emptySite: SiteData = { ...demoSite, keunggulan: [], statistik: [], testimoni: [] };
+
+  it("KeunggulanBlock shows an empty hint when there are no keunggulan", () => {
+    renderWithSite(<KeunggulanBlock block={b({ tipe: "keunggulan" })} />, emptySite);
+    expect(screen.getByText(/Keunggulan sekolah belum diisi/i)).toBeInTheDocument();
+  });
+
+  it("StatistikBlock shows an empty hint when there are no statistik", () => {
+    renderWithSite(<StatistikBlock block={b({ tipe: "statistik" })} />, emptySite);
+    expect(screen.getByText(/Statistik sekolah belum diisi/i)).toBeInTheDocument();
+  });
+
+  it("TestimoniBlock shows an empty hint when there are no testimoni", () => {
+    renderWithSite(<TestimoniBlock block={b({ tipe: "testimoni" })} />, emptySite);
+    expect(screen.getByText(/Testimoni sekolah belum diisi/i)).toBeInTheDocument();
+  });
+});

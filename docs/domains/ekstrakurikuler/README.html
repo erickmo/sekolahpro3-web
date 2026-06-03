@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ekstrakurikuler — Domain Documentation</title>
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+</style>
+</head>
+<body>
+
+<h1>Ekstrakurikuler</h1>
+<p class="muted">Domain manajemen kegiatan ekstrakurikuler di sekolah, mencakup katalog program, pendaftaran siswa, pencatatan kehadiran per sesi, dan pelaporan predikat akhir semester. Mendukung program internal (pembina guru) dan kemitraan pihak ketiga (Mitra) dengan rekap kehadiran otomatis dan penilaian berbasis persentase.</p>
+
+<h2>Arsitektur</h2>
+<ul>
+<li><strong>Backend:</strong> Module <code>Ekstrakurikuler</code> di <code>apps/sekolahpro</code> (repo terpisah); 5 doctype terdaftar di <code>tenant_registry.py DOCTYPES["SCHOOL"]</code>.</li>
+<li><strong>Frontend:</strong> Web routes <code>/sch/$sekolah/ekstrakurikuler</code> di <code>apps/school</code>; Tahun Ajaran + Semester context via <code>EkskulContextProvider</code>.</li>
+<li><strong>Shared packages:</strong> <code>@sekolahpro/api-client</code>, <code>@sekolahpro/auth</code>, <code>@sekolahpro/ui</code>.</li>
+</ul>
+
+<h2>Doctypes / Entitas</h2>
+<table>
+<thead>
+<tr>
+<th>Doctype</th>
+<th>Peran</th>
+<th>Field Kunci</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ekstrakurikuler</code></td>
+<td>Program master; rekam program ekstrakurikuler dengan pembina, jadwal, kuota</td>
+<td><code>nama</code>, <code>pembina</code>, <code>penyelenggara</code> (Internal/Mitra), <code>status</code>, <code>kuota</code>, <code>jam_mulai</code>, <code>jam_selesai</code></td>
+</tr>
+<tr>
+<td><code>Mitra Ekstrakurikuler</code></td>
+<td>Partnership master; rekam mitra penyedia (dojo, musik, pelatih khusus)</td>
+<td><code>nama</code>, <code>kontak</code>, <code>alamat</code>, <code>tanggal_mulai_mou</code>, <code>tanggal_akhir_mou</code></td>
+</tr>
+<tr>
+<td><code>Pendaftaran Ekstrakurikuler</code></td>
+<td>Enrollment siswa ke program dengan validasi kuota; kuota di-lock via <code>SELECT FOR UPDATE</code></td>
+<td><code>siswa</code>, <code>program</code>, <code>tanggal_pendaftaran</code>, <code>status</code> (Aktif/Keluar)</td>
+</tr>
+<tr>
+<td><code>Sesi Ekstrakurikuler</code></td>
+<td>Session (pertemuan) program pada hari/jam tertentu; roster dari pendaftaran Aktif</td>
+<td><code>program</code>, <code>semester</code>, <code>tahun_ajaran</code> (fetch_from semester, read_only), <code>tanggal</code>, <code>pertemuan_ke</code> (auto), <code>topik</code></td>
+</tr>
+<tr>
+<td><code>Kehadiran Ekstrakurikuler</code> (child)</td>
+<td>Attendance row per siswa per sesi; no tenant fields (tenant on parent Sesi)</td>
+<td><code>siswa</code>, <code>status</code> (Hadir/Izin/Sakit/Alpha), <code>catatan</code></td>
+</tr>
+<tr>
+<td><code>Raport Ekstrakurikuler</code></td>
+<td>End-of-semester report per siswa+program; rekap kehadiran snapshot lazy + predikat editable</td>
+<td><code>siswa</code>, <code>program</code>, <code>semester</code>, <code>tahun_ajaran</code> (fetch_from, read_only), <code>jumlah_hadir</code>, <code>jumlah_pertemuan</code>, <code>persentase_kehadiran</code> (snapshot), <code>predikat</code>, <code>deskripsi</code>, <code>status</code> (Draft/Final)</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Alur Utama</h2>
+<ol>
+<li><strong>Koordinator:</strong> Buat <code>Ekstrakurikuler</code> program (pilih penyelenggara Internal → set pembina, atau Mitra → pilih mitra). Opsional catat <code>Mitra Ekstrakurikuler</code> + MOU.</li>
+<li><strong>Koordinator:</strong> Daftarkan siswa via <code>Pendaftaran Ekstrakurikuler</code>; kuota dijaga otomatis dengan row lock (<code>FOR UPDATE</code>) agar tidak terlewati.</li>
+<li><strong>Pembina:</strong> Buka layar "Sesi & Kehadiran", mulai sesi hari ini (auto pertemuan_ke, semester dari konteks); roster ter-prefill dari pendaftaran Aktif, semua default Hadir. Tandai pengecualian saja (Izin/Sakit/Alpha); autosave per row state.</li>
+<li><strong>Pembina (akhir semester):</strong> Buka "Raport", generate semua peserta. Rekap kehadiran (jumlah_hadir, jumlah_pertemuan, persentase) ter-compute lazy via single <code>GROUP BY</code> snapshot, predikat auto-saran dari % kehadiran (editable, ≥90 Sangat Baik / ≥75 Baik / ≥50 Cukup / &lt;50 Kurang).</li>
+<li><strong>Raport terbit:</strong> Status Draft → Final memicu predikat wajib. Snapshot stabil untuk referensi wali.</li>
+</ol>
+
+<h2>Aturan &amp; Kebijakan</h2>
+<ul>
+<li><strong>Kuota enforcement:</strong> <code>Pendaftaran.validate()</code> mengambil <code>SELECT … FOR UPDATE</code> pada parent <code>Ekstrakurikuler</code>, kemudian count pendaftaran Aktif. Kuota 0 = unlimited. Tidak ada racy check.</li>
+<li><strong>Duplikat pendaftaran:</strong> Pendaftaran aktif duplikat (siswa+program) diblok; rejoin = row baru.</li>
+<li><strong>Kehadiran roster:</strong> <code>Sesi.validate()</code> menolak baris <code>Kehadiran</code> untuk siswa tanpa Pendaftaran Aktif (eligibility guard).</li>
+<li><strong>Denominator rekap:</strong> Hanya baris Kehadiran milik siswa itu di (program, semester) — tidak semua sesi program. Benar untuk peserta tengah-semester. Zero sesi → 0% (bukan NaN).</li>
+<li><strong>Periode read-only:</strong> <code>tahun_ajaran</code> di Sesi dan Raport adalah <code>fetch_from semester.tahun_ajaran</code>, read-only, agar pasangan (semester, TA) tidak desync saat sorting/grouping.</li>
+<li><strong>TA-closed immutability:</strong> Sesi, Pendaftaran, Raport immutable ketika Tahun Ajaran status = Closed (via <code>tahun_ajaran.status</code>). Program dan Mitra spans TA → tidak TA-locked.</li>
+<li><strong>Predikat timing:</strong> Raport punya Select <code>status</code> (Draft/Final). Predikat required hanya saat status=Final, jadi snapshot rekap ter-persist dulu, pembina grade setelahnya.</li>
+<li><strong>Role-based framing:</strong> <code>useEkskulRole()</code> mengidentifikasi pembina / koordinator / kepala dari Frappe role string untuk framing UX. Permissive fallback: when no role matches, grant semua role agar UI tidak pernah tersensor. Backend tetap guard via tenant_registry + doctype permissions.</li>
+</ul>
+
+<h2>Cross-Domain Events</h2>
+
+<h3>Triggers (memicu)</h3>
+<ul>
+<li>Saat status <code>Tahun Ajaran</code> berubah ke Closed: Sesi, Pendaftaran, Raport become immutable (guard di validate).</li>
+<li>Saat siswa diunroll (Pendaftaran status → Keluar): (future) soft-alert kepada pembina untuk rekap; currently masuk record saja.</li>
+</ul>
+
+<h3>Listens (bereaksi)</h3>
+<ul>
+<li><code>Tahun Ajaran.status</code> = Closed: immutability check di Sesi/Pendaftaran/Raport validate().</li>
+<li><code>Siswa.status</code>: enrollment eligibility (Sesi validate rejects kehadiran for non-Aktif siswa jika diterapkan; currently trusts Pendaftaran Aktif sebagai source-of-truth).</li>
+<li><code>Semester.tahun_ajaran</code>: fetch_from source untuk Sesi + Raport tahun_ajaran (read-only, ensures grouping consistency).</li>
+</ul>
+
+<h2>Batas Ruang Lingkup (YAGNI)</h2>
+<ul>
+<li><strong>Wali notification:</strong> Raport field shape (<code>persentase_kehadiran</code>, <code>predikat</code>, <code>deskripsi</code>) ready untuk future wali surface; v2 task emit <code>ekstrakurikuler.raport.final</code> event dan wiring ke rapor-page.</li>
+<li><strong>MOU expiry soft-alert:</strong> <code>Mitra.tanggal_akhir_mou</code> bersifat informasional; no auto-status-flip. Koordinator/kepala cek manual. V2 future: <code>ekstrakurikuler.mitra.mou_expired</code> event + email alert.</li>
+<li><strong>Finance integration:</strong> Fee info di Pendaftaran/Program bersifat informasional; finance app owns actual payment. No feeder.</li>
+<li><strong>Pre-enrollment waitlist:</strong> Deferred untuk v2. Pendaftaran tutup ketika kuota penuh (display gate).</li>
+<li><strong>Live rekap updates:</strong> Raport snapshot stabil saat tersimpan. Kehadiran perubahan setelah itu → Raport refresh hanya when user re-open + save. Accepted trade-off untuk avoid N+1 on frequent autosave di layar absensi.</li>
+</ul>
+
+</body>
+</html>

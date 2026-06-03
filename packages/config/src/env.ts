@@ -3,6 +3,8 @@ import { z } from "zod";
 export const envSchema = z.object({
   VITE_API_BASE: z.union([z.string().url(), z.literal("")]),
   VITE_SENTRY_DSN: z.string().url().optional(),
+  VITE_ADS_BASE: z.union([z.string().url(), z.literal("")]).optional(),
+  VITE_ADS_PROPERTY_KEY: z.string().optional(),
   MODE: z.enum(["development", "production", "test"]).default("development"),
 });
 

@@ -6,8 +6,8 @@ import { PageGuide } from "../components/guide";
 import { SITUS_PAGE_GUIDES } from "../components/situs/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
-function SitusOverview() {
-  const { sekolah } = Route.useParams();
+/** Situs overview: publish toggle, preview link, and status/template/domain stats. */
+export function SitusOverviewPage({ sekolah }: { sekolah: string }) {
   const { data, isLoading } = useSitus(sekolah);
   const publish = usePublish(sekolah);
 
@@ -85,6 +85,11 @@ function SitusOverview() {
       </Card>
     </div>
   );
+}
+
+function SitusOverview() {
+  const { sekolah } = Route.useParams();
+  return <SitusOverviewPage sekolah={sekolah} />;
 }
 
 export const Route = createFileRoute("/sch/$sekolah/situs/")({ component: SitusOverview });

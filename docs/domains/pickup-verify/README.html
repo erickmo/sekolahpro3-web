@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Domain: Verifikasi Penjemputan — SekolahPro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>Verifikasi Penjemputan</h1>
+  <p class="muted">Sistem keamanan berbasis petugas untuk memastikan bahwa hanya orang tua atau wali yang terdaftar (dan sudah mendapat persetujuan orang tua pada tier berbayar) dapat menjemput siswa di gerbang sekolah. Autentikasi menggunakan QR code yang ditandatangani server (token jangka pendek, 30 detik) dengan fallback PIN.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend</strong>: App Frappe <code>sekolahpro</code> (repo terpisah) — modul <code>sekolahpro.api.pickup.*</code> + dua doctype baru <code>Pickup Person</code> dan <code>Pickup Event</code>. Tier-gated: jika fitur <code>pickup_realtime_notify</code> aktif dan tier <code>paid</code>, event dibuat dengan status <code>pending</code> (menunggu persetujuan orang tua); tier <code>free</code> auto-approve.</li>
+    <li><strong>Parent app</strong>: Rute <code>/pickup</code> (apps/parent/src/routes/pickup.tsx) — menampilkan QR berputar setiap 30 detik, dropdown penjemput aktif, dan daftar delegasi (tambah/edit/cabut penjemput).</li>
+    <li><strong>School staff app</strong>: Rute <code>/sch/$sekolah/pickup-verify</code> (apps/school/src/routes/sch.$sekolah.pickup-verify.tsx) — scanner QR + form fallback PIN + kartu pelepasan siswa. Hanya terlihat untuk role <code>Sekolah Staff</code> atau <code>Satpam</code>.</li>
+    <li><strong>Paket bersama</strong>: <code>@sekolahpro/ui</code>, <code>@sekolahpro/api-client</code>, <code>@sekolahpro/auth</code>. Parent app menggunakan <code>qrcode.react</code>; school app menggunakan <code>@zxing/browser</code> untuk pemindaian QR.</li>
+  </ul>
+
+  <h2>Doctypes / Entitas</h2>
+  <table>
+    <tr><th>Doctype</th><th>Peran</th><th>Field kunci</th></tr>
+    <tr><td><code>Pickup Person</code> (inferred)</td><td>Orang yang berhak menjemput siswa — dibuat dan dikelola orang tua</td><td><code>nis</code> (Link → Siswa), <code>nama</code>, <code>hubungan</code> (Wali / Orang Tua / Kakek-Nenek / Driver / Lainnya), <code>phone</code>, <code>photo_url</code>, <code>pin_hash</code> (bcrypt), <code>is_active</code>, <code>created_by</code> (parent user)</td></tr>
+    <tr><td><code>Pickup Event</code> (inferred)</td><td>Catatan audit setiap percobaan penjemputan (QR atau PIN) dengan status persetujuan</td><td><code>nis</code> (Link → Siswa), <code>pickup_person</code> (Link → Pickup Person), <code>method</code> (qr / pin), <code>status</code> (pending / approved / declined / completed / expired), <code>requested_at</code>, <code>confirmed_at</code> (pada tier berbayar), <code>completed_at</code> (saat pelepasan), <code>verified_by</code> (staff user), <code>gate</code> (label gerbang), <code>note</code> (wajib jika ditolak)</td></tr>
+    <tr><td><code>Siswa</code> (existing)</td><td>Master data siswa yang direferensikan dari Pickup Person dan Pickup Event</td><td><code>nis</code> (PK), <code>nama</code>, <code>kelas</code>, <code>photo_url</code></td></tr>
+  </table>
+
+  <h2>Alur Utama</h2>
+  <ol>
+    <li><strong>Setup delegasi (orang tua):</strong> Di tab "Daftar Penjemput" aplikasi parent, orang tua menambah penjemput dengan nama, hubungan, nomor telepon, dan PIN opsional (6 digit; server mencegah kode lemah seperti 123456). Sistem auto-membuat satu <code>Pickup Person</code> untuk orang tua sendiri pada panggilan pertama <code>list_children</code>.</li>
+    <li><strong>Penerbitan token QR (orang tua):</strong> Saat membuka tab "QR" atau mengubah delegasi, parent app memanggil <code>useIssuePickupToken(nis, pickupPersonId)</code>. Backend mengembalikan token HMAC base64url yang ditandatangani (isi opak: <code>nis, pickup_person_id, jti, exp</code>; berakhir dalam 30 detik). Parent app me-render QR via <code>qrcode.react</code> dan menampilkan 6 karakter terakhir token + countdown. QR otomatis refresh saat token akan kedaluwarsa dalam <5 detik.</li>
+    <li><strong>Verifikasi di gerbang (petugas):</strong> Petugas sekolah (Sekolah Staff / Satpam) membuka rute <code>/sch/$sekolah/pickup-verify</code>. Dua opsi:
+      <ul>
+        <li><strong>Opsi 1: Scan QR</strong> — Kamera dibuka via <code>@zxing/browser</code>. Saat QR terdeteksi, token dikirim ke backend via <code>useStaffScanToken({ token, gate })</code>. Backend memverifikasi HMAC, cek <code>jti</code> belum dikonsumsi, cek belum kedaluwarsa. Jika valid, buat <code>Pickup Event</code> dengan <code>status=approved</code> (free tier) atau <code>status=pending</code> (paid tier, tunggu orang tua).</li>
+        <li><strong>Opsi 2: Fallback PIN</strong> — Petugas masukkan NIS siswa (trigger pencarian <code>staff_list_persons_for_nis</code>), pilih penjemput dari dropdown, masukkan PIN. Backend compare PIN dengan <code>pin_hash</code> bcrypt. Rate limit: 3 percobaan per 15 menit; setelah itu <code>pin_locked</code>. Jika cocok, buat <code>Pickup Event</code> dengan metode PIN.</li>
+      </ul>
+    </li>
+    <li><strong>Persetujuan orang tua (paid tier saja):</strong> Jika event dibuat dengan <code>status=pending</code>, parent app polling <code>list_pickup_events({ nis, since_iso })</code> setiap 3 detik. Kartu banner kuning menampilkan: "Penjemputan menunggu konfirmasi" + tombol "Setujui"/"Tolak". Orang tua klik → backend memanggil <code>parent_respond_pickup({ event_id, decision })</code>. Event flips ke <code>approved</code> atau <code>declined</code>; petugas mendapat notifikasi real-time (polling di school app setiap 2 detik atau push jika diimplementasikan).</li>
+    <li><strong>Pelepasan siswa (petugas):</strong> Setelah event approved (atau instant pada free tier), petugas melihat kartu pelepasan: foto siswa + nama + kelas, foto penjemput + nama + hubungan + telepon. Tombol "Lepaskan Siswa" + opsi "Tolak / Catat insiden" (memerlukan catatan). Klik Lepaskan → <code>staff_complete_pickup({ event_id })</code> → <code>status=completed</code> + <code>completed_at=now</code>. Toast sukses, auto-reset ke scanner setelah 5 detik. Jika Tolak → <code>staff_decline_pickup({ event_id, note })</code> → <code>status=declined</code>.</li>
+  </ol>
+
+  <h2>Aturan &amp; Kebijakan</h2>
+  <ul>
+    <li><strong>Autentikasi parent:</strong> Semua metode backend yang mengakses parent data (list penjemput, issue token, respond) menderivasi parent dari <code>frappe.session.user</code>. Parent tidak bisa pass parent ID lain; sistem selalu mengecek ownership.</li>
+    <li><strong>Autentikasi petugas:</strong> Metode staff scan/verify/complete/decline memerlukan role <code>Sekolah Staff</code> atau <code>Satpam</code>. Missing role → HTTP 403.</li>
+    <li><strong>Token HMAC:</strong> Server menandatangani token dengan secret <code>PICKUP_TOKEN_SECRET</code> (Frappe site config, never on client). Token opak base64url, tidak bisa di-parse client. Expire dalam 30 detik, single-use via <code>jti</code> (JWT ID) — konsumsi token catat <code>jti</code>, replay dalam window 30 detik ditolak dengan <code>token_consumed</code>.</li>
+    <li><strong>PIN bcrypt:</strong> Disimpan dengan cost 12 bcrypt. Tidak pernah dikembalikan API. Rate limit: 3 percobaan per orang per 15 menit; attempt ke-4 → <code>pin_locked</code>. Reset PIN hanya bisa via orang tua (tidak ada unlock desk untuk staff).</li>
+    <li><strong>Soft delete penjemput:</strong> Cabut penjemput set <code>is_active=false</code> (tidak hapus). Penjemput revoked tidak boleh dipakai untuk scan/verify baru → <code>person_revoked</code> error.</li>
+    <li><strong>Audit lengkap:</strong> Setiap upaya scan/verify (sukses atau gagal) membuat baris <code>Pickup Event</code>. Gagal catat di <code>note</code> deskripsi error (e.g., "PIN salah attempt 1/3", "Token kedaluwarsa").</li>
+    <li><strong>Tier gating:</strong> Backend baca <code>tenant.features.includes("pickup_realtime_notify")</code> + parent.subscription_tier (existing flag). Jika keduanya true → pending events, else auto-approve. Free tier polling parent tidak dipaksa, UI show notification banner saja jika ada event pending (untuk potential future upgrade).</li>
+    <li><strong>Kode PIN lemah:</strong> Client-side dan backend tolak PIN dari set: "000000", "111111", "123456", "654321", "123123". Prevent social engineering.</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  <h3>Triggers (memicu)</h3>
+  <ul>
+    <li><code>Pickup Event</code> dengan <code>status=completed</code> atau <code>status=declined</code> dipicu petugas. Daftar acara pelepasan ini dapat dicatat di modul keamanan atau "Riwayat Penjemputan" untuk analisa; implementasi listener tergantung roadmap keamanan fisik lain.</li>
+  </ul>
+  <h3>Listens (bereaksi)</h3>
+  <ul>
+    <li>Tidak ada interaksi dengan domain lain. Domain ini self-contained — entitas utama (Pickup Person, Pickup Event) hanya ref ke Siswa (existing, readonly dari perspektif pickup).</li>
+  </ul>
+
+  <h2>Batas Ruang Lingkup (YAGNI)</h2>
+  <ul>
+    <li>Notifikasi push native (Web Push API + Frappe broker) — ditunda; MVP mengandalkan polling UI + foreground app.</li>
+    <li>Deteksi hidup / face recognition — security theater trade-off; ditunda sampai kebutuhan organik.</li>
+    <li>Geofencing — hanya scan pada GPS dalam perimeter sekolah; ditunda MVP.</li>
+    <li>Manajemen delegasi kolaboratif multi-orang tua — ibu tambah delegate, ayah bisa lihat/edit; V1 single parent-ownership, ditunda.</li>
+    <li>Impor massal penjemput via CSV (untuk driver class-wide) — ditunda V2.</li>
+  </ul>
+</body>
+</html>

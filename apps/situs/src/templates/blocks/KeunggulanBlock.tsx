@@ -15,15 +15,19 @@ const DEFAULT_TITLE = "Mengapa Memilih Kami";
 /**
  * Render the keunggulan feature grid.
  * @param block - Layout block; judul overrides the heading, subjudul the eyebrow.
- * @returns A section of feature cards, or null when no keunggulan are configured.
+ * @returns A section of feature cards; a muted "belum diisi" hint when empty.
  */
 export function KeunggulanBlock({ block }: BlockProps) {
   const { keunggulan } = useSite();
-  if (!keunggulan.length) return null;
   return (
     <section className="situs-section">
       <Container>
         <SectionHeading eyebrow={block.subjudul ?? "Keunggulan"} title={block.judul || DEFAULT_TITLE} align="center" />
+        {!keunggulan.length ? (
+          <p className="mt-6 text-center text-sm" style={{ color: "var(--situs-muted)" }}>
+            Keunggulan sekolah belum diisi.
+          </p>
+        ) : (
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {keunggulan.map((k, i) => (
             <div key={`${k.judul}-${i}`} className="situs-card situs-round-lg p-7 transition duration-200 hover:-translate-y-1">
@@ -35,6 +39,7 @@ export function KeunggulanBlock({ block }: BlockProps) {
             </div>
           ))}
         </div>
+        )}
       </Container>
     </section>
   );

@@ -16,6 +16,7 @@ import {
   IconUsers,
   IconWallet,
 } from "@sekolahpro/ui";
+import { AdBanner } from "@sekolahpro/ads";
 import { useOnboardingSteps } from "../data/onboarding";
 import { PageGuide } from "../components/guide";
 import { MISC_PAGE_GUIDES } from "../components/guide/miscPageGuides";
@@ -254,6 +255,7 @@ function Home() {
       ))}
       primary={
         <>
+          <AdBanner slot="school-dashboard-top" className="mb-4 w-full" />
           <SectionCard title={MODE_LABEL[mode]} description={MODE_GREETING[mode]}>
             <ul role="list" className="divide-y divide-border">
               {FOCUS_BY_MODE[mode].map((item) => (
