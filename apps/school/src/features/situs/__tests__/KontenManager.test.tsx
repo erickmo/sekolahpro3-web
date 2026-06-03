@@ -17,6 +17,14 @@ vi.mock("@sekolahpro/api-client", async () => {
   return { ...actual, frappeFetch: vi.fn((method: string, args: unknown) => fetchMock(method, args as never)) };
 });
 
+// Stub the tiptap editor with a plain textarea so these tests drive richtext fields
+// via fireEvent.change (the real editor is covered in RichTextEditor.test.tsx).
+vi.mock("../RichTextEditor", () => ({
+  RichTextEditor: ({ id, value, onChange }: { id?: string; value: string; onChange: (v: string) => void }) => (
+    <textarea data-testid="rte" id={id} value={value} onChange={(e) => onChange(e.target.value)} />
+  ),
+}));
+
 import { KontenManager } from "../KontenManager";
 import { BERITA_SCHEMA, GALERI_SCHEMA, AGENDA_SCHEMA } from "../schemas";
 
@@ -44,6 +52,14 @@ describe("KontenManager", () => {
     expect(screen.getByText("Isi (HTML)")).toBeInTheDocument();
     expect(screen.getByText("Ringkasan")).toBeInTheDocument();
     expect(screen.getByText("Penulis")).toBeInTheDocument();
+  });
+
+  it("renders the rich-text editor for the HTML content field", async () => {
+    render(wrap(<KontenManager sekolah="SMP Demo" schema={BERITA_SCHEMA} />));
+    fireEvent.click(screen.getByRole("button", { name: /Tambah Berita/i }));
+    await waitFor(() => expect(screen.getByText("Tambah Berita")).toBeInTheDocument());
+    // "Isi (HTML)" is a richtext field → WYSIWYG editor, wired to the same FormField label.
+    expect(screen.getByLabelText(/^Isi \(HTML\)/)).toBe(screen.getByTestId("rte"));
   });
 
   it("blocks save and flags required fields left empty", async () => {

@@ -20,6 +20,9 @@
     "@sekolahpro/ui": "workspace:*",
     "@tanstack/react-query": "^5.51.0",
     "@tanstack/react-router": "^1.45.0",
+    "@tiptap/pm": "^3.24.0",
+    "@tiptap/react": "^3.24.0",
+    "@tiptap/starter-kit": "^3.24.0",
     "@zxing/browser": "^0.1.5",
     "react": "^18.3.0",
     "react-dom": "^18.3.0"
