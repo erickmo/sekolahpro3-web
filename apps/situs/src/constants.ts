@@ -3,9 +3,10 @@
 // The contract test (src/__tests__/contract.test.ts) asserts the template
 // registry and section components only use keys declared here.
 
-// klasik/modern/ceria also exist in the backend constants.py; aurora + the
-// trio below (elegan/akademik/alam) are SPA-only data-driven skins, renderable
-// via demo presets + the block engine but not yet backend-persistable.
+// Mirrors the backend website_sekolah/constants.py TEMPLATE_KEYS and the
+// Template Situs fixture catalog. Each key is backend-persistable (the
+// Situs Sekolah.template Link points at that catalog) and selectable in the
+// app-school CMS picker; the matching .tpl-<key> skin lives in templates/skins.css.
 export const TEMPLATE_KEYS = ["klasik", "modern", "ceria", "aurora", "elegan", "akademik", "alam"] as const;
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 export const DEFAULT_TEMPLATE: TemplateKey = "klasik";
