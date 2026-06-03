@@ -1,26 +1,30 @@
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Tabs, type TabItem } from "@sekolahpro/ui";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import type { NavTabGroup } from "../components/GroupedNavTabs";
+import { ModuleShell } from "../components/shell/ModuleShell";
 
-const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/sch/$sekolah/kelas", label: "Dashboard", exact: true },
-  { to: "/sch/$sekolah/kelas/daftar", label: "Daftar Kelas" },
-  { to: "/sch/$sekolah/kelas/rombel", label: "Rombongan Belajar" },
-  { to: "/sch/$sekolah/kelas/anggota", label: "Anggota Rombel" },
+// Kelas sub-nav groups, rendered as the GroupedNavTabs header pill row.
+const NAV_GROUPS: NavTabGroup[] = [
+  {
+    label: "Ringkasan",
+    items: [{ to: "/sch/$sekolah/kelas", label: "Dashboard", exact: true }],
+  },
+  {
+    label: "Kelas",
+    items: [
+      { to: "/sch/$sekolah/kelas/daftar", label: "Daftar Kelas" },
+      { to: "/sch/$sekolah/kelas/rombel", label: "Rombongan Belajar" },
+      { to: "/sch/$sekolah/kelas/anggota", label: "Anggota Rombel" },
+    ],
+  },
 ];
 
+// Layout shell for the Kelas config module (no context bar — config-only).
 function KelasLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const items: TabItem[] = TABS.map((t) => ({
-    key: t.to,
-    label: t.label,
-    active: t.exact ? pathname === t.to : pathname === t.to || pathname.startsWith(t.to + "/"),
-    render: ({ className, children }) => <Link to={t.to} className={className}>{children}</Link>,
-  }));
   return (
-    <div className="space-y-4">
-      <Tabs items={items} />
+    <ModuleShell navGroups={NAV_GROUPS} pathname={pathname}>
       <Outlet />
-    </div>
+    </ModuleShell>
   );
 }
 

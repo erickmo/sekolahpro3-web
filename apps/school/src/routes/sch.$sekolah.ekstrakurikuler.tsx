@@ -8,8 +8,8 @@ import {
 import { useResourceList } from "@sekolahpro/api-client";
 import { Badge, SearchableSelect } from "@sekolahpro/ui";
 import { EkskulContextProvider } from "../lib/ekskulContext";
-import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
-import { ModuleHeader } from "../components/ModuleHeader";
+import type { NavTabGroup } from "../components/GroupedNavTabs";
+import { ModuleShell } from "../components/shell/ModuleShell";
 import { useEkskulRole, ROLE_LABEL } from "../lib/ekskulRole";
 import {
   resolveTahunAjaran,
@@ -26,6 +26,7 @@ interface SemesterRow {
 const TA_FIELDS = ["name", "nama", "is_current", "status", "tanggal_mulai", "tanggal_selesai"];
 const SEMESTER_FIELDS = ["name", "nama", "tahun_ajaran"];
 
+// Sub-navigation groups for the ekstrakurikuler module shell.
 const NAV_GROUPS: NavTabGroup[] = [
   {
     label: "Ringkasan",
@@ -76,6 +77,8 @@ function writeEkskulPeriode(sekolah: string, value: StoredPeriode): void {
   }
 }
 
+// Ekstrakurikuler module layout: resolves TA/Semester period context and wraps
+// the outlet in the shared ModuleShell with a custom period context bar.
 function EkskulLayout() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -159,11 +162,11 @@ function EkskulLayout() {
         setDirty,
       }}
     >
-      <div className="space-y-4">
-        <ModuleHeader
-          nav={<GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="header" />}
-          context={
-            <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <ModuleShell
+        navGroups={NAV_GROUPS}
+        pathname={pathname}
+        context={
+          <div className="px-4 sm:px-6 lg:px-8 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-fg shrink-0">
             Konteks Ekstrakurikuler
           </span>
@@ -205,11 +208,11 @@ function EkskulLayout() {
           <span className="ml-auto">
             <Badge tone="brand">{ROLE_LABEL[primary]}</Badge>
           </span>
-            </div>
-          }
-        />
+          </div>
+        }
+      >
         <Outlet />
-      </div>
+      </ModuleShell>
     </EkskulContextProvider>
   );
 }

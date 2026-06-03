@@ -9,6 +9,7 @@
  *
  * Roles drive EMPHASIS, never visibility — see lib/keuanganRole.ts.
  */
+import type { NavTabGroup } from "../components/GroupedNavTabs";
 import type { KeuanganRole } from "./keuanganRole";
 
 /** A single navigable destination inside the hub. */
@@ -68,6 +69,19 @@ export const KEUANGAN_HUB_GROUPS: readonly KeuanganNavGroup[] = [
     ],
   },
 ];
+
+/**
+ * Hub IA flattened into ModuleShell's NavTabGroup[] (drops role/hint metadata).
+ * Single source for the header pill row shown by both /keuangan and /akuntansi.
+ */
+export const KEUANGAN_NAV_GROUPS: NavTabGroup[] = KEUANGAN_HUB_GROUPS.map((g) => ({
+  label: g.label,
+  items: g.items.map((i) => ({
+    to: i.to,
+    label: i.label,
+    ...(i.exact ? { exact: i.exact } : {}),
+  })),
+}));
 
 /**
  * Resolve which top-level hub section a pathname belongs to.

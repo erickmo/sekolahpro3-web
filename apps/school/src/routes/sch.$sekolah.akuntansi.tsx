@@ -6,7 +6,9 @@
  */
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { Tabs, type TabItem } from "@sekolahpro/ui";
-import { KeuanganHubNav } from "../components/keuangan";
+import { ModuleShell } from "../components/shell/ModuleShell";
+import { useGenericRoleLabel } from "../lib/genericRole";
+import { KEUANGAN_NAV_GROUPS } from "../lib/keuanganHub";
 
 const SUBTABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/sch/$sekolah/akuntansi", label: "Ringkasan", exact: true },
@@ -16,6 +18,7 @@ const SUBTABS: { to: string; label: string; exact?: boolean }[] = [
   { to: "/sch/$sekolah/akuntansi/referensi", label: "Referensi" },
 ];
 
+/** Module shell for the Akuntansi route tree (role context mode) + sub-nav. */
 function AkuntansiLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const items: TabItem[] = SUBTABS.map((t) => ({
@@ -25,11 +28,16 @@ function AkuntansiLayout() {
     render: ({ className, children }) => <Link to={t.to} className={className}>{children}</Link>,
   }));
   return (
-    <div className="space-y-5">
-      <KeuanganHubNav pathname={pathname} />
+    <ModuleShell
+      label="Akuntansi"
+      framing="Buku besar, anggaran, pajak, dan referensi akuntansi."
+      roleLabel={useGenericRoleLabel()}
+      navGroups={KEUANGAN_NAV_GROUPS}
+      pathname={pathname}
+    >
       <Tabs items={items} />
       <Outlet />
-    </div>
+    </ModuleShell>
   );
 }
 

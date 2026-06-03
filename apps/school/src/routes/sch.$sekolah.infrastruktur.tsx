@@ -1,30 +1,28 @@
-import { createFileRoute, Link, Outlet, useParams, useRouterState } from "@tanstack/react-router";
-import { Tabs, type TabItem } from "@sekolahpro/ui";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import type { NavTabGroup } from "../components/GroupedNavTabs";
+import { ModuleShell } from "../components/shell/ModuleShell";
 
+// Infrastruktur sub-nav groups, rendered as the GroupedNavTabs header pill row.
 // Lantai / Ruangan / Utilitas dipindah ke dalam halaman detail gedung
-// (daftar-gedung/$gedungId). Tab bar hanya menyisakan entry utama.
-const TABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/sch/$sekolah/infrastruktur", label: "Dashboard", exact: true },
-  { to: "/sch/$sekolah/infrastruktur/daftar-gedung", label: "Gedung" },
+// (daftar-gedung/$gedungId), jadi nav hanya menyisakan entry utama.
+const NAV_GROUPS: NavTabGroup[] = [
+  {
+    label: "Ringkasan",
+    items: [{ to: "/sch/$sekolah/infrastruktur", label: "Dashboard", exact: true }],
+  },
+  {
+    label: "Data",
+    items: [{ to: "/sch/$sekolah/infrastruktur/daftar-gedung", label: "Gedung" }],
+  },
 ];
 
+// Layout shell for the Infrastruktur config module (no context bar — config-only).
 function InfraLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { sekolah } = useParams({ from: "/sch/$sekolah/infrastruktur" });
-  const items: TabItem[] = TABS.map((t) => ({
-    key: t.to,
-    label: t.label,
-    active: (() => {
-      const resolved = t.to.replace("$sekolah", sekolah);
-      return t.exact ? pathname === resolved : pathname === resolved || pathname.startsWith(resolved + "/");
-    })(),
-    render: ({ className, children }) => <Link to={t.to} className={className}>{children}</Link>,
-  }));
   return (
-    <div className="space-y-4">
-      <Tabs items={items} />
+    <ModuleShell navGroups={NAV_GROUPS} pathname={pathname}>
       <Outlet />
-    </div>
+    </ModuleShell>
   );
 }
 

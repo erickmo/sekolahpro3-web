@@ -1,19 +1,24 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
-import { GroupedNavTabs } from "../components/GroupedNavTabs";
+import { ModuleShell } from "../components/shell/ModuleShell";
+import { useGenericRoleLabel } from "../lib/genericRole";
 import { SISWA_NAV_GROUPS } from "../lib/orang/nav";
 
 /**
- * Siswa module layout: grouped sub-navigation (stacked, role-oriented groups)
- * above the nested route outlet. Replaces the previous flat single-row Tabs so
- * the many Siswa sub-pages stay discoverable for new operators.
+ * Siswa module layout: header-variant ModuleShell wrapping the nested route
+ * outlet, with role-based context framing for the many Siswa sub-pages.
  */
 function SiswaLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <div className="space-y-4">
-      <GroupedNavTabs groups={SISWA_NAV_GROUPS} pathname={pathname} variant="stacked" />
+    <ModuleShell
+      label="Siswa"
+      framing="Kelola data, penerimaan, kelulusan, dan administrasi siswa."
+      roleLabel={useGenericRoleLabel()}
+      navGroups={SISWA_NAV_GROUPS}
+      pathname={pathname}
+    >
       <Outlet />
-    </div>
+    </ModuleShell>
   );
 }
 

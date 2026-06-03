@@ -11,7 +11,7 @@ import { useResourceList } from "@sekolahpro/api-client";
 import { AkademikContextProvider } from "../lib/akademikContext";
 import { AkademikContextBar } from "../components/akademik/AkademikContextBar";
 import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
-import { ModuleHeader } from "../components/ModuleHeader";
+import { ModuleShell } from "../components/shell/ModuleShell";
 import { PageGuide, type PageGuideStep } from "../components/guide";
 import { DistributionBar, type DistributionSegment } from "../components/viz";
 import { SectionCard } from "@sekolahpro/ui";
@@ -36,6 +36,7 @@ const TA_FIELDS = [
   "semester_genap_mulai", "semester_genap_akhir",
 ];
 
+// Grouped sub-navigation for the Akademik ModuleShell (operational pages only).
 // Akademik = operasional saja. Setup (Tahun Ajaran, Kurikulum, Mapel, KKM,
 // Komponen Nilai, Konfigurasi) pindah ke modul Master Data.
 const NAV_GROUPS: NavTabGroup[] = [
@@ -127,6 +128,8 @@ function buildTaSegments(taList: TaStatusRow[]): DistributionSegment[] {
   ];
 }
 
+// Layout shell for the Akademik module: ModuleShell + period context bar (shown
+// only on operational pages) wrapping the route Outlet.
 function AkademikLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
@@ -218,38 +221,39 @@ function AkademikLayout() {
         setDirty,
       }}
     >
-      <div className="space-y-4">
-        {contextual ? (
-          <>
-            <ModuleHeader
-              context={<AkademikContextBar />}
-              nav={<GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="header" />}
-            />
-            <PageGuide
-              storageId="layout-contextbar"
-              title="Cara pakai Konteks Periode"
-              intro="Bar di atas menentukan Tahun Ajaran & Semester untuk seluruh data nilai di modul Akademik."
-              steps={CONTEXT_GUIDE_STEPS}
-              tips={CONTEXT_GUIDE_TIPS}
-            />
-            <SectionCard
-              title="Sebaran Tahun Ajaran"
-              description="Status semua Tahun Ajaran yang tersedia untuk dipilih di Konteks."
-            >
-              {taList.length > 0 ? (
-                <DistributionBar segments={taSegments} />
-              ) : (
-                <p className="text-sm text-muted-fg">
-                  Belum ada Tahun Ajaran. Tambahkan di Master Data agar periode bisa dipilih.
-                </p>
-              )}
-            </SectionCard>
-          </>
-        ) : (
+      {contextual ? (
+        <ModuleShell
+          context={<AkademikContextBar />}
+          navGroups={NAV_GROUPS}
+          pathname={pathname}
+        >
+          <PageGuide
+            storageId="layout-contextbar"
+            title="Cara pakai Konteks Periode"
+            intro="Bar di atas menentukan Tahun Ajaran & Semester untuk seluruh data nilai di modul Akademik."
+            steps={CONTEXT_GUIDE_STEPS}
+            tips={CONTEXT_GUIDE_TIPS}
+          />
+          <SectionCard
+            title="Sebaran Tahun Ajaran"
+            description="Status semua Tahun Ajaran yang tersedia untuk dipilih di Konteks."
+          >
+            {taList.length > 0 ? (
+              <DistributionBar segments={taSegments} />
+            ) : (
+              <p className="text-sm text-muted-fg">
+                Belum ada Tahun Ajaran. Tambahkan di Master Data agar periode bisa dipilih.
+              </p>
+            )}
+          </SectionCard>
+          <Outlet />
+        </ModuleShell>
+      ) : (
+        <div className="space-y-4">
           <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="inline" />
-        )}
-        <Outlet />
-      </div>
+          <Outlet />
+        </div>
+      )}
     </AkademikContextProvider>
   );
 }
