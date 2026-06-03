@@ -28,4 +28,15 @@ describe("template registry contract", () => {
     expect(def.key).toBe("aurora");
     expect(def.themeClass).toBe("tpl-aurora");
   });
+
+  it.each([
+    ["elegan", "tpl-elegan", "Elegan"],
+    ["akademik", "tpl-akademik", "Akademik"],
+    ["alam", "tpl-alam", "Alam"],
+  ] as const)("%s is a first-class template with its own skin + label", (key, themeClass, label) => {
+    const def = getTemplate(key);
+    expect(def.key).toBe(key);
+    expect(def.themeClass).toBe(themeClass);
+    expect(def.label).toBe(label);
+  });
 });

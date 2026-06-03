@@ -82,6 +82,45 @@ export const TEMPLATE_PRESETS: Record<TemplateKey, TemplatePreset> = {
       block("kontak", "default"),
     ],
   },
+  elegan: {
+    theme: theme("split", "card"),
+    layoutBlocks: [
+      block("hero", "split"),
+      block("profil", "default"),
+      block("keunggulan", "grid"),
+      block("prestasi", "default"),
+      block("berita", "cards"),
+      block("galeri", "masonry"),
+      block("testimoni", "grid"),
+      block("kontak", "default"),
+    ],
+  },
+  akademik: {
+    theme: theme("split", "bordered"),
+    layoutBlocks: [
+      block("hero", "split"),
+      block("statistik", "row"),
+      block("keunggulan", "grid"),
+      block("prestasi", "default"),
+      block("berita", "list"),
+      block("ppdb", "banner"),
+      block("profil", "default"),
+      block("kontak", "default"),
+    ],
+  },
+  alam: {
+    theme: theme("fullbleed", "card"),
+    layoutBlocks: [
+      block("hero", "fullbleed"),
+      block("galeri", "masonry"),
+      block("keunggulan", "cards"),
+      block("statistik", "tiles"),
+      block("prestasi", "default"),
+      block("berita", "cards"),
+      block("agenda", "default"),
+      block("kontak", "default"),
+    ],
+  },
 };
 
 /** Override a site's template, theme tokens and layout with a preset — keeps all

@@ -5,6 +5,9 @@ const LABELS: Record<TemplateKey, string> = {
   modern: "Modern",
   ceria: "Ceria",
   aurora: "Aurora",
+  elegan: "Elegan",
+  akademik: "Akademik",
+  alam: "Alam",
 };
 
 /** Floating template picker shown only in demo mode (see isDemoMode). Lets a

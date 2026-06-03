@@ -67,6 +67,53 @@
   letter-spacing: -0.02em;
 }
 
+.tpl-elegan {
+  --situs-radius: 10px;
+  --situs-radius-lg: 20px;
+  --situs-heading-font: var(--font-situs-display);
+  --situs-body-font: var(--font-situs-sans);
+  --situs-card-border: 1px solid var(--situs-border);
+  --situs-card-shadow: 0 30px 70px -40px rgba(15, 23, 42, 0.35);
+  --situs-section-soft: #faf9f7;
+}
+.tpl-elegan h1,
+.tpl-elegan h2,
+.tpl-elegan h3 {
+  font-family: var(--situs-heading-font);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.tpl-akademik {
+  --situs-radius: 8px;
+  --situs-radius-lg: 14px;
+  --situs-heading-font: var(--font-situs-sans);
+  --situs-body-font: var(--font-situs-sans);
+  --situs-card-border: 1px solid var(--situs-border);
+  --situs-card-shadow: 0 12px 30px -24px rgba(30, 41, 59, 0.5);
+  --situs-section-soft: #f1f5f9;
+}
+.tpl-akademik h1,
+.tpl-akademik h2 {
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.tpl-alam {
+  --situs-radius: 18px;
+  --situs-radius-lg: 28px;
+  --situs-heading-font: var(--font-situs-sans);
+  --situs-body-font: var(--font-situs-sans);
+  --situs-card-border: 1px solid transparent;
+  --situs-card-shadow: 0 22px 50px -32px rgba(22, 101, 52, 0.4);
+  --situs-section-soft: #f3faf4;
+}
+.tpl-alam h1,
+.tpl-alam h2 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
 /* Section primitives consumed by all templates via the scoped vars. */
 .situs-card {
   border: var(--situs-card-border, 1px solid var(--situs-border));

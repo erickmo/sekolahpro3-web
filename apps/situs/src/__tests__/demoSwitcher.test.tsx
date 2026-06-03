@@ -10,6 +10,9 @@ const HERO_BY_TEMPLATE: Record<string, string> = {
   modern: "centered",
   ceria: "playful",
   aurora: "fullbleed",
+  elegan: "split",
+  akademik: "split",
+  alam: "fullbleed",
 };
 
 describe("applyDemoTemplate", () => {
