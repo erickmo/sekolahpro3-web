@@ -23,6 +23,8 @@ export interface KontenField {
   required?: boolean;
   /** Show this field as a column in the list table. */
   listColumn?: boolean;
+  /** Helper text shown under the field in the edit form. */
+  hint?: string;
 }
 
 export interface KontenSchema {
@@ -31,6 +33,8 @@ export interface KontenSchema {
   /** Field used as the row title in the table. */
   titleField: string;
   fields: KontenField[];
+  /** Default client-side sort for the list (e.g. by `urutan`). */
+  defaultSort?: { key: string; dir: "asc" | "desc" };
 }
 
 /** Schema for a Situs Sekolah child table (rows saved as an array, no own doctype CRUD). */
@@ -73,6 +77,7 @@ export const HALAMAN_SCHEMA: KontenSchema = {
   doctype: "Halaman Situs",
   singular: "Halaman",
   titleField: "judul",
+  defaultSort: { key: "urutan", dir: "asc" },
   fields: [
     { name: "judul", label: "Judul", type: "text", required: true, listColumn: true },
     { name: "slug", label: "Slug (opsional)", type: "text" },
@@ -91,7 +96,7 @@ export const AGENDA_SCHEMA: KontenSchema = {
   fields: [
     { name: "judul", label: "Judul", type: "text", required: true, listColumn: true },
     { name: "tanggal_mulai", label: "Tanggal Mulai", type: "datetime", required: true, listColumn: true },
-    { name: "tanggal_selesai", label: "Tanggal Selesai", type: "datetime" },
+    { name: "tanggal_selesai", label: "Tanggal Selesai", type: "datetime", hint: "Kosongkan untuk acara satu hari." },
     { name: "lokasi", label: "Lokasi", type: "text", listColumn: true },
     { name: "deskripsi", label: "Deskripsi", type: "textarea" },
     STATUS,
@@ -102,6 +107,7 @@ export const GALERI_SCHEMA: KontenSchema = {
   doctype: "Galeri Sekolah",
   singular: "Foto",
   titleField: "judul",
+  defaultSort: { key: "urutan", dir: "asc" },
   fields: [
     { name: "judul", label: "Judul", type: "text", required: true, listColumn: true },
     { name: "gambar", label: "Gambar (URL)", type: "image", required: true },

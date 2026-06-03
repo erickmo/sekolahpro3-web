@@ -11,17 +11,21 @@ export function Hero({ variant }: { variant: TemplateKey }) {
   const site = useSite();
   const p = site.profil;
 
+  // Secondary CTA honors the CMS hero fields (Tampilan editor → profil.heroCta2*),
+  // falling back to the generic "Tentang Kami" link when unset.
+  const secondaryLabel = p.heroCta2Label || "Tentang Kami";
+  const secondaryUrl = p.heroCta2Url || "/profil";
   const cta = (
     <div className="mt-6 flex flex-wrap gap-3">
       <Link to={p.heroCtaUrl || "/ppdb"} className="situs-brand-bg situs-round px-6 py-3 text-sm font-semibold shadow-sm">
         {p.heroCtaLabel || "Informasi PPDB"}
       </Link>
       <Link
-        to="/profil"
+        to={secondaryUrl}
         className="situs-round border px-6 py-3 text-sm font-semibold"
         style={{ borderColor: "var(--situs-border)", color: "var(--situs-ink)" }}
       >
-        Tentang Kami
+        {secondaryLabel}
       </Link>
     </div>
   );

@@ -59,6 +59,22 @@ function FieldInput({ field, id, value, onChange }: { field: KontenField; id: st
   return <Input id={id} type={inputType} value={str} onChange={(e) => onChange(e.target.value)} />;
 }
 
+/** Sort rows by the schema's defaultSort (numeric-aware); returns a new array. */
+function sortRows(rows: KontenRow[], schema: KontenSchema): KontenRow[] {
+  const sort = schema.defaultSort;
+  if (!sort) return rows;
+  const dir = sort.dir === "desc" ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const av = a[sort.key];
+    const bv = b[sort.key];
+    const an = Number(av);
+    const bn = Number(bv);
+    // Numeric compare when both parse as numbers (e.g. `urutan`); else string.
+    if (!Number.isNaN(an) && !Number.isNaN(bn)) return (an - bn) * dir;
+    return String(av ?? "").localeCompare(String(bv ?? "")) * dir;
+  });
+}
+
 /** Names of required fields whose current value is blank (null/empty/whitespace). */
 function missingRequired(schema: KontenSchema, form: FormState): string[] {
   return schema.fields
@@ -172,7 +188,7 @@ export function KontenManager({
         </Card>
       ) : (
         <DataTable
-          data={list.data ?? []}
+          data={sortRows(list.data ?? [], schema)}
           columns={columns}
           rowKey={(r) => r.name}
           empty={<EmptyState title={`Belum ada ${schema.singular.toLowerCase()}`} description="Klik tombol Tambah untuk membuat yang pertama." />}
@@ -196,7 +212,7 @@ export function KontenManager({
             {schema.fields.map((field) => {
               const fieldId = `kf-${field.name}`;
               return (
-                <FormField key={field.name} label={field.label} htmlFor={fieldId} required={field.required} error={errors[field.name] || undefined}>
+                <FormField key={field.name} label={field.label} htmlFor={fieldId} required={field.required} hint={field.hint} error={errors[field.name] || undefined}>
                   <FieldInput field={field} id={fieldId} value={form[field.name]} onChange={(v) => setField(field.name, v)} />
                 </FormField>
               );

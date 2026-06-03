@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const fetchMock = vi.fn(async (method: string, _args?: unknown) => {
+const fetchMock = vi.fn(async (method: string, _args?: unknown): Promise<unknown> => {
   if (method.endsWith("list_konten")) {
     return [
       { name: "BS-1", judul: "Halal Bihalal 2026", kategori: "Berita", status: "Terbit", tanggal_terbit: "2026-05-01" },
@@ -18,7 +18,7 @@ vi.mock("@sekolahpro/api-client", async () => {
 });
 
 import { KontenManager } from "../KontenManager";
-import { BERITA_SCHEMA } from "../schemas";
+import { BERITA_SCHEMA, GALERI_SCHEMA, AGENDA_SCHEMA } from "../schemas";
 
 afterEach(() => { cleanup(); fetchMock.mockClear(); });
 
@@ -78,5 +78,24 @@ describe("KontenManager", () => {
     fetchMock.mockImplementationOnce(async () => { throw new Error("boom"); });
     render(wrap(<KontenManager sekolah="SMP Demo" schema={BERITA_SCHEMA} />));
     await waitFor(() => expect(screen.getByText(/gagal memuat/i)).toBeInTheDocument());
+  });
+
+  it("orders the galeri list by its urutan field, not API order", async () => {
+    fetchMock.mockImplementationOnce(async () => [
+      { name: "G2", judul: "Kedua", kategori: "x", urutan: 2, status: "Terbit" },
+      { name: "G1", judul: "Pertama", kategori: "y", urutan: 1, status: "Terbit" },
+    ]);
+    render(wrap(<KontenManager sekolah="SMP Demo" schema={GALERI_SCHEMA} />));
+    const pertama = await screen.findByText("Pertama");
+    const kedua = screen.getByText("Kedua");
+    // urutan 1 ("Pertama") must render before urutan 2 ("Kedua").
+    expect(pertama.compareDocumentPosition(kedua) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("shows the helper hint on the agenda end-date field", async () => {
+    render(wrap(<KontenManager sekolah="SMP Demo" schema={AGENDA_SCHEMA} />));
+    fireEvent.click(screen.getByRole("button", { name: /Tambah Agenda/i }));
+    await waitFor(() => expect(screen.getByText("Tambah Agenda")).toBeInTheDocument());
+    expect(screen.getByText(/acara satu hari/i)).toBeInTheDocument();
   });
 });
