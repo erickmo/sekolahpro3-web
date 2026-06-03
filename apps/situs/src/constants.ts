@@ -3,7 +3,10 @@
 // The contract test (src/__tests__/contract.test.ts) asserts the template
 // registry and section components only use keys declared here.
 
-export const TEMPLATE_KEYS = ["klasik", "modern", "ceria", "aurora"] as const;
+// klasik/modern/ceria also exist in the backend constants.py; aurora + the
+// trio below (elegan/akademik/alam) are SPA-only data-driven skins, renderable
+// via demo presets + the block engine but not yet backend-persistable.
+export const TEMPLATE_KEYS = ["klasik", "modern", "ceria", "aurora", "elegan", "akademik", "alam"] as const;
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 export const DEFAULT_TEMPLATE: TemplateKey = "klasik";
 

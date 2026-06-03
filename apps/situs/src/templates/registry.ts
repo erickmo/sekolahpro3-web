@@ -9,6 +9,9 @@ import { klasik } from "./Klasik";
 import { modern } from "./Modern";
 import { ceria } from "./Ceria";
 import { aurora } from "./Aurora";
+import { elegan } from "./Elegan";
+import { akademik } from "./Akademik";
+import { alam } from "./Alam";
 import type { TemplateDef } from "./types";
 
 export const TEMPLATE_REGISTRY: Record<TemplateKey, TemplateDef> = {
@@ -16,6 +19,9 @@ export const TEMPLATE_REGISTRY: Record<TemplateKey, TemplateDef> = {
   modern,
   ceria,
   aurora,
+  elegan,
+  akademik,
+  alam,
 };
 
 export function getTemplate(key: TemplateKey): TemplateDef {
