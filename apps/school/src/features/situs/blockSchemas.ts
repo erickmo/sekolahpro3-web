@@ -50,6 +50,27 @@ export const LAYOUT_BLOCK_FIELDS: KontenField[] = [
   { name: "konten", label: "Konten", type: "richtext" },
 ];
 
+// Which LAYOUT_BLOCK_FIELDS each block tipe actually consumes in the renderer
+// (apps/situs templates/blocks). The editor only shows these so authors don't edit
+// fields with no visible effect. Adapter blocks (berita/agenda/galeri/prestasi/
+// profil/ppdb/kontak) pull global section data and ignore per-block fields, so they
+// expose none — only tipe/variant/aktif. Keep in sync with the *Block.tsx renderers.
+export const BLOCK_FIELDS_BY_TYPE: Record<BlockTipe, string[]> = {
+  hero: ["judul", "subjudul", "cta_label", "cta_url"],
+  cta: ["judul", "subjudul", "cta_label", "cta_url"],
+  keunggulan: ["judul", "subjudul"],
+  testimoni: ["judul", "subjudul"],
+  statistik: ["judul"],
+  richtext: ["judul", "konten"],
+  profil: [],
+  berita: [],
+  agenda: [],
+  galeri: [],
+  prestasi: [],
+  ppdb: [],
+  kontak: [],
+};
+
 // Block type catalogue — mirrors the backend Situs Layout Block `tipe` Select
 // and the 13 BLOCK_TYPES in the SPA (apps/situs/src/constants.ts).
 export const BLOCK_TIPE_OPTIONS = [

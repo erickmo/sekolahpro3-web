@@ -45,6 +45,13 @@ describe("DomainPage", () => {
     expect(screen.getByText("Terverifikasi")).toBeInTheDocument();
   });
 
+  it("explains how to fix a failed SSL status", async () => {
+    situsStub = { subdomain: "smp-demo", custom_domain: "www.smp.sch.id", ssl_status: "Failed", domain_verified: 0 };
+    render(wrap(<DomainPage sekolah="smp-demo" />));
+    await waitFor(() => expect(screen.getByText(/SSL: Failed/)).toBeInTheDocument());
+    expect(screen.getByText(/hubungi tim SekolahPro/i)).toBeInTheDocument();
+  });
+
   it("shows DNS instructions only once a custom domain is entered", async () => {
     render(wrap(<DomainPage sekolah="smp-demo" />));
     await waitFor(() => expect(screen.getByDisplayValue("smp-demo")).toBeInTheDocument());

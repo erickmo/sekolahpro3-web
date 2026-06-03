@@ -18,6 +18,7 @@ import {
   BLOCK_TIPE_OPTIONS,
   BLOCK_TIPE_LABELS,
   BLOCK_VARIANTS,
+  BLOCK_FIELDS_BY_TYPE,
   LAYOUT_BLOCK_FIELDS,
 } from "../features/situs/blockSchemas";
 
@@ -36,8 +37,11 @@ function newBlock(tipe: BlockTipe): LayoutBlockRow {
   return { tipe, variant: BLOCK_VARIANTS[tipe][0] ?? "default", aktif: 1 };
 }
 
-/** Per-block variant picker plus the shared presentational text fields. */
+/** Per-block variant picker plus only the presentational fields this tipe uses. */
 function BlockEditor({ block, onChange }: { block: LayoutBlockRow; onChange: (b: LayoutBlockRow) => void }) {
+  // Hide fields the renderer ignores for this block tipe (e.g. CTA fields on a
+  // richtext block, all text fields on adapter blocks like berita/agenda).
+  const fields = LAYOUT_BLOCK_FIELDS.filter((f) => BLOCK_FIELDS_BY_TYPE[block.tipe].includes(f.name));
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <FormField label="Varian">
@@ -45,7 +49,7 @@ function BlockEditor({ block, onChange }: { block: LayoutBlockRow; onChange: (b:
           {BLOCK_VARIANTS[block.tipe].map((v) => <option key={v} value={v}>{v}</option>)}
         </Select>
       </FormField>
-      {LAYOUT_BLOCK_FIELDS.map((f) => {
+      {fields.map((f) => {
         const value = String((block as unknown as Record<string, unknown>)[f.name] ?? "");
         const set = (v: string) => onChange({ ...block, [f.name]: v });
         return (
