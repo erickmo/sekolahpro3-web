@@ -10,7 +10,7 @@ import {
 import { useResourceList } from "@sekolahpro/api-client";
 import { AkademikContextProvider } from "../lib/akademikContext";
 import { AkademikContextBar } from "../components/akademik/AkademikContextBar";
-import { GroupedNavTabs, type NavTabGroup } from "../components/GroupedNavTabs";
+import { type NavTabGroup } from "../components/GroupedNavTabs";
 import { ModuleShell } from "../components/shell/ModuleShell";
 import { PageGuide, type PageGuideStep } from "../components/guide";
 import { DistributionBar, type DistributionSegment } from "../components/viz";
@@ -54,14 +54,6 @@ const NAV_GROUPS: NavTabGroup[] = [
   },
 ];
 
-// Konteks (Tahun Ajaran + Semester) hanya relevan di halaman operasional yang
-// menyaring data per periode. Setup tidak butuh, jadi bar disembunyikan di sana.
-const CONTEXT_BAR_PREFIXES = [
-  "/akademik/asesmen",
-  "/akademik/entri-nilai",
-  "/akademik/raport",
-];
-
 // Editor grid (entri-nilai/edit) mengelola periode lewat selector-nya sendiri
 // (param rombel/mapel/ta/semester di rute itu, plus tombol "Ubah Konteks").
 // Bar periode layout disembunyikan & efek redirect/persist dilewati di sana agar
@@ -73,9 +65,27 @@ export function isPeriodeSelfManaged(pathname: string): boolean {
   return pathname.includes(PERIODE_SELF_MANAGED);
 }
 
+// Bar konteks periode (Tahun Ajaran + Semester) tampil di SETIAP halaman Akademik,
+// selaras dengan modul Ekstrakurikuler — termasuk Dashboard, yang KPI-nya disaring
+// per periode. Hanya editor grid yang dikecualikan (mengelola periodenya sendiri).
+// Guard "/akademik" menjaga fungsi tetap akurat bila dipanggil dengan path lain.
 export function showContextBar(pathname: string): boolean {
+  if (!pathname.includes("/akademik")) return false;
+  return !isPeriodeSelfManaged(pathname);
+}
+
+// Halaman operasional yang menyaring data per periode. Hanya di sini layout
+// menyisipkan panduan periode + ringkasan "Sebaran Tahun Ajaran" di atas Outlet;
+// Dashboard punya panduan & visualisasinya sendiri, jadi tidak ditumpuk.
+const PERIODE_INTRO_PREFIXES = [
+  "/akademik/asesmen",
+  "/akademik/entri-nilai",
+  "/akademik/raport",
+];
+
+export function showPeriodeIntro(pathname: string): boolean {
   if (isPeriodeSelfManaged(pathname)) return false;
-  return CONTEXT_BAR_PREFIXES.some((p) => pathname.includes(p));
+  return PERIODE_INTRO_PREFIXES.some((p) => pathname.includes(p));
 }
 
 // Panduan singkat fitur Konteks Periode — muncul bersama context bar di halaman
@@ -128,8 +138,9 @@ function buildTaSegments(taList: TaStatusRow[]): DistributionSegment[] {
   ];
 }
 
-// Layout shell for the Akademik module: ModuleShell + period context bar (shown
-// only on operational pages) wrapping the route Outlet.
+// Layout shell for the Akademik module: ModuleShell (sticky sub-nav on every page,
+// mirroring ekstrakurikuler) + period context bar on every page except the grid
+// editor, wrapping the route Outlet.
 function AkademikLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
@@ -200,9 +211,10 @@ function AkademikLayout() {
   const semester = search.semester ?? resolved?.semester ?? "";
   const past = isPastPeriod(resolved?.taRow, refDate);
 
-  // Panduan kontekstual hanya relevan di halaman operasional (yang juga
-  // menampilkan context bar). Dashboard punya panduannya sendiri.
-  const contextual = showContextBar(pathname);
+  // Bar konteks tampil di semua halaman kecuali editor grid; panduan + ringkasan
+  // periode hanya disisipkan di halaman operasional (Dashboard punya sendiri).
+  const showBar = showContextBar(pathname);
+  const showIntro = showPeriodeIntro(pathname);
 
   // Ringkasan distribusi Tahun Ajaran — visualisasi dari data taList yang sudah
   // diambil layout (tanpa panggilan backend tambahan).
@@ -221,39 +233,36 @@ function AkademikLayout() {
         setDirty,
       }}
     >
-      {contextual ? (
-        <ModuleShell
-          context={<AkademikContextBar />}
-          navGroups={NAV_GROUPS}
-          pathname={pathname}
-        >
-          <PageGuide
-            storageId="layout-contextbar"
-            title="Cara pakai Konteks Periode"
-            intro="Bar di atas menentukan Tahun Ajaran & Semester untuk seluruh data nilai di modul Akademik."
-            steps={CONTEXT_GUIDE_STEPS}
-            tips={CONTEXT_GUIDE_TIPS}
-          />
-          <SectionCard
-            title="Sebaran Tahun Ajaran"
-            description="Status semua Tahun Ajaran yang tersedia untuk dipilih di Konteks."
-          >
-            {taList.length > 0 ? (
-              <DistributionBar segments={taSegments} />
-            ) : (
-              <p className="text-sm text-muted-fg">
-                Belum ada Tahun Ajaran. Tambahkan di Master Data agar periode bisa dipilih.
-              </p>
-            )}
-          </SectionCard>
-          <Outlet />
-        </ModuleShell>
-      ) : (
-        <div className="space-y-4">
-          <GroupedNavTabs groups={NAV_GROUPS} pathname={pathname} variant="inline" />
-          <Outlet />
-        </div>
-      )}
+      <ModuleShell
+        navGroups={NAV_GROUPS}
+        pathname={pathname}
+        {...(showBar ? { context: <AkademikContextBar /> } : {})}
+      >
+        {showIntro ? (
+          <>
+            <PageGuide
+              storageId="layout-contextbar"
+              title="Cara pakai Konteks Periode"
+              intro="Bar di atas menentukan Tahun Ajaran & Semester untuk seluruh data nilai di modul Akademik."
+              steps={CONTEXT_GUIDE_STEPS}
+              tips={CONTEXT_GUIDE_TIPS}
+            />
+            <SectionCard
+              title="Sebaran Tahun Ajaran"
+              description="Status semua Tahun Ajaran yang tersedia untuk dipilih di Konteks."
+            >
+              {taList.length > 0 ? (
+                <DistributionBar segments={taSegments} />
+              ) : (
+                <p className="text-sm text-muted-fg">
+                  Belum ada Tahun Ajaran. Tambahkan di Master Data agar periode bisa dipilih.
+                </p>
+              )}
+            </SectionCard>
+          </>
+        ) : null}
+        <Outlet />
+      </ModuleShell>
     </AkademikContextProvider>
   );
 }
