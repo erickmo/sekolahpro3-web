@@ -3,6 +3,9 @@ import { createFileRoute, Link, useParams} from "@tanstack/react-router";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { frappeFetch } from "@sekolahpro/api-client";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -163,6 +166,17 @@ function IjazahPage() {
           Lihat Kelulusan
         </Link>{" "}
         sebagai sumber penerbitan.
+      </div>
+      <div className="mb-4">
+        <PageGuide
+          storageNamespace="siswa-guide:"
+          storageId="ijazah"
+          title={SISWA_PAGE_GUIDES.ijazah.title}
+          intro={SISWA_PAGE_GUIDES.ijazah.intro}
+          steps={SISWA_PAGE_GUIDES.ijazah.steps}
+          tips={SISWA_PAGE_GUIDES.ijazah.tips}
+          roleLabels={SCHOOL_ROLE_LABEL}
+        />
       </div>
       <ResourceListPage<Row>
         eyebrow="Siswa"

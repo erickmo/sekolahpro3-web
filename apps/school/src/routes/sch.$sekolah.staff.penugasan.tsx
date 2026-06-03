@@ -2,6 +2,9 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { STAFF_PAGE_GUIDES } from "../components/staff/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { PENUGASAN_GURU_FIELDS } from "../components/guru-extra/sub-fields";
 import { BuatSkMengajarButton } from "../features/pegawai/PegawaiActions";
@@ -30,7 +33,16 @@ const COLUMNS: Column<Row>[] = [
 function PenugasanPage() {
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="staff-guide:"
+        storageId="penugasan"
+        title={STAFF_PAGE_GUIDES.penugasan.title}
+        intro={STAFF_PAGE_GUIDES.penugasan.intro}
+        steps={STAFF_PAGE_GUIDES.penugasan.steps}
+        tips={STAFF_PAGE_GUIDES.penugasan.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Guru"
         title="Penugasan Guru"
@@ -51,7 +63,7 @@ function PenugasanPage() {
         description="Header penugasan. Detail per-mapel diisi via halaman detail/desk."
         fields={PENUGASAN_GURU_FIELDS}
       />
-    </>
+    </div>
   );
 }
 

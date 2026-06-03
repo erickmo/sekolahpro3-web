@@ -5,6 +5,7 @@
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 import { perpFormatRupiah } from "../components/perpustakaan/perpFormatters";
 
 type Row = {
@@ -59,7 +60,9 @@ function BAListPage() {
 
   const navigate = useNavigate();
   return (
-    <ResourceListPage<Row>
+    <>
+      <PerpPageGuide id="inventaris-berita-acara" />
+      <ResourceListPage<Row>
       eyebrow="Perpustakaan / Inventaris"
       title="Berita Acara Kerusakan"
       description="Insiden kerusakan / hilang per eksemplar. Draft oleh pustakawan, approve oleh Kepala Perpustakaan."
@@ -78,7 +81,8 @@ function BAListPage() {
       addLabel="BA Baru"
       onAdd={() => navigate({ to: "/sch/$sekolah/perpustakaan/inventaris/berita-acara/$name", params: { sekolah, name: "new" } })}
       onRowClick={(r) => navigate({ to: "/sch/$sekolah/perpustakaan/inventaris/berita-acara/$name", params: { sekolah, name: r.name } })}
-    />
+      />
+    </>
   );
 }
 

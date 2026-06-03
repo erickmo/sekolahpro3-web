@@ -9,6 +9,9 @@ import {
   STATISTIK_SCHEMA,
   TESTIMONI_SCHEMA,
 } from "../features/situs/blockSchemas";
+import { PageGuide } from "../components/guide";
+import { SITUS_PAGE_GUIDES } from "../components/situs/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 const SECTIONS: ChildSchema[] = [KEUNGGULAN_SCHEMA, STATISTIK_SCHEMA, TESTIMONI_SCHEMA];
 
@@ -23,6 +26,16 @@ export function SorotanPage({ sekolah }: { sekolah: string }) {
 
   return (
     <div className="space-y-4">
+      <PageGuide
+        storageNamespace="situs-guide:"
+        storageId="sorotan"
+        title={SITUS_PAGE_GUIDES.sorotan.title}
+        intro={SITUS_PAGE_GUIDES.sorotan.intro}
+        steps={SITUS_PAGE_GUIDES.sorotan.steps}
+        tips={SITUS_PAGE_GUIDES.sorotan.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+
       <div className="flex flex-wrap gap-2">
         {SECTIONS.map((s, i) => (
           <Button

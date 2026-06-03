@@ -3,7 +3,7 @@ import { KontenManager } from "../features/situs/KontenManager";
 import { PRESTASI_SCHEMA } from "../features/situs/schemas";
 
 export function PrestasiPage({ sekolah }: { sekolah: string }) {
-  return <KontenManager sekolah={sekolah} schema={PRESTASI_SCHEMA} />;
+  return <KontenManager sekolah={sekolah} schema={PRESTASI_SCHEMA} guideId="prestasi" />;
 }
 
 function PrestasiCms() {

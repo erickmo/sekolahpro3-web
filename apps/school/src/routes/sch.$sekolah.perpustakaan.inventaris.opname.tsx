@@ -5,6 +5,7 @@
 import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PerpPageGuide } from "../components/perpustakaan/PerpPageGuide";
 
 type Row = {
   name: string;
@@ -51,7 +52,9 @@ function OpnameListPage() {
 
   const navigate = useNavigate();
   return (
-    <ResourceListPage<Row>
+    <>
+      <PerpPageGuide id="inventaris-opname" />
+      <ResourceListPage<Row>
       eyebrow="Perpustakaan / Inventaris"
       title="Stock Opname"
       description="Audit inventaris koleksi via scan eksemplar. Draft disimpan otomatis — bisa dilanjutkan kapan saja."
@@ -64,7 +67,8 @@ function OpnameListPage() {
       addLabel="Mulai Opname"
       onAdd={() => navigate({ to: "/sch/$sekolah/perpustakaan/inventaris/opname/$name", params: { sekolah, name: "new" } })}
       onRowClick={(r) => navigate({ to: "/sch/$sekolah/perpustakaan/inventaris/opname/$name", params: { sekolah, name: r.name } })}
-    />
+      />
+    </>
   );
 }
 

@@ -3,7 +3,7 @@ import { KontenManager } from "../features/situs/KontenManager";
 import { BERITA_SCHEMA } from "../features/situs/schemas";
 
 export function BeritaPage({ sekolah }: { sekolah: string }) {
-  return <KontenManager sekolah={sekolah} schema={BERITA_SCHEMA} />;
+  return <KontenManager sekolah={sekolah} schema={BERITA_SCHEMA} guideId="berita" />;
 }
 
 function BeritaCms() {

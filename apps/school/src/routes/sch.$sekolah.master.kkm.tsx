@@ -4,6 +4,9 @@ import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { CreateResourceModal, type FieldSpec } from "../components/akademik/CreateResourceModal";
 import { useAkademikContextOptional } from "../lib/akademikContext";
+import { PageGuide } from "../components/guide";
+import { MASTER_PAGE_GUIDES } from "../components/master/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -165,7 +168,16 @@ function KkmPage() {
   }, [ctx?.tahunAjaran]);
 
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="master-guide:"
+        storageId="kkm"
+        title={MASTER_PAGE_GUIDES.kkm.title}
+        intro={MASTER_PAGE_GUIDES.kkm.intro}
+        steps={MASTER_PAGE_GUIDES.kkm.steps}
+        tips={MASTER_PAGE_GUIDES.kkm.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Akademik"
         title="KKM (Kriteria Ketuntasan Minimal)"
@@ -212,7 +224,7 @@ function KkmPage() {
         fields={FIELDS}
         initialValues={initialValues}
       />
-    </>
+    </div>
   );
 }
 

@@ -7,6 +7,9 @@ import {
   SLOT_OVERRIDE_BASE_VALUES,
   SLOT_OVERRIDE_FIELDS,
 } from "../data/create-schemas";
+import { PageGuide } from "../components/guide";
+import { JADWAL_PAGE_GUIDES } from "../components/jadwal/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; jadwal_override?: string; slot_jadwal?: string; tipe?: string };
 
@@ -20,7 +23,16 @@ const COLUMNS: Column<Row>[] = [
 function SlotOverridePage() {
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="jadwal-guide:"
+        storageId="slot-override"
+        title={JADWAL_PAGE_GUIDES["slot-override"].title}
+        intro={JADWAL_PAGE_GUIDES["slot-override"].intro}
+        steps={JADWAL_PAGE_GUIDES["slot-override"].steps}
+        tips={JADWAL_PAGE_GUIDES["slot-override"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Jadwal"
         title="Slot Override"
@@ -42,7 +54,7 @@ function SlotOverridePage() {
         fields={SLOT_OVERRIDE_FIELDS}
         baseValues={SLOT_OVERRIDE_BASE_VALUES}
       />
-    </>
+    </div>
   );
 }
 

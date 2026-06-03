@@ -2,6 +2,9 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { STAFF_PAGE_GUIDES } from "../components/staff/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { SK_MENGAJAR_FIELDS } from "../components/guru-extra/sub-fields";
 import { BulkGenerateSkButton } from "../features/pegawai/PegawaiActions";
@@ -36,7 +39,16 @@ const COLUMNS: Column<Row>[] = [
 function SkMengajarPage() {
   const [open, setOpen] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="staff-guide:"
+        storageId="sk-mengajar"
+        title={STAFF_PAGE_GUIDES["sk-mengajar"].title}
+        intro={STAFF_PAGE_GUIDES["sk-mengajar"].intro}
+        steps={STAFF_PAGE_GUIDES["sk-mengajar"].steps}
+        tips={STAFF_PAGE_GUIDES["sk-mengajar"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Guru"
         title="SK Mengajar"
@@ -58,7 +70,7 @@ function SkMengajarPage() {
         description="Buat draft SK Mengajar baru."
         fields={SK_MENGAJAR_FIELDS}
       />
-    </>
+    </div>
   );
 }
 

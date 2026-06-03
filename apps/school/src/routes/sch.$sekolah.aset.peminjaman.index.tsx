@@ -3,7 +3,10 @@ import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router"
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { PeminjamanFormModal } from "../components/aset/PeminjamanFormModal";
+import { PageGuide } from "../components/guide";
+import { ASET_PAGE_GUIDES } from "../components/aset/pageGuides";
 import { peminjamanStatusTone } from "../lib/aset/badges";
+import { ROLE_LABEL } from "../lib/aset/role";
 
 type Row = {
   name: string;
@@ -30,7 +33,16 @@ function PeminjamanListPage() {
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageId="aset-peminjaman"
+        storageNamespace="aset-guide:"
+        title={ASET_PAGE_GUIDES.peminjaman.title}
+        intro={ASET_PAGE_GUIDES.peminjaman.intro}
+        steps={ASET_PAGE_GUIDES.peminjaman.steps}
+        tips={ASET_PAGE_GUIDES.peminjaman.tips}
+        roleLabels={ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Manajemen Aset"
         title="Peminjaman Aset"
@@ -54,7 +66,7 @@ function PeminjamanListPage() {
         onRowClick={(r) => navigate({ to: "/sch/$sekolah/aset/peminjaman/$name", params: { sekolah, name: r.name } })}
       />
       <PeminjamanFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    </div>
   );
 }
 

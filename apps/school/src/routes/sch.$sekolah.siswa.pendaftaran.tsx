@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -70,7 +73,17 @@ function PendaftaranPage() {
 
   const navigate = useNavigate();
   return (
-    <ResourceListPage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="pendaftaran"
+        title={SISWA_PAGE_GUIDES.pendaftaran.title}
+        intro={SISWA_PAGE_GUIDES.pendaftaran.intro}
+        steps={SISWA_PAGE_GUIDES.pendaftaran.steps}
+        tips={SISWA_PAGE_GUIDES.pendaftaran.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <ResourceListPage<Row>
       eyebrow="Siswa"
       title="Pendaftaran Siswa"
       doctype="Pendaftaran Siswa"
@@ -109,7 +122,8 @@ function PendaftaranPage() {
       ]}
       addLabel="Daftar Siswa Baru"
       onAdd={() => navigate({ to: "/sch/$sekolah/siswa/pendaftaran/new", params: { sekolah } })}
-    />
+      />
+    </div>
   );
 }
 

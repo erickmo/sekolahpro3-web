@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type ConsentStatus = "Granted" | "Withdrawn" | "Expired" | "Pending";
 type Purpose = "Publikasi Foto" | "Data Dapodik" | "Sharing Mitra" | "Medis Darurat";
@@ -73,7 +76,17 @@ function PersetujuanPage() {
 
   const navigate = useNavigate();
   return (
-    <ResourceListPage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="persetujuan"
+        title={SISWA_PAGE_GUIDES.persetujuan.title}
+        intro={SISWA_PAGE_GUIDES.persetujuan.intro}
+        steps={SISWA_PAGE_GUIDES.persetujuan.steps}
+        tips={SISWA_PAGE_GUIDES.persetujuan.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <ResourceListPage<Row>
       eyebrow="Siswa"
       title="Persetujuan Wali (UU PDP)"
       doctype="Persetujuan Wali"
@@ -104,7 +117,8 @@ function PersetujuanPage() {
       ]}
       addLabel="Minta Persetujuan"
       onAdd={() => navigate({ to: "/sch/$sekolah/siswa/persetujuan/new", params: { sekolah } })}
-    />
+      />
+    </div>
   );
 }
 

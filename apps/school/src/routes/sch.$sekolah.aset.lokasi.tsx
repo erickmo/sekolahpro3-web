@@ -3,6 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { LokasiFormModal } from "../components/aset/LokasiFormModal";
+import { PageGuide } from "../components/guide";
+import { ASET_PAGE_GUIDES } from "../components/aset/pageGuides";
+import { ROLE_LABEL } from "../lib/aset/role";
 
 type Row = {
   name: string;
@@ -26,7 +29,16 @@ const COLUMNS: Column<Row>[] = [
 function LokasiPage() {
   const [showCreate, setShowCreate] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageId="aset-lokasi"
+        storageNamespace="aset-guide:"
+        title={ASET_PAGE_GUIDES.lokasi.title}
+        intro={ASET_PAGE_GUIDES.lokasi.intro}
+        steps={ASET_PAGE_GUIDES.lokasi.steps}
+        tips={ASET_PAGE_GUIDES.lokasi.tips}
+        roleLabels={ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Manajemen Aset"
         title="Lokasi Aset"
@@ -55,7 +67,7 @@ function LokasiPage() {
         addLabel="Tambah Lokasi"
       />
       <LokasiFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    </div>
   );
 }
 

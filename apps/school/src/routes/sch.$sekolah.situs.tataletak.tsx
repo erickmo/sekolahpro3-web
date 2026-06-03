@@ -20,6 +20,9 @@ import {
   BLOCK_VARIANTS,
   LAYOUT_BLOCK_FIELDS,
 } from "../features/situs/blockSchemas";
+import { PageGuide } from "../components/guide";
+import { SITUS_PAGE_GUIDES } from "../components/situs/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 /** Pure array move helper — out-of-range targets are no-ops. */
 function move<T>(arr: T[], from: number, to: number): T[] {
@@ -111,6 +114,16 @@ export function TataLetakPage({ sekolah }: { sekolah: string }) {
             {save.isPending ? "Menyimpan…" : "Simpan Tata Letak"}
           </Button>
         }
+      />
+
+      <PageGuide
+        storageNamespace="situs-guide:"
+        storageId="tataletak"
+        title={SITUS_PAGE_GUIDES.tataletak.title}
+        intro={SITUS_PAGE_GUIDES.tataletak.intro}
+        steps={SITUS_PAGE_GUIDES.tataletak.steps}
+        tips={SITUS_PAGE_GUIDES.tataletak.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <Card className="flex flex-wrap items-end gap-3 p-4">

@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = {
   name: string;
@@ -60,7 +63,17 @@ function MutasiPage() {
 
   const navigate = useNavigate();
   return (
-    <ResourceListPage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="mutasi"
+        title={SISWA_PAGE_GUIDES.mutasi.title}
+        intro={SISWA_PAGE_GUIDES.mutasi.intro}
+        steps={SISWA_PAGE_GUIDES.mutasi.steps}
+        tips={SISWA_PAGE_GUIDES.mutasi.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <ResourceListPage<Row>
       eyebrow="Siswa"
       title="Mutasi Siswa"
       doctype="Mutasi Siswa"
@@ -91,7 +104,8 @@ function MutasiPage() {
       ]}
       addLabel="Ajukan Mutasi"
       onAdd={() => navigate({ to: "/sch/$sekolah/siswa/mutasi/new", params: { sekolah } })}
-    />
+      />
+    </div>
   );
 }
 

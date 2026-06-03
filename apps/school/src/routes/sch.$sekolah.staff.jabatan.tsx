@@ -2,6 +2,9 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { STAFF_PAGE_GUIDES } from "../components/staff/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { JabatanFormModal } from "../components/staff/JabatanFormModal";
 
 type Row = { name: string; nama_jabatan: string; keterangan?: string; aktif?: 0 | 1 };
@@ -17,7 +20,16 @@ const COLUMNS: Column<Row>[] = [
 function StaffJabatanPage() {
   const [showCreate, setShowCreate] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="staff-guide:"
+        storageId="jabatan"
+        title={STAFF_PAGE_GUIDES.jabatan.title}
+        intro={STAFF_PAGE_GUIDES.jabatan.intro}
+        steps={STAFF_PAGE_GUIDES.jabatan.steps}
+        tips={STAFF_PAGE_GUIDES.jabatan.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Staff"
         title="Jenis Jabatan Staff"
@@ -31,7 +43,7 @@ function StaffJabatanPage() {
         onAdd={() => setShowCreate(true)}
       />
       <JabatanFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    </div>
   );
 }
 

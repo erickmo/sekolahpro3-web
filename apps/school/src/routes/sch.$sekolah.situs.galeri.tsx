@@ -3,7 +3,7 @@ import { KontenManager } from "../features/situs/KontenManager";
 import { GALERI_SCHEMA } from "../features/situs/schemas";
 
 export function GaleriPage({ sekolah }: { sekolah: string }) {
-  return <KontenManager sekolah={sekolah} schema={GALERI_SCHEMA} />;
+  return <KontenManager sekolah={sekolah} schema={GALERI_SCHEMA} guideId="galeri" />;
 }
 
 function GaleriCms() {

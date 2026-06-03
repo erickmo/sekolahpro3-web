@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { MasterResourcePage } from "../components/master/MasterResourcePage";
 import { UNIT_JENJANG_FIELDS } from "../components/master/schemas";
+import { PageGuide } from "../components/guide";
+import { MASTER_PAGE_GUIDES } from "../components/master/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; nama: string; tingkat?: string; sekolah?: string; status?: string };
 
@@ -16,21 +19,32 @@ const COLUMNS: Column<Row>[] = [
 
 function UnitJenjangPage() {
   return (
-    <MasterResourcePage<Row>
-      eyebrow="Master Data"
-      title="Unit Jenjang"
-      doctype="Unit Jenjang"
-      fields={["name", "nama", "tingkat", "sekolah", "status"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "nama", dir: "asc" }}
-      searchFields={["name", "nama"]}
-      addLabel="Tambah Unit"
-      detailRoute="/sch/$sekolah/master/unit-jenjang/$name"
-      detailParams={(r) => ({ name: r.name })}
-      formTitle="Tambah Unit Jenjang"
-      formFields={UNIT_JENJANG_FIELDS}
-    />
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="master-guide:"
+        storageId="unit-jenjang"
+        title={MASTER_PAGE_GUIDES["unit-jenjang"].title}
+        intro={MASTER_PAGE_GUIDES["unit-jenjang"].intro}
+        steps={MASTER_PAGE_GUIDES["unit-jenjang"].steps}
+        tips={MASTER_PAGE_GUIDES["unit-jenjang"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <MasterResourcePage<Row>
+        eyebrow="Master Data"
+        title="Unit Jenjang"
+        doctype="Unit Jenjang"
+        fields={["name", "nama", "tingkat", "sekolah", "status"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "nama", dir: "asc" }}
+        searchFields={["name", "nama"]}
+        addLabel="Tambah Unit"
+        detailRoute="/sch/$sekolah/master/unit-jenjang/$name"
+        detailParams={(r) => ({ name: r.name })}
+        formTitle="Tambah Unit Jenjang"
+        formFields={UNIT_JENJANG_FIELDS}
+      />
+    </div>
   );
 }
 

@@ -3,7 +3,7 @@ import { KontenManager } from "../features/situs/KontenManager";
 import { HALAMAN_SCHEMA } from "../features/situs/schemas";
 
 export function HalamanPage({ sekolah }: { sekolah: string }) {
-  return <KontenManager sekolah={sekolah} schema={HALAMAN_SCHEMA} />;
+  return <KontenManager sekolah={sekolah} schema={HALAMAN_SCHEMA} guideId="halaman" />;
 }
 
 function HalamanCms() {

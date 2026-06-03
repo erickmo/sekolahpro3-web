@@ -2,6 +2,9 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { STAFF_PAGE_GUIDES } from "../components/staff/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { BerkasGuruFormModal } from "../components/staff/BerkasGuruFormModal";
 import { RenewBerkasButton } from "../features/pegawai/PegawaiActions";
 
@@ -29,7 +32,16 @@ const COLUMNS: Column<Row>[] = [
 function StaffBerkasPage() {
   const [showCreate, setShowCreate] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="staff-guide:"
+        storageId="berkas"
+        title={STAFF_PAGE_GUIDES.berkas.title}
+        intro={STAFF_PAGE_GUIDES.berkas.intro}
+        steps={STAFF_PAGE_GUIDES.berkas.steps}
+        tips={STAFF_PAGE_GUIDES.berkas.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Staff"
         title="Berkas Staff"
@@ -43,7 +55,7 @@ function StaffBerkasPage() {
         onAdd={() => setShowCreate(true)}
       />
       <BerkasGuruFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    </div>
   );
 }
 

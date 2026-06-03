@@ -3,7 +3,7 @@ import { KontenManager } from "../features/situs/KontenManager";
 import { AGENDA_SCHEMA } from "../features/situs/schemas";
 
 export function AgendaPage({ sekolah }: { sekolah: string }) {
-  return <KontenManager sekolah={sekolah} schema={AGENDA_SCHEMA} />;
+  return <KontenManager sekolah={sekolah} schema={AGENDA_SCHEMA} guideId="agenda" />;
 }
 
 function AgendaCms() {

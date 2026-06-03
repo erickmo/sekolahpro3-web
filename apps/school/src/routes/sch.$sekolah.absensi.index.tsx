@@ -24,6 +24,9 @@ const ABSENSI_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "guru", label: "Absensi Guru", hint: "Kehadiran tenaga pendidik", href: "/sch/$sekolah/absensi/guru" },
 ];
 import { useResourceList } from "@sekolahpro/api-client";
+import { PageGuide } from "../components/guide";
+import { ABSENSI_PAGE_GUIDES } from "../components/absensi/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // TODO(/absensi/): Absensi Harian header has {name, rombel, tanggal, dibuat_oleh}.
 // total_hadir / total_alpa / total_izin / total_sakit live in child `detail`
@@ -160,6 +163,16 @@ function AbsensiDashboardPage() {
         eyebrow="Absensi"
         title="Dashboard Absensi"
         description="Pantau kehadiran siswa hari ini, tindak lanjuti yang perlu perhatian."
+      />
+
+      <PageGuide
+        storageNamespace="absensi-guide:"
+        storageId="dashboard"
+        title={ABSENSI_PAGE_GUIDES.dashboard.title}
+        intro={ABSENSI_PAGE_GUIDES.dashboard.intro}
+        steps={ABSENSI_PAGE_GUIDES.dashboard.steps}
+        tips={ABSENSI_PAGE_GUIDES.dashboard.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

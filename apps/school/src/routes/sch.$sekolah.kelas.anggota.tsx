@@ -3,6 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { AnggotaRombelFormModal } from "../components/kelas/AnggotaRombelFormModal";
+import { PageGuide } from "../components/guide";
+import { KELAS_PAGE_GUIDES } from "../components/kelas/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; parent?: string; siswa?: string; no_urut?: number; tanggal_masuk_rombel?: string; status?: string };
 
@@ -19,7 +22,16 @@ const COLUMNS: Column<Row>[] = [
 function AnggotaRombelPage() {
   const [showCreate, setShowCreate] = useState(false);
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="kelas-guide:"
+        storageId="anggota"
+        title={KELAS_PAGE_GUIDES.anggota.title}
+        intro={KELAS_PAGE_GUIDES.anggota.intro}
+        steps={KELAS_PAGE_GUIDES.anggota.steps}
+        tips={KELAS_PAGE_GUIDES.anggota.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Kelas"
         title="Anggota Rombel"
@@ -34,7 +46,7 @@ function AnggotaRombelPage() {
         onAdd={() => setShowCreate(true)}
       />
       <AnggotaRombelFormModal open={showCreate} onClose={() => setShowCreate(false)} />
-    </>
+    </div>
   );
 }
 

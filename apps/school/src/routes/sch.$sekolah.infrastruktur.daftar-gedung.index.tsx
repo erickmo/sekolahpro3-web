@@ -11,6 +11,9 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { GedungFormModal } from "../components/infrastruktur/GedungFormModal";
+import { PageGuide } from "../components/guide";
+import { INFRASTRUKTUR_PAGE_GUIDES } from "../components/infrastruktur/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Gedung = { name: string; nama?: string; kode?: string; tahun_dibangun?: number };
 type Lantai = { name: string; gedung?: string };
@@ -65,6 +68,16 @@ function GedungListPage() {
             Tambah Gedung
           </Button>
         }
+      />
+
+      <PageGuide
+        storageNamespace="infrastruktur-guide:"
+        storageId="daftar-gedung"
+        title={INFRASTRUKTUR_PAGE_GUIDES["daftar-gedung"].title}
+        intro={INFRASTRUKTUR_PAGE_GUIDES["daftar-gedung"].intro}
+        steps={INFRASTRUKTUR_PAGE_GUIDES["daftar-gedung"].steps}
+        tips={INFRASTRUKTUR_PAGE_GUIDES["daftar-gedung"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       {gedungQ.isLoading ? (

@@ -2,6 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Badge, Button, Card, PageHeader, StatCard } from "@sekolahpro/ui";
 import { useSitus, usePublish } from "../data/situs";
 import { situsPreviewUrl } from "../lib/situsPreview";
+import { PageGuide } from "../components/guide";
+import { SITUS_PAGE_GUIDES } from "../components/situs/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 /** Situs overview: publish toggle, preview link, and status/template/domain stats. */
 export function SitusOverviewPage({ sekolah }: { sekolah: string }) {
@@ -30,6 +33,16 @@ export function SitusOverviewPage({ sekolah }: { sekolah: string }) {
             </Button>
           </div>
         }
+      />
+
+      <PageGuide
+        storageNamespace="situs-guide:"
+        storageId="dashboard"
+        title={SITUS_PAGE_GUIDES.dashboard.title}
+        intro={SITUS_PAGE_GUIDES.dashboard.intro}
+        steps={SITUS_PAGE_GUIDES.dashboard.steps}
+        tips={SITUS_PAGE_GUIDES.dashboard.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <div className="grid gap-4 sm:grid-cols-3">

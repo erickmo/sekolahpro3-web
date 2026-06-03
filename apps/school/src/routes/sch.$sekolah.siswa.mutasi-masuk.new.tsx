@@ -16,6 +16,9 @@ import {
   type SearchableOption,
 } from "@sekolahpro/ui";
 import { WorkflowStepper, type WorkflowStep } from "@sekolahpro/ui/components/WorkflowStepper";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 interface DapodikData {
   nisn: string;
@@ -168,6 +171,16 @@ function MutasiMasukNewPage() {
         eyebrow="Siswa › Mutasi Masuk"
         title="Terima Siswa Pindahan"
         description="Verifikasi Dapodik dulu — input manual tidak diizinkan untuk mencegah ghost data."
+      />
+
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="mutasi-masuk-baru"
+        title={SISWA_PAGE_GUIDES["mutasi-masuk-baru"].title}
+        intro={SISWA_PAGE_GUIDES["mutasi-masuk-baru"].intro}
+        steps={SISWA_PAGE_GUIDES["mutasi-masuk-baru"].steps}
+        tips={SISWA_PAGE_GUIDES["mutasi-masuk-baru"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <SectionCard title="Status">

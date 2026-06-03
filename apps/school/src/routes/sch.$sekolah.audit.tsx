@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { PageGuide } from "../components/guide";
+import { MISC_PAGE_GUIDES } from "../components/guide/miscPageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // Wired to backend DocType: "Audit Log SekolahPro"
 // /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro/sekolahpro/pengaturan/doctype/audit_log_sekolahpro
@@ -53,7 +56,17 @@ const COLUMNS: Column<Row>[] = [
 
 function AuditPage() {
   return (
-    <ResourceListPage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="school-guide:"
+        storageId="audit"
+        title={MISC_PAGE_GUIDES.audit.title}
+        intro={MISC_PAGE_GUIDES.audit.intro}
+        steps={MISC_PAGE_GUIDES.audit.steps}
+        tips={MISC_PAGE_GUIDES.audit.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <ResourceListPage<Row>
       eyebrow="Lainnya"
       title="Audit Log"
       description="Lacak aktivitas pengguna, perubahan konfigurasi, dan kejadian sistem."
@@ -67,7 +80,8 @@ function AuditPage() {
         { key: "severity", label: "Severity", field: "severity", options: SEVERITY_OPTS },
         { key: "action", label: "Aksi", field: "action", options: ACTION_OPTS },
       ]}
-    />
+      />
+    </div>
   );
 }
 

@@ -11,6 +11,9 @@ import {
   Textarea,
 } from "@sekolahpro/ui";
 import { useSitus, useSaveSitus, useTemplates, type SitusDoc } from "../data/situs";
+import { PageGuide } from "../components/guide";
+import { SITUS_PAGE_GUIDES } from "../components/situs/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { useUnsavedChanges } from "../lib/useUnsavedChanges";
 
 const TOGGLES: { name: keyof SitusDoc; label: string }[] = [
@@ -70,6 +73,16 @@ export function TampilanPage({ sekolah }: { sekolah: string }) {
             {save.isPending ? "Menyimpan…" : "Simpan Perubahan"}
           </Button>
         }
+      />
+
+      <PageGuide
+        storageNamespace="situs-guide:"
+        storageId="tampilan"
+        title={SITUS_PAGE_GUIDES.tampilan.title}
+        intro={SITUS_PAGE_GUIDES.tampilan.intro}
+        steps={SITUS_PAGE_GUIDES.tampilan.steps}
+        tips={SITUS_PAGE_GUIDES.tampilan.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <section>

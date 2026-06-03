@@ -3,6 +3,9 @@ import { type Column } from "@sekolahpro/ui";
 import { MasterResourcePage } from "../components/master/MasterResourcePage";
 import { InlineToggle } from "../components/master/InlineToggle";
 import { MODUL_FIELDS } from "../components/master/schemas";
+import { PageGuide } from "../components/guide";
+import { PENGATURAN_PAGE_GUIDES } from "../components/pengaturan/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; nama: string; aktif?: number; deskripsi?: string };
 
@@ -16,7 +19,17 @@ const COLUMNS: Column<Row>[] = [
 
 function ModulPage() {
   return (
-    <MasterResourcePage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="pengaturan-guide:"
+        storageId="modul"
+        title={PENGATURAN_PAGE_GUIDES.modul.title}
+        intro={PENGATURAN_PAGE_GUIDES.modul.intro}
+        steps={PENGATURAN_PAGE_GUIDES.modul.steps}
+        tips={PENGATURAN_PAGE_GUIDES.modul.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <MasterResourcePage<Row>
       eyebrow="Pengaturan"
       title="Modul Aktif"
       description="Toggle modul yang dipakai per tenant."
@@ -32,6 +45,7 @@ function ModulPage() {
       formTitle="Tambah Modul"
       formFields={MODUL_FIELDS}
     />
+    </div>
   );
 }
 

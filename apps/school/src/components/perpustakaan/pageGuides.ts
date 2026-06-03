@@ -26,7 +26,12 @@ export type PerpGuideId =
   | "pengadaan"
   | "anggota"
   | "laporan"
-  | "inventaris";
+  | "inventaris"
+  | "denda"
+  | "pengembalian"
+  | "kolektif"
+  | "inventaris-berita-acara"
+  | "inventaris-opname";
 
 /** Full guide content for a single page. */
 export interface PerpGuideContent {
@@ -224,6 +229,63 @@ export const PERP_PAGE_GUIDES: Record<PerpGuideId, PerpGuideContent> = {
     ],
     tips: [
       "Draft opname yang belum disubmit & BA menunggu approval muncul di 'Perlu Perhatian' dashboard.",
+    ],
+  },
+  // denda & pengembalian adalah redirect stub (PERP-ADR-0001) yang membuka hub
+  // Peminjaman dengan filter — konten ringkas, tidak dirender langsung sebagai panel.
+  denda: {
+    title: "Cara pakai Denda",
+    intro: "Pintasan ke peminjaman yang masih punya denda belum lunas agar bisa ditagih.",
+    steps: [
+      { title: "Lihat daftar berdenda", detail: "Halaman ini membuka list peminjaman yang sudah difilter ke yang punya denda.", roles: ["petugas", "pustakawan"] },
+    ],
+    tips: ["Nilai denda dihitung otomatis dari keterlambatan — tidak diisi manual."],
+  },
+  pengembalian: {
+    title: "Cara pakai Pengembalian",
+    intro: "Pintasan ke peminjaman berstatus Selesai untuk meninjau buku yang sudah kembali.",
+    steps: [
+      { title: "Tinjau yang sudah kembali", detail: "Halaman ini membuka list peminjaman yang difilter ke status Selesai.", roles: ["petugas"] },
+    ],
+    tips: ["Pengembalian & denda kini menyatu di hub Peminjaman, diatur lewat filter status."],
+  },
+  kolektif: {
+    title: "Cara pakai Pinjam Kolektif Kelas",
+    intro: "Catat paket bacaan rombongan lewat guru penanggung jawab — tanpa kuota dan denda harian.",
+    steps: [
+      { title: "Buat pinjam kolektif", detail: "Klik 'Pinjam Kolektif Baru', pilih guru PJ, rombel, dan tujuan peminjaman.", roles: ["petugas"] },
+      { title: "Pantau status", detail: "Filter status (Aktif/Selesai/Terlambat/Batal) untuk melihat paket yang masih dipinjam.", roles: ["petugas"] },
+      { title: "Buka detail", detail: "Klik baris untuk melihat daftar buku dalam paket dan mencatat pengembalian.", roles: ["petugas", "pustakawan"] },
+    ],
+    tips: [
+      "Beda dengan pinjam individu: tidak ada batas kuota dan tidak ada denda harian.",
+      "Gunakan tab Individu di atas untuk beralih ke peminjaman per siswa.",
+    ],
+  },
+  "inventaris-berita-acara": {
+    title: "Cara pakai Berita Acara Kerusakan",
+    intro: "Catat insiden buku rusak atau hilang per eksemplar untuk diputuskan Kepala Perpustakaan.",
+    steps: [
+      { title: "Buat BA baru", detail: "Klik 'BA Baru', pilih eksemplar, isi pelapor dan jenis kerusakan (ringan/berat/hilang).", roles: ["petugas", "pustakawan"] },
+      { title: "Tentukan keputusan", detail: "Pilih keputusan Diperbaiki, Hapus, atau Ganti Rugi beserta nilainya bila ada.", roles: ["pustakawan"] },
+      { title: "Approve BA", detail: "Filter status Draft, tinjau, lalu approve agar perubahan inventaris berlaku.", roles: ["pustakawan", "admin"] },
+    ],
+    tips: [
+      "Satu Berita Acara mencakup satu eksemplar.",
+      "BA berstatus Draft masih bisa diubah; setelah Approved menjadi final.",
+    ],
+  },
+  "inventaris-opname": {
+    title: "Cara pakai Stock Opname",
+    intro: "Audit inventaris koleksi dengan scan eksemplar; selisih stok ditandai otomatis.",
+    steps: [
+      { title: "Mulai opname", detail: "Klik 'Mulai Opname' untuk membuka sesi baru dan langsung masuk mode scan.", roles: ["petugas", "pustakawan"] },
+      { title: "Scan eksemplar", detail: "Scan tiap eksemplar; sistem menghitung total discan, hilang, dan rusak.", roles: ["petugas"] },
+      { title: "Selesaikan sesi", detail: "Submit opname untuk mengunci hasil audit, atau lanjutkan draft kapan saja.", roles: ["pustakawan", "admin"] },
+    ],
+    tips: [
+      "Draft tersimpan otomatis — sesi audit besar bisa dilanjutkan bertahap.",
+      "Batasi cakupan dengan filter rak agar opname per area lebih cepat.",
     ],
   },
 };

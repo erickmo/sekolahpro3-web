@@ -17,6 +17,9 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { GLOSSARY } from "../lib/glossary";
+import { PageGuide } from "../components/guide";
+import { KELAS_PAGE_GUIDES } from "../components/kelas/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 const KELAS_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "rombel", label: "Buat Rombel", hint: "Definisi struktur kelas", href: "/sch/$sekolah/kelas/rombel" },
@@ -136,6 +139,16 @@ function KelasDashboardPage() {
             kapasitas, dan rombel yang perlu perhatian.
           </>
         }
+      />
+
+      <PageGuide
+        storageNamespace="kelas-guide:"
+        storageId="dashboard"
+        title={KELAS_PAGE_GUIDES.dashboard.title}
+        intro={KELAS_PAGE_GUIDES.dashboard.intro}
+        steps={KELAS_PAGE_GUIDES.dashboard.steps}
+        tips={KELAS_PAGE_GUIDES.dashboard.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -1,6 +1,9 @@
 import { useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSession } from "@sekolahpro/auth";
+import { PageGuide } from "../components/guide";
+import { PENGATURAN_PAGE_GUIDES } from "../components/pengaturan/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 const SAAS_ROLES = ["SekolahPro Admin", "SekolahPro Manager", "System Manager"] as const;
 
@@ -1170,6 +1173,15 @@ function PengaturanPage() {
             Ekspor Konfigurasi
           </Button>
         }
+      />
+      <PageGuide
+        storageNamespace="pengaturan-guide:"
+        storageId="dashboard"
+        title={PENGATURAN_PAGE_GUIDES.dashboard.title}
+        intro={PENGATURAN_PAGE_GUIDES.dashboard.intro}
+        steps={PENGATURAN_PAGE_GUIDES.dashboard.steps}
+        tips={PENGATURAN_PAGE_GUIDES.dashboard.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
       <Tabs items={tabItems} />
       {renderTab()}

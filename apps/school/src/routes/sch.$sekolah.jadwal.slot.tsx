@@ -3,6 +3,9 @@ import { useState } from "react";
 import { type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal, type ResourceFieldDef } from "../components/shared/ResourceCreateModal";
+import { PageGuide } from "../components/guide";
+import { JADWAL_PAGE_GUIDES } from "../components/jadwal/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; hari?: string; jam_mulai?: string; jam_selesai?: string; durasi_menit?: number; tipe?: string };
 
@@ -32,7 +35,16 @@ function SlotJadwalPage() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   return (
-    <>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="jadwal-guide:"
+        storageId="slot"
+        title={JADWAL_PAGE_GUIDES.slot.title}
+        intro={JADWAL_PAGE_GUIDES.slot.intro}
+        steps={JADWAL_PAGE_GUIDES.slot.steps}
+        tips={JADWAL_PAGE_GUIDES.slot.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
       <ResourceListPage<Row>
         eyebrow="Jadwal"
         title="Slot Jadwal"
@@ -55,7 +67,7 @@ function SlotJadwalPage() {
         description="Definisikan slot waktu pelajaran baru."
         fields={FIELDS}
       />
-    </>
+    </div>
   );
 }
 

@@ -3,6 +3,9 @@ import { type Column } from "@sekolahpro/ui";
 import { MasterResourcePage } from "../components/master/MasterResourcePage";
 import { InlineToggle } from "../components/master/InlineToggle";
 import { FEATURE_FLAG_FIELDS } from "../components/master/schemas";
+import { PageGuide } from "../components/guide";
+import { PENGATURAN_PAGE_GUIDES } from "../components/pengaturan/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type Row = { name: string; key: string; enabled?: number; description?: string };
 
@@ -16,7 +19,17 @@ const COLUMNS: Column<Row>[] = [
 
 function FeatureFlagPage() {
   return (
-    <MasterResourcePage<Row>
+    <div className="space-y-6">
+      <PageGuide
+        storageNamespace="pengaturan-guide:"
+        storageId="feature-flag"
+        title={PENGATURAN_PAGE_GUIDES["feature-flag"].title}
+        intro={PENGATURAN_PAGE_GUIDES["feature-flag"].intro}
+        steps={PENGATURAN_PAGE_GUIDES["feature-flag"].steps}
+        tips={PENGATURAN_PAGE_GUIDES["feature-flag"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
+      />
+      <MasterResourcePage<Row>
       eyebrow="Pengaturan"
       title="Feature Flag"
       doctype="Feature Flag"
@@ -31,6 +44,7 @@ function FeatureFlagPage() {
       formTitle="Tambah Feature Flag"
       formFields={FEATURE_FLAG_FIELDS}
     />
+    </div>
   );
 }
 

@@ -13,6 +13,9 @@ import {
   DatePicker,
   type SearchableOption,
 } from "@sekolahpro/ui";
+import { PageGuide } from "../components/guide";
+import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 type CriticalField = "nama_lengkap" | "nik" | "tanggal_lahir" | "nisn";
 
@@ -165,6 +168,16 @@ function PerubahanNewPage() {
         eyebrow="Siswa › Perubahan Data"
         title="Ajukan Perubahan Data Kritis"
         description="Edit langsung data kritis (nama, NIK, tgl lahir, NISN) tidak diizinkan. Ajukan perubahan via workflow dual-control."
+      />
+
+      <PageGuide
+        storageNamespace="siswa-guide:"
+        storageId="perubahan-data-baru"
+        title={SISWA_PAGE_GUIDES["perubahan-data-baru"].title}
+        intro={SISWA_PAGE_GUIDES["perubahan-data-baru"].intro}
+        steps={SISWA_PAGE_GUIDES["perubahan-data-baru"].steps}
+        tips={SISWA_PAGE_GUIDES["perubahan-data-baru"].tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <SectionCard title="Pilih Siswa & Field">

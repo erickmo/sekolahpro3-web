@@ -16,6 +16,9 @@ import {
 } from "@sekolahpro/ui";
 import type { AttentionItem, ModuleFlowStep } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
+import { PageGuide } from "../components/guide";
+import { JADWAL_PAGE_GUIDES } from "../components/jadwal/pageGuides";
+import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
 // TODO(/jadwal/): Jadwal Pelajaran header doctype lacks per-slot fields
 // (hari, jam_mulai, mapel, kelas, guru). Real per-slot data is in child
@@ -140,6 +143,16 @@ function JadwalDashboardPage() {
             </Button>
           </Link>
         }
+      />
+
+      <PageGuide
+        storageNamespace="jadwal-guide:"
+        storageId="dashboard"
+        title={JADWAL_PAGE_GUIDES.dashboard.title}
+        intro={JADWAL_PAGE_GUIDES.dashboard.intro}
+        steps={JADWAL_PAGE_GUIDES.dashboard.steps}
+        tips={JADWAL_PAGE_GUIDES.dashboard.tips}
+        roleLabels={SCHOOL_ROLE_LABEL}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
