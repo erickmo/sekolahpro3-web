@@ -11,27 +11,26 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 const saveMock = vi.fn(async (_method: string, _args: unknown) => ({}));
+const defaultFetch = (method: string, args: unknown): Promise<unknown> => {
+  if (method.endsWith("get_situs")) {
+    return Promise.resolve({ sekolah: "smp-demo", template: "klasik", hero_eyebrow: "Halo" });
+  }
+  if (method.endsWith("list_template")) {
+    return Promise.resolve([
+      { key: "klasik", nama: "Klasik", deskripsi: "Resmi", radius: "8px", font_heading: "Merriweather", shadow: "sm" },
+    ]);
+  }
+  return saveMock(method, args);
+};
+const fetchMock = vi.fn(defaultFetch);
 vi.mock("@sekolahpro/api-client", async () => {
   const actual = await vi.importActual<typeof import("@sekolahpro/api-client")>("@sekolahpro/api-client");
-  return {
-    ...actual,
-    frappeFetch: vi.fn((method: string, args: unknown) => {
-      if (method.endsWith("get_situs")) {
-        return Promise.resolve({ sekolah: "smp-demo", template: "klasik", hero_eyebrow: "Halo" });
-      }
-      if (method.endsWith("list_template")) {
-        return Promise.resolve([
-          { key: "klasik", nama: "Klasik", deskripsi: "Resmi", radius: "8px", font_heading: "Merriweather", shadow: "sm" },
-        ]);
-      }
-      return saveMock(method, args);
-    }),
-  };
+  return { ...actual, frappeFetch: vi.fn((method: string, args: unknown) => fetchMock(method, args)) };
 });
 
 import { TampilanPage } from "../sch.$sekolah.situs.tampilan";
 
-afterEach(() => { cleanup(); saveMock.mockClear(); });
+afterEach(() => { cleanup(); saveMock.mockClear(); fetchMock.mockImplementation(defaultFetch); });
 
 function wrap(ui: React.ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -63,5 +62,21 @@ describe("TampilanPage Phase-3", () => {
     const firstCall = saveMock.mock.calls[0];
     const args = firstCall?.[1];
     expect((args as { values: Record<string, unknown> }).values.hero_cta2_label).toBe("Hubungi");
+  });
+
+  it("shows a loading skeleton while the site config is fetching", () => {
+    fetchMock.mockImplementation((m: string) =>
+      m.endsWith("get_situs") ? new Promise<unknown>(() => {}) : defaultFetch(m, undefined));
+    render(wrap(<TampilanPage sekolah="smp-demo" />));
+    expect(screen.getAllByRole("status").length).toBeGreaterThan(0);
+  });
+
+  it("shows an error state when the site config fails to load", async () => {
+    fetchMock.mockImplementation((m: string) => {
+      if (m.endsWith("get_situs")) return Promise.reject(new Error("boom"));
+      return defaultFetch(m, undefined);
+    });
+    render(wrap(<TampilanPage sekolah="smp-demo" />));
+    await waitFor(() => expect(screen.getByText(/gagal memuat/i)).toBeInTheDocument());
   });
 });

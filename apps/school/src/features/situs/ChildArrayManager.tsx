@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Badge,
   Button,
@@ -12,7 +12,9 @@ import {
   Textarea,
 } from "@sekolahpro/ui";
 import { useSaveSitus } from "../../data/situs";
+import { useUnsavedChanges } from "../../lib/useUnsavedChanges";
 import type { ChildSchema, KontenField } from "./schemas";
+import { ImageInput } from "./ImageInput";
 
 type Row = Record<string, unknown>;
 
@@ -50,6 +52,9 @@ function RowFieldInput({ field, id, value, onChange }: { field: KontenField; id:
   if (field.type === "check") {
     return <input id={id} type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked ? 1 : 0)} className="h-5 w-5" />;
   }
+  if (field.type === "image") {
+    return <ImageInput id={id} value={s} onChange={onChange} alt={field.label} />;
+  }
   const t = field.type === "number" ? "number" : "text";
   return <Input id={id} type={t} value={s} onChange={(e) => onChange(e.target.value)} />;
 }
@@ -60,9 +65,22 @@ export function ChildArrayManager({ sekolah, schema, rows }: { sekolah: string; 
   const [items, setItems] = useState<Row[]>(rows);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [draft, setDraft] = useState<Row | null>(null);
+  // Tracks the server snapshot we last synced into `items`, so a background
+  // refetch returning identical data does not clobber unsaved local edits.
+  const syncedRef = useRef<Row[]>(rows);
 
-  // Re-sync local edits when the parent supplies a fresh server array.
-  useEffect(() => setItems(rows), [rows]);
+  // Only adopt the parent array when its CONTENT actually changed from the last
+  // sync — same-content refetches are ignored, preserving in-progress edits.
+  useEffect(() => {
+    if (JSON.stringify(rows) !== JSON.stringify(syncedRef.current)) {
+      setItems(rows);
+      syncedRef.current = rows;
+    }
+  }, [rows]);
+
+  // Unsaved when the in-memory array diverges from the last-synced server snapshot.
+  const dirty = JSON.stringify(items) !== JSON.stringify(syncedRef.current);
+  useUnsavedChanges(dirty);
 
   const openNew = () => { setEditIdx(items.length); setDraft(emptyRow(schema)); };
   const openEdit = (i: number) => { setEditIdx(i); setDraft({ ...items[i] }); };
