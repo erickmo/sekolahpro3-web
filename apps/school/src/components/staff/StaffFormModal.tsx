@@ -13,11 +13,14 @@ import {
   DatePicker,
   FormField,
   FormGrid,
+  IdScanField,
   Input,
   Modal,
   SearchableSelect,
   type SearchableOption,
 } from "@sekolahpro/ui";
+import { scanIdentitas } from "../../lib/ocrApi";
+import { mapKtpToPegawai } from "../../lib/ocrMapping";
 
 const SEKOLAH_DOCTYPE = "Sekolah";
 const SEKOLAH_LABEL_FIELD = "nama_sekolah";
@@ -185,6 +188,18 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
     >
       <div className="space-y-5">
         <FormSection title="Identitas Diri" description="Data pribadi sesuai dokumen resmi.">
+          {/* OCR auto-fill: scan KTP to pre-populate identity fields (nama_lengkap, nik,
+              tanggal_lahir, jenis_kelamin, agama). tempat_lahir/alamat absent from
+              FormState — extra keys in mapKtpToPegawai output are safely ignored by spread. */}
+          <div className="col-span-2">
+            <IdScanField
+              jenis="KTP"
+              onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+              onApply={(fields) =>
+                setForm((prev) => ({ ...prev, ...(mapKtpToPegawai(fields) as Partial<FormState>) }))
+              }
+            />
+          </div>
           <FormField label="Nama Lengkap" required className="col-span-2">
             <Input
               value={form.nama_lengkap}

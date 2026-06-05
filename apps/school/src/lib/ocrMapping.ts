@@ -49,6 +49,41 @@ export function mapKtpToSiswa(p: Parsed): Record<string, string> {
   return out;
 }
 
+// Mapping from OCR snake_case keys → PegawaiFormModal / StaffFormModal snake_case keys.
+// Both forms share identical field names, so one mapper covers both.
+const KTP_TO_PEGAWAI: Record<string, string> = {
+  nik: "nik",
+  nama: "nama_lengkap",
+  jenis_kelamin: "jenis_kelamin",
+  tempat_lahir: "tempat_lahir",
+  tanggal_lahir: "tanggal_lahir",
+  agama: "agama",
+  alamat: "alamat",
+};
+
+/**
+ * Map a KTP OCR parsed dict to PegawaiFormModal / StaffFormModal field keys.
+ *
+ * Both forms use identical snake_case keys, so a single mapper covers both.
+ * Only keys present AND non-empty in the OCR output are included — safe to
+ * spread into setValues / setForm without overwriting existing values with "".
+ *
+ * Note: `tempat_lahir` and `alamat` are absent from StaffFormModal's FormState;
+ * the spread is still safe because setForm merges via {...cur, ...mapped} and
+ * extra keys in a Partial cast are silently ignored.
+ *
+ * @param p - Parsed OCR field dict (backend snake_case).
+ * @returns Partial pegawai/staff form dict with only the mapped, non-empty values.
+ */
+export function mapKtpToPegawai(p: Parsed): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [from, to] of Object.entries(KTP_TO_PEGAWAI)) {
+    const v = str(p, from);
+    if (v) out[to] = v;
+  }
+  return out;
+}
+
 /**
  * Map a KTP OCR parsed dict to WaliRow field keys.
  *

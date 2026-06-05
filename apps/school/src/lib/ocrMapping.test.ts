@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapKtpToSiswa, mapKtpToWali } from "./ocrMapping";
+import { mapKtpToSiswa, mapKtpToWali, mapKtpToPegawai } from "./ocrMapping";
 
 describe("ocrMapping", () => {
   describe("mapKtpToSiswa", () => {
@@ -39,6 +39,49 @@ describe("ocrMapping", () => {
 
     it("ignores unknown OCR keys", () => {
       expect(mapKtpToSiswa({ unknown_field: "X", nik: "123" })).toEqual({
+        nik: "123",
+      });
+    });
+  });
+
+  describe("mapKtpToPegawai", () => {
+    it("maps all KTP fields to Pegawai / Staff form keys", () => {
+      // PRD: OCR KTP → Pegawai form auto-fill (snake_case keys, mirrors FormState + Record<string,string>)
+      expect(
+        mapKtpToPegawai({
+          nik: "3171234567890123",
+          nama: "SITI RAHAYU",
+          jenis_kelamin: "Perempuan",
+          tempat_lahir: "BANDUNG",
+          tanggal_lahir: "1990-04-21",
+          agama: "Islam",
+          alamat: "JL SUDIRMAN 10",
+        }),
+      ).toEqual({
+        nik: "3171234567890123",
+        nama_lengkap: "SITI RAHAYU",
+        jenis_kelamin: "Perempuan",
+        tempat_lahir: "BANDUNG",
+        tanggal_lahir: "1990-04-21",
+        agama: "Islam",
+        alamat: "JL SUDIRMAN 10",
+      });
+    });
+
+    it("omits absent fields", () => {
+      expect(mapKtpToPegawai({ nik: "3171234567890123" })).toEqual({
+        nik: "3171234567890123",
+      });
+    });
+
+    it("omits empty-string values", () => {
+      expect(mapKtpToPegawai({ nik: "3171234567890123", nama: "" })).toEqual({
+        nik: "3171234567890123",
+      });
+    });
+
+    it("ignores unknown OCR keys", () => {
+      expect(mapKtpToPegawai({ unknown_field: "X", nik: "123" })).toEqual({
         nik: "123",
       });
     });

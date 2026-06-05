@@ -5,6 +5,7 @@ import {
   DatePicker,
   FormField,
   FormGrid,
+  IdScanField,
   Input,
   Modal,
   SearchableSelect,
@@ -12,6 +13,8 @@ import {
   type SearchableOption,
 } from "@sekolahpro/ui";
 import { listResource, createResource, updateResource } from "@sekolahpro/api-client";
+import { scanIdentitas } from "../../lib/ocrApi";
+import { mapKtpToPegawai } from "../../lib/ocrMapping";
 import type { PegawaiApi } from "./roles";
 
 const PEGAWAI_DOCTYPE = "Pegawai";
@@ -221,6 +224,19 @@ export function PegawaiFormModal({ open, onClose, mode, initial, onSaved }: Pega
 
         {FIELD_SECTIONS.map((sec) => (
           <FormSection key={sec.title} title={sec.title} description={sec.description}>
+            {/* OCR auto-fill: placed at the top of Identitas Diri so the scanned
+                values are visible immediately after apply. Only shown for that section. */}
+            {sec.title === "Identitas Diri" && (
+              <div className="col-span-2">
+                <IdScanField
+                  jenis="KTP"
+                  onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+                  onApply={(fields) =>
+                    setValues((prev) => ({ ...prev, ...mapKtpToPegawai(fields) }))
+                  }
+                />
+              </div>
+            )}
             {sec.fields.map((f) => (
               <FormField key={f.name} label={f.label} required={f.required} className={f.colSpan === 2 ? "col-span-2" : undefined}>
                 {renderField(f)}
