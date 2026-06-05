@@ -28,10 +28,22 @@ describe("IdScanField", () => {
     render(<IdScanField jenis="KTP" onScan={onScan} onApply={onApply} />);
     fireEvent.click(screen.getByLabelText(/setuju/i));
     const file = new File([new Uint8Array([1, 2, 3])], "ktp.png", { type: "image/png" });
+    // FIX C1 compatibility: use the file-picker input (no capture)
     fireEvent.change(screen.getByTestId("id-scan-file"), { target: { files: [file] } });
     await waitFor(() => expect(onScan).toHaveBeenCalled());
     await screen.findByText(/3171234567890123/);
     fireEvent.click(screen.getByRole("button", { name: /terapkan/i }));
     expect(onApply).toHaveBeenCalledWith({ nik: "3171234567890123", nama: "BUDI" });
+  });
+
+  // FIX M5: test the error path
+  it("shows an error when onScan fails", async () => {
+    const onScan = vi.fn().mockRejectedValue(new Error("OCR gagal"));
+    render(<IdScanField jenis="KTP" onScan={onScan} onApply={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText(/setuju/i));
+    const file = new File([new Uint8Array([1])], "ktp.png", { type: "image/png" });
+    fireEvent.change(screen.getByTestId("id-scan-file"), { target: { files: [file] } });
+    await screen.findByText(/OCR gagal/);
+    expect(screen.queryByRole("button", { name: /terapkan/i })).toBeNull();
   });
 });

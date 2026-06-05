@@ -25,6 +25,10 @@ export interface TurnstileProps {
 export function Turnstile({ siteKey, onToken }: TurnstileProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const widgetId = useRef<string | null>(null);
+  // FIX I4: store onToken in a ref so the render callback always calls the
+  // latest handler even though the widget is only rendered once
+  const onTokenRef = useRef(onToken);
+  onTokenRef.current = onToken;
 
   useEffect(() => {
     if (!document.querySelector(`script[src="${SCRIPT_SRC}"]`)) {
@@ -38,14 +42,17 @@ export function Turnstile({ siteKey, onToken }: TurnstileProps) {
       if (window.turnstile && ref.current && !widgetId.current) {
         widgetId.current = window.turnstile.render(ref.current, {
           sitekey: siteKey,
-          callback: onToken,
+          // FIX I4: delegate to ref so stale closure is never an issue
+          callback: (token: string) => onTokenRef.current(token),
         });
         clearInterval(t);
       }
     }, 200);
 
     return () => clearInterval(t);
-  }, [siteKey, onToken]);
+    // FIX I4: remove onToken from deps — the ref handles freshness; only
+    // re-run when siteKey changes (which requires a new widget anyway)
+  }, [siteKey]);
 
   return <div ref={ref} />;
 }
