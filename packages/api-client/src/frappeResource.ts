@@ -192,13 +192,39 @@ function injectSekolahFilter(
   return [["sekolah", "=", slug] as FilterTuple3];
 }
 
+// A bare order-by segment: a single column identifier with an optional asc/desc
+// and nothing else (no table prefix, no dotted child path, no function call).
+const BARE_ORDER_COL = /^([A-Za-z_][A-Za-z0-9_]*)(\s+(asc|desc))?$/i;
+
+// Qualify bare order-by columns to the parent table when the field list pulls a
+// dotted child-table column. Requesting a dotted field (e.g. "roles.role") makes
+// Frappe LEFT JOIN the child table; a bare order_by column that exists on both
+// tables (modified/creation/name/idx/owner/docstatus) is then ambiguous and the
+// query 500s with MariaDB 1052. A bare column in a child-joined list can only
+// legitimately mean the PARENT column, so qualifying it to `tab<Doctype>` is
+// always correct. No-ops when no field is dotted, or when a segment is already
+// qualified/dotted/backticked. Exported for unit tests.
+export function qualifyOrderBy(doctype: string, fields: string[] | undefined, orderBy: string): string {
+  const hasDottedField = (fields ?? []).some((f) => f.includes("."));
+  if (!hasDottedField) return orderBy;
+  return orderBy
+    .split(",")
+    .map((seg) => {
+      const m = seg.trim().match(BARE_ORDER_COL);
+      if (!m) return seg.trim(); // already qualified / dotted / backticked — leave as-is
+      const dir = m[3] ? ` ${m[3]}` : "";
+      return `\`tab${doctype}\`.${m[1]}${dir}`;
+    })
+    .join(", ");
+}
+
 export function listResource<T = Record<string, unknown>>(doctype: string, params: ListParams = {}): Promise<T[]> {
   const q: Record<string, unknown> = {};
   if (params.fields) q["fields"] = params.fields;
   const filters = injectSekolahFilter(doctype, params.filters);
   if (filters) q["filters"] = filters;
   if (params.or_filters) q["or_filters"] = params.or_filters;
-  if (params.order_by) q["order_by"] = params.order_by;
+  if (params.order_by) q["order_by"] = qualifyOrderBy(doctype, params.fields, params.order_by);
   if (params.limit_start !== undefined) q["limit_start"] = params.limit_start;
   if (params.limit_page_length !== undefined) q["limit_page_length"] = params.limit_page_length;
   return req<T[]>("GET", buildUrl(doctype, q));
