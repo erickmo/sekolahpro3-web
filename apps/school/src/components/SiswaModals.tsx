@@ -5,6 +5,7 @@ import {
   DatePicker,
   FormField,
   FormGrid,
+  IdScanField,
   Input,
   Modal,
   SearchableSelect,
@@ -19,6 +20,8 @@ import type {
   TagihanRow,
   WaliRow,
 } from "../data/siswa";
+import { scanIdentitas } from "../lib/ocrApi";
+import { mapKtpToWali } from "../lib/ocrMapping";
 
 interface BaseModalProps {
   open: boolean;
@@ -109,6 +112,14 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
       }
     >
       <form onSubmit={submit} className="space-y-5">
+        {/* OCR auto-fill: scan KTP to pre-populate wali identity fields. */}
+        <IdScanField
+          jenis="KTP"
+          onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+          onApply={(fields) =>
+            setV((prev) => ({ ...prev, ...(mapKtpToWali(fields, prev.hubungan) as Partial<WaliRow>) }))
+          }
+        />
         <FormSection title="Identitas Wali" description="Hubungan dan identitas sesuai dokumen resmi.">
           <FormField label="Hubungan" required>
             <SearchableSelect
