@@ -6,10 +6,18 @@ function str(p: Parsed, k: string): string | undefined {
   return typeof v === "string" && v ? v : undefined;
 }
 
+/** OCR gender ("Laki-laki"/"Perempuan") -> form enum code ("L"/"P"). Omits if unknown. */
+function genderCode(v?: string): string | undefined {
+  if (!v) return undefined;
+  const low = v.toLowerCase();
+  if (low.startsWith("laki")) return "L";
+  if (low.startsWith("perempuan")) return "P";
+  return undefined;
+}
+
 const KTP_TO_FORM: Record<string, string> = {
   nik: "nik",
   nama: "nama_lengkap",
-  jenis_kelamin: "jenis_kelamin",
   tempat_lahir: "tempat_lahir",
   tanggal_lahir: "tanggal_lahir",
   alamat: "alamat",
@@ -22,5 +30,7 @@ export function mapKtpToCalon(p: Parsed): Record<string, string> {
     const v = str(p, from);
     if (v) out[to] = v;
   }
+  const jk = genderCode(str(p, "jenis_kelamin"));
+  if (jk) out["jenis_kelamin"] = jk;
   return out;
 }

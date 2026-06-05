@@ -1,5 +1,6 @@
 /** Public (guest) ID-OCR client for the situs PPDB form. Requires a Turnstile token. */
 import { frappeFetch } from "@sekolahpro/api-client";
+import { ensureConfigured } from "./api";
 
 export type JenisDokumen = "KTP" | "KK" | "SIM";
 
@@ -25,6 +26,7 @@ export async function scanIdentitasPublik(
   turnstileToken: string,
   sekolah?: string,
 ): Promise<ScanResult> {
+  ensureConfigured();
   const filedata = await blobToBase64(blob);
   return frappeFetch<ScanResult>("sekolahpro.ocr.api.scan_identitas_publik", {
     turnstile_token: turnstileToken,

@@ -21,7 +21,7 @@ export function Step2DataDiri() {
         <IdScanField
           jenis="KTP"
           onScan={(blob, jenis) =>
-            scanIdentitasPublik(blob, jenis, watch("turnstile_token") || "dev").then(
+            scanIdentitasPublik(blob, jenis, watch("turnstile_token") || "").then(
               (r) => r.fields,
             )
           }

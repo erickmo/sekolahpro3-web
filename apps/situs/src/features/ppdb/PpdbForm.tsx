@@ -56,7 +56,7 @@ export function PpdbForm() {
         <IdScanField
           jenis="KTP"
           onScan={(blob, jenis) =>
-            scanIdentitasPublik(blob, jenis, ocrToken || "dev").then((r) => r.fields)
+            scanIdentitasPublik(blob, jenis, ocrToken).then((r) => r.fields)
           }
           onApply={(fields) => {
             const mapped = mapKtpToCalon(fields);

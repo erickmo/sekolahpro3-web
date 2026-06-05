@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@sekolahpro/api-client", () => ({ frappeFetch: vi.fn() }));
+vi.mock("@sekolahpro/api-client", () => ({ frappeFetch: vi.fn(), configure: vi.fn() }));
 
 import { frappeFetch } from "@sekolahpro/api-client";
 import { scanIdentitasPublik } from "./ocrApi";

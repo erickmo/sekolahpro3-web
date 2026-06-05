@@ -5,7 +5,7 @@ describe("mapKtpToCalon", () => {
   const fullKtp = {
     nik: "3201234567890001",
     nama: "Budi Santoso",
-    jenis_kelamin: "L",
+    jenis_kelamin: "Laki-laki",
     tempat_lahir: "Bandung",
     tanggal_lahir: "2000-05-20",
     alamat: "Jl. Merdeka No. 1",
@@ -21,6 +21,22 @@ describe("mapKtpToCalon", () => {
       "calon.tanggal_lahir": "2000-05-20",
       "calon.alamat": "Jl. Merdeka No. 1",
     });
+  });
+
+  it("normalizes jenis_kelamin Laki-laki -> L", () => {
+    const result = mapKtpToCalon({ jenis_kelamin: "Laki-laki" });
+    expect(result["calon.jenis_kelamin"]).toBe("L");
+  });
+
+  it("normalizes jenis_kelamin Perempuan -> P", () => {
+    const result = mapKtpToCalon({ jenis_kelamin: "Perempuan" });
+    expect(result["calon.jenis_kelamin"]).toBe("P");
+  });
+
+  it("omits calon.jenis_kelamin when gender is unknown", () => {
+    const result = mapKtpToCalon({ nik: "3201234567890001", jenis_kelamin: "X" });
+    expect("calon.jenis_kelamin" in result).toBe(false);
+    expect("calon.nik" in result).toBe(true);
   });
 
   it("omits absent fields — returns only keys with values", () => {
