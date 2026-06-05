@@ -96,9 +96,11 @@ function DaftarPegawai() {
   const [sort, setSort] = useState<SortState>({ key: "nama_lengkap", dir: "asc" });
   const [page, setPage] = useState(1);
 
+  // No explicit sekolah filter — the resource layer auto-injects the active
+  // school NAME; the route slug would defeat injection and empty the table for
+  // schools whose name != kode_pendek slug. (`sekolah` is still used for nav.)
   const q = useResourceList<PegawaiApi>("Pegawai", {
     fields: ["name", "nama_lengkap", "nip", "jabatan_fungsional", "status_kepegawaian", "is_aktif", "roles.role"],
-    filters: { sekolah },
     order_by: "nama_lengkap asc",
     limit_page_length: PEGAWAI_LIMIT,
   });

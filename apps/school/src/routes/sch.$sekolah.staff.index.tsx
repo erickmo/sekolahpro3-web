@@ -294,9 +294,11 @@ function deriveCounts(list: PegawaiApi[], donut: ChartDatum[]): StaffCounts {
  */
 function StaffIndex(): ReactNode {
   const { sekolah } = Route.useParams();
+  // No explicit sekolah filter: the resource layer auto-injects the active
+  // school's NAME (X-Active-Sekolah header). Passing the route slug here would
+  // defeat that injection and return zero rows when name != kode_pendek slug.
   const q = useResourceList<PegawaiApi>("Pegawai", {
     fields: PEGAWAI_FIELDS,
-    filters: { sekolah },
     order_by: "modified desc",
     limit_page_length: PEGAWAI_LIMIT,
   });
