@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Button, Input } from "@sekolahpro/ui";
+import { Button, Input, IdScanField } from "@sekolahpro/ui";
 import type { PickupHubungan, PickupPerson } from "../data/pickup-types";
+import { scanIdentitas } from "../lib/ocrApi";
+import { mapKtpToPickup } from "../lib/ocrMapping";
 
 export interface PickupPersonFormValues {
   nama: string;
@@ -76,8 +78,30 @@ export function PickupPersonForm({
     onSubmit(values);
   }
 
+  /**
+   * Apply OCR-parsed KTP fields to the form.
+   *
+   * Only `nama` is auto-filled; phone and PIN remain manual for security.
+   * Calls the individual state setter directly because PickupPersonForm uses
+   * discrete state (not a unified setValues object).
+   *
+   * @param fields - Parsed OCR field dict from the backend (snake_case keys).
+   */
+  function handleOcrApply(fields: Record<string, unknown>): void {
+    const mapped = mapKtpToPickup(fields);
+    // mapped.nama is the only key mapKtpToPickup produces for PickupPerson.
+    if (mapped.nama) setNama(mapped.nama);
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      {/* OCR auto-fill: scan KTP to pre-populate the person's name. */}
+      <IdScanField
+        jenis="KTP"
+        onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+        onApply={handleOcrApply}
+      />
+
       <div className="space-y-1.5">
         <label htmlFor="pp-nama" className="text-sm font-medium text-fg">Nama</label>
         <Input

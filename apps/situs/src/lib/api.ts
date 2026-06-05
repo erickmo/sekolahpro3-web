@@ -7,7 +7,7 @@ import { configure, frappeFetch } from "@sekolahpro/api-client";
 
 let configured = false;
 
-function ensureConfigured(): void {
+export function ensureConfigured(): void {
   if (configured) return;
   configure({ baseUrl: (import.meta.env.VITE_API_BASE as string | undefined) ?? "" });
   configured = true;

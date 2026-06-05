@@ -7,6 +7,7 @@ import {
   DatePicker,
   FormField,
   FormGrid,
+  IdScanField,
   Input,
   SearchableSelect,
   SectionCard,
@@ -15,6 +16,8 @@ import {
 } from "@sekolahpro/ui";
 import type { Agama, JenisKelamin, Siswa, StatusSiswa, WaliRow } from "../data/siswa";
 import { WaliModal } from "./SiswaModals";
+import { scanIdentitas } from "../lib/ocrApi";
+import { mapKtpToSiswa } from "../lib/ocrMapping";
 
 export type SiswaFormValues = Omit<Siswa,
   "nilai" | "absensi" | "tagihan" | "pembayaran" | "mutasi" | "dokumen" | "aktivitas" |
@@ -155,6 +158,14 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <SectionCard title="Identitas" description="Data dasar siswa">
+        {/* OCR auto-fill: scan KTP to pre-populate identity fields. */}
+        <IdScanField
+          jenis="KTP"
+          onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+          onApply={(fields) =>
+            setValues((prev) => ({ ...prev, ...(mapKtpToSiswa(fields) as Partial<SiswaFormValues>) }))
+          }
+        />
         <FormGrid cols={3}>
           <FormField label="Nama Lengkap" required error={errors.namaLengkap}>
             <Input name="namaLengkap" value={values.namaLengkap} onChange={(e) => set("namaLengkap", e.target.value)} />

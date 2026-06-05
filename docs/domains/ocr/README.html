@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCR Identitas (KTP / KK / SIM) — Dokumentasi Domain</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 920px; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1f2933; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f1f5f9; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.9em; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.45rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .muted { color: #64748b; }
+  </style>
+</head>
+<body>
+  <h1>OCR Identitas (KTP / KK / SIM)</h1>
+  <p class="muted">Pemindaian on-prem dokumen identitas Indonesia (KTP, Kartu Keluarga, SIM) menggunakan Tesseract untuk mengisi otomatis formulir data orang (Siswa, Wali, Pegawai/Staf, PPDB Calon Siswa, Pickup Person). Pengguna selalu meninjau dan dapat mengedit semua field yang diekstraksi sebelum menyimpan. Didesain dengan privasi-pertama: pemrosesan on-prem, persetujuan eksplisit, auto-purge 30 hari, dan field sensitif terbatasi permlevel.</p>
+
+  <h2>Arsitektur</h2>
+  <ul>
+    <li><strong>Backend Frappe module:</strong> <code>sekolahpro.ocr</code> — modul baru lintas domain; API whitelisted di <code>sekolahpro.ocr.api</code></li>
+    <li><strong>Doctype utama:</strong> <code>Pindai Identitas</code> — record audit consent + hasil scan + retensi (detail di bawah)</li>
+    <li><strong>OCR engine:</strong> <code>sekolahpro/ocr/engine/</code> — modul-modul murni (pure, tanpa DB, tanpa session): <code>preprocess.py</code> (Pillow), <code>tesseract.py</code> (pytesseract, lang=ind), <code>parser.py</code> (KTP/KK/SIM), <code>constants.py</code></li>
+    <li><strong>Shared component:</strong> <code>&lt;IdScanField&gt;</code> di <code>@sekolahpro/ui</code> — consent gate → kamera/file capture → OCR → review → terapkan ke form</li>
+    <li><strong>Shared component:</strong> <code>&lt;Turnstile&gt;</code> di <code>@sekolahpro/ui</code> — dipakai di endpoint publik PPDB</li>
+    <li><strong>Per-app API client:</strong> masing-masing app menginject <code>onScan(blob, jenis)</code> ke <code>&lt;IdScanField&gt;</code>; komponen bebas dari API client apapun</li>
+    <li><strong>Per-form mapping:</strong> fungsi murni per form (Siswa, Wali, Pegawai, PpdbForm, PickupPerson) — parsed dict → field form masing-masing</li>
+  </ul>
+
+  <h2>Doctype: <code>Pindai Identitas</code></h2>
+  <p>Anchored, tenant-scoped. Terdaftar di <code>tenant_registry.py DOCTYPES['SCHOOL']</code>.</p>
+  <table>
+    <tr>
+      <th>Field</th>
+      <th>Tipe</th>
+      <th>Catatan</th>
+    </tr>
+    <tr>
+      <td><code>naming_series</code></td>
+      <td>Data</td>
+      <td><code>PINDAI-.YYYY.-.#####</code></td>
+    </tr>
+    <tr>
+      <td><code>jenis_dokumen</code></td>
+      <td>Select</td>
+      <td><code>KTP</code> / <code>KK</code> / <code>SIM</code>; required</td>
+    </tr>
+    <tr>
+      <td><code>file_dokumen</code></td>
+      <td>Attach Image</td>
+      <td>Private (<code>is_private=1</code>); tidak dapat diakses tanpa session + izin</td>
+    </tr>
+    <tr>
+      <td><code>status</code></td>
+      <td>Select</td>
+      <td><code>Diproses</code> / <code>Berhasil</code> / <code>Gagal</code></td>
+    </tr>
+    <tr>
+      <td><code>confidence</code></td>
+      <td>Float</td>
+      <td>Rata-rata word confidence Tesseract 0–100</td>
+    </tr>
+    <tr>
+      <td><code>raw_text</code></td>
+      <td>Long Text</td>
+      <td><strong>permlevel 2</strong> — sensitif; hanya Tata Usaha, Kepala Sekolah, Operator Dapodik, System Manager</td>
+    </tr>
+    <tr>
+      <td><code>hasil_json</code></td>
+      <td>Code (JSON)</td>
+      <td><strong>permlevel 2</strong> — dict hasil parse; field hilang diomit, tidak pernah ditebak</td>
+    </tr>
+    <tr>
+      <td><code>nik_terdeteksi</code></td>
+      <td>Data</td>
+      <td><strong>permlevel 2</strong> — NIK tervalidasi 16 digit</td>
+    </tr>
+    <tr>
+      <td><code>consent_diberikan</code></td>
+      <td>Check</td>
+      <td>Required sebelum scan diproses; ditampilkan di UI sebelum kamera aktif</td>
+    </tr>
+    <tr>
+      <td><code>consent_timestamp</code></td>
+      <td>Datetime</td>
+      <td>Diset saat consent diberikan</td>
+    </tr>
+    <tr>
+      <td><code>hapus_setelah</code></td>
+      <td>Date</td>
+      <td>Tanggal purge retensi; diset otomatis via <code>validate()</code>: <code>nowdate() + RETENTION_DAYS</code></td>
+    </tr>
+    <tr>
+      <td><code>uploaded_by</code></td>
+      <td>Link User</td>
+      <td>Read-only; diisi otomatis = session user</td>
+    </tr>
+    <tr>
+      <td><code>sekolah</code></td>
+      <td>Link Sekolah</td>
+      <td>Tenant anchor</td>
+    </tr>
+    <tr>
+      <td><code>organisasi</code></td>
+      <td>Link Organisasi</td>
+      <td>Tenant anchor; fetch dari <code>sekolah</code></td>
+    </tr>
+  </table>
+
+  <h3>Controller (<code>pindai_identitas.py</code>)</h3>
+  <ul>
+    <li><code>proses_ocr()</code> — load bytes <code>file_dokumen</code> → <code>preprocess</code> → <code>tesseract</code> (lang=ind) → <code>parser.parse_&lt;jenis&gt;</code> → simpan <code>raw_text</code> / <code>hasil_json</code> / <code>confidence</code> / <code>nik_terdeteksi</code>, set <code>status</code>, return parsed dict</li>
+    <li><code>validate()</code> — set <code>hapus_setelah</code>; pastikan <code>consent_diberikan</code></li>
+  </ul>
+
+  <h2>Endpoints (<code>sekolahpro/ocr/api.py</code>)</h2>
+  <table>
+    <tr>
+      <th>Endpoint</th>
+      <th>Auth</th>
+      <th>Keterangan</th>
+    </tr>
+    <tr>
+      <td><code>scan_identitas</code></td>
+      <td>Autentikasi (session Frappe)</td>
+      <td>Untuk app school + parent (Siswa, Wali, Pegawai, Staf, PickupPerson). Validasi MIME + ukuran → buat <code>Pindai Identitas</code> → <code>proses_ocr()</code> → return <code>{scan_id, fields, confidence, jenis}</code>.</td>
+    </tr>
+    <tr>
+      <td><code>scan_identitas_publik</code></td>
+      <td>Guest (<code>allow_guest=True</code>)</td>
+      <td>Untuk form PPDB publik (apps/situs <code>PpdbForm</code> + apps/landing). Tambahan: rate-limit + Cloudflare Turnstile. Selain itu identik dengan endpoint autentikasi.</td>
+    </tr>
+    <tr>
+      <td><code>purge_kadaluarsa</code></td>
+      <td>Scheduler (internal)</td>
+      <td>Dipanggil oleh <code>scheduler_events["daily"]</code>. Hapus <code>Pindai Identitas</code> (beserta file private tertaut) yang <code>hapus_setelah &lt; today</code>.</td>
+    </tr>
+  </table>
+  <p>Setiap entrypoint ≤ 10 baris; delegasi ke controller. Upload guard (<code>_check_rate_limit</code>, <code>_validate_turnstile</code>, <code>ALLOWED_UPLOAD_MIME</code>, <code>MAX_UPLOAD_BYTES</code>) diekstrak ke <code>sekolahpro/utils/upload_guard.py</code> dan digunakan bersama oleh <code>ppdb/api/ppdb.py</code>.</p>
+
+  <h2>Engine OCR (<code>sekolahpro/ocr/engine/</code>)</h2>
+  <ul>
+    <li><strong><code>preprocess.py</code></strong> — Pillow: grayscale, autocontrast, resize, binarize (pure bytes→bytes)</li>
+    <li><strong><code>tesseract.py</code></strong> — pytesseract wrapper: image bytes → <code>(text, confidence)</code>; lang=<code>ind</code> (pure)</li>
+    <li><strong><code>parser.py</code></strong> — <code>parse_ktp</code> / <code>parse_kk</code> / <code>parse_sim</code>: text → dict; regex + label-anchored line parsing. NIK divalidasi 16 digit; tanggal dinormalisasi ke <code>YYYY-MM-DD</code>. Field tidak ditemukan → diomit (tidak pernah ditebak)</li>
+    <li><strong><code>constants.py</code></strong> — <code>RETENTION_DAYS = 30</code>, pola regex, field maps, kunci doctype</li>
+  </ul>
+
+  <h3>Field yang diekstrak per jenis dokumen</h3>
+  <table>
+    <tr>
+      <th>Jenis</th>
+      <th>Field yang diekstrak</th>
+    </tr>
+    <tr>
+      <td><code>KTP</code></td>
+      <td><code>nik</code>, <code>nama</code>, <code>tempat_lahir</code>, <code>tanggal_lahir</code>, <code>jenis_kelamin</code>, <code>alamat</code>, <code>rt_rw</code>, <code>kel_desa</code>, <code>kecamatan</code>, <code>agama</code>, <code>status_perkawinan</code>, <code>pekerjaan</code>, <code>kewarganegaraan</code></td>
+    </tr>
+    <tr>
+      <td><code>KK</code></td>
+      <td><code>no_kk</code>, <code>alamat</code>, <code>rt_rw</code>, <code>desa_kelurahan</code>, <code>kecamatan</code>, <code>kabupaten_kota</code>, <code>provinsi</code>, <code>kode_pos</code>, <code>anggota[]</code> (tiap anggota: <code>nik</code>, <code>nama</code>, <code>jenis_kelamin</code>, <code>tempat_lahir</code>, <code>tanggal_lahir</code>, <code>agama</code>, <code>pendidikan</code>, <code>pekerjaan</code>, <code>status_hubungan</code>)</td>
+    </tr>
+    <tr>
+      <td><code>SIM</code></td>
+      <td><code>nama</code>, <code>alamat</code>, <code>tempat_lahir</code>, <code>tanggal_lahir</code>, <code>no_sim</code>, <code>nik</code> (hanya SIM generasi baru yang mencetak NIK)</td>
+    </tr>
+  </table>
+
+  <h2>Alur utama</h2>
+  <ol>
+    <li><strong>Consent:</strong> Operator/pelamar klik checkbox consent di <code>&lt;IdScanField&gt;</code>; UI baru mengaktifkan tombol kamera/file</li>
+    <li><strong>Capture:</strong> Foto via <code>getUserMedia</code> (mobile) atau file picker; canvas downscale ke ≤ 1 MB JPEG-0.8</li>
+    <li><strong>Upload + OCR:</strong> Blob dikirim ke <code>scan_identitas</code> atau <code>scan_identitas_publik</code>; backend buat <code>Pindai Identitas</code>, jalankan <code>proses_ocr()</code>, return <code>fields</code> + <code>confidence</code></li>
+    <li><strong>Review:</strong> Panel review tampil: daftar field terparsing + confidence; operator periksa / koreksi</li>
+    <li><strong>Terapkan:</strong> Klik "Terapkan ke formulir" → fungsi mapping per-form isi field form; tidak ada yang disimpan ke doctype orang tanpa operator menekan Save</li>
+    <li><strong>Purge:</strong> Scheduler harian hapus <code>Pindai Identitas</code> + file private setelah <code>hapus_setelah</code></li>
+  </ol>
+
+  <h2>Frontend — Komponen &amp; Wiring</h2>
+  <h3>Shared (<code>@sekolahpro/ui</code>)</h3>
+  <ul>
+    <li><code>&lt;IdScanField&gt;</code> — consent gate → capture → OCR review → apply. Props: <code>jenis</code>, <code>onScan(blob, jenis) =&gt; Promise&lt;fields&gt;</code> (diinject per app), <code>onApply(fields)</code> (parent map ke form state). Gunakan <code>Modal</code> + <code>Button</code> dari <code>@sekolahpro/ui</code></li>
+    <li><code>&lt;Turnstile&gt;</code> — Cloudflare Turnstile widget; dipakai di endpoint publik PPDB</li>
+    <li><strong>Catatan:</strong> Setiap paket yang mengonsumsi source <code>@sekolahpro/ui</code> harus mendeklarasikan <code>react-dom</code> (deps + peer) karena <code>Modal.tsx</code> menggunakan <code>createPortal</code></li>
+  </ul>
+
+  <h3>Per-form mapping &amp; wiring</h3>
+  <table>
+    <tr>
+      <th>Form</th>
+      <th>App</th>
+      <th>Endpoint</th>
+      <th>Field yang dipetakan</th>
+    </tr>
+    <tr>
+      <td><code>SiswaForm</code></td>
+      <td>apps/school</td>
+      <td><code>scan_identitas</code> (authed)</td>
+      <td>nama_lengkap, nik, jenis_kelamin, tempat/tanggal lahir, agama, alamat</td>
+    </tr>
+    <tr>
+      <td><code>WaliModal</code></td>
+      <td>apps/school</td>
+      <td><code>scan_identitas</code> (authed)</td>
+      <td>nama, nik_ayah/nik_ibu, pekerjaan, pendidikan, alamat; KK menawarkan "isi data wali dari KK"</td>
+    </tr>
+    <tr>
+      <td><code>PegawaiFormModal</code> / <code>StaffFormModal</code></td>
+      <td>apps/school</td>
+      <td><code>scan_identitas</code> (authed)</td>
+      <td>nama_lengkap, nik, tempat/tanggal lahir, jenis_kelamin, agama, alamat</td>
+    </tr>
+    <tr>
+      <td><code>PpdbForm</code> (landing Step 2)</td>
+      <td>apps/landing</td>
+      <td><code>scan_identitas_publik</code> (guest)</td>
+      <td>Biodata pelamar + field orang tua</td>
+    </tr>
+    <tr>
+      <td><code>PpdbForm</code> (situs)</td>
+      <td>apps/situs</td>
+      <td><code>scan_identitas_publik</code> (guest)</td>
+      <td>Biodata pelamar + field orang tua</td>
+    </tr>
+    <tr>
+      <td><code>PickupPersonForm</code></td>
+      <td>apps/parent</td>
+      <td><code>scan_identitas</code> (authed)</td>
+      <td>nama; nomor telepon diisi manual</td>
+    </tr>
+  </table>
+
+  <h2>Privasi &amp; Kepatuhan UU PDP</h2>
+  <ul>
+    <li><strong>On-prem processing:</strong> Tesseract berjalan di container backend; gambar tidak pernah dikirim ke pihak ketiga</li>
+    <li><strong>Private file:</strong> <code>file_dokumen</code> disimpan sebagai private Frappe file (<code>is_private=1</code>); tidak dapat diakses tanpa session + izin</li>
+    <li><strong>Permlevel-gated sensitive fields:</strong> <code>raw_text</code>, <code>hasil_json</code>, <code>nik_terdeteksi</code> — permlevel 2; hanya peran: Tata Usaha, Kepala Sekolah, Operator Dapodik, System Manager</li>
+    <li><strong>Consent eksplisit:</strong> Checkbox <code>consent_diberikan</code> wajib dicentang di UI sebelum scan aktif; timestamp consent direkam di doctype</li>
+    <li><strong>Auto-purge 30 hari:</strong> Scheduler harian hapus <code>Pindai Identitas</code> + file private setelah <code>RETENTION_DAYS = 30</code></li>
+    <li><strong>Tenant isolation:</strong> Field <code>sekolah</code> + <code>organisasi</code> sebagai tenant anchor; doctype terdaftar di <code>tenant_registry.py</code> — tidak ada cross-tenant leak</li>
+    <li><strong>Review sebelum simpan:</strong> Field hasil OCR mengisi form yang dapat diedit; tidak ada data yang dipersist ke record orang tanpa operator menekan Save</li>
+  </ul>
+
+  <h2>Deployment</h2>
+  <ul>
+    <li><strong>System deps (BLOCKER):</strong> Backend container harus memiliki <code>tesseract-ocr</code> + <code>tesseract-ocr-ind</code> via <code>apt-get</code> (dideklarasikan di <code>pyproject.toml [deploy.dependencies.apt]</code> + Dockerfile/compose override)</li>
+    <li><strong>Python deps:</strong> <code>pytesseract</code> + <code>Pillow</code> di <code>sekolahpro</code> packaging (<code>pyproject.toml</code> / <code>requirements.txt</code>) sehingga <code>bench setup requirements</code> menginstalnya</li>
+    <li><strong>Verifikasi:</strong> <code>tesseract --list-langs</code> harus menampilkan <code>ind</code></li>
+    <li><strong>Dev bootstrap:</strong> Sediakan perintah runtime install sekali pakai untuk dev container sebelum image dibangun ulang</li>
+  </ul>
+
+  <h2>Pengujian</h2>
+  <ul>
+    <li><strong>BE parser unit:</strong> Fixture raw-text sintetis KTP/KK/SIM di <code>tests/testdata/ocr/</code> (bukan gambar ID asli — privasi); assert parsed dict, validasi NIK, normalisasi tanggal, ekstraksi multi-anggota KK</li>
+    <li><strong>BE controller + endpoint:</strong> Penolakan MIME/ukuran, rate-limit, Turnstile, guest vs authed, tenant scoping, consent-required, retention purge — total ~30 pytest</li>
+    <li><strong>FE vitest:</strong> <code>&lt;IdScanField&gt;</code> (mock <code>onScan</code>), setiap fungsi mapping per-form, RTL render + perilaku consent-gate</li>
+    <li><strong>Acceptance:</strong> Scan manual KTP asli di dev (didokumentasikan di plan; gambar tidak di-commit)</li>
+  </ul>
+
+  <h2>Cross-Domain Events</h2>
+  <h3>Feeds (mengisi domain lain)</h3>
+  <p>OCR tidak memicu domain event apapun. Pengisian field bersifat sinkron via API response: field terparsing langsung diterapkan ke state form di sisi klien. Tidak ada event queue, tidak ada webhook, tidak ada trigger ke domain lain.</p>
+  <table>
+    <tr>
+      <th>Sumber</th>
+      <th>Tujuan</th>
+      <th>Mekanisme</th>
+    </tr>
+    <tr>
+      <td><code>Pindai Identitas.hasil_json</code></td>
+      <td>Form Siswa</td>
+      <td>API response → <code>onApply(fields)</code> → mapping fn → form state (sinkron, tidak ada event)</td>
+    </tr>
+    <tr>
+      <td><code>Pindai Identitas.hasil_json</code></td>
+      <td>Form Wali Siswa</td>
+      <td>API response → <code>onApply(fields)</code> → mapping fn → form state (sinkron)</td>
+    </tr>
+    <tr>
+      <td><code>Pindai Identitas.hasil_json</code></td>
+      <td>Form Pegawai / Staf</td>
+      <td>API response → <code>onApply(fields)</code> → mapping fn → form state (sinkron)</td>
+    </tr>
+    <tr>
+      <td><code>Pindai Identitas.hasil_json</code></td>
+      <td>Form Calon Siswa (PPDB)</td>
+      <td>API response → <code>onApply(fields)</code> → mapping fn → form state (sinkron, guest via Turnstile)</td>
+    </tr>
+    <tr>
+      <td><code>Pindai Identitas.hasil_json</code></td>
+      <td>Form Pickup Person</td>
+      <td>API response → <code>onApply(fields)</code> → mapping fn → form state (sinkron)</td>
+    </tr>
+  </table>
+
+  <h3>Listens (bereaksi pada event domain lain)</h3>
+  <ul>
+    <li>Tidak ada. OCR module tidak listen ke event dari domain manapun.</li>
+  </ul>
+
+  <h2>Batas ruang lingkup (YAGNI)</h2>
+  <ul>
+    <li><strong>Cloud OCR:</strong> Tidak ada provider OCR pihak ketiga; hanya Tesseract on-prem</li>
+    <li><strong>Face-match / liveness:</strong> Verifikasi keaslian KTP di luar cakupan ini</li>
+    <li><strong>Dokumen lain:</strong> Paspor / KIA / Akta Kelahiran — hanya KTP/KK/SIM di fase ini</li>
+    <li><strong>Bulk scanning:</strong> Multi-dokumen sekaligus tidak didukung</li>
+    <li><strong>KK → auto-fill peran orang tua:</strong> Parser <code>anggota[]</code> memiliki <code>status_hubungan</code> tapi auto-assign peran Ayah/Ibu dari nilai ini ditunda (variance antar template Dukcapil); operator mengisi manual</li>
+    <li><strong>Confidence badge di UI:</strong> Nilai confidence direkam di doctype tapi belum ditampilkan sebagai badge di UI (fase berikut)</li>
+    <li><strong>Token Turnstile multi-scan:</strong> Token Turnstile single-use; multi-scan dalam satu sesi memerlukan token baru setiap kali (known limitation)</li>
+  </ul>
+</body>
+</html>
