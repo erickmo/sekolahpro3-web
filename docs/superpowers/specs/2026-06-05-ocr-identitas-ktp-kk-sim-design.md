@@ -1,7 +1,7 @@
 # Design: OCR Identitas (KTP / KK / SIM) for Person Input Forms
 
 - **Date:** 2026-06-05
-- **Status:** Approved (brainstorm) — pending spec review
+- **Status:** Implemented (2026-06-06)
 - **Repos:** `sekolahpro` (backend, Frappe) + `sekolahpro-web` (frontend, pnpm monorepo)
 - **Task size:** L (new backend module + new doctype + system dependency + cross-app frontend)
 

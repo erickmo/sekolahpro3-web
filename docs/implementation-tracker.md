@@ -3,7 +3,7 @@
 Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 `docs/domains/{domain}/README.html` dan ADR masing-masing.
 
-> **Snapshot: 2026-06-03.** Angka uji diambil dari dokumentasi domain & berkas test
+> **Snapshot: 2026-06-06.** Angka uji diambil dari dokumentasi domain & berkas test
 > sisi web yang diverifikasi ada di repo ini; test backend (`vernon_*`/`sekolahpro`)
 > berada di repo terpisah dan ditandai _(BE, repo terpisah)_ — tidak dijalankan ulang.
 > Status: **Done** = dirilis (merged), **Partial** = sebagian (mis. BE belum di-bench-run),
@@ -33,7 +33,8 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 | Pesan | 4 | 4 | 0 | 0 | [pesan](domains/pesan/README.html) |
 | Audit Log | 4 | 4 | 0 | 0 | [audit](domains/audit/README.html) |
 | Verifikasi Penjemputan | 4 | 4 | 0 | 0 | [pickup-verify](domains/pickup-verify/README.html) |
-| **Total** | **80** | **75** | **1** | **4** | |
+| OCR Identitas | 4 | 4 | 0 | 0 | [ocr](domains/ocr/README.html) |
+| **Total** | **84** | **79** | **1** | **4** | |
 
 ## Ads Manager
 
@@ -256,9 +257,20 @@ ADR: tidak ada (mekanisme audit standar Frappe).
 
 ADR: [PCK-ADR-0001 — Mekanisme verifikasi penjemput](domains/pickup-verify/ADR/PCK-ADR-0001-pickup-verification.md)
 
+## OCR Identitas
+
+| ID | Item | Tipe | Status | Uji |
+|----|------|------|--------|-----|
+| OCR-001 | Doctype `Pindai Identitas` (consent + retensi + tenant-scoped) + controller `proses_ocr()` + scheduler `purge_kadaluarsa` | Feature | Done | _(BE, repo terpisah; ~30 pytest: MIME/size reject, rate-limit, Turnstile, guest vs authed, tenant scoping, consent-required, purge)_ |
+| OCR-002 | Engine on-prem: `preprocess.py` (Pillow) + `tesseract.py` (pytesseract lang=ind) + `parser.py` (KTP/KK/SIM, NIK 16-digit, date norm) | Feature | Done | _(BE: parser unit tests — fixture raw-text sintetis KTP/KK/SIM, multi-anggota KK)_ |
+| OCR-003 | Shared `<IdScanField>` + `<Turnstile>` di `@sekolahpro/ui`; wiring ke Siswa/Wali/Pegawai/Staf (authed) + PPDB landing + situs PpdbForm (guest) + PickupPerson | Feature | Done | vitest: `IdScanField` (mock onScan, consent-gate RTL), mapping fn per-form (siswa/wali/pegawai/ppdb/pickup) |
+| OCR-004 | Privasi UU PDP: private file + permlevel-2 fields + consent checkbox + auto-purge 30 hari + on-prem only | PRD | Done | — (lihat README + spec design) |
+
+ADR: tidak ada (keputusan arsitektur tercakup dalam [spesifikasi desain](superpowers/specs/2026-06-05-ocr-identitas-ktp-kk-sim-design.md)).
+
 ## Cakupan & sisa
 
 Seluruh domain bisnis aplikasi **school** (rute `sch.$sekolah.*` + `kop.$sekolah.*`)
-kini terdokumentasi (20 domain). Di luar cakupan dokumentasi domain (bukan domain bisnis):
+kini terdokumentasi (21 domain). Di luar cakupan dokumentasi domain (bukan domain bisnis):
 aplikasi konsumen **parent / student / merchant / landing** dan konsol **saas**
 (admin) — masing-masing mengonsumsi domain di atas, didokumentasikan via README app bila perlu.
