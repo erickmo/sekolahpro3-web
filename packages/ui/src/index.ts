@@ -40,4 +40,5 @@ export * from "./components/ApprovalBar";
 export * from "./components/RejectModal";
 export * from "./components/AuditTrailTimeline";
 export * from "./components/IdScanField";
+export * from "./components/Turnstile";
 export * from "./icons";

@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
+import { Turnstile, IdScanField } from "@sekolahpro/ui";
 import { useSite } from "../../SiteContext";
 import { usePpdbInfo } from "../../lib/ppdb";
 import { ppdbSchema, type PpdbFormValues } from "./schema";
 import { useSubmitPendaftaran } from "./api";
+import { scanIdentitasPublik } from "../../lib/ocrApi";
+import { mapKtpToCalon } from "./ocrMapping";
 
 function Row({ label, error, children }: { label: string; error?: string | undefined; children: React.ReactNode }) {
   return (
@@ -22,9 +26,11 @@ export function PpdbForm() {
   const navigate = useNavigate();
   const { data: info } = usePpdbInfo(site.sekolah);
   const submit = useSubmitPendaftaran(site.sekolah);
+  const [ocrToken, setOcrToken] = useState("");
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<PpdbFormValues>({ resolver: zodResolver(ppdbSchema), defaultValues: { nisn: "", email: "" } });
 
@@ -39,6 +45,28 @@ export function PpdbForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8" noValidate>
+      <div className="situs-card situs-round-lg space-y-3 p-5">
+        <p className="text-sm font-semibold" style={{ color: "var(--situs-brand)" }}>
+          Isi otomatis dari KTP (opsional)
+        </p>
+        <Turnstile
+          siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY ?? ""}
+          onToken={setOcrToken}
+        />
+        <IdScanField
+          jenis="KTP"
+          onScan={(blob, jenis) =>
+            scanIdentitasPublik(blob, jenis, ocrToken || "dev").then((r) => r.fields)
+          }
+          onApply={(fields) => {
+            const mapped = mapKtpToCalon(fields);
+            Object.entries(mapped).forEach(([k, v]) =>
+              setValue(k as keyof PpdbFormValues, v as never, { shouldValidate: true }),
+            );
+          }}
+        />
+      </div>
+
       <fieldset className="situs-card situs-round-lg space-y-4 p-5">
         <legend className="px-1 text-sm font-semibold" style={{ color: "var(--situs-brand)" }}>1 · Jalur & Gelombang</legend>
         <div className="grid gap-4 sm:grid-cols-2">
