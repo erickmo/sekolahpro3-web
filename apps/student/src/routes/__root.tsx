@@ -20,6 +20,7 @@ import {
   IconLogout,
   IconBook,
   IconChat,
+  IconId,
 } from "@sekolahpro/ui";
 import { logout, useSession } from "@sekolahpro/auth";
 import { useTenant } from "@sekolahpro/tenant";
@@ -178,6 +179,7 @@ type NavTo =
   | "/nilai"
   | "/jadwal"
   | "/absensi"
+  | "/qr"
   | "/tugas"
   | "/pesan"
   | "/profil";
@@ -227,6 +229,7 @@ function Layout() {
         mk("/", "Beranda", <IconHome />),
         mk("/jadwal", "Jadwal", <IconCalendar />),
         mk("/absensi", "Absensi", <IconCheck />),
+        mk("/qr", "Kartu QR", <IconId />),
         mk("/nilai", "Nilai", <IconChart />),
         mk("/tugas", "Tugas", <IconBook />),
       ],
