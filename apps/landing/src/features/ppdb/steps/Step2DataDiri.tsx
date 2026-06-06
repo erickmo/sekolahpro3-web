@@ -4,7 +4,7 @@ import type { Path } from "react-hook-form";
 import type { FullPpdbInput } from "../schema";
 import { IdScanField } from "@sekolahpro/ui";
 import { scanIdentitasPublik } from "../../../lib/ocrApi";
-import { mapKtpToCalon } from "../ocrMapping";
+import { mapKtpToCalon, mapKkToWizard } from "../ocrMapping";
 import { Turnstile } from "../turnstile";
 import { Field } from "./Step1Jalur";
 
@@ -39,6 +39,30 @@ export function Step2DataDiri() {
           onToken={(t) => setValue("turnstile_token", t, { shouldValidate: false })}
           resetSignal={tsReset}
         />
+      </section>
+
+      {/* ── KK auto-fill (optional) — fills calon + orang tua in one scan ── */}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-slate-700">
+          Isi dari Kartu Keluarga (calon + orang tua)
+        </h3>
+        <IdScanField
+          jenis="KK"
+          onScan={(blob, jenis) =>
+            scanIdentitasPublik(blob, jenis, watch("turnstile_token") || "")
+              .then((r) => ({ fields: r.fields, confidence: r.confidence }))
+              .finally(() => setTsReset((n) => n + 1))
+          }
+          onApply={(fields) => {
+            const mapped = mapKkToWizard(fields);
+            Object.entries(mapped).forEach(([path, val]) =>
+              setValue(path as Path<FullPpdbInput>, val as never, { shouldValidate: true }),
+            );
+          }}
+        />
+        <p className="text-xs text-slate-500">
+          Satu pindai KK mengisi data calon (anak) sekaligus nama ayah dan ibu di langkah berikutnya.
+        </p>
       </section>
 
       {/* ── Manual fields ── */}
