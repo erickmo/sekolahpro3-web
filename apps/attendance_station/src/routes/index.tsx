@@ -1,0 +1,11 @@
+import { createFileRoute } from "@tanstack/react-router";
+
+function Home() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <h1 className="text-2xl font-semibold text-fg">Stasiun Absensi</h1>
+    </div>
+  );
+}
+
+export const Route = createFileRoute("/")({ component: Home });
