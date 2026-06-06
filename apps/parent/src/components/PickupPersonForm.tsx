@@ -98,7 +98,7 @@ export function PickupPersonForm({
       {/* OCR auto-fill: scan KTP to pre-populate the person's name. */}
       <IdScanField
         jenis="KTP"
-        onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+        onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => ({ fields: r.fields, confidence: r.confidence }))}
         onApply={handleOcrApply}
       />
 

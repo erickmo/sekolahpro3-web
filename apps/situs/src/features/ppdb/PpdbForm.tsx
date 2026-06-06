@@ -27,6 +27,7 @@ export function PpdbForm() {
   const { data: info } = usePpdbInfo(site.sekolah);
   const submit = useSubmitPendaftaran(site.sekolah);
   const [ocrToken, setOcrToken] = useState("");
+  const [tsReset, setTsReset] = useState(0);
   const {
     register,
     handleSubmit,
@@ -52,11 +53,14 @@ export function PpdbForm() {
         <Turnstile
           siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY ?? ""}
           onToken={setOcrToken}
+          resetSignal={tsReset}
         />
         <IdScanField
           jenis="KTP"
           onScan={(blob, jenis) =>
-            scanIdentitasPublik(blob, jenis, ocrToken).then((r) => r.fields)
+            scanIdentitasPublik(blob, jenis, ocrToken)
+              .then((r) => ({ fields: r.fields, confidence: r.confidence }))
+              .finally(() => setTsReset((n) => n + 1))
           }
           onApply={(fields) => {
             const mapped = mapKtpToCalon(fields);

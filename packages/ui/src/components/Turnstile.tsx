@@ -7,7 +7,7 @@ declare global {
         el: HTMLElement,
         opts: { sitekey: string; callback: (t: string) => void },
       ) => string;
-      reset: (id: string) => void;
+      reset: (id?: string) => void;
     };
   }
 }
@@ -19,10 +19,16 @@ export interface TurnstileProps {
   siteKey: string;
   /** Called with the verification token when the user passes the challenge. */
   onToken: (token: string) => void;
+  /**
+   * Bump this number after each guest scan to reset the widget and re-issue a
+   * fresh token. Cloudflare tokens are single-use; reusing a spent token causes
+   * the backend to reject the request.
+   */
+  resetSignal?: number;
 }
 
 /** Cloudflare Turnstile widget. Lazy-loads the script, renders once, reports the token. */
-export function Turnstile({ siteKey, onToken }: TurnstileProps) {
+export function Turnstile({ siteKey, onToken, resetSignal }: TurnstileProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const widgetId = useRef<string | null>(null);
   // FIX I4: store onToken in a ref so the render callback always calls the
@@ -53,6 +59,15 @@ export function Turnstile({ siteKey, onToken }: TurnstileProps) {
     // FIX I4: remove onToken from deps — the ref handles freshness; only
     // re-run when siteKey changes (which requires a new widget anyway)
   }, [siteKey]);
+
+  // Reset the widget to re-issue a fresh token after each scan. Guard with
+  // optional chaining so this no-ops safely in jsdom / test environments.
+  useEffect(() => {
+    if (resetSignal === undefined || resetSignal === 0) return;
+    if (widgetId.current) {
+      window.turnstile?.reset(widgetId.current);
+    }
+  }, [resetSignal]);
 
   return <div ref={ref} />;
 }

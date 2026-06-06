@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import type { Path } from "react-hook-form";
 import type { FullPpdbInput } from "../schema";
@@ -10,6 +11,7 @@ import { Field } from "./Step1Jalur";
 export function Step2DataDiri() {
   const { register, setValue, watch, formState: { errors } } = useFormContext<FullPpdbInput>();
   const e = errors.calon;
+  const [tsReset, setTsReset] = useState(0);
 
   return (
     <div className="space-y-6">
@@ -21,9 +23,9 @@ export function Step2DataDiri() {
         <IdScanField
           jenis="KTP"
           onScan={(blob, jenis) =>
-            scanIdentitasPublik(blob, jenis, watch("turnstile_token") || "").then(
-              (r) => r.fields,
-            )
+            scanIdentitasPublik(blob, jenis, watch("turnstile_token") || "")
+              .then((r) => ({ fields: r.fields, confidence: r.confidence }))
+              .finally(() => setTsReset((n) => n + 1))
           }
           onApply={(fields) => {
             const mapped = mapKtpToCalon(fields);
@@ -35,6 +37,7 @@ export function Step2DataDiri() {
         <p className="text-xs text-slate-500">Verifikasi untuk memindai dokumen</p>
         <Turnstile
           onToken={(t) => setValue("turnstile_token", t, { shouldValidate: false })}
+          resetSignal={tsReset}
         />
       </section>
 

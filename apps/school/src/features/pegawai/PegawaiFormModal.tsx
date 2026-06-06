@@ -230,7 +230,7 @@ export function PegawaiFormModal({ open, onClose, mode, initial, onSaved }: Pega
               <div className="col-span-2">
                 <IdScanField
                   jenis="KTP"
-                  onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+                  onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => ({ fields: r.fields, confidence: r.confidence }))}
                   onApply={(fields) =>
                     setValues((prev) => ({ ...prev, ...mapKtpToPegawai(fields) }))
                   }

@@ -20,10 +20,10 @@ describe("IdScanField", () => {
     expect(screen.getByRole("button", { name: /pilih file/i })).not.toBeDisabled();
   });
 
-  it("calls onScan then shows fields and applies them", async () => {
+  it("calls onScan then shows fields, confidence badge, and applies them", async () => {
     const onScan = vi
       .fn()
-      .mockResolvedValue({ nik: "3171234567890123", nama: "BUDI" });
+      .mockResolvedValue({ fields: { nik: "3171234567890123", nama: "BUDI" }, confidence: 87 });
     const onApply = vi.fn();
     render(<IdScanField jenis="KTP" onScan={onScan} onApply={onApply} />);
     fireEvent.click(screen.getByLabelText(/setuju/i));
@@ -32,7 +32,11 @@ describe("IdScanField", () => {
     fireEvent.change(screen.getByTestId("id-scan-file"), { target: { files: [file] } });
     await waitFor(() => expect(onScan).toHaveBeenCalled());
     await screen.findByText(/3171234567890123/);
+    // Confidence badge should appear
+    expect(screen.getByText(/Keyakinan OCR/i)).toBeTruthy();
+    expect(screen.getByText(/87%/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /terapkan/i }));
+    // onApply receives only fields (not the full ScanOutcome)
     expect(onApply).toHaveBeenCalledWith({ nik: "3171234567890123", nama: "BUDI" });
   });
 

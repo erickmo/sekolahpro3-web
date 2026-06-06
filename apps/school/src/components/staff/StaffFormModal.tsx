@@ -194,7 +194,7 @@ export function StaffFormModal({ open, onClose, onCreated }: StaffFormModalProps
           <div className="col-span-2">
             <IdScanField
               jenis="KTP"
-              onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+              onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => ({ fields: r.fields, confidence: r.confidence }))}
               onApply={(fields) =>
                 setForm((prev) => ({ ...prev, ...(mapKtpToPegawai(fields) as Partial<FormState>) }))
               }
