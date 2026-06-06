@@ -114,6 +114,41 @@
     <li><strong>Siswa alpa beruntun >3 hari:</strong> Dashboard index deteksi dari agregat Absensi Harian (Cross-domain READ).</li>
   </ul>
 
+  <h2>Penjadwalan &amp; Operasional (Scheduler)</h2>
+  <p>Job rekonsiliasi terdaftar sebagai <strong>Scheduled Job Type</strong> native Frappe
+  (auto-sync dari <code>scheduler_events</code> di <code>hooks.py</code> saat <code>bench migrate</code>).
+  Tidak perlu cron OS.</p>
+  <table>
+    <thead>
+      <tr><th>Job / Method</th><th>Tipe</th><th>Jadwal default</th><th>Kelola di</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>sekolahpro.attendance.services.derivation_service.reconcile_daily</code></td>
+        <td>Scheduled Job Type (frequency <code>Cron</code>)</td>
+        <td><code>0 23 * * *</code> (23:00 harian)</td>
+        <td>UI <code>/app/scheduled-job-type</code> → record <code>derivation_service.reconcile_daily</code></td>
+      </tr>
+      <tr>
+        <td><code>sekolahpro.attendance.services.derivation_service.derive_summaries</code></td>
+        <td>Doc event (<code>Attendance Event.after_insert</code>) via <code>frappe.enqueue</code> queue <code>short</code></td>
+        <td>Per-insert (bukan terjadwal)</td>
+        <td>Tidak di scheduler — wiring di <code>hooks.py doc_events</code></td>
+      </tr>
+      <tr>
+        <td><code>sekolahpro.attendance.services.pairing_service.cleanup_expired_pairings</code></td>
+        <td>Scheduled Job Type (frequency <code>Hourly</code>)</td>
+        <td>Tiap jam</td>
+        <td>UI <code>/app/scheduled-job-type</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted"><strong>Ubah jadwal:</strong> sementara/per-site lewat UI Scheduled Job Type
+  (edit <code>Cron Format</code> / <code>Frequency</code>, toggle <code>Stopped</code>, atau "Run Now");
+  permanen/lintas-site lewat <code>scheduler_events</code> di <code>hooks.py</code> lalu
+  <code>bench migrate</code> (re-sync record). Scheduler global harus aktif
+  (<code>bench --site &lt;site&gt; enable-scheduler</code>) dan container scheduler jalan agar cron tereksekusi.</p>
+
   <h2>Batas Ruang Lingkup (YAGNI)</h2>
   <ul>
     <li><strong>Visitor/Tamu Attendance (Fase non-prioritas):</strong> Deferred — belum ada flow tamu (tidak ada Student ID card).</li>
