@@ -31,4 +31,22 @@ describe("QrCardView", () => {
       expect(alert).toHaveTextContent(/gagal/i);
     });
   });
+
+  it("me-mint ulang QR saat interval refresh terlewati", async () => {
+    // ABS-003 — fake timers di-scope ke test ini saja; dua test di atas
+    // memakai real timers. advanceTimersByTimeAsync ikut menge-flush
+    // microtask promise yang di-await.
+    vi.useFakeTimers();
+    try {
+      const REFRESH_MS = 1_000;
+      const mintQr = mockResolves(SAMPLE);
+      render(<QrCardView mintQr={mintQr} refreshMs={REFRESH_MS} />);
+
+      await vi.waitFor(() => expect(mintQr).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+      expect(mintQr.mock.calls.length).toBeGreaterThanOrEqual(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

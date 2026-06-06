@@ -47,10 +47,14 @@ export function QrCardView({ mintQr, refreshMs = DEFAULT_REFRESH_MS }: QrCardVie
     const renderToken = (token: string) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      // Tangani penolakan toCanvas (mis. canvas 2d-context tak tersedia di
-      // jsdom) supaya tidak menjadi unhandled rejection — kegagalan gambar
-      // bukan kegagalan mint, jadi state error mint tidak diubah.
-      QRCode.toCanvas(canvas, token, { width: QR_CANVAS_SIZE }).catch(() => {});
+      // `getContext("2d")` membedakan lingkungan uji jsdom (tak punya konteks
+      // 2D → null) dari kegagalan render nyata di browser. Bila null, render
+      // di-skip diam-diam agar test tetap bersih; bila ada konteks, kegagalan
+      // toCanvas adalah error nyata dan harus muncul ke pengguna (kios).
+      if (!canvas.getContext("2d")) return;
+      QRCode.toCanvas(canvas, token, { width: QR_CANVAS_SIZE }).catch(() => {
+        if (alive) setError("Gagal memuat kode QR. Coba lagi sebentar.");
+      });
     };
 
     const refresh = async () => {
