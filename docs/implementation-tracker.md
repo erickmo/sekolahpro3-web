@@ -27,14 +27,14 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 | Guru & Staf | 4 | 4 | 0 | 0 | [staff](domains/staff/README.html) |
 | Jadwal | 4 | 4 | 0 | 0 | [jadwal](domains/jadwal/README.html) |
 | Infrastruktur | 4 | 4 | 0 | 0 | [infrastruktur](domains/infrastruktur/README.html) |
-| Absensi | 4 | 1 | 0 | 3 | [absensi](domains/absensi/README.html) |
+| Absensi | 4 | 4 | 0 | 0 | [absensi](domains/absensi/README.html) |
 | Kelas & Rombel | 4 | 4 | 0 | 0 | [kelas](domains/kelas/README.html) |
 | Pengaturan | 4 | 4 | 0 | 0 | [pengaturan](domains/pengaturan/README.html) |
 | Pesan | 4 | 4 | 0 | 0 | [pesan](domains/pesan/README.html) |
 | Audit Log | 4 | 4 | 0 | 0 | [audit](domains/audit/README.html) |
 | Verifikasi Penjemputan | 4 | 4 | 0 | 0 | [pickup-verify](domains/pickup-verify/README.html) |
 | OCR Identitas | 4 | 4 | 0 | 0 | [ocr](domains/ocr/README.html) |
-| **Total** | **84** | **79** | **1** | **4** | |
+| **Total** | **84** | **82** | **1** | **1** | |
 
 ## Ads Manager
 
@@ -196,11 +196,16 @@ ADR: [INF-ADR-0001 — Fasilitas Ruangan child istable (tenanted via parent)](do
 | ID | Item | Tipe | Status | Uji |
 |----|------|------|--------|-----|
 | ABS-001 | Backend Foundation (Phase 1: doctype, JWT, pairing, tap) | Feature | Done | _(BE: 22 pytest, repo terpisah)_ |
-| ABS-002 | PWA Core (Phase 2: pairing UI, HID tap, online flow) | Feature | Ditunda | — |
-| ABS-003 | QR Flow (Phase 3: mint QR app siswa, kamera PWA) | Feature | Ditunda | — |
-| ABS-004 | Derivasi + Rekonsiliasi (Phase 7: Daily/Class Attendance) | Feature | Ditunda | — |
+| ABS-002 | PWA Core (Phase 2: `apps/attendance_station` — layar pair/station/login, HID reader adapter, tap online, cache kartu) | Feature | Done | vitest attendance_station (tapHandler/jwt/time/api/cardCache/pairing) + layar pair/station/login |
+| ABS-003 | QR Flow (Phase 3: `apps/student` `/qr` Show-QR + scanner kamera PWA, verifikasi Ed25519) | Feature | Done | vitest qr.tsx (student) + scanner/jwt (station) |
+| ABS-004 | Derivasi + Rekonsiliasi (Phase 4/7: `Attendance Event.after_insert` → `derive_summaries` ke akademik Absensi Harian/Pelajaran; cron `reconcile_daily`) | Feature | Done | _(BE, repo terpisah; 17 pytest derivasi: status gate, gate/class, idempotensi, guard manual, rekonsiliasi)_ |
 
 ADR: [ABS-ADR-0001 — Attendance Station multi-mode terpadu](domains/absensi/ADR/ABS-ADR-0001-attendance-station.md)
+
+> Catatan: fase 2 (PWA core), 3 (QR), dan 4 (derivasi) sudah diimplementasikan
+> (web: `apps/attendance_station` + `apps/student` `/qr`; BE: derivasi ke akademik
+> `Absensi Harian`/`Absensi Pelajaran`, keputusan D1). Mode offline (IndexedDB queue),
+> Web NFC, jembatan reader eksternal, dan notifikasi wali tetap ditunda.
 
 ## Kelas & Rombel
 

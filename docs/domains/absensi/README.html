@@ -57,24 +57,14 @@
         <td>station, subject_type, subject_id, method (card/qr/manual), direction (in/out), event_type (gate/class/event), tapped_at, jti (replay cache)</td>
       </tr>
       <tr>
-        <td><code>Daily Attendance</code></td>
-        <td>Ringkasan harian per orang/hari (derivasi dari gate event, fase 7)</td>
-        <td>subject_type, subject_id, date, sekolah, first_in, last_out, gate_status (hadir/terlambat/alpha)</td>
+        <td><code>Absensi Harian</code> (akademik, ada — target derivasi)</td>
+        <td>Ringkasan harian hasil derivasi dari gate <code>Attendance Event</code> (keputusan D1: pakai doctype akademik yang sudah ada, bukan <code>Daily Attendance</code> baru). <code>Sekolah.jam_masuk</code> + <code>toleransi_terlambat</code> menentukan hadir/terlambat; <code>sumber_input</code> (Manual|Otomatis) adalah guard override manual.</td>
+        <td>tanggal, kelas, rombel, total_hadir, total_alpa, total_izin, total_sakit, status, sumber_input (Manual|Otomatis), + Detail child table (per orang)</td>
       </tr>
       <tr>
-        <td><code>Class Attendance</code></td>
-        <td>Ringkasan per sesi jadwal (derivasi dari class event, fase 7)</td>
-        <td>jadwal_pelajaran, date, status (hadir/izin/sakit/alpha), in_at, source (station/manual)</td>
-      </tr>
-      <tr>
-        <td><code>Absensi Harian</code> (akademik, ada)</td>
-        <td>Ringkasan harian per kelas (akan diwirkan dengan Daily Attendance di Fase 7)</td>
-        <td>tanggal, kelas, rombel, total_hadir, total_alpa, total_izin, total_sakit, status</td>
-      </tr>
-      <tr>
-        <td><code>Absensi Pelajaran</code> (akademik, ada)</td>
-        <td>Ringkasan per pelajaran/sesi (akan diwirkan dengan Class Attendance di Fase 7)</td>
-        <td>tanggal, mata_pelajaran, kelas, guru, status</td>
+        <td><code>Absensi Pelajaran</code> (akademik, ada — target derivasi)</td>
+        <td>Ringkasan per pelajaran/sesi hasil derivasi dari class <code>Attendance Event</code> (keputusan D1: pakai doctype akademik yang sudah ada, bukan <code>Class Attendance</code> baru).</td>
+        <td>tanggal, mata_pelajaran, kelas, guru, status, + Detail child table (per siswa)</td>
       </tr>
       <tr>
         <td><code>Absensi Guru</code> (akademik, ada)</td>
@@ -83,6 +73,8 @@
       </tr>
     </tbody>
   </table>
+  <p class="muted"><strong>Keputusan D1:</strong> tidak ada doctype <code>Daily Attendance</code> / <code>Class Attendance</code> terpisah. Derivasi ringkasan menulis langsung ke doctype akademik yang sudah ada — <code>Absensi Harian</code> / <code>Absensi Pelajaran</code> beserta child table Detail-nya. Lihat <code>docs/superpowers/specs/2026-06-07-absensi-phase234-implementation-design.md</code>.</p>
+  <p class="muted"><strong>Status implementasi (2026-06-07):</strong> Stasiun PWA <code>apps/attendance_station</code> (fase 2) dan layar QR dinamis siswa <code>apps/student</code> <code>/qr</code> (fase 3) sudah ada; derivasi (fase 4/7) sudah dirilis di backend. Mode offline (IndexedDB queue), Web NFC, jembatan reader eksternal, dan notifikasi wali masih ditunda.</p>
 
   <h2>Alur Utama</h2>
   <ol>
@@ -90,7 +82,7 @@
     <li><strong>Tap Card Online (Gate/Classroom, Fase 1):</strong> Operator tap kartu RFID ke reader HID → stasiun lookup UID lokal → validasi sekolah/status → POST <code>record_tap</code> ke backend → backend verifikasi ulang, insert Attendance Event (accepted/rejected).</li>
     <li><strong>Tap QR Online (Fase 3):</strong> Siswa buka "Tampilkan QR" di app → app mint JWT Ed25519 (30s TTL) via <code>mint_qr</code> setiap 25 detik → stasiun scan QR → verifikasi sig + exp lokal → POST ke <code>record_tap</code> dengan token.</li>
     <li><strong>Offline Queue (Fase 4):</strong> Stasiun offline → tap (card/QR) masuk IndexedDB → tombol "Sinkronisasi" atau otomatis saat reconnect → flush batch dengan server → server verifikasi sig + jti dedup + timestamp skew → accept/reject dengan alasan.</li>
-    <li><strong>Derivasi Ringkasan (Fase 7):</strong> Setelah <code>Attendance Event</code> diterima, background job <code>derive_summaries</code> → upsert <code>Daily Attendance</code> (gate), <code>Class Attendance</code> (class) → hitung status hadir/terlambat/alpha; wirkan ke akademik <code>Absensi Harian</code>/<code>Absensi Pelajaran</code>.</li>
+    <li><strong>Derivasi Ringkasan (Fase 4/7, dirilis):</strong> Setelah <code>Attendance Event</code> diterima, <code>Attendance Event.after_insert</code> meng-enqueue <code>derive_summaries</code> → upsert langsung ke akademik <code>Absensi Harian</code> (gate) dan <code>Absensi Pelajaran</code> (class) beserta child Detail-nya (keputusan D1, bukan doctype baru) → hitung status hadir/terlambat/alpha dari <code>Sekolah.jam_masuk</code> + <code>toleransi_terlambat</code>; cron <code>reconcile_daily</code> (23:00) menandai baris tanpa event sebagai Alpha. Edit manual men-set <code>sumber_input=Manual</code> sehingga tidak ditimpa otomasi.</li>
     <li><strong>Notifikasi Wali (Fase 8):</strong> Setelah derivasi, jika <code>event_type=gate</code> dan wali berlangganan paid tier → dispatch push notification via notification service.</li>
   </ol>
 
@@ -110,16 +102,16 @@
   <h2>Cross-Domain Events</h2>
   <h3>Triggers (Memicu)</h3>
   <ul>
-    <li><strong>Attendance Event accepted (Fase 7)</strong> → background job <code>derive_summaries</code> untuk upsert Daily/Class Attendance.</li>
-    <li><strong>Daily/Class Attendance upsert (Fase 7)</strong> → derive gate_status hadir/terlambat/alpha berdasarkan jadwal sekolah jam_masuk.</li>
-    <li><strong>Daily Attendance gate_status="hadir" + event_type=gate (Fase 8)</strong> → jika wali tier paid, dispatch push notification.</li>
-    <li><strong>Absensi Harian/Pelajaran manually edited</strong> → set source=manual; derivasi auto skip baris ini berikutnya.</li>
+    <li><strong>Attendance Event accepted (Fase 4/7)</strong> → <code>after_insert</code> meng-enqueue <code>derive_summaries</code> untuk upsert akademik <code>Absensi Harian</code> (gate) / <code>Absensi Pelajaran</code> (class).</li>
+    <li><strong>Absensi Harian/Pelajaran upsert (Fase 4/7)</strong> → derive status hadir/terlambat/alpha dari <code>Sekolah.jam_masuk</code> + <code>toleransi_terlambat</code>.</li>
+    <li><strong>Absensi Harian status="hadir" + event_type=gate (Fase 8, ditunda)</strong> → jika wali tier paid, dispatch push notification.</li>
+    <li><strong>Absensi Harian/Pelajaran manually edited</strong> → set <code>sumber_input=Manual</code>; derivasi auto skip baris ini berikutnya.</li>
   </ul>
   <h3>Listens (Bereaksi)</h3>
   <ul>
-    <li><strong>Daily Attendance:</strong> Bereaksi pada scheduled reconciliation (23:00, Fase 7) — rows tanpa event in → gate_status=alpha; rows expected (per jadwal) tanpa station event → gate_status=alpha (jika source≠manual).</li>
-    <li><strong>Class Attendance:</strong> Bereaksi pada created/updated dengan source=station → operator tap confirm UI menampilkan ✓ + sound.</li>
-    <li><strong>Siswa alpa beruntun >3 hari:</strong> Dashboard index deteksi dari Daily Attendance aggregate (Cross-domain READ).</li>
+    <li><strong>Absensi Harian:</strong> Bereaksi pada cron <code>reconcile_daily</code> (23:00, Fase 4/7) — baris tanpa event in → status=Alpha; baris expected (per jadwal) tanpa station event → Alpha (jika <code>sumber_input</code>≠Manual).</li>
+    <li><strong>Absensi Pelajaran:</strong> Bereaksi pada created/updated dengan sumber station → operator tap confirm UI menampilkan ✓ + sound.</li>
+    <li><strong>Siswa alpa beruntun >3 hari:</strong> Dashboard index deteksi dari agregat Absensi Harian (Cross-domain READ).</li>
   </ul>
 
   <h2>Batas Ruang Lingkup (YAGNI)</h2>
