@@ -115,7 +115,7 @@ export function WaliModal({ open, onClose, initial, onSubmit }: WaliModalProps) 
         {/* OCR auto-fill: scan KTP to pre-populate wali identity fields. */}
         <IdScanField
           jenis="KTP"
-          onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+          onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => ({ fields: r.fields, confidence: r.confidence }))}
           onApply={(fields) =>
             setV((prev) => ({ ...prev, ...(mapKtpToWali(fields, prev.hubungan) as Partial<WaliRow>) }))
           }

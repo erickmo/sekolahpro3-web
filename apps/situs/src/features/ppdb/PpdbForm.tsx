@@ -8,7 +8,7 @@ import { usePpdbInfo } from "../../lib/ppdb";
 import { ppdbSchema, type PpdbFormValues } from "./schema";
 import { useSubmitPendaftaran } from "./api";
 import { scanIdentitasPublik } from "../../lib/ocrApi";
-import { mapKtpToCalon } from "./ocrMapping";
+import { mapKtpToCalon, mapKkToCalon } from "./ocrMapping";
 
 function Row({ label, error, children }: { label: string; error?: string | undefined; children: React.ReactNode }) {
   return (
@@ -27,6 +27,7 @@ export function PpdbForm() {
   const { data: info } = usePpdbInfo(site.sekolah);
   const submit = useSubmitPendaftaran(site.sekolah);
   const [ocrToken, setOcrToken] = useState("");
+  const [tsReset, setTsReset] = useState(0);
   const {
     register,
     handleSubmit,
@@ -52,11 +53,14 @@ export function PpdbForm() {
         <Turnstile
           siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY ?? ""}
           onToken={setOcrToken}
+          resetSignal={tsReset}
         />
         <IdScanField
           jenis="KTP"
           onScan={(blob, jenis) =>
-            scanIdentitasPublik(blob, jenis, ocrToken).then((r) => r.fields)
+            scanIdentitasPublik(blob, jenis, ocrToken)
+              .then((r) => ({ fields: r.fields, confidence: r.confidence }))
+              .finally(() => setTsReset((n) => n + 1))
           }
           onApply={(fields) => {
             const mapped = mapKtpToCalon(fields);
@@ -65,6 +69,29 @@ export function PpdbForm() {
             );
           }}
         />
+      </div>
+
+      <div className="situs-card situs-round-lg space-y-3 p-5">
+        <p className="text-sm font-semibold" style={{ color: "var(--situs-brand)" }}>
+          Isi dari Kartu Keluarga (calon + orang tua)
+        </p>
+        <IdScanField
+          jenis="KK"
+          onScan={(blob, jenis) =>
+            scanIdentitasPublik(blob, jenis, ocrToken)
+              .then((r) => ({ fields: r.fields, confidence: r.confidence }))
+              .finally(() => setTsReset((n) => n + 1))
+          }
+          onApply={(fields) => {
+            const mapped = mapKkToCalon(fields);
+            Object.entries(mapped).forEach(([k, v]) =>
+              setValue(k as keyof PpdbFormValues, v as never, { shouldValidate: true }),
+            );
+          }}
+        />
+        <p className="text-xs" style={{ color: "var(--situs-muted)" }}>
+          Satu pindai KK mengisi data calon (anak) sekaligus nama ayah dan ibu.
+        </p>
       </div>
 
       <fieldset className="situs-card situs-round-lg space-y-4 p-5">

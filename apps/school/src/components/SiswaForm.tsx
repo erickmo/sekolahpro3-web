@@ -161,7 +161,7 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
         {/* OCR auto-fill: scan KTP to pre-populate identity fields. */}
         <IdScanField
           jenis="KTP"
-          onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => r.fields)}
+          onScan={(blob, jenis) => scanIdentitas(blob, jenis).then((r) => ({ fields: r.fields, confidence: r.confidence }))}
           onApply={(fields) =>
             setValues((prev) => ({ ...prev, ...(mapKtpToSiswa(fields) as Partial<SiswaFormValues>) }))
           }

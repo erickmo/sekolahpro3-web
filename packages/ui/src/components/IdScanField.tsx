@@ -6,10 +6,15 @@ const JPEG_QUALITY = 0.8;
 
 export type JenisDokumen = "KTP" | "KK" | "SIM";
 
+export interface ScanOutcome {
+  fields: Record<string, unknown>;
+  confidence?: number; // 0-100
+}
+
 export interface IdScanFieldProps {
   jenis: JenisDokumen;
   /** Upload blob + run OCR. Injected per app (each app's api client). */
-  onScan: (blob: Blob, jenis: JenisDokumen) => Promise<Record<string, unknown>>;
+  onScan: (blob: Blob, jenis: JenisDokumen) => Promise<ScanOutcome>;
   /** Receive reviewed fields to map into host form. */
   onApply: (fields: Record<string, unknown>) => void;
 }
@@ -34,10 +39,19 @@ async function downscale(file: File): Promise<Blob> {
  * ID document scanner: consent gate → capture (camera/file) → OCR via injected
  * onScan → review parsed fields → apply to host form via onApply. API-agnostic.
  */
+const CONFIDENCE_HIGH = 80;
+const CONFIDENCE_MID = 60;
+
+function confidenceBadgeClass(confidence: number): string {
+  if (confidence >= CONFIDENCE_HIGH) return "bg-green-100 text-green-800";
+  if (confidence >= CONFIDENCE_MID) return "bg-amber-100 text-amber-800";
+  return "bg-red-100 text-red-800";
+}
+
 export function IdScanField({ jenis, onScan, onApply }: IdScanFieldProps) {
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [fields, setFields] = useState<Record<string, unknown> | null>(null);
+  const [outcome, setOutcome] = useState<ScanOutcome | null>(null);
   // FIX I1: error state to surface scan failures
   const [scanError, setScanError] = useState<string | null>(null);
   // FIX C1: separate refs for file-picker and camera inputs
@@ -54,7 +68,7 @@ export function IdScanField({ jenis, onScan, onApply }: IdScanFieldProps) {
     setScanError(null);
     try {
       const blob = await downscale(file);
-      setFields(await onScan(blob, jenis));
+      setOutcome(await onScan(blob, jenis));
     } catch (err) {
       // FIX I1: surface error to user
       setScanError(err instanceof Error ? err.message : "Gagal memindai dokumen");
@@ -115,10 +129,17 @@ export function IdScanField({ jenis, onScan, onApply }: IdScanFieldProps) {
       />
       {/* FIX I1: render scan error */}
       {scanError && <p className="text-sm text-red-600">{scanError}</p>}
-      {fields !== null && (
+      {outcome !== null && (
         <div className="space-y-2 rounded bg-slate-50 p-2 text-sm">
+          {outcome.confidence !== undefined && (
+            <span
+              className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${confidenceBadgeClass(outcome.confidence)}`}
+            >
+              Keyakinan OCR: {Math.round(outcome.confidence)}%
+            </span>
+          )}
           <ul className="space-y-1">
-            {Object.entries(fields)
+            {Object.entries(outcome.fields)
               .filter(([k]) => k !== "anggota")
               .map(([k, v]) => (
                 <li key={k}>
@@ -126,7 +147,7 @@ export function IdScanField({ jenis, onScan, onApply }: IdScanFieldProps) {
                 </li>
               ))}
           </ul>
-          <Button type="button" onClick={() => onApply(fields)}>
+          <Button type="button" onClick={() => onApply(outcome.fields)}>
             Terapkan ke formulir
           </Button>
         </div>
