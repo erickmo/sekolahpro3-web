@@ -3,9 +3,11 @@
 Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 `docs/domains/{domain}/README.html` dan ADR masing-masing.
 
-> **Snapshot: 2026-06-06.** Angka uji diambil dari dokumentasi domain & berkas test
+> **Snapshot: 2026-06-07.** Angka uji diambil dari dokumentasi domain & berkas test
 > sisi web yang diverifikasi ada di repo ini; test backend (`vernon_*`/`sekolahpro`)
-> berada di repo terpisah dan ditandai _(BE, repo terpisah)_ — tidak dijalankan ulang.
+> berada di repo terpisah dan ditandai _(BE, repo terpisah)_ — umumnya tidak dijalankan
+> ulang. Pengecualian 2026-06-07: BE Ekstrakurikuler (EKS-003) & Situs (SIT-003)
+> di-bench-run lewat `bench --site sekolahpro.localhost run-tests` (34 + 25 hijau).
 > Status: **Done** = dirilis (merged), **Partial** = sebagian (mis. BE belum di-bench-run),
 > **Pending** = belum dikerjakan, **Ditunda** = sengaja ditunda ke fase berikut (lihat ADR).
 
@@ -15,9 +17,9 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 |--------|-----:|-----:|--------:|----------------:|-----|
 | Ads Manager | 4 | 4 | 0 | 0 | [ads](domains/ads/README.html) |
 | Perpustakaan | 4 | 4 | 0 | 0 | [perpustakaan](domains/perpustakaan/README.html) |
-| Ekstrakurikuler | 4 | 3 | 0 | 1 | [ekstrakurikuler](domains/ekstrakurikuler/README.html) |
+| Ekstrakurikuler | 4 | 4 | 0 | 0 | [ekstrakurikuler](domains/ekstrakurikuler/README.html) |
 | Koperasi | 4 | 4 | 0 | 0 | [koperasi](domains/koperasi/README.html) |
-| Situs Sekolah | 4 | 3 | 1 | 0 | [situs](domains/situs/README.html) |
+| Situs Sekolah | 4 | 4 | 0 | 0 | [situs](domains/situs/README.html) |
 | Manajemen Aset | 4 | 4 | 0 | 0 | [aset](domains/aset/README.html) |
 | Akademik | 5 | 5 | 0 | 0 | [akademik](domains/akademik/README.html) |
 | Akuntansi | 4 | 4 | 0 | 0 | [akuntansi](domains/akuntansi/README.html) |
@@ -34,7 +36,7 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 | Audit Log | 4 | 4 | 0 | 0 | [audit](domains/audit/README.html) |
 | Verifikasi Penjemputan | 4 | 4 | 0 | 0 | [pickup-verify](domains/pickup-verify/README.html) |
 | OCR Identitas | 4 | 4 | 0 | 0 | [ocr](domains/ocr/README.html) |
-| **Total** | **84** | **82** | **1** | **1** | |
+| **Total** | **84** | **84** | **0** | **0** | |
 
 ## Ads Manager
 
@@ -64,7 +66,7 @@ ADR: [PERP-ADR-0001 — Merge sirkulasi (peminjaman+pengembalian)](domains/perpu
 |----|------|------|--------|-----|
 | EKS-001 | Pustaka frontend murni + uji (role, recap, context, predikat) | Feature | Done | `ekskulRole/ekskulRecap/ekskulContext` + `predikatFromKehadiran` vitest (~36 it) |
 | EKS-002 | Rute web (8 halaman: dashboard, program, pendaftaran, sesi, raport, mitra) | Feature | Done | typecheck/build |
-| EKS-003 | Backend doctype + validasi (kuota FOR UPDATE, lazy GROUP BY recap, predikat) | Feature | Pending | _(BE, repo terpisah; ~34 pytest direncanakan)_ |
+| EKS-003 | Backend doctype + validasi (kuota FOR UPDATE, lazy GROUP BY recap, predikat) | Feature | Done | _(BE, repo terpisah; 34 test bench-run hijau 2026-06-07: ekstrakurikuler 7, mitra 3, pendaftaran 7, raport 9, sesi 8)_ |
 | EKS-004 | Keputusan lazy recap (tanpa feeder Sesi→Raport) | PRD | Done | — (lihat ADR) |
 
 ADR: [EKS-ADR-0001 — Lazy recap kehadiran (tanpa feeder)](domains/ekstrakurikuler/ADR/EKS-ADR-0001-lazy-recap.md)
@@ -86,7 +88,7 @@ ADR: [KOP-ADR-0001 — Mode menu per jenis koperasi](domains/koperasi/ADR/KOP-AD
 |----|------|------|--------|-----|
 | SIT-001 | Sistem template block-driven (composer + block renderer di `apps/situs`) | Feature | Done | ~17 vitest (hero/content/theme/render/ppdb/demoSwitcher) |
 | SIT-002 | CMS tata letak + sorotan + tampilan (rute `sch.$sekolah.situs.*`) | Feature | Done | vitest `situs.*` (school) + block schemas |
-| SIT-003 | Backend module `website_sekolah` (host resolution, tenant isolation) | Feature | Partial | _(BE, repo terpisah; `test_situs.py` ditulis, bench-run tertunda)_ |
+| SIT-003 | Backend module `website_sekolah` (host resolution, tenant isolation) | Feature | Done | _(BE, repo terpisah; `test_situs.py` bench-run hijau 2026-06-07: 25 test — host resolution, isolasi tenant, anti-tamper PPDB)_ |
 | SIT-004 | Demo SPA offline (`apps/situs` :5184, switcher klasik/modern/ceria/aurora) | Feature | Done | `demoSwitcher.test.tsx` + walkthrough manual |
 
 ADR: [SIT-ADR-0001 — Template block-driven + CMS block no-code](domains/situs/ADR/SIT-ADR-0001-block-driven-templates.md)
