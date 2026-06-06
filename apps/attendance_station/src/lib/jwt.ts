@@ -102,8 +102,11 @@ export function verifyQrToken(
   skewSec: number,
 ): Claims {
   const parts = token.split(".");
+  if (parts.length !== JWT_SEGMENTS) {
+    throw new Error("malformed token");
+  }
   const [h, p, s] = parts;
-  if (parts.length !== JWT_SEGMENTS || h === undefined || p === undefined || s === undefined) {
+  if (h === undefined || p === undefined || s === undefined) {
     throw new Error("malformed token");
   }
   const header = JSON.parse(decodeBase64Url(h)) as TokenHeader;

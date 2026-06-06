@@ -57,7 +57,12 @@ export class CardCache {
     if (!raw) {
       return {};
     }
-    return JSON.parse(raw) as CardMap;
+    // Degrade a corrupt/blank blob to an empty map so offline reads never throw.
+    try {
+      return JSON.parse(raw) as CardMap;
+    } catch {
+      return {};
+    }
   }
 
   /**
