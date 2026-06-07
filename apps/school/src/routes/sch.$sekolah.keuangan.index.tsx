@@ -1,13 +1,15 @@
 /**
- * Keuangan hub dashboard — the finance command center.
+ * Keuangan hub landing — the "Alur Uang" cockpit.
  *
- * Role-aware (Bendahara / Kasir / Akuntan / Kepala), heavy on visualization:
- * cash trend, income-vs-expense, expense composition, collection gauge, cash
- * waterfall, and an overdue-bills attention list. Backed by the live
- * vernon_accounting keuangan doctypes via ../data/keuangan-live.
+ * Work-first order (daily accountant weighted 70%): an urgency-ranked work-queue
+ * sits ON TOP, then the 5-stage money-flow pipeline ribbon, then the conditional
+ * "Saat Ini Penting" deadline strip, then the existing visualisation band, an
+ * onboarding guide, and a footer quick-create row. Roles drive EMPHASIS only.
+ * Backed by the live vernon_accounting keuangan doctypes via ../data/keuangan-live
+ * plus the SPT draft count from akuntansi. No financial document is mutated here.
  */
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import {
   Badge,
   PageHeader,
@@ -18,6 +20,7 @@ import {
   IconAlert,
   IconArrowLeft,
 } from "@sekolahpro/ui";
+import { useResourceList } from "@sekolahpro/api-client";
 import {
   LineChart,
   StackedBarChart,
@@ -29,9 +32,25 @@ import {
   type StackGroup,
   type Tone,
 } from "../components/viz";
-import { KeuanganRoleChips, KeuanganPageGuide } from "../components/keuangan";
+import {
+  KeuanganRoleChips,
+  KeuanganPageGuide,
+  WorkQueueCard,
+  PipelineRibbon,
+  DeadlineStrip,
+  QuickCreateRow,
+  TutupBulanPanel,
+  type RibbonStage,
+  type QuickCreate,
+  type CloseStep,
+  type CloseStatus,
+} from "../components/keuangan";
 import { useKeuanganRole, type KeuanganRole } from "../lib/keuanganRole";
+import { useActiveCompany } from "../lib/akuntansi-scope";
+import { buildWorkQueue } from "../lib/keuanganWorkQueue";
+import { computeDeadlines } from "../lib/keuanganCalendar";
 import { formatRupiah, type KategoriPengeluaran } from "../data/keuangan";
+import { DOCTYPE, type SptMasaPPN, type JournalEntry } from "../data/akuntansi";
 import {
   useTagihanLive,
   usePembayaranLive,
@@ -40,15 +59,11 @@ import {
   aggregateMonthly,
 } from "../data/keuangan-live";
 
-/** Current month as a yyyy-mm prefix, used to scope "bulan ini" KPIs. */
-function currentMonthPrefix(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-}
+/** Today as an ISO yyyy-mm-dd prefix, used to scope deadlines + the work-queue. */
+const TODAY = new Date().toISOString().slice(0, 10);
 
-const CURRENT_MONTH_PREFIX = currentMonthPrefix();
+/** Current month as a yyyy-mm prefix, used to scope "bulan ini" KPIs. */
+const CURRENT_MONTH_PREFIX = TODAY.slice(0, 7);
 
 /** Tone palette for expense categories (stable, max 7). */
 const KATEGORI_TONE: Record<KategoriPengeluaran, Tone> = {
@@ -61,21 +76,88 @@ const KATEGORI_TONE: Record<KategoriPengeluaran, Tone> = {
   Lainnya: "neutral",
 };
 
-/** Role-scoped guide steps shown in the dashboard tutorial. */
+/** Which pipeline stage to elevate for the active role (emphasis only). */
+const ROLE_STAGE: Record<KeuanganRole, RibbonStage["key"]> = {
+  kasir: "terima",
+  bendahara: "tagih",
+  akuntan: "catat",
+  kepala: "tutup-buku",
+};
+
+/** Footer quick-create actions (highest-frequency "buat baru"). */
+const QUICK_CREATE: readonly QuickCreate[] = [
+  { label: "Terima Bayar", to: "/sch/$sekolah/keuangan/pembayaran" },
+  { label: "Tagihan Baru", to: "/sch/$sekolah/keuangan/tagihan" },
+  { label: "Jurnal Baru", to: "/sch/$sekolah/akuntansi/buku-besar/jurnal/new" },
+  { label: "Pengeluaran", to: "/sch/$sekolah/keuangan/pengeluaran" },
+];
+
+/** Routes for each month-end close step. */
+const CLOSE_ROUTE = {
+  kas: "/sch/$sekolah/keuangan/kas",
+  jurnal: "/sch/$sekolah/akuntansi/buku-besar/jurnal",
+  tagihan: "/sch/$sekolah/keuangan/tagihan",
+  sptPpn: "/sch/$sekolah/akuntansi/pajak/spt-ppn",
+  period: "/sch/$sekolah/akuntansi/referensi/period",
+} as const;
+
+/** Derive a warn/done status from an outstanding count. */
+function warnIf(count: number, doneLabel: string, warnLabel: string): { status: CloseStatus; statusLabel: string } {
+  return count > 0 ? { status: "warn", statusLabel: warnLabel } : { status: "done", statusLabel: doneLabel };
+}
+
+/** Build the ordered month-end close checklist from outstanding counts. */
+function buildCloseSteps(p: { unpaidTagihan: number; draftJournals: number; sptDraft: number }): CloseStep[] {
+  return [
+    { label: "Rekonsiliasi Buku Kas", hint: "Cocokkan saldo kas fisik dengan catatan", to: CLOSE_ROUTE.kas, status: "todo", statusLabel: "tinjau" },
+    { label: "Tinjau Jurnal Belum Posting", hint: "Pastikan semua jurnal sudah diposting", to: CLOSE_ROUTE.jurnal, ...warnIf(p.draftJournals, "beres", `${p.draftJournals} draft`) },
+    { label: "Tinjau Tagihan Terbuka", hint: "Tindak lanjuti tunggakan sebelum tutup", to: CLOSE_ROUTE.tagihan, ...warnIf(p.unpaidTagihan, "lunas", `${p.unpaidTagihan} terbuka`) },
+    { label: "Lapor SPT Masa PPN", hint: "Selesaikan SPT draft", to: CLOSE_ROUTE.sptPpn, ...warnIf(p.sptDraft, "terlapor", `${p.sptDraft} draft`) },
+    { label: "Tutup Periode", hint: "Kunci periode akuntansi setelah semua beres", to: CLOSE_ROUTE.period, status: "todo", statusLabel: "kunci" },
+  ];
+}
+
+/** Pipeline ribbon spec: one KPI + waiting-count per stage, role stage elevated. */
+interface RibbonInput {
+  tagihanTerbuka: number;
+  pemasukanBulan: number;
+  pengeluaranBulan: number;
+  sptDraft: number;
+  tagihCount: number;
+  belanjaCount: number;
+  closeDaysLeft: number;
+  activeRole: KeuanganRole;
+}
+
+/** Build the 5 pipeline stage cards from the aggregated KPIs. */
+function buildRibbonStages(p: RibbonInput): RibbonStage[] {
+  const emph = ROLE_STAGE[p.activeRole];
+  return [
+    { key: "tagih", label: "Tagih", to: "/sch/$sekolah/keuangan/tagihan", kpi: formatRupiah(p.tagihanTerbuka), kpiLabel: "tagihan terbuka", count: p.tagihCount, emphasized: emph === "tagih" },
+    { key: "terima", label: "Terima", to: "/sch/$sekolah/keuangan/pembayaran", kpi: formatRupiah(p.pemasukanBulan), kpiLabel: "masuk bulan ini", count: 0, emphasized: emph === "terima" },
+    { key: "catat", label: "Catat", to: "/sch/$sekolah/keuangan/pengeluaran", kpi: formatRupiah(p.pengeluaranBulan), kpiLabel: "keluar bulan ini", count: p.belanjaCount, emphasized: emph === "catat" },
+    { key: "tutup-buku", label: "Tutup Buku", to: "/sch/$sekolah/akuntansi/anggaran", kpi: `H-${Math.max(0, p.closeDaysLeft)}`, kpiLabel: "menuju tutup buku", count: 0, emphasized: emph === "tutup-buku" },
+    { key: "lapor-pajak", label: "Lapor Pajak", to: "/sch/$sekolah/akuntansi/pajak/spt-ppn", kpi: String(p.sptDraft), kpiLabel: "SPT draft", count: p.sptDraft, emphasized: emph === "lapor-pajak" },
+  ];
+}
+
+/** Role-scoped guide steps shown in the dashboard tutorial (pipeline framing). */
 const GUIDE_STEPS = [
-  { title: "Kasir menerima pembayaran", detail: "Catat pelunasan SPP/biaya di Pembayaran, lalu rekonsiliasi di Buku Kas tiap akhir hari.", roles: ["kasir"] },
-  { title: "Bendahara mengelola tagihan & belanja", detail: "Terbitkan Tagihan, setujui Pengeluaran, pantau tunggakan di kartu 'Perlu Perhatian'.", roles: ["bendahara"] },
-  { title: "Akuntan memposting ke buku besar", detail: "Setiap transaksi mengalir ke Akuntansi › Buku Besar (jurnal & GL). Pajak dikelola di sub-menu Pajak.", roles: ["akuntan"] },
-  { title: "Kepala Sekolah memantau & menyetujui", detail: "Lihat tren kas, tingkat penagihan, dan serapan anggaran. Setujui pengeluaran besar.", roles: ["kepala"] },
-  { title: "Warna = status", detail: "Hijau = sehat/masuk, merah = keluar/mendesak, kuning = perlu tindakan." },
+  { title: "Baca alurnya: Tagih → Terima → Catat → Tutup Buku → Lapor Pajak", detail: "Menu mengikuti perjalanan uang sekolah. Mulai dari kiri, lanjut ke kanan." },
+  { title: "Kasir: Terima", detail: "Catat pelunasan SPP/biaya di Terima, lalu rekonsiliasi di Buku Kas tiap akhir hari.", roles: ["kasir"] },
+  { title: "Bendahara: Tagih & Catat", detail: "Terbitkan Tagihan, setujui Pengeluaran. 'Pekerjaan Hari Ini' menampilkan yang menunggu Anda.", roles: ["bendahara"] },
+  { title: "Akuntan: Catat & Lapor Pajak", detail: "Posting jurnal ke buku besar, lalu kelola SPT PPN/PPh di Lapor Pajak.", roles: ["akuntan"] },
+  { title: "Kepala Sekolah: Tutup Buku", detail: "Pantau serapan anggaran dan tutup periode. Setujui pengeluaran besar.", roles: ["kepala"] },
 ];
 
 const GUIDE_TIPS = [
-  "Pilih chip peran di atas untuk menyorot pintasan paling relevan untuk Anda.",
-  "Angka pada kartu memakai data bulan berjalan; grafik tren memakai 12 bulan.",
+  "Pilih chip peran di atas untuk menaikkan pekerjaan Anda ke puncak antrean.",
+  "Tekan ⌘K kapan saja untuk melompat ke halaman atau aksi mana pun.",
 ];
 
 function KeuanganDashboard() {
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const company = useActiveCompany();
   const role = useKeuanganRole();
   const [activeRole, setActiveRole] = useState<KeuanganRole>(role.primary);
 
@@ -83,6 +165,34 @@ function KeuanganDashboard() {
   const { rows: pembayaran } = usePembayaranLive();
   const { rows: pengeluaran } = usePengeluaranLive();
   const { rows: kas } = useKasLive();
+
+  const sptQ = useResourceList<SptMasaPPN>(DOCTYPE.SPT_MASA_PPN, {
+    fields: ["name", "status"],
+    filters: company ? [["company", "=", company]] : [],
+    limit_page_length: 0,
+  });
+  const sptDraft = useMemo(
+    () => (sptQ.data ?? []).filter((s) => (s.status ?? "Draft") === "Draft").length,
+    [sptQ.data],
+  );
+
+  const journalDraftQ = useResourceList<JournalEntry>(DOCTYPE.JOURNAL_ENTRY, {
+    fields: ["name", "docstatus"],
+    filters: company ? [["docstatus", "=", 0], ["company", "=", company]] : [["docstatus", "=", 0]],
+    limit_page_length: 0,
+  });
+  const draftJournals = journalDraftQ.data?.length ?? 0;
+
+  /** Month-end close: are we in close mode (?close=1)? */
+  const { close } = Route.useSearch();
+  const unpaidTagihan = useMemo(
+    () => tagihan.filter((t) => t.status !== "Lunas" && t.status !== "Dibatalkan" && t.jumlah - t.dibayar > 0).length,
+    [tagihan],
+  );
+  const closeSteps = useMemo(
+    () => buildCloseSteps({ unpaidTagihan, draftJournals, sptDraft }),
+    [unpaidTagihan, draftJournals, sptDraft],
+  );
 
   /** Monthly income/expense rollup from live rows (chronological). */
   const ringkasan = useMemo(() => aggregateMonthly(pembayaran, pengeluaran), [pembayaran, pengeluaran]);
@@ -112,6 +222,33 @@ function KeuanganDashboard() {
     const collectionRate = totalTagih > 0 ? (totalDibayar / totalTagih) * 100 : 0;
     return { saldoKas, pemasukanBulan, pengeluaranBulan, tagihanTerbuka, collectionRate };
   }, [tagihan, pembayaran, pengeluaran, kas]);
+
+  /** Deadlines (statutory, date-only fallback) for the "Saat Ini Penting" strip. */
+  const deadlines = useMemo(() => computeDeadlines(TODAY), []);
+  const closeDaysLeft = deadlines.find((d) => d.id === "tutup-buku")?.daysLeft ?? 0;
+
+  /** Urgency-ranked work-queue, role-floated to the top. */
+  const workItems = useMemo(
+    () => buildWorkQueue({ tagihan, pengeluaran, sptDraftCount: sptDraft, today: TODAY, role: activeRole }),
+    [tagihan, pengeluaran, sptDraft, activeRole],
+  );
+  const tagihCount = workItems.filter((i) => i.type === "tagihan").length;
+  const belanjaCount = workItems.filter((i) => i.type === "belanja").length;
+
+  const ribbonStages = useMemo(
+    () =>
+      buildRibbonStages({
+        tagihanTerbuka: stats.tagihanTerbuka,
+        pemasukanBulan: stats.pemasukanBulan,
+        pengeluaranBulan: stats.pengeluaranBulan,
+        sptDraft,
+        tagihCount,
+        belanjaCount,
+        closeDaysLeft,
+        activeRole,
+      }),
+    [stats, sptDraft, tagihCount, belanjaCount, closeDaysLeft, activeRole],
+  );
 
   /** Expense composition by category (donut). */
   const kategoriDonut = useMemo<ChartDatum[]>(() => {
@@ -171,19 +308,35 @@ function KeuanganDashboard() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Keuangan"
-        title="Pusat Kendali Keuangan"
-        description="Pantau arus kas, tagihan, dan belanja sekolah dalam satu layar."
+        title="Alur Uang"
+        description="Tagih → Terima → Catat → Tutup Buku → Lapor Pajak. Semua yang menunggu Anda ada di Pekerjaan Hari Ini."
+        actions={
+          <Link
+            to="/sch/$sekolah/keuangan"
+            params={{ sekolah }}
+            search={{ close: 1 }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:border-brand hover:bg-brand/5"
+          >
+            Tutup Bulan
+          </Link>
+        }
       />
 
       <KeuanganRoleChips active={activeRole} onSelect={setActiveRole} />
 
-      <KeuanganPageGuide
-        storageId="dashboard"
-        intro="Hub ini menyatukan operasional kas harian dan akuntansi. Ikuti langkah sesuai peran Anda."
-        steps={GUIDE_STEPS}
-        tips={GUIDE_TIPS}
-      />
+      {/* Month-end close mode (?close=1): surface the close checklist on top. */}
+      {close === 1 ? <TutupBulanPanel steps={closeSteps} sekolah={sekolah} /> : null}
 
+      {/* ROW 1 — work-first: today's actionable queue on top. */}
+      <WorkQueueCard items={workItems} sekolah={sekolah} />
+
+      {/* ROW 2 — the money-flow pipeline. */}
+      <PipelineRibbon stages={ribbonStages} sekolah={sekolah} />
+
+      {/* ROW 3 — conditional deadline nudge (collapses when idle). */}
+      <DeadlineStrip deadlines={deadlines} sekolah={sekolah} />
+
+      {/* ROW 4 — KPIs + the existing visualisation band, re-homed under the cockpit. */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Saldo Kas" value={formatRupiah(stats.saldoKas)} accent="brand" icon={<IconWallet />} />
         <StatCard label="Pemasukan Bulan Ini" value={formatRupiah(stats.pemasukanBulan)} accent="emerald" icon={<IconChart />} />
@@ -268,8 +421,22 @@ function KeuanganDashboard() {
           </ul>
         </SectionCard>
       </div>
+
+      {/* Onboarding guide (collapsible) + footer quick-create. */}
+      <KeuanganPageGuide
+        storageId="dashboard"
+        intro="Hub ini menyatukan operasional kas harian dan akuntansi dalam satu alur uang. Ikuti langkah sesuai peran Anda."
+        steps={GUIDE_STEPS}
+        tips={GUIDE_TIPS}
+      />
+
+      <QuickCreateRow actions={QUICK_CREATE} sekolah={sekolah} />
     </div>
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/keuangan/")({ component: KeuanganDashboard });
+export const Route = createFileRoute("/sch/$sekolah/keuangan/")({
+  validateSearch: (search: Record<string, unknown>): { close?: 1 } =>
+    search.close === 1 || search.close === "1" ? { close: 1 } : {},
+  component: KeuanganDashboard,
+});
