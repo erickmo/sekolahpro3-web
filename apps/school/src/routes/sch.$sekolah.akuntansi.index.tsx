@@ -21,7 +21,7 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { DonutChart, ProgressRing, type ChartDatum, type Tone } from "../components/viz";
-import { KeuanganRoleChips, KeuanganPageGuide } from "../components/keuangan";
+import { KeuanganRoleChips, KeuanganPageGuide, LinkGrid, type QuickLink } from "../components/keuangan";
 import { useKeuanganRole, type KeuanganRole } from "../lib/keuanganRole";
 import {
   DOCTYPE,
@@ -33,12 +33,6 @@ import {
   type SptMasaPPN,
   type FiscalYear,
 } from "../data/akuntansi";
-
-interface QuickLink {
-  to: string;
-  label: string;
-  hint: string;
-}
 
 const BUKU_BESAR_LINKS: readonly QuickLink[] = [
   { to: "/sch/$sekolah/akuntansi/buku-besar/akun", label: "Bagan Akun", hint: "Chart of Accounts" },
@@ -86,29 +80,6 @@ const GUIDE_TIPS = [
   "Istilah asing (PPN, NSFP, TER) dijelaskan saat Anda mengarahkan kursor padanya.",
   "Mulai dari Referensi bila ini setup pertama — urutannya: Tahun Fiskal → Periode → Bagan Akun.",
 ];
-
-function LinkGrid({ items, sekolah }: { items: readonly QuickLink[]; sekolah: string }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {items.map((it) => (
-        <Link
-          key={it.to}
-          {...scopedLinkProps(sekolah, it.to.replace("/sch/$sekolah", ""))}
-          className="group flex items-start gap-3 rounded-md border border-border p-3 hover:bg-muted/60 transition-colors"
-        >
-          <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md bg-brand/10 text-brand">
-            <IconWallet />
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium text-fg group-hover:text-brand truncate">{it.label}</div>
-            <div className="text-xs text-muted-fg truncate">{it.hint}</div>
-          </div>
-          <span className="text-muted-fg text-xs">→</span>
-        </Link>
-      ))}
-    </div>
-  );
-}
 
 function AkuntansiOverview() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
