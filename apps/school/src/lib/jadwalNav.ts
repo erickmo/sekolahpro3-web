@@ -41,6 +41,10 @@ export const JADWAL_NAV_GROUPS: readonly JadwalNavGroup[] = [
     items: [{ to: "/sch/$sekolah/jadwal", label: "Dashboard", exact: true }],
   },
   {
+    label: "Saya",
+    items: [{ to: "/sch/$sekolah/jadwal/agenda", label: "Agenda Saya", roles: ["guru"] }],
+  },
+  {
     label: "Jadwal",
     items: [
       { to: "/sch/$sekolah/jadwal/daftar", label: "Jadwal Pelajaran", roles: ["admin", "kepala"] },

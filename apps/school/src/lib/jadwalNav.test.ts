@@ -15,8 +15,8 @@ describe("filterJadwalNav", () => {
     expect(l).toContain("Slot Override");
   });
 
-  it("guru hanya melihat Dashboard (halaman penyusun di-route-wall)", () => {
-    expect(labels(filterJadwalNav("guru"))).toEqual(["Dashboard"]);
+  it("guru melihat Dashboard + Agenda Saya (halaman penyusun di-route-wall)", () => {
+    expect(labels(filterJadwalNav("guru"))).toEqual(["Dashboard", "Agenda Saya"]);
   });
 
   it("kepala melihat oversight (Jadwal Pelajaran + Override) tanpa editor slot", () => {
@@ -27,10 +27,9 @@ describe("filterJadwalNav", () => {
     expect(l).not.toContain("Slot Override");
   });
 
-  it("membuang grup yang kosong setelah filter (guru hanya sisa Ringkasan)", () => {
+  it("membuang grup yang kosong setelah filter (guru: Ringkasan + Saya, tanpa Jadwal/Override)", () => {
     const groups = filterJadwalNav("guru");
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.label).toBe("Ringkasan");
+    expect(groups.map((g) => g.label)).toEqual(["Ringkasan", "Saya"]);
   });
 });
 
