@@ -5,7 +5,7 @@ import { SISWA_LIST } from "../data/siswa";
 import { PEGAWAI_LIST, isGuru, isStaff } from "../data/pegawai";
 import { KELAS_LIST } from "../data/kelas";
 
-export type SearchCategory = "Siswa" | "Guru" | "Staff" | "Kelas";
+export type SearchCategory = "Keuangan" | "Siswa" | "Guru" | "Staff" | "Kelas";
 
 export type SearchHit = {
   id: string;
@@ -23,10 +23,79 @@ function includes(haystack: string | number | undefined | null, needle: string):
   return String(haystack).toLowerCase().includes(needle);
 }
 
+/**
+ * Curated finance route+action index for the ⌘K palette ("jump to anything in
+ * Keuangan"). `href` is a bare, scope-relative route (scopedTo prepends
+ * /sch/$sekolah) — never a query string, so TanStack's typed Link can consume it.
+ * `synonyms` carry the verbs/jargon a power user types ("with" -> withholding).
+ */
+interface FinanceAction {
+  label: string;
+  href: string;
+  synonyms: string[];
+}
+
+const FINANCE_ACTIONS: readonly FinanceAction[] = [
+  { label: "Terima Pembayaran", href: "/keuangan/pembayaran", synonyms: ["terima bayar", "pembayaran", "bayar spp", "kasir"] },
+  { label: "Tagihan SPP & Siswa", href: "/keuangan/tagihan", synonyms: ["tagih", "tagihan", "spp", "invoice"] },
+  { label: "Pengeluaran & Persetujuan", href: "/keuangan/pengeluaran", synonyms: ["belanja", "pengeluaran", "expense", "setujui"] },
+  { label: "Buku Kas Harian", href: "/keuangan/kas", synonyms: ["buku kas", "kas", "cashbook", "setoran"] },
+  { label: "Jurnal Baru", href: "/akuntansi/buku-besar/jurnal/new", synonyms: ["buat jurnal", "jurnal baru", "journal", "posting"] },
+  { label: "Jurnal Umum", href: "/akuntansi/buku-besar/jurnal", synonyms: ["jurnal", "journal entry"] },
+  { label: "Buku Besar (GL)", href: "/akuntansi/buku-besar/gl", synonyms: ["gl", "general ledger", "buku besar"] },
+  { label: "Bagan Akun", href: "/akuntansi/buku-besar/akun", synonyms: ["bagan akun", "akun", "chart of accounts", "coa"] },
+  { label: "Realisasi vs Anggaran", href: "/akuntansi/anggaran", synonyms: ["anggaran", "budget", "realisasi"] },
+  { label: "Cost Center", href: "/akuntansi/anggaran/cost-center", synonyms: ["cost center", "pusat biaya"] },
+  { label: "SPT Masa PPN", href: "/akuntansi/pajak/spt-ppn", synonyms: ["spt", "ppn", "spt ppn", "pajak ppn"] },
+  { label: "e-Faktur Export", href: "/akuntansi/pajak/efaktur", synonyms: ["efaktur", "e-faktur", "djp", "csv pajak"] },
+  { label: "PPh Withholding", href: "/akuntansi/pajak/withholding", synonyms: ["withholding", "pph", "potong pajak", "pph 23"] },
+  { label: "PPh 21 TER", href: "/akuntansi/pajak/ter", synonyms: ["ter", "pph 21", "tarif ter"] },
+  { label: "Tutup Periode", href: "/akuntansi/referensi/period", synonyms: ["tutup", "tutup buku", "tutup periode", "close"] },
+  { label: "Tahun Fiskal", href: "/akuntansi/referensi/fiscal-year", synonyms: ["tahun fiskal", "fiscal year"] },
+] as const;
+
+const FINANCE_MAX_HITS = 6;
+
+/** Whether an action matches the (lowercased) query on label, synonym, or href. */
+function financeMatches(action: FinanceAction, q: string): boolean {
+  if (action.label.toLowerCase().includes(q)) return true;
+  if (action.href.toLowerCase().includes(q)) return true;
+  return action.synonyms.some((s) => s.includes(q) || q.includes(s));
+}
+
+/**
+ * Finance "jump to" hits for a query. Category "Keuangan"; capped so the global
+ * palette is not swamped. Returns [] below the minimum query length.
+ */
+export function financeActions(query: string, max: number = FINANCE_MAX_HITS): SearchHit[] {
+  const q = query.trim().toLowerCase();
+  if (q.length < MIN_QUERY_LENGTH) return [];
+  const hits: SearchHit[] = [];
+  for (const action of FINANCE_ACTIONS) {
+    if (!financeMatches(action, q)) continue;
+    hits.push({
+      id: `keu:${action.href}`,
+      label: action.label,
+      category: "Keuangan",
+      meta: "Buka halaman",
+      href: action.href,
+    });
+    if (hits.length >= max) break;
+  }
+  return hits;
+}
+
 export function globalSearch(query: string, max: number = DEFAULT_MAX_HITS): SearchHit[] {
   const q = query.trim().toLowerCase();
   if (q.length < MIN_QUERY_LENGTH) return [];
   const hits: SearchHit[] = [];
+
+  // Finance "jump to" actions rank first so a verb like "withholding" reaches
+  // its page without opening the menu; they only appear when they match.
+  for (const action of financeActions(q)) {
+    hits.push(action);
+    if (hits.length >= max) return hits;
+  }
 
   for (const s of SISWA_LIST) {
     if (includes(s.namaLengkap, q) || includes(s.nis, q) || includes(s.nisn, q)) {
@@ -82,7 +151,7 @@ export function globalSearch(query: string, max: number = DEFAULT_MAX_HITS): Sea
 }
 
 export function groupHitsByCategory(hits: SearchHit[]): Array<{ category: SearchCategory; items: SearchHit[] }> {
-  const order: SearchCategory[] = ["Siswa", "Guru", "Staff", "Kelas"];
+  const order: SearchCategory[] = ["Keuangan", "Siswa", "Guru", "Staff", "Kelas"];
   return order
     .map((category) => ({
       category,
