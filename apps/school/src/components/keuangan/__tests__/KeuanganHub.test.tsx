@@ -18,20 +18,27 @@ import { KeuanganPageGuide } from "../KeuanganPageGuide";
 afterEach(cleanup);
 
 describe("toNavTabGroups", () => {
-  it("flattens hub groups into NavTabGroup[] keeping to/label/exact", () => {
+  it("flattens the pipeline stages into NavTabGroup[] (setup drawer excluded)", () => {
     const groups = toNavTabGroups();
-    expect(groups.map((g) => g.label)).toEqual(["Ringkasan", "Operasional", "Akuntansi"]);
-    const dashboard = groups[0]!.items[0]!;
-    expect(dashboard).toEqual({ to: "/sch/$sekolah/keuangan", label: "Dashboard", exact: true });
+    expect(groups.map((g) => g.label)).toEqual([
+      "Beranda",
+      "Tagih",
+      "Terima",
+      "Catat",
+      "Tutup Buku",
+      "Lapor Pajak",
+    ]);
+    const beranda = groups[0]!.items[0]!;
+    expect(beranda).toEqual({ to: "/sch/$sekolah/keuangan", label: "Beranda", exact: true });
   });
 });
 
 describe("KeuanganHubNav", () => {
-  it("renders the dashboard and pages across both route trees", () => {
+  it("renders the cockpit and pages across both route trees", () => {
     render(<KeuanganHubNav pathname="/sch/x/keuangan" />);
-    expect(screen.getByText("Dashboard")).toBeTruthy();
-    expect(screen.getByText("Tagihan")).toBeTruthy();
-    expect(screen.getByText("Buku Besar")).toBeTruthy();
+    expect(screen.getByText("Beranda")).toBeTruthy();
+    expect(screen.getByText("Tagihan SPP & Siswa")).toBeTruthy();
+    expect(screen.getByText("SPT Masa PPN")).toBeTruthy();
   });
 });
 

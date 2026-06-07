@@ -1,24 +1,18 @@
 /**
- * Unified Keuangan hub navigation.
+ * Unified Keuangan hub navigation — the "Alur Uang" money-flow pipeline.
  *
- * Renders the single hub nav (Ringkasan / Operasional / Akuntansi) used by both
- * the /keuangan and /akuntansi layouts so the two route trees feel like one
- * module. Adapts the IA in lib/keuanganHub.ts to the shared GroupedNavTabs.
+ * Renders the single hub nav (Beranda / Tagih / Terima / Catat / Tutup Buku /
+ * Lapor Pajak) used by both the /keuangan and /akuntansi layouts so the two
+ * route trees feel like one module. Adapts the IA in lib/keuanganHub.ts to the
+ * shared GroupedNavTabs; the "Siapkan" setup drawer is intentionally excluded.
  */
 import type { ReactNode } from "react";
 import { GroupedNavTabs, type NavTabGroup } from "../GroupedNavTabs";
-import { KEUANGAN_HUB_GROUPS } from "../../lib/keuanganHub";
+import { KEUANGAN_NAV_GROUPS } from "../../lib/keuanganHub";
 
-/** Flatten the hub IA into GroupedNavTabs groups (drops role/hint metadata). */
+/** The pipeline stages as GroupedNavTabs groups (setup drawer excluded). */
 export function toNavTabGroups(): NavTabGroup[] {
-  return KEUANGAN_HUB_GROUPS.map((g) => ({
-    label: g.label,
-    items: g.items.map((i) => ({
-      to: i.to,
-      label: i.label,
-      ...(i.exact ? { exact: i.exact } : {}),
-    })),
-  }));
+  return KEUANGAN_NAV_GROUPS;
 }
 
 export interface KeuanganHubNavProps {
