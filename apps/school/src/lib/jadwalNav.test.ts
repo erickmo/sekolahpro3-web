@@ -8,26 +8,35 @@ function labels(groups: NavTabGroup[]): string[] {
 }
 
 describe("filterJadwalNav", () => {
-  it("admin (Tata Usaha) melihat seluruh nav termasuk editor slot", () => {
+  it("admin (Tata Usaha) melihat Susun + builder, bukan Pengawasan/Saya", () => {
     const l = labels(filterJadwalNav("admin"));
+    expect(l).toContain("Papan Susun");
+    expect(l).toContain("Kotak Permintaan");
     expect(l).toContain("Jadwal Pelajaran");
     expect(l).toContain("Slot Jadwal");
-    expect(l).toContain("Slot Override");
+    expect(l).not.toContain("Pantauan");
+    expect(l).not.toContain("Agenda Saya");
   });
 
-  it("guru melihat Dashboard + Agenda Saya (halaman penyusun di-route-wall)", () => {
-    expect(labels(filterJadwalNav("guru"))).toEqual(["Dashboard", "Agenda Saya"]);
+  it("guru melihat Dashboard + Agenda Saya + Permintaan Saya (penyusun di-route-wall)", () => {
+    expect(labels(filterJadwalNav("guru"))).toEqual([
+      "Dashboard",
+      "Agenda Saya",
+      "Permintaan Saya",
+    ]);
   });
 
-  it("kepala melihat oversight (Jadwal Pelajaran + Override) tanpa editor slot", () => {
+  it("kepala melihat Pengawasan + oversight, tanpa editor slot / Papan Susun", () => {
     const l = labels(filterJadwalNav("kepala"));
+    expect(l).toContain("Pantauan");
+    expect(l).toContain("Persetujuan");
     expect(l).toContain("Jadwal Pelajaran");
     expect(l).toContain("Jadwal Override");
     expect(l).not.toContain("Slot Jadwal");
-    expect(l).not.toContain("Slot Override");
+    expect(l).not.toContain("Papan Susun");
   });
 
-  it("membuang grup yang kosong setelah filter (guru: Ringkasan + Saya, tanpa Jadwal/Override)", () => {
+  it("membuang grup kosong setelah filter (guru: Ringkasan + Saya)", () => {
     const groups = filterJadwalNav("guru");
     expect(groups.map((g) => g.label)).toEqual(["Ringkasan", "Saya"]);
   });

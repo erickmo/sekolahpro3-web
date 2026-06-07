@@ -33,16 +33,35 @@ interface JadwalNavGroup {
   items: readonly JadwalNavItem[];
 }
 
-// Full Jadwal sub-nav over the EXISTING routes. Persona surfaces (Papan Susun,
-// Agenda, Pantauan, Persetujuan) attach their own items as those routes land.
+// Full Jadwal sub-nav, role-sliced into persona surfaces:
+//   kepala -> Pengawasan (Pantauan, Persetujuan)
+//   guru   -> Saya (Agenda, Permintaan)
+//   admin  -> Susun (Papan, Kotak) + builder (Jadwal/Override)
 export const JADWAL_NAV_GROUPS: readonly JadwalNavGroup[] = [
   {
     label: "Ringkasan",
     items: [{ to: "/sch/$sekolah/jadwal", label: "Dashboard", exact: true }],
   },
   {
+    label: "Pengawasan",
+    items: [
+      { to: "/sch/$sekolah/jadwal/pantauan", label: "Pantauan", roles: ["kepala"] },
+      { to: "/sch/$sekolah/jadwal/persetujuan", label: "Persetujuan", roles: ["kepala"] },
+    ],
+  },
+  {
     label: "Saya",
-    items: [{ to: "/sch/$sekolah/jadwal/agenda", label: "Agenda Saya", roles: ["guru"] }],
+    items: [
+      { to: "/sch/$sekolah/jadwal/agenda", label: "Agenda Saya", roles: ["guru"] },
+      { to: "/sch/$sekolah/jadwal/permintaan", label: "Permintaan Saya", roles: ["guru"] },
+    ],
+  },
+  {
+    label: "Susun",
+    items: [
+      { to: "/sch/$sekolah/jadwal/papan", label: "Papan Susun", roles: ["admin"] },
+      { to: "/sch/$sekolah/jadwal/kotak", label: "Kotak Permintaan", roles: ["admin"] },
+    ],
   },
   {
     label: "Jadwal",

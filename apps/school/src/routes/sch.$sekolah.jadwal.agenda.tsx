@@ -4,12 +4,25 @@ import {
   Badge,
   PageHeader,
   SectionCard,
+  StatCard,
   IconCalendar,
   IconClock,
+  IconUsers,
 } from "@sekolahpro/ui";
 import { useFrappeMethod } from "@sekolahpro/api-client";
 import { PageGuide } from "../components/guide";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
+
+// Minimum teaching load (JTM) for the sertifikasi allowance — flag below this.
+const JTM_MINIMAL_SERTIFIKASI = 24;
+
+interface JtmResult {
+  guru: string;
+  total_menit: number;
+  jtm: number;
+}
+
+const METHOD_JTM = "sekolahpro.akademik.api.jadwal.jtm_saya";
 
 // One effective teaching slot for the logged-in guru on a given date, returned
 // by `agenda_saya` (resolver per-rombel already applied override semantics).
@@ -48,7 +61,9 @@ function todayIso(): string {
 function AgendaSayaPage() {
   const [tanggal, setTanggal] = useState<string>(todayIso());
   const q = useFrappeMethod<AgendaResult>(METHOD_AGENDA, { tanggal });
+  const jtmQ = useFrappeMethod<JtmResult>(METHOD_JTM, {});
 
+  const jtm = jtmQ.data?.jtm ?? 0;
   const slots = useMemo(() => q.data?.slots ?? [], [q.data]);
   const libur = !q.isLoading && !q.isError && slots.length === 0;
 
@@ -84,6 +99,25 @@ function AgendaSayaPage() {
         ]}
         roleLabels={SCHOOL_ROLE_LABEL}
       />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label="JTM Saya"
+          value={jtmQ.isLoading ? "…" : jtm}
+          hint={`dari ${JTM_MINIMAL_SERTIFIKASI} minimum sertifikasi`}
+          icon={<IconUsers />}
+          accent={jtm >= JTM_MINIMAL_SERTIFIKASI ? "emerald" : "amber"}
+          urgency={jtm >= JTM_MINIMAL_SERTIFIKASI ? "normal" : "warn"}
+        />
+        <StatCard
+          label="Kelas Hari Ini"
+          value={q.isLoading ? "…" : slots.length}
+          hint={q.data ? q.data.hari : "pada tanggal terpilih"}
+          icon={<IconClock />}
+          accent="brand"
+          urgency="normal"
+        />
+      </div>
 
       <SectionCard
         title={q.data ? `${q.data.hari}, ${q.data.tanggal}` : "Agenda"}
