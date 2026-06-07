@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { frappeFetch, useFrappeMutation, useResourceDoc } from "@sekolahpro/api-client";
@@ -11,17 +11,17 @@ import {
   PageHeader,
   SectionCard,
 } from "@sekolahpro/ui";
-import { WorkflowStepper, type WorkflowStep } from "@sekolahpro/ui/components/WorkflowStepper";
+import { WorkflowStepper } from "@sekolahpro/ui/components/WorkflowStepper";
 import { ApprovalBar } from "@sekolahpro/ui/components/ApprovalBar";
 import { RejectModal } from "@sekolahpro/ui/components/RejectModal";
 import { AuditTrailTimeline, type AuditEntry } from "@sekolahpro/ui/components/AuditTrailTimeline";
-
-type WorkflowState =
-  | "Draft"
-  | "Pending Ka-TU"
-  | "Pending Kepsek"
-  | "Approved"
-  | "Rejected";
+import { WORKFLOW_STATE, type WorkflowState } from "../lib/mutasiConstants";
+import {
+  canViewAudit,
+  deriveApprovalGate,
+  deriveApprovalSteps,
+  stateBadgeTone,
+} from "../lib/kelasApproval";
 
 interface KelulusanDoc {
   name: string;
@@ -40,44 +40,6 @@ interface KelulusanDoc {
   audit_log?: AuditEntry[];
 }
 
-const ROLE_KATU = new Set(["Kepala Tata Usaha", "System Manager"]);
-const ROLE_KEPSEK = new Set(["Kepala Sekolah", "System Manager"]);
-const ROLE_AUDIT_VIEW = new Set(["Kepala Sekolah", "Bimbingan Konseling", "System Manager"]);
-
-function deriveSteps(state: WorkflowState): WorkflowStep[] {
-  const base = [
-    { key: "draft", label: "Draft" },
-    { key: "katu", label: "Approval Ka-TU" },
-    { key: "kepsek", label: "Approval Kepsek" },
-    { key: "done", label: "Disahkan" },
-  ];
-  return base.map((s) => {
-    if (state === "Rejected") return { ...s, status: s.key === "draft" ? "done" : "rejected" };
-    if (state === "Approved") return { ...s, status: "done" };
-    if (state === "Pending Kepsek") {
-      return {
-        ...s,
-        status:
-          s.key === "draft" || s.key === "katu" ? "done" : s.key === "kepsek" ? "current" : "pending",
-      };
-    }
-    if (state === "Pending Ka-TU") {
-      return {
-        ...s,
-        status: s.key === "draft" ? "done" : s.key === "katu" ? "current" : "pending",
-      };
-    }
-    return { ...s, status: s.key === "draft" ? "current" : "pending" };
-  });
-}
-
-function stateBadgeTone(state: WorkflowState): "neutral" | "warning" | "success" | "danger" {
-  if (state === "Approved") return "success";
-  if (state === "Rejected") return "danger";
-  if (state === "Draft") return "neutral";
-  return "warning";
-}
-
 function KelulusanDetailPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
 
@@ -87,9 +49,6 @@ function KelulusanDetailPage() {
 
   const roles = useSessionStore((s) => s.roles);
   const currentUser = useSessionStore((s) => s.user);
-  const isKatu = useMemo(() => roles.some((r) => ROLE_KATU.has(r)), [roles]);
-  const isKepsek = useMemo(() => roles.some((r) => ROLE_KEPSEK.has(r)), [roles]);
-  const canViewAudit = useMemo(() => roles.some((r) => ROLE_AUDIT_VIEW.has(r)), [roles]);
 
   const apply = useFrappeMutation<{ doctype: string; docname: string; action: string }>(
     "frappe.model.workflow.apply_workflow",
@@ -141,22 +100,7 @@ function KelulusanDetailPage() {
     );
   }
 
-  const isLocked = state !== "Draft";
-  const canApproveKatu = state === "Pending Ka-TU" && isKatu;
-  const canApproveKepsek = state === "Pending Kepsek" && isKepsek;
-  const canApprove = canApproveKatu || canApproveKepsek;
-  const approveLabel = canApproveKepsek
-    ? "Setujui sebagai Kepala Sekolah"
-    : "Setujui sebagai Ka-TU";
-  const blockReason = !canApprove
-    ? state === "Pending Ka-TU"
-      ? "Hanya Kepala Tata Usaha yang dapat menyetujui pada tahap ini."
-      : state === "Pending Kepsek"
-        ? "Hanya Kepala Sekolah yang dapat menyetujui pada tahap ini."
-        : "Tidak ada aksi approval pada status ini."
-    : undefined;
-
-  const showApprovalBar = state === "Pending Ka-TU" || state === "Pending Kepsek";
+  const gate = deriveApprovalGate(state, roles);
 
   return (
     <div className="space-y-6 pb-24">
@@ -180,13 +124,13 @@ function KelulusanDetailPage() {
       />
 
       <SectionCard title="Status Workflow">
-        <WorkflowStepper steps={deriveSteps(state)} />
+        <WorkflowStepper steps={deriveApprovalSteps(state, "Disahkan")} />
       </SectionCard>
 
       <SectionCard
         title="Data Kelulusan"
         action={
-          isLocked ? (
+          gate.isLocked ? (
             <Badge tone="neutral">Terkunci — menunggu approval</Badge>
           ) : (
             <Button size="sm" variant="outline" onClick={() => runAction("Submit")} disabled={apply.isPending}>
@@ -232,7 +176,7 @@ function KelulusanDetailPage() {
         </SectionCard>
       ) : null}
 
-      {state === "Approved" ? (
+      {state === WORKFLOW_STATE.APPROVED ? (
         <SectionCard title="Arsip Ijazah">
           {doc.arsip_ijazah ? (
             <div className="flex items-center gap-3">
@@ -259,16 +203,16 @@ function KelulusanDetailPage() {
       <SectionCard title="Audit Trail">
         <AuditTrailTimeline
           entries={doc.audit_log ?? []}
-          showRestricted={canViewAudit}
+          showRestricted={canViewAudit(roles)}
           defaultOpen={false}
         />
       </SectionCard>
 
-      {showApprovalBar ? (
+      {gate.showApprovalBar ? (
         <ApprovalBar
-          approveLabel={approveLabel}
-          canApprove={canApprove}
-          blockReason={blockReason}
+          approveLabel={gate.approveLabel}
+          canApprove={gate.canApprove}
+          blockReason={gate.blockReason}
           onApprove={() => runAction("Approve")}
           onReject={() => setRejectOpen(true)}
           pending={apply.isPending}
