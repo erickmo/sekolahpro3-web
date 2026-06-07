@@ -10,8 +10,9 @@ import { ModuleShell } from "../components/shell/ModuleShell";
 import { useGenericRoleLabel } from "../lib/genericRole";
 import { KEUANGAN_NAV_GROUPS } from "../lib/keuanganHub";
 
+// "Ringkasan" is intentionally absent: the bare /akuntansi index redirects to
+// the unified Keuangan hub, so the sub-nav lists only the akuntansi sub-modules.
 const SUBTABS: { to: string; label: string; exact?: boolean }[] = [
-  { to: "/sch/$sekolah/akuntansi", label: "Ringkasan", exact: true },
   { to: "/sch/$sekolah/akuntansi/buku-besar", label: "Buku Besar" },
   { to: "/sch/$sekolah/akuntansi/anggaran", label: "Anggaran" },
   { to: "/sch/$sekolah/akuntansi/pajak", label: "Pajak" },
