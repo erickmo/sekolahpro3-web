@@ -1,5 +1,9 @@
 # Keuangan "Alur Uang" Hub — Implementation Plan
 
+> **STATUS: DONE (2026-06-07).** All 9 tasks implemented via TDD. Gates green:
+> tsc 0 · eslint 0 (changed files) · vitest 1112/1112 (147 files) · vite build ok (6m19s).
+> Deferred (per spec §4): bulk-post mutations + guards, per-page validateSearch prefilter, F-key hotkeys.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans (inline) or superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) tracking. TDD: red → green → refactor → commit.
 
 **Goal:** Reshape the accounting/finance menu into a money-flow pipeline hub ("Alur Uang") with a work-queue cockpit, fiscal-deadline strip, ⌘K finance actions, and a month-end close checklist — IA + landing + surfacing only, zero URL migration, no financial-doc mutation.
