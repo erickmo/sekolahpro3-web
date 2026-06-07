@@ -9,7 +9,7 @@
  * plus the SPT draft count from akuntansi. No financial document is mutated here.
  */
 import { useMemo, useState } from "react";
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import {
   Badge,
   PageHeader,
@@ -39,15 +39,18 @@ import {
   PipelineRibbon,
   DeadlineStrip,
   QuickCreateRow,
+  TutupBulanPanel,
   type RibbonStage,
   type QuickCreate,
+  type CloseStep,
+  type CloseStatus,
 } from "../components/keuangan";
 import { useKeuanganRole, type KeuanganRole } from "../lib/keuanganRole";
 import { useActiveCompany } from "../lib/akuntansi-scope";
 import { buildWorkQueue } from "../lib/keuanganWorkQueue";
 import { computeDeadlines } from "../lib/keuanganCalendar";
 import { formatRupiah, type KategoriPengeluaran } from "../data/keuangan";
-import { DOCTYPE, type SptMasaPPN } from "../data/akuntansi";
+import { DOCTYPE, type SptMasaPPN, type JournalEntry } from "../data/akuntansi";
 import {
   useTagihanLive,
   usePembayaranLive,
@@ -88,6 +91,31 @@ const QUICK_CREATE: readonly QuickCreate[] = [
   { label: "Jurnal Baru", to: "/sch/$sekolah/akuntansi/buku-besar/jurnal/new" },
   { label: "Pengeluaran", to: "/sch/$sekolah/keuangan/pengeluaran" },
 ];
+
+/** Routes for each month-end close step. */
+const CLOSE_ROUTE = {
+  kas: "/sch/$sekolah/keuangan/kas",
+  jurnal: "/sch/$sekolah/akuntansi/buku-besar/jurnal",
+  tagihan: "/sch/$sekolah/keuangan/tagihan",
+  sptPpn: "/sch/$sekolah/akuntansi/pajak/spt-ppn",
+  period: "/sch/$sekolah/akuntansi/referensi/period",
+} as const;
+
+/** Derive a warn/done status from an outstanding count. */
+function warnIf(count: number, doneLabel: string, warnLabel: string): { status: CloseStatus; statusLabel: string } {
+  return count > 0 ? { status: "warn", statusLabel: warnLabel } : { status: "done", statusLabel: doneLabel };
+}
+
+/** Build the ordered month-end close checklist from outstanding counts. */
+function buildCloseSteps(p: { unpaidTagihan: number; draftJournals: number; sptDraft: number }): CloseStep[] {
+  return [
+    { label: "Rekonsiliasi Buku Kas", hint: "Cocokkan saldo kas fisik dengan catatan", to: CLOSE_ROUTE.kas, status: "todo", statusLabel: "tinjau" },
+    { label: "Tinjau Jurnal Belum Posting", hint: "Pastikan semua jurnal sudah diposting", to: CLOSE_ROUTE.jurnal, ...warnIf(p.draftJournals, "beres", `${p.draftJournals} draft`) },
+    { label: "Tinjau Tagihan Terbuka", hint: "Tindak lanjuti tunggakan sebelum tutup", to: CLOSE_ROUTE.tagihan, ...warnIf(p.unpaidTagihan, "lunas", `${p.unpaidTagihan} terbuka`) },
+    { label: "Lapor SPT Masa PPN", hint: "Selesaikan SPT draft", to: CLOSE_ROUTE.sptPpn, ...warnIf(p.sptDraft, "terlapor", `${p.sptDraft} draft`) },
+    { label: "Tutup Periode", hint: "Kunci periode akuntansi setelah semua beres", to: CLOSE_ROUTE.period, status: "todo", statusLabel: "kunci" },
+  ];
+}
 
 /** Pipeline ribbon spec: one KPI + waiting-count per stage, role stage elevated. */
 interface RibbonInput {
@@ -146,6 +174,24 @@ function KeuanganDashboard() {
   const sptDraft = useMemo(
     () => (sptQ.data ?? []).filter((s) => (s.status ?? "Draft") === "Draft").length,
     [sptQ.data],
+  );
+
+  const journalDraftQ = useResourceList<JournalEntry>(DOCTYPE.JOURNAL_ENTRY, {
+    fields: ["name", "docstatus"],
+    filters: company ? [["docstatus", "=", 0], ["company", "=", company]] : [["docstatus", "=", 0]],
+    limit_page_length: 0,
+  });
+  const draftJournals = journalDraftQ.data?.length ?? 0;
+
+  /** Month-end close: are we in close mode (?close=1)? */
+  const { close } = Route.useSearch();
+  const unpaidTagihan = useMemo(
+    () => tagihan.filter((t) => t.status !== "Lunas" && t.status !== "Dibatalkan" && t.jumlah - t.dibayar > 0).length,
+    [tagihan],
+  );
+  const closeSteps = useMemo(
+    () => buildCloseSteps({ unpaidTagihan, draftJournals, sptDraft }),
+    [unpaidTagihan, draftJournals, sptDraft],
   );
 
   /** Monthly income/expense rollup from live rows (chronological). */
@@ -264,9 +310,22 @@ function KeuanganDashboard() {
         eyebrow="Keuangan"
         title="Alur Uang"
         description="Tagih → Terima → Catat → Tutup Buku → Lapor Pajak. Semua yang menunggu Anda ada di Pekerjaan Hari Ini."
+        actions={
+          <Link
+            to="/sch/$sekolah/keuangan"
+            params={{ sekolah }}
+            search={{ close: 1 }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-fg transition-colors hover:border-brand hover:bg-brand/5"
+          >
+            Tutup Bulan
+          </Link>
+        }
       />
 
       <KeuanganRoleChips active={activeRole} onSelect={setActiveRole} />
+
+      {/* Month-end close mode (?close=1): surface the close checklist on top. */}
+      {close === 1 ? <TutupBulanPanel steps={closeSteps} sekolah={sekolah} /> : null}
 
       {/* ROW 1 — work-first: today's actionable queue on top. */}
       <WorkQueueCard items={workItems} sekolah={sekolah} />
@@ -376,4 +435,8 @@ function KeuanganDashboard() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/keuangan/")({ component: KeuanganDashboard });
+export const Route = createFileRoute("/sch/$sekolah/keuangan/")({
+  validateSearch: (search: Record<string, unknown>): { close?: 1 } =>
+    search.close === 1 || search.close === "1" ? { close: 1 } : {},
+  component: KeuanganDashboard,
+});
