@@ -55,26 +55,37 @@ function PermintaanSayaPage() {
   });
   const rows = listQ.data ?? [];
 
+  const guruListQ = useResourceList<{ name: string }>("Pegawai", { fields: ["name"], limit_page_length: 0 });
+
   const create = useResourceCreate<PermintaanRow>(DOCTYPE);
   const ajukan = useFrappeMutation<{ name: string; action: string }, string>(METHOD_TRANSISI);
 
+  const [tipe, setTipe] = useState<"Izin" | "Tukar">("Izin");
   const [tanggal, setTanggal] = useState<string>(todayIso());
   const [alasan, setAlasan] = useState<string>("");
+  const [guruPengganti, setGuruPengganti] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
   const submitting = create.isPending || ajukan.isPending;
 
-  async function handleAjukanIzin() {
+  async function handleAjukan() {
     setError(null);
     if (!guru) {
       setError("Akun ini tidak terkait data Pegawai.");
       return;
     }
+    if (tipe === "Tukar" && !guruPengganti) {
+      setError("Pilih guru pengganti untuk permintaan Tukar.");
+      return;
+    }
     try {
-      const created = await create.mutateAsync({ tipe: "Izin", tanggal, guru_asli: guru, alasan });
+      const payload: Record<string, unknown> = { tipe, tanggal, guru_asli: guru, alasan };
+      if (tipe === "Tukar") payload.guru_pengganti = guruPengganti;
+      const created = await create.mutateAsync(payload);
       // Submit to the Tata Usaha inbox immediately (Draft -> Diajukan).
       await ajukan.mutateAsync({ name: created.name, action: "Ajukan" });
       setAlasan("");
+      setGuruPengganti("");
       listQ.refetch();
     } catch (e) {
       setError((e as Error).message);
@@ -102,8 +113,19 @@ function PermintaanSayaPage() {
         roleLabels={SCHOOL_ROLE_LABEL}
       />
 
-      <SectionCard title="Ajukan Izin" description="Permintaan tidak mengajar pada tanggal tertentu.">
+      <SectionCard title="Ajukan Permintaan" description="Izin tidak mengajar, atau Tukar jam dengan guru lain.">
         <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted-fg">Tipe</span>
+            <select
+              value={tipe}
+              onChange={(e) => setTipe(e.target.value as "Izin" | "Tukar")}
+              className="rounded-md border border-border bg-card px-2.5 py-1.5 text-sm text-fg"
+            >
+              <option value="Izin">Izin</option>
+              <option value="Tukar">Tukar</option>
+            </select>
+          </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="text-muted-fg">Tanggal</span>
             <input
@@ -113,6 +135,21 @@ function PermintaanSayaPage() {
               className="rounded-md border border-border bg-card px-2.5 py-1.5 text-sm text-fg"
             />
           </label>
+          {tipe === "Tukar" && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted-fg">Guru Pengganti</span>
+              <select
+                value={guruPengganti}
+                onChange={(e) => setGuruPengganti(e.target.value)}
+                className="rounded-md border border-border bg-card px-2.5 py-1.5 text-sm text-fg min-w-[10rem]"
+              >
+                <option value="">— pilih —</option>
+                {(guruListQ.data ?? [])
+                  .filter((g) => g.name !== guru)
+                  .map((g) => <option key={g.name} value={g.name}>{g.name}</option>)}
+              </select>
+            </label>
+          )}
           <label className="flex flex-1 flex-col gap-1 text-sm min-w-[12rem]">
             <span className="text-muted-fg">Alasan</span>
             <input
@@ -123,8 +160,8 @@ function PermintaanSayaPage() {
               className="rounded-md border border-border bg-card px-2.5 py-1.5 text-sm text-fg"
             />
           </label>
-          <Button onClick={handleAjukanIzin} disabled={submitting}>
-            {submitting ? "Mengajukan…" : "Ajukan Izin"}
+          <Button onClick={handleAjukan} disabled={submitting}>
+            {submitting ? "Mengajukan…" : "Ajukan"}
           </Button>
         </div>
         {error && (
