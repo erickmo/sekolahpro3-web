@@ -10,7 +10,7 @@
  * fabricated numbers (honest empty-states, audit graft from C1).
  */
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useResourceList, useResourceDoc } from "@sekolahpro/api-client";
 import { useSessionStore } from "@sekolahpro/auth";
 import { PageHeader, SectionCard, Badge, Button } from "@sekolahpro/ui";
@@ -22,6 +22,7 @@ import {
 } from "../lib/kelasku";
 import { aggregatePresence, type AbsensiDetailRow } from "../lib/presence";
 import { collectRiskFlags, type EntriNilaiRow } from "../lib/kelasRisk";
+import { CatatanWaliPanel } from "../components/kelas/CatatanWaliPanel";
 
 interface RombelDoc extends KelaskuRombel {
   anggota?: KelaskuAnggota[];
@@ -42,6 +43,7 @@ const PRESENCE_STATUSES: { key: PresenceCountKey; label: string }[] = [
 ];
 
 function KelaskuPage() {
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const user = useSessionStore((s) => s.user);
 
   const rombelQuery = useResourceList<KelaskuRombel>("Rombongan Belajar", {
@@ -203,11 +205,11 @@ function KelaskuPage() {
         )}
       </SectionCard>
 
-      <SectionCard title="Catatan Wali">
-        <div className="py-2 text-sm text-muted-fg">
-          Catatan cepat per siswa menyusul (doctype Catatan Wali, fase backend).
-        </div>
-      </SectionCard>
+      <CatatanWaliPanel
+        rombel={active.name}
+        sekolah={sekolah}
+        siswaOptions={rosterIds}
+      />
     </div>
   );
 }
