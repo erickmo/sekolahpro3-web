@@ -61,6 +61,7 @@ function PapanSusunPage() {
   const [rombel, setRombel] = useState<string>("");
   const [form, setForm] = useState<BlankForm>(FORM_KOSONG);
   const [msg, setMsg] = useState<string | null>(null);
+  const [salinan, setSalinan] = useState<Pick<PapanSlot, "mata_pelajaran" | "guru" | "ruangan"> | null>(null);
 
   const rombelQ = useResourceList<RombelRow>("Rombongan Belajar", { fields: ["name", "nama_rombel"], limit_page_length: 0 });
   const rombelList = rombelQ.data ?? [];
@@ -140,6 +141,33 @@ function PapanSusunPage() {
     }
   }
 
+  // Paste the copied slot's mapel/guru/ruangan into an empty cell (hari + band),
+  // re-running the conflict check so a paste can never introduce a double-book.
+  async function handleTempel(hari: string, jam_mulai: string, jam_selesai: string) {
+    setMsg(null);
+    if (!jadwalName || !doc || !salinan) return;
+    try {
+      if (salinan.guru) {
+        const hasil = await cek.mutateAsync({
+          guru: salinan.guru, hari, jam_mulai, jam_selesai,
+          tahun_ajaran: doc.tahun_ajaran, semester: doc.semester, exclude: jadwalName,
+        });
+        if (hasil.bentrok) {
+          setMsg(`Bentrok: ${hasil.info ?? "guru sudah terjadwal pada jam itu"}`);
+          return;
+        }
+      }
+      const baru: PapanSlot = {
+        hari, jam_mulai, jam_selesai,
+        mata_pelajaran: salinan.mata_pelajaran ?? null, guru: salinan.guru ?? null, ruangan: salinan.ruangan ?? null,
+      };
+      await update.mutateAsync({ name: jadwalName, patch: { slots: withTambahanSlot(slots, baru) } });
+      docQ.refetch();
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -186,6 +214,15 @@ function PapanSusunPage() {
       </div>
 
       {msg && <Badge tone="danger">{msg}</Badge>}
+      {salinan && (
+        <div className="flex items-center gap-2 text-sm">
+          <Badge tone="brand">Menyalin: {salinan.mata_pelajaran ?? "—"} · {salinan.guru ?? "tanpa guru"}</Badge>
+          <button type="button" onClick={() => setSalinan(null)} className="text-xs text-muted-fg hover:text-fg underline">
+            batal salin
+          </button>
+          <span className="text-xs text-muted-fg">— klik Tempel pada sel kosong</span>
+        </div>
+      )}
 
       {jadwalName && (
         <SectionCard title="Tambah Slot" description="Bentrok guru dicek sebelum disimpan.">
@@ -258,7 +295,16 @@ function PapanSusunPage() {
                     {HARI.map((h) => {
                       const idx = slots.findIndex((s) => s.hari === h && bandKey(s) === bandKey(band));
                       const c = idx >= 0 ? slots[idx] : undefined;
-                      if (!c) return <td key={h} className="px-3 py-2 text-muted-fg/40">—</td>;
+                      if (!c) {
+                        return (
+                          <td key={h} className="px-3 py-2 text-muted-fg/40">
+                            {salinan ? (
+                              <button type="button" onClick={() => handleTempel(h, band.jam_mulai, band.jam_selesai)} disabled={busy}
+                                className="text-brand hover:underline text-xs" aria-label="Tempel slot">Tempel</button>
+                            ) : "—"}
+                          </td>
+                        );
+                      }
                       return (
                         <td key={h} className={`px-3 py-2 ${!c.guru ? "bg-rose-500/10" : ""}`}>
                           <div className="flex items-start justify-between gap-1">
@@ -266,8 +312,12 @@ function PapanSusunPage() {
                               <div className="text-fg truncate">{c.mata_pelajaran ?? "—"}</div>
                               <div className="text-xs text-muted-fg truncate">{c.guru ?? <span className="text-rose-600">tanpa guru</span>}</div>
                             </div>
-                            <button type="button" onClick={() => handleHapus(idx)} disabled={busy}
-                              className="text-muted-fg hover:text-rose-600 text-xs leading-none" aria-label="Hapus slot">×</button>
+                            <div className="flex shrink-0 flex-col items-end gap-0.5">
+                              <button type="button" onClick={() => handleHapus(idx)} disabled={busy}
+                                className="text-muted-fg hover:text-rose-600 text-xs leading-none" aria-label="Hapus slot">×</button>
+                              <button type="button" onClick={() => setSalinan({ mata_pelajaran: c.mata_pelajaran ?? null, guru: c.guru ?? null, ruangan: c.ruangan ?? null })}
+                                className="text-muted-fg hover:text-brand text-[10px] leading-none" aria-label="Salin slot">salin</button>
+                            </div>
                           </div>
                         </td>
                       );

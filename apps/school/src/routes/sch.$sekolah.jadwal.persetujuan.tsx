@@ -1,16 +1,68 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, Button, PageHeader, SectionCard } from "@sekolahpro/ui";
-import { useResourceList } from "@sekolahpro/api-client";
+import { useFrappeMethod, useResourceList } from "@sekolahpro/api-client";
 import { PageGuide } from "../components/guide";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
-import { JADWAL_ACTIONS, useJadwalTransition } from "../components/jadwal-extra/workflowActions";
+import { JADWAL_ACTIONS, type JadwalAction, useJadwalTransition } from "../components/jadwal-extra/workflowActions";
+
+const METHOD_KELAYAKAN = "sekolahpro.akademik.api.jadwal.kelayakan_jadwal";
 
 interface JadwalRow {
   name: string;
   rombel?: string;
   semester?: string;
   tahun_ajaran?: string;
+}
+
+interface Kelayakan {
+  layak: boolean;
+  total_slot: number;
+  slot_tanpa_guru: number;
+}
+
+// One pending schedule. Setujui is GATED behind compliance (kelayakan_jadwal):
+// a schedule with empty slots or missing teachers cannot be rubber-stamped.
+function PersetujuanRow({
+  row,
+  busy,
+  onAct,
+}: {
+  row: JadwalRow;
+  busy: boolean;
+  onAct: (name: string, action: JadwalAction) => void;
+}) {
+  const kQ = useFrappeMethod<Kelayakan>(METHOD_KELAYAKAN, { name: row.name });
+  const layak = kQ.data?.layak ?? false;
+  const lubang = kQ.data?.slot_tanpa_guru ?? 0;
+  const kosong = (kQ.data?.total_slot ?? 0) === 0;
+
+  return (
+    <li className="flex flex-wrap items-center gap-3 px-5 py-3.5">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-fg truncate">{row.rombel ?? row.name}</span>
+          {!kQ.isLoading && lubang > 0 && <Badge tone="warning">{lubang} slot tanpa guru</Badge>}
+          {!kQ.isLoading && kosong && <Badge tone="warning">belum ada slot</Badge>}
+        </div>
+        <div className="text-xs text-muted-fg truncate">
+          {row.tahun_ajaran ?? "—"} · {row.semester ?? "—"}
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" disabled={busy} onClick={() => onAct(row.name, JADWAL_ACTIONS.tolak)}>
+          Tolak
+        </Button>
+        <Button
+          disabled={busy || !layak}
+          title={!layak ? "Lengkapi slot & guru sebelum menyetujui" : undefined}
+          onClick={() => onAct(row.name, JADWAL_ACTIONS.setujui)}
+        >
+          Setujui
+        </Button>
+      </div>
+    </li>
+  );
 }
 
 function PersetujuanPage() {
@@ -24,7 +76,7 @@ function PersetujuanPage() {
   const { transisi, isPending } = useJadwalTransition();
   const [error, setError] = useState<string | null>(null);
 
-  async function act(name: string, action: (typeof JADWAL_ACTIONS)[keyof typeof JADWAL_ACTIONS]) {
+  async function act(name: string, action: JadwalAction) {
     setError(null);
     try {
       await transisi(name, action);
@@ -66,22 +118,7 @@ function PersetujuanPage() {
         ) : (
           <ul className="divide-y divide-border">
             {rows.map((r) => (
-              <li key={r.name} className="flex flex-wrap items-center gap-3 px-5 py-3.5">
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-fg truncate">{r.rombel ?? r.name}</div>
-                  <div className="text-xs text-muted-fg truncate">
-                    {r.tahun_ajaran ?? "—"} · {r.semester ?? "—"}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" disabled={isPending} onClick={() => act(r.name, JADWAL_ACTIONS.tolak)}>
-                    Tolak
-                  </Button>
-                  <Button disabled={isPending} onClick={() => act(r.name, JADWAL_ACTIONS.setujui)}>
-                    Setujui
-                  </Button>
-                </div>
-              </li>
+              <PersetujuanRow key={r.name} row={r} busy={isPending} onAct={act} />
             ))}
           </ul>
         )}

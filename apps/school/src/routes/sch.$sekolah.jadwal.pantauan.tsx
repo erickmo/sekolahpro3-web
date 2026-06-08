@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   Badge,
+  Button,
   PageHeader,
   SectionCard,
   StatCard,
@@ -9,13 +10,31 @@ import {
   IconUsers,
   IconBook,
 } from "@sekolahpro/ui";
-import { useFrappeMethod, useResourceList } from "@sekolahpro/api-client";
+import { useFrappeMethod, useFrappeMutation, useResourceList } from "@sekolahpro/api-client";
 import { PageGuide } from "../components/guide";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
+import { bebanToCsv } from "../lib/jadwalExport";
 
 const JTM_MINIMAL = 24;
 const METHOD_CAKUPAN = "sekolahpro.akademik.api.jadwal.cakupan_jadwal";
 const METHOD_BEBAN = "sekolahpro.akademik.api.jadwal.beban_mengajar_guru";
+const METHOD_SAHKAN = "sekolahpro.akademik.api.jadwal.sahkan_jadwal_semester";
+
+interface SemesterRow {
+  name: string;
+  nama?: string;
+}
+
+/** Trigger a client-side download of `text` as `filename`. */
+function unduhFile(filename: string, text: string, mime = "text/csv;charset=utf-8") {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface CakupanRow {
   rombel: string;
@@ -53,6 +72,29 @@ function PantauanPage() {
   const semuaTercover = !cakupanQ.isLoading && lubang === 0;
   const bebanSeimbang = !bebanQ.isLoading && guruKurangJtm.length === 0;
   const tanpaAntrean = !antreanQ.isLoading && antrean.length === 0;
+
+  const semesterQ = useResourceList<SemesterRow>("Semester", { fields: ["name", "nama"], limit_page_length: 0 });
+  const semesterList = semesterQ.data ?? [];
+  const [semester, setSemester] = useState<string>("");
+  const activeSemester = semester || semesterList[0]?.name || "";
+
+  const sahkan = useFrappeMutation<{ semester: string }, { disahkan: boolean }>(METHOD_SAHKAN);
+  const [sahkanMsg, setSahkanMsg] = useState<string | null>(null);
+
+  async function handleSahkan() {
+    setSahkanMsg(null);
+    if (!activeSemester) return;
+    try {
+      await sahkan.mutateAsync({ semester: activeSemester });
+      setSahkanMsg("Jadwal semester disahkan.");
+    } catch (e) {
+      setSahkanMsg((e as Error).message);
+    }
+  }
+
+  function handleExport() {
+    unduhFile(`rekap-jtm-${sekolah}.csv`, bebanToCsv(beban));
+  }
 
   return (
     <div className="space-y-6">
@@ -145,6 +187,41 @@ function PantauanPage() {
           )}
         </SectionCard>
       </div>
+
+      <SectionCard
+        title="Pengesahan & Ekspor"
+        description="Sahkan jadwal semester (syarat: nol lubang) dan unduh rekap JTM untuk Dapodik/sertifikasi."
+      >
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted-fg">Semester</span>
+            <select
+              value={activeSemester}
+              onChange={(e) => setSemester(e.target.value)}
+              className="rounded-md border border-border bg-card px-2.5 py-1.5 text-sm text-fg min-w-[12rem]"
+            >
+              {semesterList.map((s) => (
+                <option key={s.name} value={s.name}>{s.nama ?? s.name}</option>
+              ))}
+            </select>
+          </label>
+          <Button
+            onClick={handleSahkan}
+            disabled={sahkan.isPending || !semuaTercover || !activeSemester}
+            title={!semuaTercover ? "Masih ada lubang jadwal — tidak bisa disahkan" : undefined}
+          >
+            {sahkan.isPending ? "Mengesahkan…" : "Sahkan Jadwal Semester"}
+          </Button>
+          <Button variant="outline" onClick={handleExport} disabled={beban.length === 0}>
+            Export Rekap JTM (CSV)
+          </Button>
+        </div>
+        {sahkanMsg && (
+          <div className="mt-3">
+            <Badge tone={sahkanMsg.includes("disahkan") ? "success" : "danger"}>{sahkanMsg}</Badge>
+          </div>
+        )}
+      </SectionCard>
     </div>
   );
 }
