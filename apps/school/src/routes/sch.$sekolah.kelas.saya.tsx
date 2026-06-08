@@ -21,6 +21,7 @@ import {
   type KelaskuAnggota,
 } from "../lib/kelasku";
 import { aggregatePresence, type AbsensiDetailRow } from "../lib/presence";
+import { collectRiskFlags, type EntriNilaiRow } from "../lib/kelasRisk";
 
 interface RombelDoc extends KelaskuRombel {
   anggota?: KelaskuAnggota[];
@@ -72,6 +73,14 @@ function KelaskuPage() {
   const absensiDoc = useResourceDoc<AbsensiDoc>("Absensi Harian", absensiName);
   const presence = aggregatePresence(absensiDoc.data?.detail ?? []);
   const diabsen = absensiName !== "";
+
+  const rosterIds = roster.map((a) => a.siswa);
+  const entriQuery = useResourceList<EntriNilaiRow>("Entri Nilai", {
+    fields: ["siswa", "mata_pelajaran", "predikat", "is_remedial"],
+    filters: [["siswa", "in", rosterIds.length ? rosterIds : ["__none__"]]],
+    limit_page_length: 0,
+  });
+  const riskFlags = collectRiskFlags(entriQuery.data ?? []);
 
   if (rombelQuery.isLoading) {
     return <div className="p-6 text-sm text-muted-fg">Memuat kelas…</div>;
@@ -169,9 +178,34 @@ function KelaskuPage() {
         )}
       </SectionCard>
 
-      <SectionCard title="Risiko · Catatan Wali">
+      <SectionCard
+        title={
+          <span className="flex items-center gap-2">
+            <span>Antrean Perhatian</span>
+            <Badge tone={riskFlags.length === 0 ? "success" : "warning"}>{riskFlags.length}</Badge>
+          </span>
+        }
+        description="Siswa dengan nilai D atau remedial."
+      >
+        {entriQuery.isLoading ? (
+          <div className="py-2 text-sm text-muted-fg">Memuat nilai…</div>
+        ) : riskFlags.length === 0 ? (
+          <div className="py-2 text-sm text-muted-fg">Tidak ada siswa berisiko akademik.</div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {riskFlags.map((f) => (
+              <li key={f.siswa} className="py-2 text-sm">
+                <span className="font-medium text-fg">{f.siswa}</span>
+                <span className="ml-2 text-xs text-amber-600">{f.reasons.join(" · ")}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Catatan Wali">
         <div className="py-2 text-sm text-muted-fg">
-          Antrean perhatian akademik dan Catatan Wali (doctype baru) menyusul pada fase backend.
+          Catatan cepat per siswa menyusul (doctype Catatan Wali, fase backend).
         </div>
       </SectionCard>
     </div>
