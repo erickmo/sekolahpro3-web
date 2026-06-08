@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { Badge, ModuleFlow, PageHeader, type Column, type ModuleFlowStep } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
@@ -8,6 +8,7 @@ import { PageGuide } from "../components/guide";
 import { MISC_PAGE_GUIDES } from "../components/guide/miscPageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { PusatLaporHero } from "../components/laporan/PusatLaporHero";
+import { KotakMasalahData } from "../components/laporan/KotakMasalahData";
 
 type LaporanTab = "pusat" | "jadwal";
 
@@ -64,6 +65,7 @@ const LAPORAN_FLOW_STEPS: ModuleFlowStep[] = [
 ];
 
 function LaporanPage() {
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const [tab, setTab] = useState<LaporanTab>("pusat");
   const [open, setOpen] = useState(false);
   return (
@@ -99,7 +101,12 @@ function LaporanPage() {
             Jadwal Otomatis
           </button>
         </div>
-        {tab === "pusat" ? <PusatLaporHero /> : null}
+        {tab === "pusat" ? (
+          <>
+            <KotakMasalahData sekolah={sekolah} />
+            <PusatLaporHero />
+          </>
+        ) : null}
       </div>
 
       {tab === "jadwal" ? (
