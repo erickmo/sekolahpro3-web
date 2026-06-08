@@ -18,6 +18,7 @@ import {
   PageHeader,
   SectionCard,
   GlossaryTooltip,
+  Button,
   IconBook,
   IconUsers,
   IconCheck,
@@ -36,6 +37,7 @@ import {
 import { computeDefects, totalDefects, type BoardRombelRow } from "../../lib/kelasBoard";
 import { DefectGate } from "./DefectGate";
 import { FixItTray } from "./FixItTray";
+import { RolloverDrawer } from "./RolloverDrawer";
 
 const QUICK_LINKS = [
   { to: "/sch/$sekolah/kelas/daftar", label: "Daftar Kelas", icon: <IconBook /> },
@@ -53,6 +55,7 @@ export function PapanKelas() {
   const taList = taQuery.data ?? [];
 
   const [override, setOverride] = useState<string | undefined>();
+  const [rolloverOpen, setRolloverOpen] = useState(false);
   const storedTa = readStoredPeriode(sekolah).ta;
   const resolved = resolveTahunAjaran(
     taList,
@@ -99,21 +102,26 @@ export function PapanKelas() {
           </>
         }
         actions={
-          <label className="flex items-center gap-2 text-sm">
-            <span className="text-muted-fg">Tahun Ajaran</span>
-            <select
-              value={ta}
-              onChange={(e) => onSelectTa(e.target.value)}
-              className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm"
-            >
-              {taList.length === 0 ? <option value="">—</option> : null}
-              {taList.map((t) => (
-                <option key={t.name} value={t.name}>
-                  {t.nama ?? t.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted-fg">Tahun Ajaran</span>
+              <select
+                value={ta}
+                onChange={(e) => onSelectTa(e.target.value)}
+                className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm"
+              >
+                {taList.length === 0 ? <option value="">—</option> : null}
+                {taList.map((t) => (
+                  <option key={t.name} value={t.name}>
+                    {t.nama ?? t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button size="sm" variant="outline" onClick={() => setRolloverOpen(true)}>
+              Naik Kelas
+            </Button>
+          </div>
         }
       />
 
@@ -213,6 +221,14 @@ export function PapanKelas() {
           ))}
         </div>
       </SectionCard>
+
+      <RolloverDrawer
+        open={rolloverOpen}
+        onClose={() => setRolloverOpen(false)}
+        rombelOptions={rows}
+        taOptions={taList}
+        defaultTaAsal={ta}
+      />
     </div>
   );
 }
