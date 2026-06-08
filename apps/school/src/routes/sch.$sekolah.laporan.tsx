@@ -10,6 +10,7 @@ import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { PusatLaporHero } from "../components/laporan/PusatLaporHero";
 import { KotakMasalahData } from "../components/laporan/KotakMasalahData";
 import { SemuaLaporanCatalog } from "../components/laporan/SemuaLaporanCatalog";
+import { SusunPaket } from "../components/laporan/SusunPaket";
 
 type LaporanTab = "pusat" | "katalog" | "jadwal";
 
@@ -69,6 +70,7 @@ function LaporanPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const [tab, setTab] = useState<LaporanTab>("pusat");
   const [open, setOpen] = useState(false);
+  const [susunKewajiban, setSusunKewajiban] = useState<string | null>(null);
   return (
     <>
       <div className="px-6 pt-6 space-y-6">
@@ -112,11 +114,18 @@ function LaporanPage() {
         {tab === "pusat" ? (
           <>
             <KotakMasalahData sekolah={sekolah} />
-            <PusatLaporHero />
+            <PusatLaporHero onSusun={setSusunKewajiban} />
           </>
         ) : null}
         {tab === "katalog" ? <SemuaLaporanCatalog sekolah={sekolah} /> : null}
       </div>
+
+      <SusunPaket
+        open={!!susunKewajiban}
+        onClose={() => setSusunKewajiban(null)}
+        kewajibanId={susunKewajiban}
+        sekolah={sekolah}
+      />
 
       {tab === "jadwal" ? (
         <>
