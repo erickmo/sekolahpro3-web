@@ -1,5 +1,18 @@
 import { describe, it, expect } from "vitest";
-import { financeActions, globalSearch, groupHitsByCategory } from "./global-search";
+import { financeActions, laporanActions, globalSearch, groupHitsByCategory } from "./global-search";
+
+describe("laporanActions (⌘K report-center provider)", () => {
+  it("matches a report term to the Pusat Lapor surface", () => {
+    const hits = laporanActions("dapodik");
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits[0]!.category).toBe("Laporan");
+    expect(hits[0]!.href).toBe("/laporan");
+  });
+
+  it("returns [] below the minimum query length", () => {
+    expect(laporanActions("a")).toEqual([]);
+  });
+});
 
 describe("financeActions (⌘K finance route+action provider)", () => {
   it("matches a tax verb to its deep route", () => {
