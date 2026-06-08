@@ -20,10 +20,25 @@ import {
   type KelaskuRombel,
   type KelaskuAnggota,
 } from "../lib/kelasku";
+import { aggregatePresence, type AbsensiDetailRow } from "../lib/presence";
 
 interface RombelDoc extends KelaskuRombel {
   anggota?: KelaskuAnggota[];
 }
+
+interface AbsensiDoc {
+  name: string;
+  detail?: AbsensiDetailRow[];
+}
+
+type PresenceCountKey = "hadir" | "sakit" | "izin" | "alpha" | "terlambat";
+const PRESENCE_STATUSES: { key: PresenceCountKey; label: string }[] = [
+  { key: "hadir", label: "Hadir" },
+  { key: "sakit", label: "Sakit" },
+  { key: "izin", label: "Izin" },
+  { key: "alpha", label: "Alpa" },
+  { key: "terlambat", label: "Telat" },
+];
 
 function KelaskuPage() {
   const user = useSessionStore((s) => s.user);
@@ -43,6 +58,20 @@ function KelaskuPage() {
 
   const docQuery = useResourceDoc<RombelDoc>("Rombongan Belajar", activeName);
   const roster = sortRoster(docQuery.data?.anggota ?? []);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const absensiList = useResourceList<{ name: string }>("Absensi Harian", {
+    fields: ["name"],
+    filters: [
+      ["rombel", "=", activeName],
+      ["tanggal", "=", today],
+    ],
+    limit_page_length: 1,
+  });
+  const absensiName = absensiList.data?.[0]?.name ?? "";
+  const absensiDoc = useResourceDoc<AbsensiDoc>("Absensi Harian", absensiName);
+  const presence = aggregatePresence(absensiDoc.data?.detail ?? []);
+  const diabsen = absensiName !== "";
 
   if (rombelQuery.isLoading) {
     return <div className="p-6 text-sm text-muted-fg">Memuat kelas…</div>;
@@ -114,10 +143,35 @@ function KelaskuPage() {
         )}
       </SectionCard>
 
-      <SectionCard title="Presensi · Risiko · Catatan Wali">
+      <SectionCard title="Hadir Hari Ini" description={`Presensi ${today}.`}>
+        {absensiList.isLoading ? (
+          <div className="py-2 text-sm text-muted-fg">Memuat presensi…</div>
+        ) : !diabsen ? (
+          <div className="py-2 text-sm text-amber-600">
+            Belum diabsen hari ini.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-5 gap-2">
+              {PRESENCE_STATUSES.map((s) => (
+                <div key={s.key} className="rounded-md border border-border bg-bg px-2 py-2 text-center">
+                  <div className="text-lg font-semibold tabular-nums text-fg">{presence[s.key]}</div>
+                  <div className="text-xs text-muted-fg">{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {presence.absent.length > 0 ? (
+              <div className="text-sm text-rose-600">
+                Alpa: {presence.absent.join(", ")}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Risiko · Catatan Wali">
         <div className="py-2 text-sm text-muted-fg">
-          Strip presensi hari ini, antrean perhatian (reuse laporan Rekap Absensi Siswa), dan
-          Catatan Wali menyusul pada fase backend.
+          Antrean perhatian akademik dan Catatan Wali (doctype baru) menyusul pada fase backend.
         </div>
       </SectionCard>
     </div>
