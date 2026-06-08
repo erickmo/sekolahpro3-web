@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, ModuleFlow, type Column, type ModuleFlowStep } from "@sekolahpro/ui";
+import { Badge, ModuleFlow, PageHeader, type Column, type ModuleFlowStep } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { LAPORAN_TERJADWAL_FIELDS } from "../data/create-schemas";
 import { PageGuide } from "../components/guide";
 import { MISC_PAGE_GUIDES } from "../components/guide/miscPageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
+import { PusatLaporHero } from "../components/laporan/PusatLaporHero";
+
+type LaporanTab = "pusat" | "jadwal";
 
 // Wired to backend DocType: "Laporan Terjadwal"
 // /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro/sekolahpro/laporan/doctype/laporan_terjadwal
@@ -61,50 +64,80 @@ const LAPORAN_FLOW_STEPS: ModuleFlowStep[] = [
 ];
 
 function LaporanPage() {
+  const [tab, setTab] = useState<LaporanTab>("pusat");
   const [open, setOpen] = useState(false);
   return (
     <>
-    <div className="px-6 pt-6 space-y-6">
-      <PageGuide
-        storageNamespace="school-guide:"
-        storageId="laporan"
-        title={MISC_PAGE_GUIDES.laporan.title}
-        intro={MISC_PAGE_GUIDES.laporan.intro}
-        steps={MISC_PAGE_GUIDES.laporan.steps}
-        tips={MISC_PAGE_GUIDES.laporan.tips}
-        roleLabels={SCHOOL_ROLE_LABEL}
-      />
-      <ModuleFlow
-        title="Alur Penjadwalan Laporan"
-        description="Langkah menjadwalkan laporan otomatis."
-        steps={LAPORAN_FLOW_STEPS}
-      />
-    </div>
-    <ResourceListPage<Row>
-      eyebrow="Operasional"
-      title="Laporan"
-      description="Pustaka laporan terjadwal."
-      doctype="Laporan Terjadwal"
-      fields={["name", "nama", "report", "periode", "format", "enabled", "next_run", "last_run", "modified"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "modified", dir: "desc" }}
-      searchFields={["name", "nama", "report"]}
-      selectFilters={[
-        { key: "periode", label: "Periode", field: "periode", options: PERIODE_OPTS },
-        { key: "format", label: "Format", field: "format", options: FORMAT_OPTS },
-      ]}
-      addLabel="Jadwalkan Laporan"
-      onAdd={() => setOpen(true)}
-    />
-      <ResourceCreateModal
-        open={open}
-        onClose={() => setOpen(false)}
-        doctype="Laporan Terjadwal"
-        title="Jadwalkan Laporan"
-        description="Buat jadwal laporan terjadwal baru."
-        fields={LAPORAN_TERJADWAL_FIELDS}
-      />
+      <div className="px-6 pt-6 space-y-6">
+        <PageHeader
+          eyebrow="Operasional"
+          title="Pusat Lapor"
+          description="Susun & kirim laporan compliance tepat waktu, lengkap, format benar."
+        />
+        <PageGuide
+          storageNamespace="school-guide:"
+          storageId="laporan"
+          title={MISC_PAGE_GUIDES.laporan.title}
+          intro={MISC_PAGE_GUIDES.laporan.intro}
+          steps={MISC_PAGE_GUIDES.laporan.steps}
+          tips={MISC_PAGE_GUIDES.laporan.tips}
+          roleLabels={SCHOOL_ROLE_LABEL}
+        />
+        <div className="flex gap-2 border-b border-border">
+          <button
+            type="button"
+            onClick={() => setTab("pusat")}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${tab === "pusat" ? "border-brand text-brand" : "border-transparent text-muted-fg hover:text-fg"}`}
+          >
+            Pusat Lapor
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("jadwal")}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${tab === "jadwal" ? "border-brand text-brand" : "border-transparent text-muted-fg hover:text-fg"}`}
+          >
+            Jadwal Otomatis
+          </button>
+        </div>
+        {tab === "pusat" ? <PusatLaporHero /> : null}
+      </div>
+
+      {tab === "jadwal" ? (
+        <>
+          <div className="px-6 pt-2">
+            <ModuleFlow
+              title="Alur Penjadwalan Laporan"
+              description="Langkah menjadwalkan laporan otomatis."
+              steps={LAPORAN_FLOW_STEPS}
+            />
+          </div>
+          <ResourceListPage<Row>
+            eyebrow="Operasional"
+            title="Jadwal Otomatis"
+            description="Pustaka laporan terjadwal."
+            doctype="Laporan Terjadwal"
+            fields={["name", "nama", "report", "periode", "format", "enabled", "next_run", "last_run", "modified"]}
+            rowKey={(r) => r.name}
+            columns={COLUMNS}
+            defaultSort={{ key: "modified", dir: "desc" }}
+            searchFields={["name", "nama", "report"]}
+            selectFilters={[
+              { key: "periode", label: "Periode", field: "periode", options: PERIODE_OPTS },
+              { key: "format", label: "Format", field: "format", options: FORMAT_OPTS },
+            ]}
+            addLabel="Jadwalkan Laporan"
+            onAdd={() => setOpen(true)}
+          />
+          <ResourceCreateModal
+            open={open}
+            onClose={() => setOpen(false)}
+            doctype="Laporan Terjadwal"
+            title="Jadwalkan Laporan"
+            description="Buat jadwal laporan terjadwal baru."
+            fields={LAPORAN_TERJADWAL_FIELDS}
+          />
+        </>
+      ) : null}
     </>
   );
 }

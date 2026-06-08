@@ -66,6 +66,30 @@ export function computeDueState(
   return { dueDate, state };
 }
 
+/** An obligation paired with its computed due date + state. */
+export interface KewajibanWithDue {
+  kewajiban: Kewajiban;
+  dueDate: string;
+  state: DueState;
+}
+
+const URGENCY_RANK: Record<DueState, number> = { overdue: 0, "due-soon": 1, upcoming: 2 };
+
+/** Sort obligations by urgency (overdue → due-soon → upcoming, then by due date). */
+export function sortKewajibanByUrgency(
+  items: readonly Kewajiban[],
+  refDate: Date,
+): KewajibanWithDue[] {
+  return items
+    .map((kewajiban) => {
+      const { dueDate, state } = computeDueState(kewajiban.periode, kewajiban.dueDay, refDate);
+      return { kewajiban, dueDate, state };
+    })
+    .sort(
+      (a, b) => URGENCY_RANK[a.state] - URGENCY_RANK[b.state] || a.dueDate.localeCompare(b.dueDate),
+    );
+}
+
 /** TU reporting obligations — v1 config (seeded from the 6 TU compliance reports). */
 export const KEWAJIBAN_TU: Kewajiban[] = [
   {

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { computeDueState, KEWAJIBAN_TU, type Kewajiban } from "./kewajiban";
+import {
+  computeDueState,
+  sortKewajibanByUrgency,
+  KEWAJIBAN_TU,
+  type Kewajiban,
+} from "./kewajiban";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00`);
 
@@ -33,5 +38,24 @@ describe("laporan kewajiban — KEWAJIBAN_TU config", () => {
     const reports = KEWAJIBAN_TU.flatMap((k) => k.paket.map((p) => p.reportName));
     expect(reports).toContain("Siswa Missing NISN");
     expect(reports).toContain("Data Siswa Dapodik");
+  });
+});
+
+describe("laporan kewajiban — sortKewajibanByUrgency", () => {
+  const k = (id: string, dueDay: number): Kewajiban => ({
+    id,
+    nama: id,
+    target: "Dinas",
+    periode: "Bulanan",
+    dueDay,
+    paket: [{ reportName: "X", defaultFmt: "xlsx" }],
+  });
+
+  it("orders overdue first, then due-soon, then upcoming", () => {
+    const ref = new Date("2026-06-10T00:00:00");
+    // dueDay 5 → overdue, dueDay 12 → due-soon, dueDay 28 → upcoming
+    const sorted = sortKewajibanByUrgency([k("late", 5), k("soon", 12), k("far", 28)], ref);
+    expect(sorted.map((s) => s.kewajiban.id)).toEqual(["late", "soon", "far"]);
+    expect(sorted[0]!.state).toBe("overdue");
   });
 });
