@@ -11,6 +11,7 @@ import { PusatLaporHero } from "../components/laporan/PusatLaporHero";
 import { KotakMasalahData } from "../components/laporan/KotakMasalahData";
 import { SemuaLaporanCatalog } from "../components/laporan/SemuaLaporanCatalog";
 import { SusunPaket } from "../components/laporan/SusunPaket";
+import { KalenderWajibLapor } from "../components/laporan/KalenderWajibLapor";
 
 type LaporanTab = "pusat" | "katalog" | "jadwal";
 
@@ -113,6 +114,7 @@ function LaporanPage() {
         </div>
         {tab === "pusat" ? (
           <>
+            <KalenderWajibLapor />
             <KotakMasalahData sekolah={sekolah} />
             <PusatLaporHero onSusun={setSusunKewajiban} />
           </>
