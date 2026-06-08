@@ -115,7 +115,7 @@ function LaporanPage() {
             <PusatLaporHero />
           </>
         ) : null}
-        {tab === "katalog" ? <SemuaLaporanCatalog /> : null}
+        {tab === "katalog" ? <SemuaLaporanCatalog sekolah={sekolah} /> : null}
       </div>
 
       {tab === "jadwal" ? (

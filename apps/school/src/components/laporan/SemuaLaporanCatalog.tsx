@@ -8,8 +8,9 @@
  */
 import { useMemo, useState } from "react";
 import { useResourceList } from "@sekolahpro/api-client";
-import { SectionCard, Badge } from "@sekolahpro/ui";
+import { SectionCard, Badge, Button } from "@sekolahpro/ui";
 import { resolveChannel, type ReportChannel } from "../../lib/laporan/reportChannel";
+import { RunPanel } from "./RunPanel";
 
 interface ReportRow {
   name: string;
@@ -33,13 +34,18 @@ function deskUrl(reportName: string): string {
   return `/app/query-report/${encodeURIComponent(reportName)}`;
 }
 
-export function SemuaLaporanCatalog() {
+export interface SemuaLaporanCatalogProps {
+  sekolah: string;
+}
+
+export function SemuaLaporanCatalog({ sekolah }: SemuaLaporanCatalogProps) {
   const q = useResourceList<ReportRow>("Report", {
     fields: ["name", "module", "report_type", "disabled"],
     filters: [["disabled", "=", 0]],
     limit_page_length: 0,
   });
   const [search, setSearch] = useState("");
+  const [runReport, setRunReport] = useState<string | null>(null);
 
   const grouped = useMemo(() => {
     const rows = (q.data ?? []).filter(
@@ -56,6 +62,7 @@ export function SemuaLaporanCatalog() {
   }, [q.data, search]);
 
   return (
+    <>
     <SectionCard
       title={
         <span className="flex items-center gap-2">
@@ -90,14 +97,20 @@ export function SemuaLaporanCatalog() {
                       <span className="min-w-0 truncate font-medium text-fg">{r.name}</span>
                       <span className="flex shrink-0 items-center gap-2">
                         <Badge tone={CHANNEL_TONE[ch]}>{CHANNEL_LABEL[ch]}</Badge>
-                        <a
-                          href={deskUrl(r.name)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-brand hover:underline"
-                        >
-                          Buka →
-                        </a>
+                        {ch === "desk" ? (
+                          <a
+                            href={deskUrl(r.name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-brand hover:underline"
+                          >
+                            Buka →
+                          </a>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => setRunReport(r.name)}>
+                            Jalankan
+                          </Button>
+                        )}
                       </span>
                     </li>
                   );
@@ -108,5 +121,12 @@ export function SemuaLaporanCatalog() {
         </div>
       )}
     </SectionCard>
+    <RunPanel
+      open={!!runReport}
+      onClose={() => setRunReport(null)}
+      report={runReport ?? ""}
+      sekolah={sekolah}
+    />
+    </>
   );
 }
