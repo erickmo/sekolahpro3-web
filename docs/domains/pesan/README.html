@@ -18,6 +18,25 @@
   <h1>Pesan</h1>
   <p class="muted">Modul komunikasi internal sekolah dengan sistem inbox/outbox untuk pesan masuk dari formulir kontak publik, kanal terjadwal, serta reply inline. Hub operasional di <code>/sch/:sekolah/pesan</code> (school) dan <code>/pesan</code> (parent/student).</p>
 
+  <h2>Implementasi Role-Sliced (Fase 1, 2026-06-08)</h2>
+  <p>Hasil tournament desain (3 POV: Tata Usaha / Guru / Kepala Sekolah, lihat
+  <code>apps/school/docs/superpowers/plans/2026-06-08-pesan-tournament-*.md</code>). Route datar
+  <code>sch.$sekolah.pesan.tsx</code> dipecah menjadi <strong>satu modul role-sliced</strong> (bukan 3 fork):
+  layout tipis <code>ModuleShell</code> + <code>sch.$sekolah.pesan.index.tsx</code> yang melakukan
+  <em>satu</em> percabangan peran via <code>lib/pesanRole.ts</code> (<code>usePesanRole</code>):</p>
+  <ul>
+    <li><strong>kepsek</strong> &rarr; <code>PanelKepsek</code> — kokpit pengawasan zero-click (verdikt + 3 sinyal SLA dari
+      <code>lib/pesanSla.ts</code> atas Contact Inbox nyata).</li>
+    <li><strong>guru</strong> &rarr; redirect <code>/pesan/saya</code> (<code>PesanWaliSaya</code>) — permukaan "Pesan Wali".</li>
+    <li><strong>tu</strong> / fallback &rarr; <code>MasukDesk</code> — inbox split-pane lama (perilaku tak berubah, zero-regression).</li>
+  </ul>
+  <p>Shared libs baru (semua TDD, role = presentation hint, akses tetap di backend):
+  <code>pesanRole</code>, <code>pesanSla</code>, <code>pesanApproval</code> (gate Kepsek single — TIDAK reuse
+  <code>kelasApproval</code> yang ter-hardcode ke workflow Mutasi), <code>pesanNav</code>, <code>lib/pesan/{compose,inbox}</code>.
+  Pengiriman outbound (broadcast / Pesan Wali) memakai <em>queue</em> Mobile Outbox dengan label jujur
+  "Antre" (bukan "Terkirim") karena gateway belum dikonfirmasi; composer broadcast + Meja Persetujuan + thread 2-arah
+  menunggu doctype backend (<code>Pesan Broadcast</code>, <code>Pesan Wali</code>, <code>Pengaturan Pesan</code>) di repo Frappe terpisah.</p>
+
   <h2>Arsitektur</h2>
   <ul>
     <li><strong>Backend Frappe module:</strong> <code>sekolahpro.api.parent.list_pesan</code> (inferred backend logic; repo terpisah)</li>
