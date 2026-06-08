@@ -14,6 +14,7 @@
  */
 import { useMemo, useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   PageHeader,
   SectionCard,
@@ -38,6 +39,7 @@ import { computeDefects, totalDefects, type BoardRombelRow } from "../../lib/kel
 import { DefectGate } from "./DefectGate";
 import { FixItTray } from "./FixItTray";
 import { RolloverDrawer } from "./RolloverDrawer";
+import { OrphanTray } from "./OrphanTray";
 
 const QUICK_LINKS = [
   { to: "/sch/$sekolah/kelas/daftar", label: "Daftar Kelas", icon: <IconBook /> },
@@ -47,6 +49,7 @@ const QUICK_LINKS = [
 
 export function PapanKelas() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const qc = useQueryClient();
 
   const taQuery = useResourceList<TahunAjaranRow>("Tahun Ajaran", {
     fields: ["name", "nama", "is_current", "status", "tanggal_mulai", "tanggal_selesai"],
@@ -193,15 +196,12 @@ export function PapanKelas() {
           }}
         />
 
-        <SectionCard
-          title="Belum Berkelas"
-          description="Siswa aktif tanpa rombel di TA ini."
-        >
-          <div className="py-2 text-sm text-muted-fg">
-            Menunggu endpoint <code>siswa_belum_berkelas</code> (fase backend) untuk
-            mendeteksi siswa orphan dan menempatkannya.
-          </div>
-        </SectionCard>
+        <OrphanTray
+          sekolah={sekolah}
+          tahunAjaran={ta}
+          rombelOptions={rows}
+          onPlaced={() => qc.invalidateQueries({ queryKey: ["resource:list", "Rombongan Belajar"] })}
+        />
       </div>
 
       <SectionCard title="Navigasi" description="Kelola struktur rombel.">
