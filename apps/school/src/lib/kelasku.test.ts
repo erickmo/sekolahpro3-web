@@ -5,8 +5,10 @@ import {
   normalizePhone,
   waLink,
   telLink,
+  pickWaliContact,
   type KelaskuRombel,
   type KelaskuAnggota,
+  type WaliRow,
 } from "./kelasku";
 
 const r = (name: string): KelaskuRombel => ({ name, nama_rombel: name, status: "Aktif" });
@@ -56,5 +58,30 @@ describe("kelasku — contact links", () => {
   it("builds wa.me and tel links", () => {
     expect(waLink("08123456")).toBe("https://wa.me/628123456");
     expect(telLink("08123456")).toBe("tel:+628123456");
+  });
+});
+
+describe("kelasku — pickWaliContact", () => {
+  const wali: WaliRow[] = [
+    { nama: "Ayah", hubungan: "Ayah", no_hp: "0811" },
+    { nama: "Ibu", hubungan: "Ibu", no_hp: "0822", is_primary: 1 },
+  ];
+
+  it("prefers the primary wali that has a phone", () => {
+    expect(pickWaliContact(wali)?.nama).toBe("Ibu");
+  });
+
+  it("falls back to the first wali with a phone when none is primary", () => {
+    expect(
+      pickWaliContact([
+        { nama: "A", no_hp: "" },
+        { nama: "B", no_hp: "0833" },
+      ])?.nama,
+    ).toBe("B");
+  });
+
+  it("returns undefined when no wali has a phone", () => {
+    expect(pickWaliContact([{ nama: "X" }])).toBeUndefined();
+    expect(pickWaliContact([])).toBeUndefined();
   });
 });

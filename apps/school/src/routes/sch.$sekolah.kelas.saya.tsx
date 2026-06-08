@@ -23,6 +23,7 @@ import {
 import { aggregatePresence, type AbsensiDetailRow } from "../lib/presence";
 import { collectRiskFlags, type EntriNilaiRow } from "../lib/kelasRisk";
 import { CatatanWaliPanel } from "../components/kelas/CatatanWaliPanel";
+import { StudentSheet } from "../components/kelas/StudentSheet";
 
 interface RombelDoc extends KelaskuRombel {
   anggota?: KelaskuAnggota[];
@@ -56,6 +57,7 @@ function KelaskuPage() {
   });
 
   const [preferred, setPreferred] = useState<string | undefined>();
+  const [sheetSiswa, setSheetSiswa] = useState<string | null>(null);
   const res = resolveKelasku(rombelQuery.data ?? [], preferred);
   const activeName = res.kind === "none" ? "" : res.kind === "one" ? res.rombel.name : res.active.name;
 
@@ -147,7 +149,10 @@ function KelaskuPage() {
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand/10 text-xs font-semibold tabular-nums text-brand">
                   {a.no_urut ?? "—"}
                 </span>
-                <span className="min-w-0 truncate font-medium text-fg">{a.siswa}</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-fg">{a.siswa}</span>
+                <Button size="sm" variant="outline" onClick={() => setSheetSiswa(a.siswa)}>
+                  Hubungi
+                </Button>
               </li>
             ))}
           </ul>
@@ -209,6 +214,12 @@ function KelaskuPage() {
         rombel={active.name}
         sekolah={sekolah}
         siswaOptions={rosterIds}
+      />
+
+      <StudentSheet
+        open={!!sheetSiswa}
+        onClose={() => setSheetSiswa(null)}
+        siswa={sheetSiswa ?? ""}
       />
     </div>
   );

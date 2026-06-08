@@ -70,3 +70,21 @@ export function waLink(phone: string): string {
 export function telLink(phone: string): string {
   return `tel:+${normalizePhone(phone)}`;
 }
+
+/** A Wali Siswa child row (parent contact). */
+export interface WaliRow {
+  nama?: string;
+  hubungan?: string;
+  no_hp?: string;
+  email?: string;
+  is_primary?: 0 | 1 | boolean;
+}
+
+/**
+ * Pick the wali to contact: the primary wali with a phone, else the first wali
+ * with a phone. Returns undefined when no wali has a phone number.
+ */
+export function pickWaliContact(wali: readonly WaliRow[]): WaliRow | undefined {
+  const withPhone = wali.filter((w) => !!w.no_hp && String(w.no_hp).trim() !== "");
+  return withPhone.find((w) => w.is_primary) ?? withPhone[0];
+}
