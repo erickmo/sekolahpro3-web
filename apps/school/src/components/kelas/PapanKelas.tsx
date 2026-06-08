@@ -41,6 +41,7 @@ import { FixItTray } from "./FixItTray";
 import { RolloverDrawer } from "./RolloverDrawer";
 import { OrphanTray } from "./OrphanTray";
 import { GeneratorModal } from "./GeneratorModal";
+import { BumpModal } from "./BumpModal";
 
 const QUICK_LINKS = [
   { to: "/sch/$sekolah/kelas/daftar", label: "Daftar Kelas", icon: <IconBook /> },
@@ -61,6 +62,7 @@ export function PapanKelas() {
   const [override, setOverride] = useState<string | undefined>();
   const [rolloverOpen, setRolloverOpen] = useState(false);
   const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [bumpRombel, setBumpRombel] = useState<string | null>(null);
   const refetchBoard = () =>
     qc.invalidateQueries({ queryKey: ["resource:list", "Rombongan Belajar"] });
   const storedTa = readStoredPeriode(sekolah).ta;
@@ -193,10 +195,13 @@ export function PapanKelas() {
                 >
                   {r.nama_rombel ?? r.name}
                 </Link>
-                <span
-                  className={`shrink-0 tabular-nums text-xs ${over ? "text-rose-500" : "text-amber-600"}`}
-                >
-                  {isi}/{cap}
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className={`tabular-nums text-xs ${over ? "text-rose-500" : "text-amber-600"}`}>
+                    {isi}/{cap}
+                  </span>
+                  <Button size="sm" variant="outline" onClick={() => setBumpRombel(r.name)}>
+                    Kelola
+                  </Button>
                 </span>
               </div>
             );
@@ -243,6 +248,13 @@ export function PapanKelas() {
         sekolah={sekolah}
         tahunAjaran={ta}
         onCreated={refetchBoard}
+      />
+
+      <BumpModal
+        open={!!bumpRombel}
+        onClose={() => setBumpRombel(null)}
+        rombel={bumpRombel ?? ""}
+        onDone={refetchBoard}
       />
     </div>
   );
