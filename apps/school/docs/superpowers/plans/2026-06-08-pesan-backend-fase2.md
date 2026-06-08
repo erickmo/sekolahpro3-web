@@ -18,6 +18,17 @@ roster-inline + thread 2-arah (Guru). Semua butuh doctype backend di bawah.
 
 Cross-repo contract; bila salah → rework field-contract (gotcha OCR/absensi memory).
 
+### ✅ KEPUTUSAN TERKUNCI (2026-06-08)
+
+| # | Pertanyaan | Jawaban | Konsekuensi desain |
+|---|---|---|---|
+| 1 | Gateway WA/Email live? | **Ya, di BE** | Kirim NYATA. Status **per channel**: WA deep-link = hand-off → label "Antre/Terkirim — via WhatsApp" (tak terkonfirmasi); Email/InApp lewat gateway → "Terkirim" terkonfirmasi (dari Email Queue / status worker). Fan-out boleh promise delivery utk Email/InApp, TIDAK utk WA. |
+| 2 | Model multi-tenant | **Shared site, row-level `sekolah`** | Isolasi = baris, BUKAN site. ⇒ **`permission_query_conditions` hooks WAJIB** tiap doctype baru (Pesan Broadcast / Pesan Wali / Pengaturan Pesan) + register `tenant_registry`. ⇒ native `Email Template` (global, tanpa `sekolah`) **BISA bocor antar-sekolah** → template HARUS tenant-scoped (lihat §1a). Semua read (audience resolve, comm_health) WAJIB filter `sekolah` server-side. |
+| 3 | Status/kirim per channel | **Set per channel** | `compose.ts` `queuedLabel` + status BE dipetakan per channel (WA vs Email vs InApp), bukan satu vocab global. |
+| 3b | Scope guru (mapel vs homeroom) | **Homeroom-only (Fase 1, default least-privilege)** | `permission_query` Pesan Wali batasi guru ke siswa `wali_kelas==user`. Expand ke mapel-scope (Anggota Rombel ∩ mapel) saat resolver teach-roster ada. Override bila org mau mapel-scope sekarang. |
+
+Sisa item §0 (4=scope guru sudah dijawab 3b; 5/6/7/8) tetap perlu konfirmasi sebelum kode terkait.
+
 1. **Gateway live?** Apakah worker WA/Email yang konsumsi `Mobile Outbox Entry` benar-benar
    jalan + akan kenal op baru (`send_broadcast`/`send_pesan_wali`/`send_announcement`)? Bila
    belum → semua "Terkirim" aspiratif; FE tetap label "Antre". **Jawaban menentukan apakah
@@ -71,6 +82,18 @@ Fields:
 - **Routing approval (fail-SAFE)**: bila `Pengaturan Pesan.wajib_persetujuan_resmi` ATAU
   `total_penerima ≥ ambang_persetujuan` → submit masuk `Menunggu Kepsek`; else kirim langsung.
   Default bila Single belum ada = WAJIB approval (jangan fail-open).
+
+## §1a — Template tenant-scoped (konsekuensi §0.2 shared-row-level)
+
+Karena shared site row-level, native `Email Template` (tanpa field `sekolah`) bocor antar-sekolah.
+Pilihan (rekomendasi **B**):
+- **A.** Custom Field `sekolah` (Link) di `Email Template` + `permission_query_conditions` →
+  reuse engine native, minim doctype baru. Risiko: patch perilaku doctype core.
+- **B. (rekomendasi)** Doctype baru `Pesan Template` (sekolah-anchored, tenant-register):
+  `judul`, `kategori`, `subjek`, `isi` (merge tags `{{nama_wali}}/{{nama_siswa}}/{{nominal}}`),
+  `channel` (WA/Email/Notif), `aktif`, `sekolah`. Fixture-seed default per sekolah. FE
+  `TemplatePicker` baca dari sini (bukan Email Template global). Render merge server-side.
+  Menggabung kebutuhan template TU broadcast + Guru Pesan Wali → satu store, tak dobel.
 
 ## §2 — Doctype `Pesan Wali` (Guru, thread 2-arah)
 
@@ -126,7 +149,9 @@ Fields:
 
 Gotcha (memory absensi): CI gate = `bench --site … run-tests` (unittest); pytest absen di
 container. Tulis `FrappeTestCase`. Pakai `make_*_fixture` yang ada. Cakupan:
-- Tenant-scope: `Pesan Broadcast`/`Pesan Wali`/`Pengaturan Pesan` tak bocor antar sekolah (registry).
+- Tenant-scope (KRITIS, §0.2 row-level): user sekolah A TIDAK bisa baca/list `Pesan Broadcast`/
+  `Pesan Wali`/`Pengaturan Pesan`/`Pesan Template` sekolah B — uji `permission_query_conditions`
+  langsung (registry saja TIDAK cukup pada shared-row-level). Termasuk audience resolve + comm_health.
 - Fan-out `on_submit`: N penerima → N Mobile Outbox rows, op + idempotency_key benar.
 - Workflow transitions: Draf→Menunggu Kepsek→Disetujui; hanya role Kepala Sekolah boleh Approve.
 - Routing fail-safe: Single absen → wajib approval; `total_penerima ≥ N` → Menunggu Kepsek.
@@ -136,14 +161,17 @@ container. Tulis `FrappeTestCase`. Pakai `make_*_fixture` yang ada. Cakupan:
 ## §7 — Build order
 
 ```
-0. Sepakati §0 (gateway + nama + signature + multi-tenant + scope). Kunci kontrak.
-1. Pengaturan Pesan Single + register + tests (config dulu, dipakai routing).
-2. resolve_pesan_audience + pesan_comm_health + tests (read-only, low risk).
-3. Pesan Broadcast doctype + Workflow fixture + on_submit fan-out + register + tests.
-4. Pesan Wali doctype + on_insert + permission_query + register + tests.
-5. parent.list_pesan 2-arah + jembatan broadcast Contact Inbox nis=null + tests.
-6. bench migrate + restart; verifikasi op baru dikenali gateway worker.
-7. (web repo) Flip FE seams: buka composer/Meja/thread, ganti label "Antre"→status nyata
+0. ✅ §0 terkunci (gateway=live, tenancy=shared-row-level, status=per-channel, guru=homeroom F1).
+   Sisa: kunci nama/op/signature + N + SLA semantics + scope reply parent (§0.5–8).
+1. Pengaturan Pesan Single + register + permission_query + tests (config dulu, dipakai routing).
+2. Pesan Template doctype (§1a-B) + register + permission_query + fixture seed + tests.
+3. resolve_pesan_audience + pesan_comm_health + tests (read-only, WAJIB filter sekolah).
+4. Pesan Broadcast doctype + Workflow fixture + on_submit fan-out (status per-channel) + register + permission_query + tests.
+5. Pesan Wali doctype + on_insert + permission_query (homeroom-only F1) + register + tests.
+6. parent.list_pesan 2-arah + jembatan broadcast Contact Inbox nis=null + tests.
+7. bench migrate + restart; verifikasi op baru (send_broadcast/send_pesan_wali/send_announcement)
+   dikenali gateway worker + status balik per-channel benar.
+8. (web repo) Flip FE seams: buka composer/Meja/thread, ganti label "Antre"→status nyata
    per channel, hapus stub "menunggu aktivasi server". Re-verify tsc/eslint/vitest/build.
 ```
 
