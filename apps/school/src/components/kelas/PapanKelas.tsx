@@ -40,6 +40,7 @@ import { DefectGate } from "./DefectGate";
 import { FixItTray } from "./FixItTray";
 import { RolloverDrawer } from "./RolloverDrawer";
 import { OrphanTray } from "./OrphanTray";
+import { GeneratorModal } from "./GeneratorModal";
 
 const QUICK_LINKS = [
   { to: "/sch/$sekolah/kelas/daftar", label: "Daftar Kelas", icon: <IconBook /> },
@@ -59,6 +60,9 @@ export function PapanKelas() {
 
   const [override, setOverride] = useState<string | undefined>();
   const [rolloverOpen, setRolloverOpen] = useState(false);
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const refetchBoard = () =>
+    qc.invalidateQueries({ queryKey: ["resource:list", "Rombongan Belajar"] });
   const storedTa = readStoredPeriode(sekolah).ta;
   const resolved = resolveTahunAjaran(
     taList,
@@ -121,6 +125,9 @@ export function PapanKelas() {
                 ))}
               </select>
             </label>
+            <Button size="sm" variant="outline" onClick={() => setGeneratorOpen(true)}>
+              Buat Rombel
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setRolloverOpen(true)}>
               Naik Kelas
             </Button>
@@ -200,7 +207,7 @@ export function PapanKelas() {
           sekolah={sekolah}
           tahunAjaran={ta}
           rombelOptions={rows}
-          onPlaced={() => qc.invalidateQueries({ queryKey: ["resource:list", "Rombongan Belajar"] })}
+          onPlaced={refetchBoard}
         />
       </div>
 
@@ -228,6 +235,14 @@ export function PapanKelas() {
         rombelOptions={rows}
         taOptions={taList}
         defaultTaAsal={ta}
+      />
+
+      <GeneratorModal
+        open={generatorOpen}
+        onClose={() => setGeneratorOpen(false)}
+        sekolah={sekolah}
+        tahunAjaran={ta}
+        onCreated={refetchBoard}
       />
     </div>
   );
