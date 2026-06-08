@@ -9,8 +9,9 @@ import { MISC_PAGE_GUIDES } from "../components/guide/miscPageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { PusatLaporHero } from "../components/laporan/PusatLaporHero";
 import { KotakMasalahData } from "../components/laporan/KotakMasalahData";
+import { SemuaLaporanCatalog } from "../components/laporan/SemuaLaporanCatalog";
 
-type LaporanTab = "pusat" | "jadwal";
+type LaporanTab = "pusat" | "katalog" | "jadwal";
 
 // Wired to backend DocType: "Laporan Terjadwal"
 // /Users/erickmo/Desktop/Project/frappe/apps/sekolahpro/sekolahpro/laporan/doctype/laporan_terjadwal
@@ -95,6 +96,13 @@ function LaporanPage() {
           </button>
           <button
             type="button"
+            onClick={() => setTab("katalog")}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${tab === "katalog" ? "border-brand text-brand" : "border-transparent text-muted-fg hover:text-fg"}`}
+          >
+            Semua Laporan
+          </button>
+          <button
+            type="button"
             onClick={() => setTab("jadwal")}
             className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${tab === "jadwal" ? "border-brand text-brand" : "border-transparent text-muted-fg hover:text-fg"}`}
           >
@@ -107,6 +115,7 @@ function LaporanPage() {
             <PusatLaporHero />
           </>
         ) : null}
+        {tab === "katalog" ? <SemuaLaporanCatalog /> : null}
       </div>
 
       {tab === "jadwal" ? (
