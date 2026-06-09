@@ -118,7 +118,7 @@ function AkademikHubPage() {
   useEffect(() => {
     if (search.pick) return;
     if (taList.length === 0) return;
-    const target = pickAutoRedirectTa(readStoredPeriode(sekolah).ta, taList);
+    const target = pickAutoRedirectTa(readStoredPeriode(sekolah).ta, taList, new Date());
     if (target) {
       navigate({
         to: "/sch/$sekolah/akademik/$ta",
@@ -202,6 +202,27 @@ function AkademikHubPage() {
           ) : null}
         </>
       )}
+
+      {/* Always-visible pointer to next-year admission. The hub only shows
+          "Berjalan + Arsip", which silently denies that a future year exists;
+          beginners searching for "tahun depan" must find it here, not phone TU
+          (debate critic must-fix #5). PPDB is intentionally a separate module. */}
+      <SectionCard
+        title="Tahun Depan"
+        description="Penerimaan murid baru untuk tahun ajaran berikutnya dikelola di modul PPDB."
+      >
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg p-4">
+          <div className="min-w-0">
+            <span className="font-semibold text-fg">Pendaftaran Murid Baru</span>
+            <p className="mt-0.5 text-xs text-muted-fg">
+              Gelombang &amp; calon siswa untuk tahun ajaran depan.
+            </p>
+          </div>
+          <Link to="/sch/$sekolah/ppdb" params={{ sekolah }} className="shrink-0">
+            <Button variant="outline">Buka PPDB →</Button>
+          </Link>
+        </div>
+      </SectionCard>
     </div>
   );
 }
