@@ -14,13 +14,18 @@ import {
   SearchableSelect,
   SetupBanner,
   IconUsers,
-  IconClock,
-  IconCheck,
   IconCalendar,
   type SearchableOption,
 } from "@sekolahpro/ui";
 import { useAkademikContext } from "../../lib/akademikContext";
 import { useAkademikRole, ROLE_LABEL } from "../../lib/akademikRole";
+import { resolvePeriodeStatus } from "../../lib/akademikPeriode";
+import { PeriodeStatusBadge } from "../shell/PeriodeStatusBadge";
+
+// Period-status vocabulary now lives in lib/akademikPeriode (single source,
+// shared with the cross-module StripTahun). Re-exported here for the existing
+// consumers/tests that import it from this module.
+export { resolvePeriodeStatus, STATUS_LABEL } from "../../lib/akademikPeriode";
 
 const SEMESTER_OPTIONS: SearchableOption[] = [
   { value: "Ganjil", label: "Ganjil" },
@@ -28,47 +33,6 @@ const SEMESTER_OPTIONS: SearchableOption[] = [
 ];
 
 const SWITCH_CONFIRM = "Ganti semester? Perubahan yang belum disimpan akan hilang.";
-
-/** Status periode terpilih → menentukan warna & label indikator di bar. */
-type PeriodeStatus = "aktif" | "lampau" | "belum-aktif";
-
-/** Subset BadgeTone bawaan komponen Badge yang dipakai bar ini. */
-type BarBadgeTone = "success" | "warning" | "neutral";
-
-/** Tentukan status periode dari flag konteks (tanpa memanggil data baru). */
-export function resolvePeriodeStatus(noActiveTa: boolean, isPastPeriod: boolean): PeriodeStatus {
-  if (noActiveTa) return "belum-aktif";
-  if (isPastPeriod) return "lampau";
-  return "aktif";
-}
-
-/**
- * Tone Badge per status periode. Memakai BadgeTone bawaan komponen Badge
- * ("success"/"warning"/"neutral"), bukan palet Tone viz.
- */
-const STATUS_TONE: Record<PeriodeStatus, BarBadgeTone> = {
-  aktif: "success",
-  lampau: "warning",
-  "belum-aktif": "neutral",
-};
-
-export const STATUS_LABEL: Record<PeriodeStatus, string> = {
-  aktif: "Periode berjalan",
-  lampau: "Periode lampau",
-  "belum-aktif": "Belum ada TA aktif",
-};
-
-/** Badge kecil penanda status periode aktif di sebelah selector. */
-function PeriodeStatusBadge({ status }: { status: PeriodeStatus }) {
-  const Icon = status === "aktif" ? IconCheck : IconClock;
-  return (
-    <Badge tone={STATUS_TONE[status]} className="gap-1">
-      {/* shrink-0 so the glyph keeps its fixed size inside the flex badge */}
-      <Icon className="h-3 w-3 shrink-0" aria-hidden />
-      {STATUS_LABEL[status]}
-    </Badge>
-  );
-}
 
 /** Badge peran pengguna aktif — hanya untuk framing, tidak membatasi fitur. */
 function RoleBadge() {

@@ -115,6 +115,37 @@ export function isPastPeriod(ta: TahunAjaranRow | undefined, refDate: Date): boo
   return false;
 }
 
+// ── Status periode (vocabulary tunggal, dipakai chrome lintas-modul) ──────────
+// Tetap pure/JSX-free: data + logika status saja. Komponen badge-nya hidup di
+// components/shell/PeriodeStatusBadge.
+
+/** Status periode terpilih → menentukan warna & label indikator di chrome. */
+export type PeriodeStatus = "aktif" | "lampau" | "belum-aktif";
+
+/** Subset BadgeTone (komponen Badge) yang dipakai badge status periode. */
+export type PeriodeBadgeTone = "success" | "warning" | "neutral";
+
+/** Tentukan status periode dari flag konteks (tanpa memanggil data baru). */
+export function resolvePeriodeStatus(noActiveTa: boolean, isPastPeriod: boolean): PeriodeStatus {
+  if (noActiveTa) return "belum-aktif";
+  if (isPastPeriod) return "lampau";
+  return "aktif";
+}
+
+/** Tone Badge per status periode (BadgeTone bawaan, bukan palet viz). */
+export const STATUS_TONE: Record<PeriodeStatus, PeriodeBadgeTone> = {
+  aktif: "success",
+  lampau: "warning",
+  "belum-aktif": "neutral",
+};
+
+/** Label badge per status periode. */
+export const STATUS_LABEL: Record<PeriodeStatus, string> = {
+  aktif: "Periode berjalan",
+  lampau: "Periode lampau",
+  "belum-aktif": "Belum ada TA aktif",
+};
+
 export interface StoredPeriode {
   ta?: string;
   semester?: string;
