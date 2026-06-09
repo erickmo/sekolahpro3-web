@@ -54,4 +54,29 @@ describe("StripTahun", () => {
     expect(screen.getByText("Tata Usaha")).toBeTruthy();
     expect(screen.getByText(/menampilkan semua tahun ajaran/i)).toBeTruthy();
   });
+
+  it("renders TA as a dropdown (not a read-only badge) when taSwitch is given", () => {
+    render(
+      <StripTahun
+        moduleLabel="Jadwal"
+        taSwitch={{ value: "S-2025", options: [{ value: "S-2025", label: "2025/2026" }], onChange: () => {} }}
+        isPastPeriod={false}
+        noActiveTa={false}
+      />,
+    );
+    // The TA control is now a labelled combobox, not a static badge.
+    expect(screen.getByLabelText("Tahun Ajaran")).toBeTruthy();
+  });
+
+  it("renders a Semester dropdown when semesterSwitch is given", () => {
+    render(
+      <StripTahun
+        moduleLabel="Jadwal"
+        semesterSwitch={{ value: "Ganjil", options: [{ value: "Ganjil", label: "Ganjil" }], onChange: () => {} }}
+        isPastPeriod={false}
+        noActiveTa={false}
+      />,
+    );
+    expect(screen.getByLabelText("Semester")).toBeTruthy();
+  });
 });

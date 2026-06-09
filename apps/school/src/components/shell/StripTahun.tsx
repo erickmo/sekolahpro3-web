@@ -7,15 +7,33 @@
 // choice; it does NOT itself filter any data — pass `note` to say so when the
 // page below is unfiltered. Status vocabulary is shared via lib/akademikPeriode.
 import { Fragment } from "react";
-import { Badge, SetupBanner, IconUsers, IconCalendar } from "@sekolahpro/ui";
+import {
+  Badge,
+  SearchableSelect,
+  SetupBanner,
+  IconUsers,
+  IconCalendar,
+  type SearchableOption,
+} from "@sekolahpro/ui";
 import { resolvePeriodeStatus } from "../../lib/akademikPeriode";
 import { PeriodeStatusBadge } from "./PeriodeStatusBadge";
+
+/** A dropdown the strip can switch (TA or Semester); handlers come from the layout. */
+export interface PeriodSwitch {
+  value: string;
+  options: SearchableOption[];
+  onChange: (v: string) => void;
+}
 
 export interface StripTahunProps {
   /** Module name, rendered as the "Konteks {moduleLabel}" eyebrow. */
   moduleLabel: string;
-  /** Active Tahun Ajaran display name (read-only). Omitted → no TA badge. */
+  /** Active Tahun Ajaran display name (read-only badge). Ignored when taSwitch is set. */
   taLabel?: string;
+  /** When set, render the TA as a dropdown (archive-switchable) instead of a read-only badge. */
+  taSwitch?: PeriodSwitch;
+  /** When set, render a Semester dropdown next to the TA. */
+  semesterSwitch?: PeriodSwitch;
   /** Whether the active period is past/closed (drives 'lampau' + archive banner). */
   isPastPeriod: boolean;
   /** Whether the school has no active TA set (drives 'belum-aktif' + setup nudge). */
@@ -30,6 +48,8 @@ export interface StripTahunProps {
 export function StripTahun({
   moduleLabel,
   taLabel,
+  taSwitch,
+  semesterSwitch,
   isPastPeriod,
   noActiveTa,
   roleLabel,
@@ -46,14 +66,43 @@ export function StripTahun({
           <PeriodeStatusBadge status={status} />
         </div>
 
-        {/* Tahun Ajaran aktif — read-only; modul ini tidak memaksa pilih tahun. */}
-        {taLabel ? (
+        {/* Tahun Ajaran — a dropdown when switchable, else a read-only badge. */}
+        {taSwitch || taLabel ? (
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs text-muted-fg shrink-0">Tahun Ajaran</span>
-            <Badge tone="neutral" className="gap-1 max-w-[12rem]">
-              <IconCalendar className="h-3 w-3 shrink-0" aria-hidden />
-              <span className="truncate">{taLabel}</span>
-            </Badge>
+            <label className="text-xs text-muted-fg shrink-0" htmlFor="strip-tahun-ta">
+              Tahun Ajaran
+            </label>
+            {taSwitch ? (
+              <SearchableSelect
+                id="strip-tahun-ta"
+                value={taSwitch.value}
+                onChange={taSwitch.onChange}
+                options={taSwitch.options}
+                placeholder="Pilih TA…"
+                className="w-48"
+              />
+            ) : (
+              <Badge tone="neutral" className="gap-1 max-w-[12rem]">
+                <IconCalendar className="h-3 w-3 shrink-0" aria-hidden />
+                <span className="truncate">{taLabel}</span>
+              </Badge>
+            )}
+          </div>
+        ) : null}
+
+        {semesterSwitch ? (
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-muted-fg shrink-0" htmlFor="strip-tahun-semester">
+              Semester
+            </label>
+            <SearchableSelect
+              id="strip-tahun-semester"
+              value={semesterSwitch.value}
+              onChange={semesterSwitch.onChange}
+              options={semesterSwitch.options}
+              placeholder="Pilih semester…"
+              className="w-44"
+            />
           </div>
         ) : null}
 

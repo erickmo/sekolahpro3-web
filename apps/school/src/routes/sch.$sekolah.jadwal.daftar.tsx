@@ -7,6 +7,7 @@ import { JADWAL_PELAJARAN_FIELDS } from "../data/create-schemas";
 import { PageGuide } from "../components/guide";
 import { JADWAL_PAGE_GUIDES } from "../components/jadwal/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
+import { useJadwalPeriode } from "../lib/jadwalPeriode";
 
 // TODO(/jadwal/daftar): Jadwal Pelajaran header doctype only has
 // {name, rombel, semester, tahun_ajaran, kurikulum, is_aktif}.
@@ -39,6 +40,9 @@ const COLUMNS: Column<Row>[] = [
 
 function JadwalDaftarPage() {
   const [open, setOpen] = useState(false);
+  // Scope the list to the selected Tahun Ajaran; gate creation when it's an
+  // archived/past year (read-only). The strip above explains the archive state.
+  const { tahunAjaran, isPastPeriod } = useJadwalPeriode();
   return (
     <div className="space-y-6">
       <PageGuide
@@ -59,8 +63,9 @@ function JadwalDaftarPage() {
         columns={COLUMNS}
         defaultSort={{ key: "name", dir: "asc" }}
         searchFields={["name", "rombel"]}
+        {...(tahunAjaran ? { baseFilters: [["tahun_ajaran", "=", tahunAjaran]] } : {})}
         addLabel="Tambah Jadwal"
-        onAdd={() => setOpen(true)}
+        {...(isPastPeriod ? {} : { onAdd: () => setOpen(true) })}
       />
       <ResourceCreateModal
         open={open}

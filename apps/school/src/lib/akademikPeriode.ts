@@ -151,14 +151,16 @@ export interface StoredPeriode {
   semester?: string;
 }
 
-function storageKey(sekolah: string): string {
-  return `akademik:periode:${sekolah}`;
+// `ns` namespaces the remembered period per module (akademik/ekskul/jadwal each
+// keep their own active year — auditing a past TA in one must not yank another).
+function storageKey(sekolah: string, ns: string): string {
+  return `${ns}:periode:${sekolah}`;
 }
 
 // localStorage tak tersedia/korup → kembalikan {} (jangan throw).
-export function readStoredPeriode(sekolah: string): StoredPeriode {
+export function readStoredPeriode(sekolah: string, ns = "akademik"): StoredPeriode {
   try {
-    const raw = globalThis.localStorage?.getItem(storageKey(sekolah));
+    const raw = globalThis.localStorage?.getItem(storageKey(sekolah, ns));
     if (!raw) return {};
     const parsed = JSON.parse(raw) as StoredPeriode;
     return parsed && typeof parsed === "object" ? parsed : {};
@@ -167,9 +169,9 @@ export function readStoredPeriode(sekolah: string): StoredPeriode {
   }
 }
 
-export function writeStoredPeriode(sekolah: string, value: StoredPeriode): void {
+export function writeStoredPeriode(sekolah: string, value: StoredPeriode, ns = "akademik"): void {
   try {
-    globalThis.localStorage?.setItem(storageKey(sekolah), JSON.stringify(value));
+    globalThis.localStorage?.setItem(storageKey(sekolah, ns), JSON.stringify(value));
   } catch {
     /* ignore quota/unavailable */
   }
