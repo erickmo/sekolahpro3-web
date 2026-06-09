@@ -6,10 +6,13 @@
  * is a fast-follow (jszip not yet available).
  */
 import { useState } from "react";
+import { frappeFetch } from "@sekolahpro/api-client";
 import { Modal, Button, Badge } from "@sekolahpro/ui";
 import { KEWAJIBAN_TU } from "../../lib/laporan/kewajiban";
 import { resolveChannel, type ReportChannel } from "../../lib/laporan/reportChannel";
 import { runAndSave } from "../../lib/laporan/runReport";
+
+const RECEIPT_DOCTYPE = "Laporan Submission Receipt";
 
 type RowStatus = "idle" | "running" | "done" | "error" | "skip";
 
@@ -44,23 +47,46 @@ export function SusunPaket({ open, onClose, kewajibanId, sekolah }: SusunPaketPr
   const kewajiban = KEWAJIBAN_TU.find((k) => k.id === kewajibanId);
   const [status, setStatus] = useState<Record<string, RowStatus>>({});
   const [busy, setBusy] = useState(false);
+  const [recorded, setRecorded] = useState(false);
 
   async function runAll() {
     if (!kewajiban) return;
     setBusy(true);
+    setRecorded(false);
+    const results: { report: string; status: RowStatus }[] = [];
     for (const ref of kewajiban.paket) {
       const channel = resolveChannel(ref.reportName);
       if (channel === "desk") {
         setStatus((s) => ({ ...s, [ref.reportName]: "skip" }));
+        results.push({ report: ref.reportName, status: "skip" });
         continue;
       }
       setStatus((s) => ({ ...s, [ref.reportName]: "running" }));
       try {
         await runAndSave(ref.reportName, channel, { sekolah, fmt: ref.defaultFmt });
         setStatus((s) => ({ ...s, [ref.reportName]: "done" }));
+        results.push({ report: ref.reportName, status: "done" });
       } catch (_) {
         setStatus((s) => ({ ...s, [ref.reportName]: "error" }));
+        results.push({ report: ref.reportName, status: "error" });
       }
+    }
+    // Best-effort audit receipt (needs the Laporan Submission Receipt doctype).
+    try {
+      await frappeFetch("frappe.client.insert", {
+        doc: {
+          doctype: RECEIPT_DOCTYPE,
+          kewajiban_id: kewajiban.id,
+          nama_paket: kewajiban.nama,
+          periode: `${kewajiban.periode} ${new Date().toISOString().slice(0, 7)}`,
+          target: kewajiban.target,
+          laporan_json: JSON.stringify(results),
+          sekolah,
+        },
+      });
+      setRecorded(true);
+    } catch (_) {
+      // receipt is best-effort; the downloads already succeeded
     }
     setBusy(false);
   }
@@ -87,6 +113,11 @@ export function SusunPaket({ open, onClose, kewajibanId, sekolah }: SusunPaketPr
             );
           })}
         </ul>
+        {recorded ? (
+          <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-700">
+            Tercatat di Riwayat & Bukti.
+          </div>
+        ) : null}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Tutup</Button>
           <Button disabled={busy || !kewajiban} onClick={runAll}>
