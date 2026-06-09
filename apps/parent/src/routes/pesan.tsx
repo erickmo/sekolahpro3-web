@@ -3,16 +3,21 @@ import { PageHeader, SectionCard } from "@sekolahpro/ui";
 import { RequireAuth } from "@sekolahpro/auth";
 import { useActiveChild } from "../lib/activeChild";
 import { usePesanList } from "../data/pesan";
+import { PesanWaliThread } from "../components/PesanWaliThread";
 
 function PesanPage() {
-  const { children } = useActiveChild();
+  const { children, activeNis } = useActiveChild();
   const { data, isLoading } = usePesanList();
   const items = data ?? [];
   const nameByNis = new Map(children.map((c) => [c.nis, c.nama]));
+  const activeChildName = activeNis ? nameByNis.get(activeNis) : undefined;
 
   return (
     <div className="space-y-6">
       <PageHeader title="Pesan" />
+
+      <PesanWaliThread nis={activeNis} childName={activeChildName} />
+
       <SectionCard title="Kotak masuk" padded={false}>
         {isLoading ? (
           <div className="px-5 py-4 text-sm text-muted-fg">Memuat…</div>
