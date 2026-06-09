@@ -12,6 +12,7 @@
  * ("menunggu aktivasi server") rather than faking a send — see the Kepsek tournament plan.
  */
 import { useMemo } from "react";
+import { useParams } from "@tanstack/react-router";
 import {
   Badge,
   Button,
@@ -33,6 +34,7 @@ import {
   type InboxRow,
 } from "../../lib/pesan/inbox";
 import { deriveCommHealth, DEFAULT_SLA_JAM, type CommVerdict } from "../../lib/pesanSla";
+import { useCommHealth } from "../../lib/pesan/pesanApi";
 
 const INBOX_FIELDS = ["name", "nama", "email", "pesan", "status", "submitted_at", "creation"];
 const INBOX_LIMIT = 200;
@@ -57,6 +59,7 @@ function ageJam(row: InboxRow, nowMs: number): number {
 }
 
 export function PanelKepsek() {
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const listQuery = useResourceList<InboxRow>(INBOX_DOCTYPE, {
     fields: INBOX_FIELDS,
     order_by: "creation desc",
@@ -66,9 +69,12 @@ export function PanelKepsek() {
   const items = useMemo<InboxRow[]>(() => listQuery.data ?? [], [listQuery.data]);
   const nowMs = Date.now();
 
+  // Prefer the server's full-inbox signals (BE pesan_comm_health); fall back to the
+  // client estimate over loaded rows while loading / on error so the panel never blanks.
+  const healthQuery = useCommHealth(sekolah);
   const health = useMemo(
-    () => deriveCommHealth(items, DEFAULT_SLA_JAM, nowMs),
-    [items, nowMs],
+    () => healthQuery.data ?? deriveCommHealth(items, DEFAULT_SLA_JAM, nowMs),
+    [healthQuery.data, items, nowMs],
   );
   const stats = useMemo(() => computeInboxStats(items), [items]);
 

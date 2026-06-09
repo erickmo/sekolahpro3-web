@@ -12,6 +12,7 @@
  */
 import { Link, useParams } from "@tanstack/react-router";
 import { PageHeader, SectionCard, IconChat, IconUsers, IconClock } from "@sekolahpro/ui";
+import { TindakLanjutSaya } from "./TindakLanjutSaya";
 
 /** Brand button styling reused for a TanStack Link CTA (Button has no asChild/to prop). */
 const LINK_BUTTON =
@@ -54,16 +55,7 @@ export function PesanWaliSaya() {
         </div>
       </SectionCard>
 
-      <SectionCard title="Tindak Lanjut Saya">
-        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-5 text-center">
-          <p className="text-sm font-medium text-fg">Menunggu aktivasi server</p>
-          <p className="mt-1 text-xs text-muted-fg">
-            Riwayat percakapan dua arah dengan wali aktif setelah doctype
-            <code className="mx-1 rounded bg-muted px-1">Pesan Wali</code>
-            dipasang di backend. Saat ini pesan ke wali dikirim via WhatsApp dari halaman kelas.
-          </p>
-        </div>
-      </SectionCard>
+      <TindakLanjutSaya />
     </div>
   );
 }
