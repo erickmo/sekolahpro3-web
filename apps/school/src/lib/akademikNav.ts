@@ -3,6 +3,7 @@
 // Extracted from the route layout so these stay testable and decoupled from the
 // TanStack route-file restructure (TA hub + per-TA workspace). No React, no I/O.
 import { type DistributionSegment } from "../components/viz";
+import { isPastPeriod, type TahunAjaranRow } from "./akademikPeriode";
 
 // Editor grid (entri-nilai/edit) manages its own period via the route params,
 // so the shared period chrome (context bar + intro) is hidden there.
@@ -74,16 +75,27 @@ export function splitTaList<T extends { is_current?: number }>(
 }
 
 /**
- * Pick the TA to auto-redirect into from the hub: the stored TA when it is still
- * present in the list, else null (render the hub). This keeps the hub as the entry
- * point only when there is no valid remembered period to jump straight into.
+ * Pick the TA to auto-redirect into from the hub.
+ *
+ * Honours the remembered TA only while it is still a WRITABLE (non-past) period.
+ * If the stored TA has since closed or fallen out of its date window, never drop
+ * the user back into that archive — auto-landing on a read-only year shows
+ * disabled save buttons that beginners read as "app broken" (debate critic
+ * must-fix #3). Instead fall to the running (`is_current`) TA, or `null` to keep
+ * the hub as the entry when nothing safe is available. First visit (no stored TA)
+ * still returns `null` so the hub stays the deliberate entry point.
  */
 export function pickAutoRedirectTa(
   storedTa: string | undefined,
-  list: readonly { name: string }[],
+  list: readonly TahunAjaranRow[],
+  refDate: Date,
 ): string | null {
   if (!storedTa) return null;
-  return list.some((t) => t.name === storedTa) ? storedTa : null;
+  const stored = list.find((t) => t.name === storedTa);
+  if (!stored) return null;
+  if (!isPastPeriod(stored, refDate)) return storedTa;
+  const current = list.find((t) => t.is_current === 1);
+  return current ? current.name : null;
 }
 
 // Subset of TA fields needed for the distribution summary (structural so it does

@@ -29,18 +29,54 @@ describe("splitTaList", () => {
 });
 
 describe("pickAutoRedirectTa", () => {
-  const list = [{ name: "S-2025" }, { name: "S-2024" }];
+  // Mid school-year reference date: inside 2025/2026, outside earlier years.
+  const ref = new Date(2025, 9, 15); // 2025-10-15
+  const running = {
+    name: "S-2025",
+    is_current: 1 as const,
+    status: "Aktif",
+    tanggal_mulai: "2025-07-01",
+    tanggal_selesai: "2026-06-30",
+  };
+  const closed = {
+    name: "S-2024",
+    is_current: 0 as const,
+    status: "Closed",
+    tanggal_mulai: "2024-07-01",
+    tanggal_selesai: "2025-06-30",
+  };
+  const pastWindow = {
+    name: "S-2023",
+    is_current: 0 as const,
+    status: "Aktif",
+    tanggal_mulai: "2023-07-01",
+    tanggal_selesai: "2024-06-30",
+  };
+  const list = [running, closed, pastWindow];
 
-  it("returns the stored TA when still present in the list", () => {
-    expect(pickAutoRedirectTa("S-2024", list)).toBe("S-2024");
+  it("returns the stored TA when it is still a writable (non-past) period", () => {
+    expect(pickAutoRedirectTa("S-2025", list, ref)).toBe("S-2025");
+  });
+
+  it("redirects to the running TA when the stored TA is closed/archived", () => {
+    // Beginner landed in an archive last session; never auto-drop them back there.
+    expect(pickAutoRedirectTa("S-2024", list, ref)).toBe("S-2025");
+  });
+
+  it("redirects to the running TA when the stored TA is past by date window", () => {
+    expect(pickAutoRedirectTa("S-2023", list, ref)).toBe("S-2025");
+  });
+
+  it("returns null when the stored TA is past and there is no running TA", () => {
+    expect(pickAutoRedirectTa("S-2024", [closed, pastWindow], ref)).toBeNull();
   });
 
   it("returns null when the stored TA is gone (show the hub)", () => {
-    expect(pickAutoRedirectTa("S-1999", list)).toBeNull();
+    expect(pickAutoRedirectTa("S-1999", list, ref)).toBeNull();
   });
 
-  it("returns null when there is no stored TA", () => {
-    expect(pickAutoRedirectTa(undefined, list)).toBeNull();
+  it("returns null when there is no stored TA (first visit → hub)", () => {
+    expect(pickAutoRedirectTa(undefined, list, ref)).toBeNull();
   });
 });
 
