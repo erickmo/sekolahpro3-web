@@ -11,7 +11,7 @@
  * doctype (separate Frappe repo), so that surface is rendered as an honest disabled seam
  * ("menunggu aktivasi server") rather than faking a send — see the Kepsek tournament plan.
  */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import {
   Badge,
@@ -35,6 +35,8 @@ import {
 } from "../../lib/pesan/inbox";
 import { deriveCommHealth, DEFAULT_SLA_JAM, type CommVerdict } from "../../lib/pesanSla";
 import { useCommHealth } from "../../lib/pesan/pesanApi";
+import { KomposerPengumuman } from "./KomposerPengumuman";
+import { MejaPersetujuanPesan } from "./MejaPersetujuanPesan";
 
 const INBOX_FIELDS = ["name", "nama", "email", "pesan", "status", "submitted_at", "creation"];
 const INBOX_LIMIT = 200;
@@ -91,6 +93,7 @@ export function PanelKepsek() {
   );
 
   const verdict = VERDICT_META[health.verdict];
+  const [showCompose, setShowCompose] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -168,21 +171,21 @@ export function PanelKepsek() {
       </SectionCard>
 
       <SectionCard
-        title="Pengumuman Resmi & Persetujuan"
-        description="Broadcast resmi atas nama Kepala Sekolah dan antrean persetujuan pengumuman."
+        title="Pengumuman Resmi"
+        description="Broadcast resmi atas nama Kepala Sekolah ke seluruh wali."
       >
-        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-5 text-center">
-          <p className="text-sm font-medium text-fg">Menunggu aktivasi server</p>
-          <p className="mt-1 text-xs text-muted-fg">
-            Pengumuman resmi dan gerbang persetujuan (Workflow Frappe) aktif setelah doctype
-            <code className="mx-1 rounded bg-muted px-1">Pesan Broadcast</code>
-            dipasang di backend. Total {stats.total.toLocaleString("id-ID")} pesan terpantau.
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-fg">
+            Susun pengumuman lalu ajukan; pengiriman menunggu persetujuan di bawah.
+            Total {stats.total.toLocaleString("id-ID")} pesan masuk terpantau.
           </p>
-          <Button variant="outline" className="mt-3" disabled>
-            Buat Pengumuman Resmi
-          </Button>
+          <Button onClick={() => setShowCompose(true)}>Buat Pengumuman</Button>
         </div>
       </SectionCard>
+
+      <MejaPersetujuanPesan />
+
+      <KomposerPengumuman open={showCompose} sekolah={sekolah} onClose={() => setShowCompose(false)} />
     </div>
   );
 }
