@@ -10,6 +10,7 @@
  * unrecognized session always lands on today's working inbox (zero regression).
  */
 import { useMemo, useState } from "react";
+import { useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
@@ -42,6 +43,7 @@ import {
   type InboxRow,
 } from "../../lib/pesan/inbox";
 import { buildReplyPayload, newIdempotencyKey } from "../../lib/pesan/compose";
+import { KomposerPengumuman } from "./KomposerPengumuman";
 
 const INBOX_FIELDS = ["name", "nama", "email", "telepon", "pesan", "status", "submitted_at", "creation"];
 const INBOX_LIMIT = 100;
@@ -62,6 +64,8 @@ export function MasukDesk() {
   const [filter, setFilter] = useState<FilterKey>("Semua");
   const [draft, setDraft] = useState("");
   const [showCompose, setShowCompose] = useState(false);
+  const [showBroadcast, setShowBroadcast] = useState(false);
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
 
   const qc = useQueryClient();
 
@@ -127,6 +131,10 @@ export function MasukDesk() {
             <Button variant="outline" onClick={handleMarkAll} disabled={updateInbox.isPending}>
               <span className="h-4 w-4 mr-1.5"><IconCheck /></span>
               Tandai Semua Selesai
+            </Button>
+            <Button variant="outline" onClick={() => setShowBroadcast(true)}>
+              <span className="h-4 w-4 mr-1.5"><IconChat /></span>
+              Buat Pengumuman
             </Button>
             <Button onClick={() => setShowCompose(true)}>
               <span className="h-4 w-4 mr-1.5"><IconPlus /></span>
@@ -195,6 +203,15 @@ export function MasukDesk() {
         onClose={() => setShowCompose(false)}
         onCreated={() => {
           qc.invalidateQueries({ queryKey: ["resource:list", INBOX_DOCTYPE] });
+        }}
+      />
+
+      <KomposerPengumuman
+        open={showBroadcast}
+        sekolah={sekolah}
+        onClose={() => setShowBroadcast(false)}
+        onSubmitted={() => {
+          qc.invalidateQueries({ queryKey: ["resource:list", "Pesan Broadcast"] });
         }}
       />
     </div>
