@@ -1,58 +1,22 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
-
 /**
  * Period context for the Ekstrakurikuler module (Tahun Ajaran + Semester).
- * Cloned from akademikContext so ekskul owns its own provider identity. Filled by
- * the ekskul layout; the context bar / Sesi auto-create read the active period.
+ *
+ * A thin wrapper over the shared {@link createPeriodContext} factory. Ekskul
+ * keeps its OWN context identity (a separate factory call) so an ekskul hook
+ * never resolves akademik's provider and vice-versa. Filled by the ekskul
+ * layout; the context bar / Sesi auto-create read the active period.
  */
-export interface EkskulContextValue {
-  tahunAjaran: string;
-  semester: string;
-  setTahunAjaran: (v: string) => void;
-  setSemester: (v: string) => void;
-  // Keamanan periode + UX (diisi oleh layout):
-  isPastPeriod: boolean;
-  noActiveTa: boolean;
-  // Edit belum tersimpan — layar absensi melapor lewat setDirty; bar memakai
-  // untuk konfirmasi sebelum ganti periode.
-  dirty: boolean;
-  setDirty: (v: boolean) => void;
-}
+import { createPeriodContext, type PeriodContextValue } from "./periodContext";
 
-const Ctx = createContext<EkskulContextValue | null>(null);
+/** Value shape exposed by the ekskul period context. */
+export type EkskulContextValue = PeriodContextValue;
 
-interface ProviderProps {
-  value: EkskulContextValue;
-  children: ReactNode;
-}
+const ctx = createPeriodContext("Ekskul");
 
-export function EkskulContextProvider({ value, children }: ProviderProps) {
-  // Memoise on individual fields (layout passes a fresh object every render).
-  const memo = useMemo(
-    () => value,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      value.tahunAjaran,
-      value.semester,
-      value.isPastPeriod,
-      value.noActiveTa,
-      value.dirty,
-      value.setTahunAjaran,
-      value.setSemester,
-      value.setDirty,
-    ],
-  );
-  return <Ctx.Provider value={memo}>{children}</Ctx.Provider>;
-}
+export const EkskulContextProvider = ctx.Provider;
 
-export function useEkskulContext(): EkskulContextValue {
-  const v = useContext(Ctx);
-  if (!v) {
-    throw new Error("useEkskulContext must be used within EkskulContextProvider");
-  }
-  return v;
-}
+/** Read the ekskul period; throws outside {@link EkskulContextProvider}. */
+export const useEkskulContext = ctx.useValue;
 
-export function useEkskulContextOptional(): EkskulContextValue | null {
-  return useContext(Ctx);
-}
+/** Read the ekskul period, or `null` when no provider is mounted above. */
+export const useEkskulContextOptional = ctx.useValueOptional;
