@@ -6,6 +6,7 @@ import { AnggotaRombelFormModal } from "../components/kelas/AnggotaRombelFormMod
 import { PageGuide } from "../components/guide";
 import { KELAS_PAGE_GUIDES } from "../components/kelas/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
+import { useKelasPeriode } from "../lib/kelasPeriode";
 
 type Row = { name: string; parent?: string; siswa?: string; no_urut?: number; tanggal_masuk_rombel?: string; status?: string };
 
@@ -21,6 +22,10 @@ const COLUMNS: Column<Row>[] = [
 
 function AnggotaRombelPage() {
   const [showCreate, setShowCreate] = useState(false);
+  // Anggota Rombel (istable child) has no tahun_ajaran field, so this list is
+  // NOT year-filtered (membership spans years). Only the create action is gated
+  // when an archived year is selected.
+  const { isPastPeriod } = useKelasPeriode();
   return (
     <div className="space-y-6">
       <PageGuide
@@ -32,6 +37,9 @@ function AnggotaRombelPage() {
         tips={KELAS_PAGE_GUIDES.anggota.tips}
         roleLabels={SCHOOL_ROLE_LABEL}
       />
+      <p className="text-xs text-muted-fg">
+        Daftar anggota menampilkan semua tahun ajaran (keanggotaan lintas tahun).
+      </p>
       <ResourceListPage<Row>
         eyebrow="Kelas"
         title="Anggota Rombel"
@@ -43,7 +51,7 @@ function AnggotaRombelPage() {
         searchFields={["name", "siswa", "parent"]}
         baseFilters={[["parenttype", "=", "Rombongan Belajar"]]}
         addLabel="Tambah Anggota"
-        onAdd={() => setShowCreate(true)}
+        {...(isPastPeriod ? {} : { onAdd: () => setShowCreate(true) })}
       />
       <AnggotaRombelFormModal open={showCreate} onClose={() => setShowCreate(false)} />
     </div>
