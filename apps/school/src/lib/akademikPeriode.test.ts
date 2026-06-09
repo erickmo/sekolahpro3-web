@@ -3,6 +3,8 @@ import {
   resolveTahunAjaran,
   computeSemester,
   isPastPeriod,
+  resolvePeriodeStatus,
+  STATUS_LABEL,
   type TahunAjaranRow,
 } from "./akademikPeriode";
 
@@ -76,5 +78,23 @@ describe("isPastPeriod", () => {
   });
   it("Aktif + dalam window → false", () => {
     expect(isPastPeriod(TA[1], REF)).toBe(false);
+  });
+});
+
+describe("resolvePeriodeStatus", () => {
+  it("belum-aktif menang (prioritas tertinggi)", () => {
+    expect(resolvePeriodeStatus(true, false)).toBe("belum-aktif");
+    expect(resolvePeriodeStatus(true, true)).toBe("belum-aktif");
+  });
+  it("lampau saat periode lewat dan TA aktif ada", () => {
+    expect(resolvePeriodeStatus(false, true)).toBe("lampau");
+  });
+  it("aktif saat periode berjalan", () => {
+    expect(resolvePeriodeStatus(false, false)).toBe("aktif");
+  });
+  it("STATUS_LABEL memetakan tiap status ke label tampilan", () => {
+    expect(STATUS_LABEL.aktif).toBe("Periode berjalan");
+    expect(STATUS_LABEL.lampau).toBe("Periode lampau");
+    expect(STATUS_LABEL["belum-aktif"]).toBe("Belum ada TA aktif");
   });
 });
