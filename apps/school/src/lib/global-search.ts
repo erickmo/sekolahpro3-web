@@ -5,7 +5,7 @@ import { SISWA_LIST } from "../data/siswa";
 import { PEGAWAI_LIST, isGuru, isStaff } from "../data/pegawai";
 import { KELAS_LIST } from "../data/kelas";
 
-export type SearchCategory = "Keuangan" | "Siswa" | "Guru" | "Staff" | "Kelas";
+export type SearchCategory = "Keuangan" | "Laporan" | "Siswa" | "Guru" | "Staff" | "Kelas";
 
 export type SearchHit = {
   id: string;
@@ -85,6 +85,41 @@ export function financeActions(query: string, max: number = FINANCE_MAX_HITS): S
   return hits;
 }
 
+/**
+ * Report-center "jump to" index for the ⌘K palette. Every entry lands on the
+ * unified /laporan surface (in-page tabs), so a TU typing "dapodik" or "tpg"
+ * reaches Pusat Lapor without hunting through modules. Mirrors {@link financeActions}.
+ */
+const LAPORAN_ACTIONS: readonly FinanceAction[] = [
+  { label: "Pusat Lapor", href: "/laporan", synonyms: ["laporan", "report", "pusat lapor", "lapor"] },
+  { label: "Laporan Dapodik", href: "/laporan", synonyms: ["dapodik", "nisn", "data siswa dapodik"] },
+  { label: "Rekap Absensi (laporan)", href: "/laporan", synonyms: ["rekap absensi", "absensi report"] },
+  { label: "Buku Induk Siswa", href: "/laporan", synonyms: ["buku induk"] },
+  { label: "Laporan TPG", href: "/laporan", synonyms: ["tpg", "tunjangan profesi guru"] },
+  { label: "Jadwal Laporan Otomatis", href: "/laporan", synonyms: ["jadwal laporan", "laporan terjadwal", "scheduled report"] },
+] as const;
+
+const LAPORAN_MAX_HITS = 5;
+
+/** Report-center "jump to" hits for a query. Category "Laporan". */
+export function laporanActions(query: string, max: number = LAPORAN_MAX_HITS): SearchHit[] {
+  const q = query.trim().toLowerCase();
+  if (q.length < MIN_QUERY_LENGTH) return [];
+  const hits: SearchHit[] = [];
+  for (const action of LAPORAN_ACTIONS) {
+    if (!financeMatches(action, q)) continue;
+    hits.push({
+      id: `lap:${action.label}`,
+      label: action.label,
+      category: "Laporan",
+      meta: "Buka Pusat Lapor",
+      href: action.href,
+    });
+    if (hits.length >= max) break;
+  }
+  return hits;
+}
+
 export function globalSearch(query: string, max: number = DEFAULT_MAX_HITS): SearchHit[] {
   const q = query.trim().toLowerCase();
   if (q.length < MIN_QUERY_LENGTH) return [];
@@ -93,6 +128,12 @@ export function globalSearch(query: string, max: number = DEFAULT_MAX_HITS): Sea
   // Finance "jump to" actions rank first so a verb like "withholding" reaches
   // its page without opening the menu; they only appear when they match.
   for (const action of financeActions(q)) {
+    hits.push(action);
+    if (hits.length >= max) return hits;
+  }
+
+  // Report-center jumps rank next to the finance actions.
+  for (const action of laporanActions(q)) {
     hits.push(action);
     if (hits.length >= max) return hits;
   }
