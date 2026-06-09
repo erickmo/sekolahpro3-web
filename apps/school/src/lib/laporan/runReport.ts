@@ -6,7 +6,7 @@
  * 'desk' reports are not run here (the catalog links them to the Frappe Desk).
  */
 import { frappeFetch } from "@sekolahpro/api-client";
-import { saveBase64File } from "./download";
+import { saveBase64File, base64ToBytes } from "./download";
 import type { ReportChannel } from "./reportChannel";
 
 export const EXPORT_B64 = "sekolahpro.akademik.api.laporan_dinas.export_b64";
@@ -70,4 +70,19 @@ export async function runAndSave(
   const filename = res.filename ?? `${report}.${opts.fmt}`;
   saveBase64File(res.content_b64, filename, res.mime ?? "application/octet-stream");
   return filename;
+}
+
+/** Run a report and return its bytes (for bundling) instead of saving. */
+export async function runReportBytes(
+  report: string,
+  channel: ReportChannel,
+  opts: RunOpts,
+): Promise<{ filename: string; bytes: Uint8Array }> {
+  const { method, args } = buildRunRequest(report, channel, opts);
+  const res = (await frappeFetch(method, args)) as ExportEnvelope;
+  if (!res?.content_b64) throw new Error("Tidak ada konten laporan");
+  return {
+    filename: res.filename ?? `${report}.${opts.fmt}`,
+    bytes: base64ToBytes(res.content_b64),
+  };
 }

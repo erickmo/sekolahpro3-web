@@ -10,7 +10,9 @@ import { frappeFetch } from "@sekolahpro/api-client";
 import { Modal, Button, Badge } from "@sekolahpro/ui";
 import { KEWAJIBAN_TU } from "../../lib/laporan/kewajiban";
 import { resolveChannel, type ReportChannel } from "../../lib/laporan/reportChannel";
-import { runAndSave } from "../../lib/laporan/runReport";
+import { runAndSave, runReportBytes } from "../../lib/laporan/runReport";
+import { buildStoredZip, type ZipFile } from "../../lib/laporan/zipBundle";
+import { saveBlob } from "../../lib/laporan/download";
 
 const RECEIPT_DOCTYPE = "Laporan Submission Receipt";
 
@@ -91,12 +93,40 @@ export function SusunPaket({ open, onClose, kewajibanId, sekolah }: SusunPaketPr
     setBusy(false);
   }
 
+  async function runZip() {
+    if (!kewajiban) return;
+    setBusy(true);
+    const files: ZipFile[] = [];
+    for (const ref of kewajiban.paket) {
+      const channel = resolveChannel(ref.reportName);
+      if (channel === "desk") {
+        setStatus((s) => ({ ...s, [ref.reportName]: "skip" }));
+        continue;
+      }
+      setStatus((s) => ({ ...s, [ref.reportName]: "running" }));
+      try {
+        const { filename, bytes } = await runReportBytes(ref.reportName, channel, {
+          sekolah,
+          fmt: ref.defaultFmt,
+        });
+        files.push({ name: filename, bytes });
+        setStatus((s) => ({ ...s, [ref.reportName]: "done" }));
+      } catch (_) {
+        setStatus((s) => ({ ...s, [ref.reportName]: "error" }));
+      }
+    }
+    if (files.length > 0) {
+      saveBlob(buildStoredZip(files), `paket-${kewajiban.id}.zip`, "application/zip");
+    }
+    setBusy(false);
+  }
+
   return (
     <Modal open={open} onClose={onClose} title={`Susun: ${kewajiban?.nama ?? ""}`}>
       <div className="space-y-3">
         <p className="text-sm text-muted-fg">
-          Jalankan semua laporan anggota paket ini lalu unduh masing-masing
-          {kewajiban ? ` (target ${kewajiban.target})` : ""}.
+          Jalankan semua laporan anggota paket ini lalu unduh masing-masing atau
+          sebagai satu ZIP{kewajiban ? ` (target ${kewajiban.target})` : ""}.
         </p>
         <ul className="divide-y divide-border rounded-md border border-border">
           {kewajiban?.paket.map((ref) => {
@@ -120,6 +150,9 @@ export function SusunPaket({ open, onClose, kewajibanId, sekolah }: SusunPaketPr
         ) : null}
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onClose}>Tutup</Button>
+          <Button variant="outline" disabled={busy || !kewajiban} onClick={runZip}>
+            {busy ? "Memproses…" : "Unduh ZIP"}
+          </Button>
           <Button disabled={busy || !kewajiban} onClick={runAll}>
             {busy ? "Memproses…" : "Jalankan & Unduh Semua"}
           </Button>
