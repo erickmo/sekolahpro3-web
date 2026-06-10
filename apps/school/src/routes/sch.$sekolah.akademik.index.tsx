@@ -34,6 +34,10 @@ const TA_FIELDS = ["name", "nama", "is_current", "status", "tanggal_mulai", "tan
 export interface HubSearch {
   /** When set (1), suppress the auto-redirect so the user can pick a TA. */
   pick?: number;
+  /** Legacy-URL stub target: workspace module subpath to forward to after TA
+   * resolution (e.g. "kelas", "jadwal/papan"). Validated by parseGoParam in
+   * the hub component before use (consumed in plan Task 7). */
+  go?: string;
 }
 
 const HUB_GUIDE_STEPS: PageGuideStep[] = [
@@ -232,6 +236,9 @@ export const Route = createFileRoute("/sch/$sekolah/akademik/")({
   validateSearch: (search: Record<string, unknown>): HubSearch => {
     const out: HubSearch = {};
     if (search.pick) out.pick = 1;
+    // Pass the go param through as a raw string; the hub component validates
+    // it via parseGoParam before navigating (task 7).
+    if (typeof search.go === "string" && search.go) out.go = search.go;
     return out;
   },
 });
