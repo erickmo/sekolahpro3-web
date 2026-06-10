@@ -30,7 +30,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @sekolahpro/app-landing build
       - uses: webfactory/ssh-agent@v0.9.0
-        with: { ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }} }
+        with: { ssh-private-key: "${{ secrets.DEPLOY_SSH_KEY }}" }
       - name: Add deploy host to known_hosts
         env: { DEPLOY_HOST: "${{ secrets.DEPLOY_HOST }}" }
         run: ssh-keyscan "$DEPLOY_HOST" >> ~/.ssh/known_hosts
