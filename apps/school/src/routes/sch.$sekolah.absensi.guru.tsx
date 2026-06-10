@@ -6,6 +6,7 @@ import { AbsensiGuruFormModal } from "../components/absensi/AbsensiGuruFormModal
 import { PageGuide } from "../components/guide";
 import { ABSENSI_PAGE_GUIDES } from "../components/absensi/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
+import { useAbsensiPeriode } from "../lib/absensiPeriode";
 
 type Row = { name: string; tanggal: string; guru?: string; jam_masuk?: string; jam_pulang?: string; status?: string };
 
@@ -21,6 +22,9 @@ const COLUMNS: Column<Row>[] = [
 
 function AbsensiGuruPage() {
   const [showCreate, setShowCreate] = useState(false);
+  // Absensi Guru is the one TA-keyed absensi surface: scope to the selected year
+  // and gate creation in an archived year (don't back-date teacher presence).
+  const { tahunAjaran, isPastPeriod } = useAbsensiPeriode();
   return (
     <>
       <PageGuide
@@ -41,8 +45,9 @@ function AbsensiGuruPage() {
         columns={COLUMNS}
         defaultSort={{ key: "tanggal", dir: "desc" }}
         searchFields={["name"]}
+        {...(tahunAjaran ? { baseFilters: [["tahun_ajaran", "=", tahunAjaran]] } : {})}
         addLabel="Input Absensi"
-        onAdd={() => setShowCreate(true)}
+        {...(isPastPeriod ? {} : { onAdd: () => setShowCreate(true) })}
       />
       <AbsensiGuruFormModal open={showCreate} onClose={() => setShowCreate(false)} />
     </>
