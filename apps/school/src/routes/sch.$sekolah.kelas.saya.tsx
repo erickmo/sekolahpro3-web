@@ -2,12 +2,12 @@
  * Kelasku — the Wali Kelas cockpit (/kelas/saya). The /kelas index redirects a
  * homeroom teacher here.
  *
- * Phase 3 shell (read-only): self-resolves the wali's own active rombel from the
- * session user, shows a seat-ordered roster, and a class switcher when the wali
- * owns more than one. Presence / risk flags / one-tap Hubungi Wali and the
- * Catatan Wali quick-notes store need backend wiring (Rekap Absensi report +
- * Catatan Wali doctype) and are marked pending here — the cockpit never shows
- * fabricated numbers (honest empty-states, audit graft from C1).
+ * Self-resolves the wali's own active rombel from the session user, shows a
+ * seat-ordered roster, a class switcher when the wali owns more than one,
+ * presence/risk panels, the Catatan Wali quick-notes store, and per-student
+ * StudentSheet with one-tap Hubungi Wali + the roster-inline Pesan Wali
+ * composer. The cockpit never shows fabricated numbers (honest empty-states,
+ * audit graft from C1).
  */
 import { useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
@@ -220,6 +220,7 @@ function KelaskuPage() {
         open={!!sheetSiswa}
         onClose={() => setSheetSiswa(null)}
         siswa={sheetSiswa ?? ""}
+        rombel={active.name}
       />
     </div>
   );

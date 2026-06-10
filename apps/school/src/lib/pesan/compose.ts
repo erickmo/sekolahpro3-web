@@ -116,3 +116,70 @@ export function queuedLabel(channel: PesanChannel): string {
   if (channel === "WA") return "Antre — via WhatsApp";
   return "Antre — menunggu kirim";
 }
+
+// ---------------------------------------------------------------------------
+// Pesan Wali doc insert (the Guru roster-inline composer)
+//
+// Unlike the Outbox envelopes above, a teacher → wali message is a plain
+// `Pesan Wali` DOC insert: the BE controller (pesan_wali.py) defaults guru/
+// thread_key/wali_phone/status and enqueues the Outbox row itself, so the FE
+// sends ONLY the authoring fields and never writes the Outbox for this flow.
+// ---------------------------------------------------------------------------
+
+/** Kategori options of the Pesan Wali doctype Select (mirrors the BE schema). */
+export const PESAN_WALI_KATEGORI = ["Kehadiran", "Akademik", "PR", "Umum"] as const;
+export type PesanWaliKategori = (typeof PESAN_WALI_KATEGORI)[number];
+
+/** Channel values of the Pesan Wali doctype. WA needs a wali phone; InApp always lands. */
+export const PESAN_WALI_CHANNEL = { WA: "WA", IN_APP: "InApp" } as const;
+export type PesanWaliChannel = (typeof PESAN_WALI_CHANNEL)[keyof typeof PESAN_WALI_CHANNEL];
+
+/** Teacher messages are always outbound; replies (arah="masuk") come from the parent API. */
+const PESAN_WALI_ARAH_KELUAR = "keluar";
+
+/** The authoring fields of a teacher → wali message (a `type` so it stays assignable to
+ * the `Record<string, unknown>` payload that useResourceCreate.mutateAsync expects). */
+export type PesanWaliDoc = {
+  siswa: string;
+  rombel: string;
+  kategori: PesanWaliKategori;
+  isi: string;
+  arah: typeof PESAN_WALI_ARAH_KELUAR;
+  channel: PesanWaliChannel;
+};
+
+/** Build the `Pesan Wali` insert payload — authoring fields only, draft trimmed. */
+export function buildPesanWaliDoc(args: {
+  siswa: string;
+  rombel: string;
+  kategori: PesanWaliKategori;
+  isi: string;
+  channel: PesanWaliChannel;
+}): PesanWaliDoc {
+  return {
+    siswa: args.siswa,
+    rombel: args.rombel,
+    kategori: args.kategori,
+    isi: args.isi.trim(),
+    arah: PESAN_WALI_ARAH_KELUAR,
+    channel: args.channel,
+  };
+}
+
+/** Send gate: a target student and a non-blank draft. */
+export function canSendPesanWali(siswa: string, isi: string): boolean {
+  return !!siswa && isi.trim().length > 0;
+}
+
+/** WA when the primary wali has a phone; otherwise InApp (the thread still reaches the
+ * parent app via the wali_pesan API, it just skips the WhatsApp gateway). */
+export function pesanWaliChannel(waliPhone: string | null | undefined): PesanWaliChannel {
+  return waliPhone ? PESAN_WALI_CHANNEL.WA : PESAN_WALI_CHANNEL.IN_APP;
+}
+
+/** Honest post-insert label: WA is a queued gateway hand-off ({@link queuedLabel});
+ * for InApp the insert itself is what the parent app reads, so "tercatat" is accurate. */
+export function pesanWaliSentLabel(channel: PesanWaliChannel): string {
+  if (channel === PESAN_WALI_CHANNEL.WA) return queuedLabel("WA");
+  return "Tercatat — tampil di aplikasi wali";
+}
