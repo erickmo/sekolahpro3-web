@@ -29,12 +29,8 @@ import { GLOSSARY } from "../../lib/glossary";
 import { PageGuide } from "../guide";
 import { KELAS_PAGE_GUIDES } from "./pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../../lib/schoolGuideRole";
-import {
-  resolveTahunAjaran,
-  readStoredPeriode,
-  writeStoredPeriode,
-  type TahunAjaranRow,
-} from "../../lib/akademikPeriode";
+import { type TahunAjaranRow } from "../../lib/akademikPeriode";
+import { useKelasPeriode, useKelasReadOnly } from "../../lib/kelasPeriode";
 import { computeDefects, totalDefects, type BoardRombelRow } from "../../lib/kelasBoard";
 import { DefectGate } from "./DefectGate";
 import { FixItTray } from "./FixItTray";
@@ -59,18 +55,16 @@ export function PapanKelas() {
   });
   const taList = taQuery.data ?? [];
 
-  const [override, setOverride] = useState<string | undefined>();
   const [rolloverOpen, setRolloverOpen] = useState(false);
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [bumpRombel, setBumpRombel] = useState<string | null>(null);
   const refetchBoard = () =>
     qc.invalidateQueries({ queryKey: ["resource:list", "Rombongan Belajar"] });
-  const storedTa = readStoredPeriode(sekolah).ta;
-  const resolved = resolveTahunAjaran(
-    taList,
-    storedTa ? { storedTa, refDate: new Date() } : { refDate: new Date() },
-  ).ta;
-  const ta = override ?? resolved;
+  // TA now comes from the module's KelasPeriodContext (the strip selector), not
+  // a local dropdown; the board stays client-side filtered by it. Structure
+  // mutations are gated when an archived year is selected.
+  const { tahunAjaran: ta } = useKelasPeriode();
+  const { readOnly, reason } = useKelasReadOnly();
 
   const rombelQuery = useResourceList<BoardRombelRow>("Rombongan Belajar", {
     fields: [
@@ -94,11 +88,6 @@ export function PapanKelas() {
   // Orphan count is BE-backed (siswa_belum_berkelas) — pending; counted as 0 in v1.
   const defectCount = totalDefects(defects, 0);
 
-  function onSelectTa(value: string) {
-    setOverride(value);
-    writeStoredPeriode(sekolah, { ta: value });
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -112,25 +101,22 @@ export function PapanKelas() {
         }
         actions={
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-muted-fg">Tahun Ajaran</span>
-              <select
-                value={ta}
-                onChange={(e) => onSelectTa(e.target.value)}
-                className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm"
-              >
-                {taList.length === 0 ? <option value="">—</option> : null}
-                {taList.map((t) => (
-                  <option key={t.name} value={t.name}>
-                    {t.nama ?? t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Button size="sm" variant="outline" onClick={() => setGeneratorOpen(true)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setGeneratorOpen(true)}
+              disabled={readOnly}
+              {...(reason ? { title: reason } : {})}
+            >
               Buat Rombel
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setRolloverOpen(true)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setRolloverOpen(true)}
+              disabled={readOnly}
+              {...(reason ? { title: reason } : {})}
+            >
               Naik Kelas
             </Button>
           </div>

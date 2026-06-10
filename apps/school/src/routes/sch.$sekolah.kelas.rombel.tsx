@@ -6,6 +6,7 @@ import { RombelFormModal } from "../components/kelas/RombelFormModal";
 import { PageGuide } from "../components/guide";
 import { KELAS_PAGE_GUIDES } from "../components/kelas/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
+import { useKelasPeriode } from "../lib/kelasPeriode";
 
 type Row = { name: string; nama_rombel: string; tingkat?: string; wali_kelas?: string; jumlah_siswa?: number; tahun_ajaran?: string; status?: string };
 
@@ -22,6 +23,8 @@ const COLUMNS: Column<Row>[] = [
 
 function RombelPage() {
   const [showCreate, setShowCreate] = useState(false);
+  // Scope to the selected Tahun Ajaran; gate creation in an archived year.
+  const { tahunAjaran, isPastPeriod } = useKelasPeriode();
   return (
     <div className="space-y-6">
       <PageGuide
@@ -42,8 +45,9 @@ function RombelPage() {
         columns={COLUMNS}
         defaultSort={{ key: "nama_rombel", dir: "asc" }}
         searchFields={["name", "nama_rombel"]}
+        {...(tahunAjaran ? { baseFilters: [["tahun_ajaran", "=", tahunAjaran]] } : {})}
         addLabel="Buat Rombel"
-        onAdd={() => setShowCreate(true)}
+        {...(isPastPeriod ? {} : { onAdd: () => setShowCreate(true) })}
       />
       <RombelFormModal open={showCreate} onClose={() => setShowCreate(false)} />
     </div>
