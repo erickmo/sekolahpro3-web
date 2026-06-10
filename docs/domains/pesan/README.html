@@ -34,8 +34,31 @@
   <code>pesanRole</code>, <code>pesanSla</code>, <code>pesanApproval</code> (gate Kepsek single — TIDAK reuse
   <code>kelasApproval</code> yang ter-hardcode ke workflow Mutasi), <code>pesanNav</code>, <code>lib/pesan/{compose,inbox}</code>.
   Pengiriman outbound (broadcast / Pesan Wali) memakai <em>queue</em> Mobile Outbox dengan label jujur
-  "Antre" (bukan "Terkirim") karena gateway belum dikonfirmasi; composer broadcast + Meja Persetujuan + thread 2-arah
-  menunggu doctype backend (<code>Pesan Broadcast</code>, <code>Pesan Wali</code>, <code>Pengaturan Pesan</code>) di repo Frappe terpisah.</p>
+  "Antre" (bukan "Terkirim") karena gateway belum dikonfirmasi.</p>
+
+  <h2>Fase 2 — Wiring Backend Nyata (2026-06-09 .. 2026-06-10, PR web #81/#82/#84/#85/#89)</h2>
+  <p>Doctype backend (<code>Pengaturan Pesan</code>, <code>Pesan Broadcast</code>, <code>Pesan Wali</code>) sudah merge
+  di repo Frappe terpisah (sekolahpro3 PR #47–#51); FE step 8 menyambungkannya:</p>
+  <ul>
+    <li><strong>Seam API:</strong> <code>lib/pesan/pesanApi.ts</code> — <code>useCommHealth</code> /
+      <code>useResolveAudience</code> / <code>useListPesan</code> / <code>useReplyPesan</code> (satu tempat wiring
+      whitelisted methods, mirror <code>ppdbApi</code>).</li>
+    <li><strong>Broadcast resmi end-to-end:</strong> <code>KomposerPengumuman</code> (TU via MasukDesk + Kepsek via
+      PanelKepsek) membuat <code>Pesan Broadcast</code> + <code>apply_workflow</code> "Ajukan" →
+      <code>MejaPersetujuanPesan</code> (Kepsek Setujui/Tolak) → fan-out Outbox di controller BE saat Disetujui.</li>
+    <li><strong>Komposer Pesan Wali inline roster (Guru, PR #89):</strong> <code>PesanWaliComposer</code>
+      (components/pesan/) di-host <code>StudentSheet</code> di kokpit <code>/kelas/saya</code> (prop opsional
+      <code>rombel</code> — host lain tetap contact-only). Insert doc <code>Pesan Wali</code> berisi field penulisan
+      saja ({siswa, rombel, kategori, isi, arah:"keluar", channel}); controller BE mengisi
+      guru/thread_key/wali_phone/status dan fan-out Outbox sendiri — FE TIDAK menulis Outbox untuk alur ini.
+      Kanal WA bila wali punya nomor, fallback <code>InApp</code> (thread tetap sampai aplikasi wali via API
+      <code>wali_pesan</code>). Label hasil jujur: "Antre — via WhatsApp" / "Tercatat — tampil di aplikasi wali".
+      <code>TindakLanjutSaya</code> (daftar thread guru + status balasan) refresh via invalidasi prefix
+      <code>["resource:list","Pesan Wali"]</code>. Builder/guard/label murni di <code>lib/pesan/compose.ts</code>.</li>
+    <li><strong>Balasan orangtua 2-arah:</strong> apps/parent <code>/pesan</code> thread chat
+      (<code>wali_pesan.list_pesan</code> / <code>reply_pesan</code>; balasan = <code>arah="masuk"</code>, thread sumber
+      → status "Dibalas").</li>
+  </ul>
 
   <h2>Arsitektur</h2>
   <ul>
@@ -69,6 +92,16 @@
         <td>Mobile Outbox Entry (inferred)</td>
         <td>Queue reply yang dikirim ke pengirim</td>
         <td><code>op</code> (mis. "reply_contact_inbox"), <code>status</code> (received/sent), <code>response</code> (JSON payload {to, inbox, body}), <code>idempotency_key</code></td>
+      </tr>
+      <tr>
+        <td>Pesan Wali (repo Frappe terpisah, live)</td>
+        <td>Thread 2-arah guru &harr; wali per siswa, lahir di roster</td>
+        <td><code>siswa</code> (reqd), <code>rombel</code>, <code>guru</code>, <code>kategori</code> (Kehadiran | Akademik | PR | Umum), <code>isi</code> (reqd), <code>arah</code> (keluar | masuk), <code>channel</code> (WA | InApp), <code>status</code> (Terkirim | Menunggu Balasan | Dibalas | Selesai), <code>thread_key</code> (siswa::guru), <code>wali_phone</code> (snapshot), <code>sekolah</code> (auto tenant)</td>
+      </tr>
+      <tr>
+        <td>Pesan Broadcast (repo Frappe terpisah, live)</td>
+        <td>Pengumuman resmi ber-workflow Kepsek</td>
+        <td><code>judul</code>, <code>isi</code>, <code>audiens_type</code> (semua_wali | per_rombel | per_jenjang | manual), <code>channel</code>, <code>workflow_state</code> (Draf &rarr; Menunggu Kepsek &rarr; Disetujui/Ditolak)</td>
       </tr>
       <tr>
         <td>PesanItem (parent app mock)</td>

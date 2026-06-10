@@ -93,6 +93,7 @@
     <li><strong>Monitoring Kapasitas:</strong> Dashboard otomatis menghitung stat: rombel tanpa wali, rombel >100% kapasitas, rombel penuh (jumlah_siswa >= kapasitas), rombel tanpa jadwal aktif. Attention list highlight masalah.</li>
     <li><strong>Penjadwalan:</strong> User navigasi dari dashboard ke modul Jadwal Pelajaran (/sch/$sekolah/jadwal/daftar) untuk set jadwal per rombel. Dashboard warn jika rombel aktif belum ada jadwal aktif.</li>
     <li><strong>Detail Kelas:</strong> Wali kelas / admin akses kelas detail (/sch/$sekolah/kelas/$kodeKelas) melihat roster siswa, jadwal mapel, rekap nilai, absensi, jurnal kelas, aktivitas audit log. Tab-based interface (Ringkasan, Siswa, Jadwal, Nilai, Absensi, Jurnal, Aktivitas).</li>
+    <li><strong>Kokpit Kelasku (/sch/$sekolah/kelas/saya):</strong> Wali kelas self-resolve rombel aktifnya (filter <code>wali_kelas=session user</code>), lihat roster urut presensi, panel presensi hari ini + Antrean Perhatian (nilai D/remedial), dan Catatan Wali. Tombol "Hubungi" per siswa membuka <code>StudentSheet</code> (kontak wali + deep-link WA/telepon) yang juga meng-host <code>PesanWaliComposer</code> (modul Pesan, PR #89): kirim pesan tercatat ke wali langsung dari roster — insert doc <code>Pesan Wali</code>, thread + status balasan dilacak di permukaan Pesan (<code>TindakLanjutSaya</code>). Komposer hanya muncul bila host meneruskan prop <code>rombel</code>.</li>
   </ol>
 
   <h2>Aturan & Kebijakan</h2>
@@ -113,6 +114,7 @@
     <li><strong>Rombongan Belajar.on_insert / after_insert:</strong> Set <code>jumlah_siswa = 0</code> (denorm initial count). Tenant scoping <code>organisasi</code> fetch dari <code>sekolah.organisasi</code>.</li>
     <li><strong>Anggota Rombel.validate():</strong> Per-row checks (status enum, no_urut > 0 jika set). Trigger sebelum Rombongan Belajar.validate().</li>
     <li><strong>Rombongan Belajar.validate():</strong> Cross-row checks: unique_anggota, kapasitas_vs_anggota, tingkat range, status enum.</li>
+    <li><strong>StudentSheet → domain Pesan:</strong> kirim dari <code>PesanWaliComposer</code> insert doc <code>Pesan Wali</code> {siswa, rombel, kategori, isi, arah, channel} — controller BE yang fan-out Mobile Outbox. Lihat <code>docs/domains/pesan/README.html</code>.</li>
   </ul>
   <h3>Listens (bereaksi)</h3>
   <ul>
