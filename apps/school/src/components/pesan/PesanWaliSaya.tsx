@@ -4,11 +4,9 @@
  *
  * Design intent (Guru tournament winner): a teacher has no inbox to triage — messages to
  * a wali are born on the teaching surface (roster row, Alpa list, Antrean Perhatian) and
- * tracked as a 2-way "Pesan Wali" thread. That full flow needs the `Pesan Wali` doctype
- * (separate Frappe repo) for the thread + status lifecycle, so this phase-1 entry routes
- * the teacher to where the work begins (Kelas Saya roster) and is honest about what is not
- * yet wired, rather than faking a thread. The dispatch envelope (buildPesanWaliPayload) and
- * role surface are already in place for when the doctype lands.
+ * tracked as a 2-way "Pesan Wali" thread. The doctype + roster-inline composer are live:
+ * the CTA routes to the Kelas Saya roster where StudentSheet hosts PesanWaliComposer,
+ * and the teacher's threads (with reply status) surface in TindakLanjutSaya below.
  */
 import { Link, useParams } from "@tanstack/react-router";
 import { PageHeader, SectionCard, IconChat, IconUsers, IconClock } from "@sekolahpro/ui";

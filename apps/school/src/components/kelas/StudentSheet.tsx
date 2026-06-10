@@ -1,11 +1,14 @@
 /**
  * StudentSheet — per-student slide-over for the Wali Kelas cockpit. Fetches the
- * Siswa doc (wali child inline) and offers one-tap "Hubungi Wali" via WhatsApp /
- * telephone deep-links from the primary wali's no_hp. Read-only; no new backend.
+ * Siswa doc (wali child inline), offers one-tap "Hubungi Wali" via WhatsApp /
+ * telephone deep-links from the primary wali's no_hp, and (when the host passes
+ * the active rombel) embeds the roster-inline PesanWaliComposer — the tracked
+ * 2-way "Pesan Wali" thread, born here instead of an inbox.
  */
 import { useResourceDoc } from "@sekolahpro/api-client";
 import { Modal, Badge } from "@sekolahpro/ui";
 import { pickWaliContact, waLink, telLink, type WaliRow } from "../../lib/kelasku";
+import { PesanWaliComposer } from "../pesan/PesanWaliComposer";
 
 interface SiswaDoc {
   nama_lengkap?: string;
@@ -16,9 +19,12 @@ export interface StudentSheetProps {
   open: boolean;
   onClose: () => void;
   siswa: string;
+  /** Active Rombongan Belajar doc name — when set, the Pesan Wali composer is shown
+   * (only the homeroom cockpit passes it; other hosts stay contact-only). */
+  rombel?: string;
 }
 
-export function StudentSheet({ open, onClose, siswa }: StudentSheetProps) {
+export function StudentSheet({ open, onClose, siswa, rombel }: StudentSheetProps) {
   const doc = useResourceDoc<SiswaDoc>("Siswa", open ? siswa : "");
   const wali = doc.data?.wali ?? [];
   const contact = pickWaliContact(wali);
@@ -68,6 +74,12 @@ export function StudentSheet({ open, onClose, siswa }: StudentSheetProps) {
             ) : (
               <div className="text-sm text-muted-fg">Tidak ada nomor wali untuk dihubungi.</div>
             )}
+
+            {rombel ? (
+              <div className="border-t border-border pt-4">
+                <PesanWaliComposer siswa={siswa} rombel={rombel} waliPhone={contact?.no_hp} />
+              </div>
+            ) : null}
           </>
         )}
       </div>

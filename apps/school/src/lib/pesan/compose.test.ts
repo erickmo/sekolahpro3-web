@@ -1,9 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
   OUTBOX_OP,
+  PESAN_WALI_KATEGORI,
+  PESAN_WALI_CHANNEL,
   buildReplyPayload,
   buildBroadcastPayload,
   buildPesanWaliPayload,
+  buildPesanWaliDoc,
+  canSendPesanWali,
+  pesanWaliChannel,
+  pesanWaliSentLabel,
   queuedLabel,
 } from "./compose";
 
@@ -44,6 +50,63 @@ describe("buildPesanWaliPayload", () => {
       body: "Ananda alpa 3 hari",
       pesan_wali: "PW-3",
     });
+  });
+});
+
+describe("buildPesanWaliDoc — roster-inline composer doc payload", () => {
+  it("builds the authoring fields only (controller fills guru/thread/phone/status)", () => {
+    const doc = buildPesanWaliDoc({
+      siswa: "SIS-7",
+      rombel: "ROM-1A",
+      kategori: "Kehadiran",
+      isi: "  Ananda alpa 3 hari  ",
+      channel: PESAN_WALI_CHANNEL.WA,
+    });
+    expect(doc).toEqual({
+      siswa: "SIS-7",
+      rombel: "ROM-1A",
+      kategori: "Kehadiran",
+      isi: "Ananda alpa 3 hari",
+      arah: "keluar",
+      channel: "WA",
+    });
+  });
+
+  it("mirrors the doctype kategori Select options", () => {
+    expect(PESAN_WALI_KATEGORI).toEqual(["Kehadiran", "Akademik", "PR", "Umum"]);
+  });
+});
+
+describe("canSendPesanWali", () => {
+  it("rejects a blank or whitespace-only message", () => {
+    expect(canSendPesanWali("SIS-7", "")).toBe(false);
+    expect(canSendPesanWali("SIS-7", "   ")).toBe(false);
+  });
+
+  it("rejects a missing siswa and accepts a real draft", () => {
+    expect(canSendPesanWali("", "halo")).toBe(false);
+    expect(canSendPesanWali("SIS-7", "halo")).toBe(true);
+  });
+});
+
+describe("pesanWaliChannel — WA needs a wali phone", () => {
+  it("picks WA when a phone exists, InApp otherwise", () => {
+    expect(pesanWaliChannel("08123")).toBe(PESAN_WALI_CHANNEL.WA);
+    expect(pesanWaliChannel("")).toBe(PESAN_WALI_CHANNEL.IN_APP);
+    expect(pesanWaliChannel(null)).toBe(PESAN_WALI_CHANNEL.IN_APP);
+    expect(pesanWaliChannel(undefined)).toBe(PESAN_WALI_CHANNEL.IN_APP);
+  });
+});
+
+describe("pesanWaliSentLabel — honest post-insert wording", () => {
+  it("labels WA as a queued hand-off, never 'Terkirim'", () => {
+    expect(pesanWaliSentLabel(PESAN_WALI_CHANNEL.WA)).toBe(queuedLabel("WA"));
+    expect(pesanWaliSentLabel(PESAN_WALI_CHANNEL.WA)).not.toContain("Terkirim");
+  });
+
+  it("labels InApp as recorded in the parent app (the insert IS the delivery)", () => {
+    expect(pesanWaliSentLabel(PESAN_WALI_CHANNEL.IN_APP)).toMatch(/aplikasi/i);
+    expect(pesanWaliSentLabel(PESAN_WALI_CHANNEL.IN_APP)).not.toContain("Terkirim");
   });
 });
 
