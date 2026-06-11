@@ -50,7 +50,7 @@ vi.mock("@sekolahpro/api-client", () => ({
   useResourceCreate: () => ({ mutateAsync: createMutate, isPending: false }),
 }));
 
-import { Route } from "../sch.$sekolah.ppdb.gelombang";
+import { Route } from "../sch.$sekolah.akademik.ppdb.gelombang";
 
 const GELOMBANG_FIXTURE = {
   name: "GEL-001",

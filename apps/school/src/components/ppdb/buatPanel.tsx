@@ -1,7 +1,7 @@
 /**
  * BuatPanel — wizard "Buat Pendaftaran PPDB" yang dipakai HANYA oleh route
- * src/routes/sch.$sekolah.ppdb.buat.tsx. Diekstrak dari route agar file route
- * tetap ramping (< 300 baris) dan panel ini fokus pada alur form berurut.
+ * src/routes/sch.$sekolah.akademik.ppdb.buat.tsx. Diekstrak dari route agar file
+ * route tetap ramping (< 300 baris) dan panel ini fokus pada alur form berurut.
  *
  * Alur (dipertahankan dari versi sebelumnya — submit/mutation TIDAK berubah):
  *   1. Gelombang (pilih existing atau buat baru inline)
@@ -133,7 +133,7 @@ export function BuatPanel({ sekolah }: { sekolah: string }) {
             });
             window.open(po.payment_url, "_blank");
           }}
-          onNew={() => navigate({ to: "/sch/$sekolah/ppdb/buat", params: { sekolah } })}
+          onNew={() => navigate({ to: "/sch/$sekolah/akademik/ppdb/buat", params: { sekolah } })}
         />
       )}
 

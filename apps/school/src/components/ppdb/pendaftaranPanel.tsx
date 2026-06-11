@@ -125,7 +125,7 @@ export function buildEnrichedColumns(
       sortable: true,
       cell: (r) => (
         <Link
-          to="/sch/$sekolah/ppdb/$noPendaftaran"
+          to="/sch/$sekolah/akademik/ppdb/$noPendaftaran"
           params={{ sekolah, noPendaftaran: r.name }}
           className="font-mono text-xs text-brand hover:underline"
         >

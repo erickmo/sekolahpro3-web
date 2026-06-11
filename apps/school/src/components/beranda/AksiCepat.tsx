@@ -19,7 +19,7 @@ interface QuickAction {
 const QUICK_ACTIONS: QuickAction[] = [
   { to: "/sch/$sekolah/siswa/new", label: "Tambah Siswa", icon: <IconUsers /> },
   { to: "/sch/$sekolah/keuangan/tagihan", label: "Catat Pembayaran", icon: <IconWallet /> },
-  { to: "/sch/$sekolah/ppdb/pembayaran", label: "Verifikasi PPDB", icon: <IconCheck /> },
+  { to: "/sch/$sekolah/akademik/ppdb/pembayaran", label: "Verifikasi PPDB", icon: <IconCheck /> },
   { to: "/sch/$sekolah/absensi/guru", label: "Input Absensi", icon: <IconPlus /> },
 ];
 

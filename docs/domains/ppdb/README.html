@@ -110,5 +110,14 @@
     <li><strong>Integrasi NISN real-time:</strong> NISN lookup dari data central saat registrasi (optional; user entry juga boleh)</li>
     <li><strong>Live payment reconciliation:</strong> Payment aging di UI pakai pull manual (reconcile button), bukan webhook otomatis (future: add webhook listener)</li>
   </ul>
+
+  <h2>Fase 1 — Satu Pintu Akademik (2026-06-11)</h2>
+  <p>Rute PPDB dipindah ke bawah Akademik. Berbeda dengan Kelas/Jadwal/Ekskul, PPDB tidak di bawah <code>$ta</code> karena bersifat lintas-TA.</p>
+  <ul>
+    <li><strong>Rute baru:</strong> <code>/sch/$sekolah/akademik/ppdb/*</code> (11 rute: index, dashboard, gelombang, seleksi, daftar-ulang, pembayaran, jalur, antrian, calon, calon.$name, analytics)</li>
+    <li><strong>Rute lama:</strong> <code>/sch/$sekolah/ppdb/*</code> — stub redirect (<code>sch.$sekolah.ppdb.index.tsx</code> + <code>sch.$sekolah.ppdb.$.tsx</code>) redirect langsung ke <code>/akademik/ppdb</code> (bukan via hub <code>?go=ppdb</code>).</li>
+    <li><strong>Lintas-TA:</strong> PPDB tidak memerlukan konteks TA workspace; PPDB sendiri mengelola gelombang penerimaan per tahun ajaran via field <code>tahun_ajaran</code> di Pendaftaran PPDB.</li>
+    <li><strong>Akses dari workspace:</strong> Tersedia sebagai kartu Tautan Modul di dashboard workspace per-TA, dan sebagai kartu di hub <code>/akademik</code> (next-TA card).</li>
+  </ul>
 </body>
 </html>

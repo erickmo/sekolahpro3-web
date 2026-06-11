@@ -44,7 +44,7 @@ vi.mock("@sekolahpro/auth", () => ({
   useSession: () => sessionMock(),
 }));
 
-import { PpdbBerandaPage } from "../sch.$sekolah.ppdb.index";
+import { PpdbBerandaPage } from "../sch.$sekolah.akademik.ppdb.index";
 
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

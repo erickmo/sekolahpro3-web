@@ -62,7 +62,7 @@ vi.mock("../../lib/ppdbApi", () => {
   };
 });
 
-import { Route } from "../sch.$sekolah.ppdb.buat";
+import { Route } from "../sch.$sekolah.akademik.ppdb.buat";
 
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

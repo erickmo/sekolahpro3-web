@@ -42,7 +42,7 @@ vi.mock("../../data/ppdb", async () => {
   return { ...actual, listPpdbForSekolah: vi.fn(() => [] as Pendaftar[]) };
 });
 
-import { DaftarUlangPpdbPage } from "../sch.$sekolah.ppdb.daftar-ulang";
+import { DaftarUlangPpdbPage } from "../sch.$sekolah.akademik.ppdb.daftar-ulang";
 import { listPpdbForSekolah } from "../../data/ppdb";
 
 const mockedList = vi.mocked(listPpdbForSekolah);

@@ -133,5 +133,14 @@
     <li><strong>Konfigurasi kapasitas default per Unit Jenjang:</strong> Hardcoded 32 di Rombongan Belajar JSON. Future: inherit dari Unit Jenjang.default_kapasitas (YAGNI).</li>
     <li><strong>Role permissions granular per rombel:</strong> Not implemented. Wali Kelas role read-only semua rombel. Future: scope wali kelas ke rombel-nya saja (low priority, low ROI).</li>
   </ul>
+
+  <h2>Fase 1 — Satu Pintu Akademik (2026-06-11)</h2>
+  <p>Rute Kelas dipindah ke bawah workspace Akademik per-TA. Akses langsung via sidebar dihapus.</p>
+  <ul>
+    <li><strong>Rute baru:</strong> <code>/sch/$sekolah/akademik/$ta/kelas/*</code> (7 rute: index, rombel, rombel.$name, rombel.baru, anggota, detail.$kodeKelas, detail.$kodeKelas.siswa)</li>
+    <li><strong>Rute lama:</strong> <code>/sch/$sekolah/kelas/*</code> — stub redirect (<code>sch.$sekolah.kelas.index.tsx</code> + <code>sch.$sekolah.kelas.$.tsx</code>) redirect ke hub <code>/akademik?go=kelas</code>.</li>
+    <li><strong>Kelas bebas-TA:</strong> Param <code>$ta</code> hadir di URL untuk konteks workspace tapi tidak dikirim ke API Rombongan Belajar/Anggota Rombel (scoping by-convention di backend).</li>
+    <li><strong>Nav grup Pengaturan:</strong> Kelas masuk grup <em>Pengaturan</em> di workspace nav (bersama setup Jadwal, dll).</li>
+  </ul>
 </body>
 </html>

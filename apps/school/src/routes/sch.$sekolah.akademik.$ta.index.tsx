@@ -245,7 +245,7 @@ function linkParamsFor(sekolah: string, ta: string): { sekolah: string; ta: stri
   return { sekolah, ta };
 }
 
-function AkademikDashboardPage() {
+export function AkademikDashboardPage() {
   const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/" });
 
   const ctx = useAkademikContextOptional();
@@ -604,6 +604,12 @@ function AkademikDashboardPage() {
         </div>
       </SectionCard>
 
+      {/* Tautan ke modul yang tidak bergabung ke workspace $ta karena
+          tidak ber-segmen $ta (PPDB, Absensi, Laporan). Tanpa kartu ini
+          tidak ada jalur navigasi ke modul-modul tersebut setelah hub
+          akademik.index.tsx melakukan auto-redirect ke workspace. */}
+      <ModulLinks sekolah={sekolah} />
+
       <div className="grid gap-6 lg:grid-cols-2">
         <SectionCard
           title="Perlu Perhatian"
@@ -813,6 +819,82 @@ function ErrorRetry({ onRetry }: { onRetry: () => void }) {
         Coba lagi
       </Button>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tautan Modul
+// ---------------------------------------------------------------------------
+
+/** Entry for one external-module link row. */
+type ModulLink = {
+  /** Unique key for React list rendering. */
+  key: string;
+  /** Route `to` string — must NOT contain $ta (these modules are outside workspace). */
+  to: string;
+  /** Human-readable link label shown in the card. */
+  label: string;
+  /** Short contextual caption explaining why the link appears here. */
+  caption: string;
+};
+
+/**
+ * Static list of modules that live outside the $ta workspace.
+ * Routes carry $sekolah only — they are resolved via params prop at render.
+ */
+const MODUL_LINKS: ModulLink[] = [
+  {
+    key: "ppdb",
+    to: "/sch/$sekolah/akademik/ppdb",
+    label: "Buka PPDB",
+    caption: "Pendaftaran siswa baru (TA berikutnya)",
+  },
+  {
+    key: "absensi",
+    to: "/sch/$sekolah/absensi",
+    label: "Buka Absensi",
+    caption: "Modul absensi — pintu sendiri sampai Fase 2",
+  },
+  {
+    key: "laporan",
+    to: "/sch/$sekolah/laporan",
+    label: "Buka Laporan",
+    caption: "Laporan untuk TA ini (filter by TA saat Pusat Lapor landing)",
+  },
+];
+
+/**
+ * "Tautan Modul" card: links to modules that live outside the $ta workspace
+ * and therefore cannot join the pill-bar navigation.
+ * Rendered on the workspace dashboard so users always have a path to them even
+ * after the hub has auto-redirected into the $ta workspace.
+ *
+ * @param sekolah - Active school slug, forwarded to each Link's params.
+ */
+function ModulLinks({ sekolah }: { sekolah: string }) {
+  return (
+    <SectionCard
+      title="Tautan Modul"
+      description="Modul ini tidak bergabung ke workspace ini — aksesnya dari sini."
+    >
+      <ul className="divide-y divide-border -my-2">
+        {MODUL_LINKS.map((link) => (
+          <li key={link.key} className="py-2.5 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs text-muted-fg">{link.caption}</div>
+            </div>
+            <Link
+              // Cast satisfies typed router; params substitutes $sekolah at runtime.
+              to={link.to as "/sch/$sekolah/akademik/ppdb"}
+              params={{ sekolah }}
+              className="shrink-0 text-sm font-medium text-brand hover:underline"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </SectionCard>
   );
 }
 

@@ -34,7 +34,7 @@ vi.mock("../../data/ppdb", async (importOriginal) => {
 });
 
 import { listPpdbForSekolah } from "../../data/ppdb";
-import { PembayaranPpdbPage } from "../sch.$sekolah.ppdb.pembayaran";
+import { PembayaranPpdbPage } from "../sch.$sekolah.akademik.ppdb.pembayaran";
 
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

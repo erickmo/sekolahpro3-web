@@ -129,5 +129,15 @@
     <li><strong>Historisasi perubahan jadwal:</strong> Tracking perubahan slot (audit log detail) tidak tersedia per 2026-06-03; sistem hanya track `modified` header. Detail historisasi ditangguhkan v2.</li>
     <li><strong>Integrasi Sistem Informasi Sekolah (real-time):</strong> Sinkronisasi dua-arah dengan sistem SIS pihak ketiga tidak ada; hanya fallback ke Frappe REST API standar.</li>
   </ul>
+
+  <h2>Fase 1 — Satu Pintu Akademik (2026-06-11)</h2>
+  <p>Rute Jadwal dipindah ke bawah workspace Akademik per-TA. Akses langsung via sidebar dihapus.</p>
+  <ul>
+    <li><strong>Rute baru:</strong> <code>/sch/$sekolah/akademik/$ta/jadwal/*</code> (13 rute: index, daftar, daftar.$name, papan, agenda, slot, slot.$name, slot-override, override, permintaan, persetujuan, kotak, pantauan)</li>
+    <li><strong>Rute lama:</strong> <code>/sch/$sekolah/jadwal/*</code> — stub redirect (<code>sch.$sekolah.jadwal.index.tsx</code> + <code>sch.$sekolah.jadwal.$.tsx</code>) redirect ke hub <code>/akademik?go=jadwal</code>.</li>
+    <li><strong>Semester docname lokal:</strong> Format <code>TA-{tahun_awal}-{tahun_akhir_2digit}-SEM-{Ganjil|Genap}</code>, e.g. <code>TA-2024-25-SEM-Ganjil</code>. Nilai <code>"Ganjil"</code>/<code>"Genap"</code> sesuai konvensi doctype backend.</li>
+    <li><strong>Nav grup Kegiatan:</strong> Jadwal masuk grup <em>Kegiatan</em> di workspace nav (bersama Ekskul).</li>
+    <li><strong>Absensi ModuleFlow cross-link:</strong> Rute <code>/sch/$sekolah/jadwal/daftar</code> di AbsensiFlow (stub-redirect convention) tetap valid — stub redirect ke rute baru di runtime.</li>
+  </ul>
 </body>
 </html>

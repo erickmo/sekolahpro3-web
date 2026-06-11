@@ -2,6 +2,9 @@
  * Unit tests for the Akademik period-first navigation helpers: TA hub splitting,
  * auto-redirect selection, workspace breadcrumb labelling, and TA path encoding.
  * These back the TA hub + per-TA workspace IA (see 2026-06-03 akademik-ta-hub spec).
+ *
+ * Extends with: workspace nav groups, go-param parser, submodule-path detector,
+ * and next-TA picker (Fase 1 single-door spec §1.2–§1.5).
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -9,6 +12,10 @@ import {
   pickAutoRedirectTa,
   workspaceSubLabel,
   taPath,
+  parseGoParam,
+  isSubmodulePath,
+  pickNextTa,
+  buildWorkspaceNavGroups,
 } from "./akademikNav";
 
 describe("splitTaList", () => {
@@ -103,5 +110,73 @@ describe("taPath", () => {
 
   it("leaves a slug-safe name unchanged", () => {
     expect(taPath("S-2025")).toBe("S-2025");
+  });
+});
+
+// ── Fase 1 additions ─────────────────────────────────────────────────────────
+
+describe("parseGoParam", () => {
+  it("accepts whitelisted module subpaths", () => {
+    expect(parseGoParam("kelas")).toBe("kelas");
+    expect(parseGoParam("kelas/rombel")).toBe("kelas/rombel");
+    expect(parseGoParam("jadwal/papan")).toBe("jadwal/papan");
+    expect(parseGoParam("ekskul/program")).toBe("ekskul/program");
+  });
+  it("rejects unknown roots, absolute URLs, traversal, odd segments", () => {
+    expect(parseGoParam("keuangan")).toBeNull();
+    expect(parseGoParam("https://evil")).toBeNull();
+    expect(parseGoParam("kelas/../pengaturan")).toBeNull();
+    expect(parseGoParam("kelas/%2e%2e/x")).toBeNull();
+    expect(parseGoParam("kelas//x")).toBeNull();
+    expect(parseGoParam("/kelas")).toBeNull();
+    expect(parseGoParam("")).toBeNull();
+    expect(parseGoParam(undefined)).toBeNull();
+  });
+  it("returns the DECODED value so encoded separators cannot smuggle into hrefs", () => {
+    expect(parseGoParam("kelas%2Fpapan")).toBe("kelas/papan");
+    expect(parseGoParam("kelas%2Fpapan%3Ffake%3Dx")).toBeNull();
+    expect(parseGoParam("kelas/papan%23frag")).toBeNull();
+  });
+});
+
+describe("isSubmodulePath", () => {
+  it("matches module pages under a TA workspace", () => {
+    expect(isSubmodulePath("/sch/a/akademik/2025%2F2026/kelas")).toBe(true);
+    expect(isSubmodulePath("/sch/a/akademik/2025%2F2026/jadwal/papan")).toBe(true);
+    expect(isSubmodulePath("/sch/a/akademik/2025%2F2026/ekskul")).toBe(true);
+  });
+  it("does not match workspace dashboard or penilaian pages", () => {
+    expect(isSubmodulePath("/sch/a/akademik/2025%2F2026")).toBe(false);
+    expect(isSubmodulePath("/sch/a/akademik/2025%2F2026/asesmen")).toBe(false);
+  });
+});
+
+describe("pickNextTa", () => {
+  const rows = [
+    { name: "2024/2025", tanggal_mulai: "2024-07-01" },
+    { name: "2025/2026", tanggal_mulai: "2025-07-01" },
+    { name: "2026/2027", tanggal_mulai: "2026-07-01" },
+  ];
+  it("returns the nearest TA starting after refDate (local-date string compare)", () => {
+    expect(pickNextTa(rows, "2026-06-10")?.name).toBe("2026/2027");
+  });
+  it("treats a TA starting today as not upcoming", () => {
+    expect(pickNextTa(rows, "2026-07-01")).toBeNull();
+  });
+  it("returns null when none upcoming", () => {
+    expect(pickNextTa(rows, "2027-01-01")).toBeNull();
+  });
+});
+
+describe("buildWorkspaceNavGroups", () => {
+  it("contains Pengaturan and Kegiatan groups with module links", () => {
+    const groups = buildWorkspaceNavGroups();
+    expect(groups.map((g) => g.label)).toEqual(["Ringkasan", "Pengaturan", "Penilaian", "Kegiatan"]);
+    const pengaturan = groups.find((g) => g.label === "Pengaturan")!;
+    expect(pengaturan.items.map((i) => i.to)).toEqual([
+      "/sch/$sekolah/akademik/$ta/kelas",
+      "/sch/$sekolah/akademik/$ta/jadwal/papan",
+      "/sch/$sekolah/akademik/$ta/ekskul/program",
+    ]);
   });
 });

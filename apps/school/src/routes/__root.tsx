@@ -15,16 +15,13 @@ import {
   IconHome,
   IconUsers,
   IconBook,
-  IconCalendar,
   IconGrad,
   IconFile,
-  IconPlus,
   IconAlert,
   IconCheck,
   IconWallet,
   IconChat,
   IconChart,
-  IconFlag,
   IconSettings,
   IconBell,
   IconSearch,
@@ -47,6 +44,7 @@ import { KOPERASI_NAV } from "../lib/koperasi-nav";
 import { filterKoperasiNav } from "../lib/koperasi/filterKoperasiNav";
 import { useKoperasiMode } from "../lib/koperasi/useKoperasiMode";
 import { SetupBannerContext } from "../lib/setupBanner";
+import { canSee } from "../lib/menuGating";
 
 const SEARCH_MIN_QUERY = 2;
 const SEARCH_MAX_HITS = 8;
@@ -302,47 +300,6 @@ function AvatarMenu({
   );
 }
 
-const ROLE_MENU_MAP: Record<string, string[]> = {
-  super_admin: ["*"],
-  admin_sekolah: ["*"],
-  kepala_sekolah: [
-    "/",
-    "/siswa",
-    "/staff",
-    "/kelas",
-    "/akademik",
-    "/ekstrakurikuler",
-    "/jadwal",
-    "/absensi",
-    "/ppdb",
-    "/keuangan",
-    "/akuntansi",
-    "/laporan",
-    "/pickup-verify",
-    "/aset",
-    "/master",
-    "/situs",
-    "/pengaturan",
-  ],
-  operator: ["/", "/siswa", "/staff", "/kelas", "/jadwal", "/absensi", "/ppdb", "/ekstrakurikuler", "/pesan", "/pickup-verify", "/aset"],
-  guru: ["/", "/siswa", "/kelas", "/akademik", "/ekstrakurikuler", "/master", "/jadwal", "/absensi", "/pesan"],
-  bendahara: ["/", "/siswa", "/keuangan", "/akuntansi", "/koperasi", "/ppdb", "/laporan", "/pesan"],
-  pustakawan: ["/", "/perpustakaan", "/siswa", "/pesan"],
-  petugas_koperasi: ["/", "/koperasi", "/siswa", "/pesan"],
-  manajer_aset: ["/", "/aset", "/siswa", "/pesan", "/laporan"],
-  petugas_aset: ["/", "/aset", "/siswa", "/pesan"],
-};
-
-function canSee(to: string, roles: string[]): boolean {
-  for (const role of roles) {
-    const allowed = ROLE_MENU_MAP[role];
-    if (!allowed) continue;
-    if (allowed.includes("*")) return true;
-    if (allowed.includes(to)) return true;
-  }
-  return false;
-}
-
 type SidebarItem = SidebarNavSection["items"][number] & { to: string };
 
 // Gradient brand-mark per shell — sekolah biru→violet, koperasi emerald
@@ -503,26 +460,6 @@ function Layout() {
     items: s.items.map((it) => mkKop(it.to, it.label, KOP_SECTION_ICON[s.title] ?? <IconWallet />)),
   }));
 
-  // Entri "Koperasi" di sidebar sekolah = cross-link ke shell koperasi
-  // (/kop/$sekolah). Tetap pakai `to: "/koperasi"` agar gating peran via
-  // canSee tak berubah, tapi link mengarah keluar ke shell koperasi.
-  const koperasiCrossLink: SidebarItem = {
-    to: "/koperasi",
-    label: "Koperasi",
-    icon: <IconWallet />,
-    active: false,
-    render: ({ className, children }: { className: string; children: React.ReactNode }) =>
-      slug ? (
-        <Link to={kopScopedTo(slug, "/")} params={scopedParams(slug)} className={className}>
-          {children}
-        </Link>
-      ) : (
-        <Link to="/pilih" className={className}>
-          {children}
-        </Link>
-      ),
-  };
-
   const roles = session.roles && session.roles.length > 0 ? session.roles : ["admin_sekolah"];
 
   const rawSections: { title: string; items: SidebarItem[] }[] = [
@@ -532,24 +469,19 @@ function Layout() {
         mk("/", "Dashboard", <IconHome />),
         mk("/siswa", "Siswa", <IconUsers />),
         mk("/staff", "Guru & Staff", <IconGrad />),
-        mk("/kelas", "Kelas", <IconBook />),
       ],
     },
     {
       title: "Akademik",
       items: [
         mk("/akademik", "Akademik", <IconBook />),
-        mk("/ekstrakurikuler", "Ekstrakurikuler", <IconFlag />),
-        mk("/jadwal", "Jadwal", <IconCalendar />),
         mk("/absensi", "Absensi", <IconCheck />),
       ],
     },
     {
       title: "Layanan",
       items: [
-        mk("/ppdb", "PPDB", <IconPlus />),
         mk("/perpustakaan", "Perpustakaan", <IconFile />),
-        koperasiCrossLink,
       ],
     },
     {

@@ -50,7 +50,7 @@ const PAYMENT_PENDING_STATUS = "Tertunda";
 const STATUS_DAFTAR_ULANG_DONE: Pendaftar["statusPendaftaran"] = "Daftar Ulang";
 
 // Prefix route PPDB; "$sekolah" sengaja literal agar konsumen mengisi param.
-const ROUTE_PREFIX = "/sch/$sekolah/ppdb";
+const ROUTE_PREFIX = "/sch/$sekolah/akademik/ppdb";
 
 /** True jika pendaftar punya minimal satu dokumen yang belum tuntas. */
 function needsDocAction(p: Pendaftar): boolean {

@@ -64,10 +64,10 @@ describe("buildWorkQueue — struktur dasar", () => {
     }
   });
 
-  it("setiap actionHref menunjuk route /sch/$sekolah/ppdb/* dengan literal $sekolah", () => {
+  it("setiap actionHref menunjuk route /sch/$sekolah/akademik/ppdb/* dengan literal $sekolah", () => {
     const groups = buildWorkQueue([], TODAY_ISO);
     for (const g of groups) {
-      expect(g.actionHref).toMatch(/^\/sch\/\$sekolah\/ppdb\//);
+      expect(g.actionHref).toMatch(/^\/sch\/\$sekolah\/akademik\/ppdb\//);
     }
   });
 });
