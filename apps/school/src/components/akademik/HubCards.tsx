@@ -21,10 +21,10 @@ export type HubTaRow = {
 };
 
 /** Build a workspace-subpath href for a TA + validated `go` target. `go` is the
- * DECODED subpath from parseGoParam; only `sekolah` + the TA `name` need encoding
- * (taPath), so the literal "/" between go segments is preserved verbatim. */
+ * DECODED subpath from parseGoParam; per-segment encode keeps "/" literal but
+ * makes ids with %/space URL-safe. */
 export function workspaceGoHref(sekolah: string, taName: string, go: string): string {
-  return `/sch/${encodeURIComponent(sekolah)}/akademik/${taPath(taName)}/${go}`;
+  return `/sch/${encodeURIComponent(sekolah)}/akademik/${taPath(taName)}/${go.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 /** Status descriptor for a TA card badge (label + tone + icon). */
