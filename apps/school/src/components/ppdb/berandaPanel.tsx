@@ -83,10 +83,10 @@ const LOCALE = "id-ID";
 function KpiRow({ kpi, renderLink }: { kpi: BerandaKpi; renderLink: RenderLink }): ReactNode {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label={KPI_TOTAL_LABEL} value={kpi.total.toLocaleString(LOCALE)} hint="seluruh pendaftaran" icon={<IconUsers />} accent="brand" actionHref="/sch/$sekolah/ppdb/calon-siswa" renderLink={renderLink} />
-      <StatCard label={KPI_LOLOS_LABEL} value={kpi.lolos.toLocaleString(LOCALE)} hint="lulus + diterima" icon={<IconCheck />} accent="emerald" actionHref="/sch/$sekolah/ppdb/seleksi" renderLink={renderLink} />
-      <StatCard label={KPI_BAYAR_LABEL} value={kpi.pembayaranPending.toLocaleString(LOCALE)} hint="tagihan tertunda" icon={<IconWallet />} accent="rose" urgency={kpi.pembayaranPending > 0 ? "warn" : "normal"} actionHref="/sch/$sekolah/ppdb/pembayaran" renderLink={renderLink} />
-      <StatCard label={KPI_HARI_LABEL} value={kpi.hariTersisa.toLocaleString(LOCALE)} hint="menuju penutupan" icon={<IconCalendar />} accent="violet" urgency={kpi.hariTersisa <= 14 ? "warn" : "normal"} actionHref="/sch/$sekolah/ppdb/gelombang" renderLink={renderLink} />
+      <StatCard label={KPI_TOTAL_LABEL} value={kpi.total.toLocaleString(LOCALE)} hint="seluruh pendaftaran" icon={<IconUsers />} accent="brand" actionHref="/sch/$sekolah/akademik/ppdb/calon-siswa" renderLink={renderLink} />
+      <StatCard label={KPI_LOLOS_LABEL} value={kpi.lolos.toLocaleString(LOCALE)} hint="lulus + diterima" icon={<IconCheck />} accent="emerald" actionHref="/sch/$sekolah/akademik/ppdb/seleksi" renderLink={renderLink} />
+      <StatCard label={KPI_BAYAR_LABEL} value={kpi.pembayaranPending.toLocaleString(LOCALE)} hint="tagihan tertunda" icon={<IconWallet />} accent="rose" urgency={kpi.pembayaranPending > 0 ? "warn" : "normal"} actionHref="/sch/$sekolah/akademik/ppdb/pembayaran" renderLink={renderLink} />
+      <StatCard label={KPI_HARI_LABEL} value={kpi.hariTersisa.toLocaleString(LOCALE)} hint="menuju penutupan" icon={<IconCalendar />} accent="violet" urgency={kpi.hariTersisa <= 14 ? "warn" : "normal"} actionHref="/sch/$sekolah/akademik/ppdb/gelombang" renderLink={renderLink} />
     </div>
   );
 }

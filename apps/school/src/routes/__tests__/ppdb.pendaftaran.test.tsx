@@ -60,7 +60,7 @@ vi.mock("@sekolahpro/auth", () => ({
   useSession: () => ({ roles: [] }),
 }));
 
-import { PpdbDaftarPage } from "../sch.$sekolah.ppdb.daftar";
+import { PpdbDaftarPage } from "../sch.$sekolah.akademik.ppdb.daftar";
 
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

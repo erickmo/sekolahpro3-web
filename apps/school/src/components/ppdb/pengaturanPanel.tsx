@@ -44,7 +44,7 @@ const MIN_PERCENT = 0;
 /** Maximum percent allowed for the "minimum bayar" field. */
 const MAX_PERCENT = 100;
 /** Route to the pembayaran page used by onboarding + helper notes. */
-const PEMBAYARAN_HREF = "/sch/$sekolah/ppdb/pembayaran";
+const PEMBAYARAN_HREF = "/sch/$sekolah/akademik/ppdb/pembayaran";
 
 /** Supported payment gateway providers. */
 const GATEWAY_OPTIONS = [

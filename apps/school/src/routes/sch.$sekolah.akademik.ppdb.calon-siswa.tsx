@@ -171,7 +171,7 @@ export function CalonSiswaPage(): ReactNode {
               pendaftar={p}
               renderDetailLink={(noPendaftaran, children) => (
                 <Link
-                  to="/sch/$sekolah/ppdb/$noPendaftaran"
+                  to="/sch/$sekolah/akademik/ppdb/$noPendaftaran"
                   params={{ sekolah, noPendaftaran }}
                 >
                   {children}
@@ -185,6 +185,6 @@ export function CalonSiswaPage(): ReactNode {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb/calon-siswa")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/ppdb/calon-siswa")({
   component: CalonSiswaPage,
 });

@@ -144,7 +144,7 @@ export function PembayaranPpdbPage() {
       cell: (r) =>
         r.pendaftaran_ppdb ? (
           <Link
-            to="/sch/$sekolah/ppdb/$noPendaftaran"
+            to="/sch/$sekolah/akademik/ppdb/$noPendaftaran"
             params={{ sekolah, noPendaftaran: r.pendaftaran_ppdb }}
             className="font-mono text-xs text-brand hover:underline"
           >
@@ -284,4 +284,4 @@ export function PembayaranPpdbPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb/pembayaran")({ component: PembayaranPpdbPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/ppdb/pembayaran")({ component: PembayaranPpdbPage });

@@ -8,28 +8,28 @@ import { useGenericRoleLabel } from "../lib/genericRole";
 const NAV_GROUPS: NavTabGroup[] = [
   {
     label: "Ringkasan",
-    items: [{ to: "/sch/$sekolah/ppdb", label: "Dashboard", exact: true }],
+    items: [{ to: "/sch/$sekolah/akademik/ppdb", label: "Dashboard", exact: true }],
   },
   {
     label: "Pendaftaran",
     items: [
-      { to: "/sch/$sekolah/ppdb/buat", label: "Buat PPDB" },
-      { to: "/sch/$sekolah/ppdb/daftar", label: "Pendaftaran" },
-      { to: "/sch/$sekolah/ppdb/calon-siswa", label: "Calon Siswa" },
-      { to: "/sch/$sekolah/ppdb/gelombang", label: "Gelombang" },
+      { to: "/sch/$sekolah/akademik/ppdb/buat", label: "Buat PPDB" },
+      { to: "/sch/$sekolah/akademik/ppdb/daftar", label: "Pendaftaran" },
+      { to: "/sch/$sekolah/akademik/ppdb/calon-siswa", label: "Calon Siswa" },
+      { to: "/sch/$sekolah/akademik/ppdb/gelombang", label: "Gelombang" },
     ],
   },
   {
     label: "Proses",
     items: [
-      { to: "/sch/$sekolah/ppdb/seleksi", label: "Seleksi" },
-      { to: "/sch/$sekolah/ppdb/pembayaran", label: "Pembayaran" },
-      { to: "/sch/$sekolah/ppdb/daftar-ulang", label: "Daftar Ulang" },
+      { to: "/sch/$sekolah/akademik/ppdb/seleksi", label: "Seleksi" },
+      { to: "/sch/$sekolah/akademik/ppdb/pembayaran", label: "Pembayaran" },
+      { to: "/sch/$sekolah/akademik/ppdb/daftar-ulang", label: "Daftar Ulang" },
     ],
   },
   {
     label: "Kelola",
-    items: [{ to: "/sch/$sekolah/ppdb/pengaturan", label: "Pengaturan" }],
+    items: [{ to: "/sch/$sekolah/akademik/ppdb/pengaturan", label: "Pengaturan" }],
   },
 ];
 
@@ -49,4 +49,4 @@ function PpdbLayout() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb")({ component: PpdbLayout });
+export const Route = createFileRoute("/sch/$sekolah/akademik/ppdb")({ component: PpdbLayout });

@@ -35,7 +35,7 @@ export function ResultPanel({
         <Alert tone="success" title="Pendaftaran terbuat">
           No. Pendaftaran:{" "}
           <Link
-            to="/sch/$sekolah/ppdb/$noPendaftaran"
+            to="/sch/$sekolah/akademik/ppdb/$noPendaftaran"
             params={{ sekolah, noPendaftaran: result.pendaftaranName }}
             className="font-mono text-brand underline"
           >
@@ -104,7 +104,7 @@ export function ResultPanel({
 function ResultLink({ sekolah, noPendaftaran }: { sekolah: string; noPendaftaran: string }) {
   return (
     <Link
-      to="/sch/$sekolah/ppdb/$noPendaftaran"
+      to="/sch/$sekolah/akademik/ppdb/$noPendaftaran"
       params={{ sekolah, noPendaftaran }}
       className="block rounded-lg border border-brand bg-brand/10 p-3 text-left transition hover:border-brand"
     >

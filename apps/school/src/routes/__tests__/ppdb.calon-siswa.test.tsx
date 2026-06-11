@@ -35,7 +35,7 @@ vi.mock("../../data/ppdb", async () => {
 });
 
 import { listPpdbForSekolah, type Pendaftar } from "../../data/ppdb";
-import { CalonSiswaPage } from "../sch.$sekolah.ppdb.calon-siswa";
+import { CalonSiswaPage } from "../sch.$sekolah.akademik.ppdb.calon-siswa";
 
 /** Bangun satu Pendaftar minimal untuk fixture test (field non-relevan diisi aman). */
 function makePendaftar(overrides: Partial<Pendaftar>): Pendaftar {

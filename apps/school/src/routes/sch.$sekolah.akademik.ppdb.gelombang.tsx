@@ -219,7 +219,7 @@ function GelombangPage() {
 
       <p className="text-xs text-muted-fg">
         Butuh mengubah biaya atau formulir?{" "}
-        <Link to="/sch/$sekolah/ppdb/pengaturan" params={{ sekolah }} className="text-brand hover:underline">
+        <Link to="/sch/$sekolah/akademik/ppdb/pengaturan" params={{ sekolah }} className="text-brand hover:underline">
           Buka Pengaturan PPDB
         </Link>
         .
@@ -234,4 +234,4 @@ function GelombangPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb/gelombang")({ component: GelombangPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/ppdb/gelombang")({ component: GelombangPage });

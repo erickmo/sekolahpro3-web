@@ -265,7 +265,7 @@ export function PpdbDaftarPage() {
             sort={sort}
             onSortChange={setSort}
             onRowClick={(r) =>
-              navigate({ to: "/sch/$sekolah/ppdb/$noPendaftaran", params: { sekolah, noPendaftaran: r.name } })
+              navigate({ to: "/sch/$sekolah/akademik/ppdb/$noPendaftaran", params: { sekolah, noPendaftaran: r.name } })
             }
             empty={q.isLoading ? "Memuat..." : q.isError ? "Gagal memuat data." : "Belum ada pendaftaran."}
           />
@@ -294,4 +294,4 @@ export function PpdbDaftarPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb/daftar")({ component: PpdbDaftarPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/ppdb/daftar")({ component: PpdbDaftarPage });

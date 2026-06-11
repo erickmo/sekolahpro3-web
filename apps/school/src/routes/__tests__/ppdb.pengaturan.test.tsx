@@ -54,7 +54,7 @@ vi.mock("@sekolahpro/api-client", () => ({
   frappeFetch: vi.fn(),
 }));
 
-import { Route } from "../sch.$sekolah.ppdb.pengaturan";
+import { Route } from "../sch.$sekolah.akademik.ppdb.pengaturan";
 
 function wrap(ui: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

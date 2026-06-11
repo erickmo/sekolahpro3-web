@@ -13,7 +13,7 @@ import { NextActionCard, type NextAction } from "../NextActionCard";
 const SAMPLE_ACTION: NextAction = {
   label: "Verifikasi 5 dokumen",
   description: "Ada 5 pendaftar dengan dokumen menunggu verifikasi.",
-  href: "/sch/$sekolah/ppdb/dokumen",
+  href: "/sch/$sekolah/akademik/ppdb/dokumen",
   tone: "warning",
 };
 
@@ -40,12 +40,12 @@ describe("NextActionCard", () => {
     ));
     render(<NextActionCard action={SAMPLE_ACTION} renderLink={renderLink} />);
     expect(renderLink).toHaveBeenCalledWith(
-      "/sch/$sekolah/ppdb/dokumen",
+      "/sch/$sekolah/akademik/ppdb/dokumen",
       expect.anything(),
     );
     // CTA harus terhubung ke href yang diberikan.
     const link = screen.getByRole("link");
-    expect(link).toHaveAttribute("href", "/sch/$sekolah/ppdb/dokumen");
+    expect(link).toHaveAttribute("href", "/sch/$sekolah/akademik/ppdb/dokumen");
   });
 
   it("tidak merender apa pun saat action null", () => {

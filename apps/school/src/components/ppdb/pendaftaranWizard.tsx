@@ -83,7 +83,7 @@ function CalonStep({
       />
       <p className="mt-2 text-xs text-muted-fg">
         Calon belum terdaftar?{" "}
-        <Link to="/sch/$sekolah/ppdb/calon-siswa" params={{ sekolah }} className="text-brand hover:underline">
+        <Link to="/sch/$sekolah/akademik/ppdb/calon-siswa" params={{ sekolah }} className="text-brand hover:underline">
           Tambah Calon Siswa
         </Link>
         .
@@ -115,7 +115,7 @@ function GelombangStep({
       {empty && (
         <p className="mt-2 text-xs text-amber-700">
           Belum ada gelombang aktif.{" "}
-          <Link to="/sch/$sekolah/ppdb/gelombang" params={{ sekolah }} className="underline">
+          <Link to="/sch/$sekolah/akademik/ppdb/gelombang" params={{ sekolah }} className="underline">
             Buka pengaturan gelombang
           </Link>
           .

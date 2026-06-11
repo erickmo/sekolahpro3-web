@@ -30,7 +30,7 @@ vi.mock("@sekolahpro/api-client", () => ({
   frappeFetch: vi.fn(),
 }));
 
-import { SeleksiPpdbPage } from "../sch.$sekolah.ppdb.seleksi";
+import { SeleksiPpdbPage } from "../sch.$sekolah.akademik.ppdb.seleksi";
 import { listPpdbForSekolah } from "../../data/ppdb";
 
 function wrap(ui: ReactNode) {

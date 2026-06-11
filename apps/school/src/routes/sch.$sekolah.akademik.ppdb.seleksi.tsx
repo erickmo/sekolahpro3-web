@@ -269,4 +269,4 @@ export function SeleksiPpdbPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb/seleksi")({ component: SeleksiPpdbPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/ppdb/seleksi")({ component: SeleksiPpdbPage });

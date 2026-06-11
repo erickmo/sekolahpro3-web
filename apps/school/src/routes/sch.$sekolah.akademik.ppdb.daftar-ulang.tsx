@@ -178,7 +178,7 @@ export function DaftarUlangPpdbPage() {
         description="Selesaikan daftar ulang pelamar diterima → buat record Siswa resmi."
         actions={
           <Link
-            to="/sch/$sekolah/ppdb"
+            to="/sch/$sekolah/akademik/ppdb"
             params={{ sekolah }}
             className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm font-medium text-fg hover:bg-muted"
           >
@@ -248,7 +248,7 @@ function EmptyAccepted({ sekolah }: { sekolah: string }) {
       description="Pelamar akan muncul di sini setelah hasil seleksi diumumkan dan statusnya menjadi Diterima."
       action={
         <Link
-          to="/sch/$sekolah/ppdb/seleksi"
+          to="/sch/$sekolah/akademik/ppdb/seleksi"
           params={{ sekolah }}
           className="inline-flex h-9 items-center rounded-md bg-brand px-4 text-sm font-medium text-white hover:bg-brand/90"
         >
@@ -259,6 +259,6 @@ function EmptyAccepted({ sekolah }: { sekolah: string }) {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb/daftar-ulang")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/ppdb/daftar-ulang")({
   component: DaftarUlangPpdbPage,
 });

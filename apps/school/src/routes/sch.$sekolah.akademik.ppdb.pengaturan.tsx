@@ -142,6 +142,6 @@ function PengaturanPpdbPage(): ReactNode {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb/pengaturan")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/ppdb/pengaturan")({
   component: PengaturanPpdbPage,
 });

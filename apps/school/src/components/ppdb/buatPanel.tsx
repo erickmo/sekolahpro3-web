@@ -133,7 +133,7 @@ export function BuatPanel({ sekolah }: { sekolah: string }) {
             });
             window.open(po.payment_url, "_blank");
           }}
-          onNew={() => navigate({ to: "/sch/$sekolah/ppdb/buat", params: { sekolah } })}
+          onNew={() => navigate({ to: "/sch/$sekolah/akademik/ppdb/buat", params: { sekolah } })}
         />
       )}
 

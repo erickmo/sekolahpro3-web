@@ -222,7 +222,7 @@ function AkademikHubPage() {
               Gelombang &amp; calon siswa untuk tahun ajaran depan.
             </p>
           </div>
-          <Link to="/sch/$sekolah/ppdb" params={{ sekolah }} className="shrink-0">
+          <Link to="/sch/$sekolah/akademik/ppdb" params={{ sekolah }} className="shrink-0">
             <Button variant="outline">Buka PPDB →</Button>
           </Link>
         </div>

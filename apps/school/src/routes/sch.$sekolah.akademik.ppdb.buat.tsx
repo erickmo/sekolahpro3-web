@@ -58,7 +58,7 @@ function PpdbBuatPage() {
         actions={
           <Button
             variant="outline"
-            onClick={() => navigate({ to: "/sch/$sekolah/ppdb", params: { sekolah } })}
+            onClick={() => navigate({ to: "/sch/$sekolah/akademik/ppdb", params: { sekolah } })}
           >
             Batal
           </Button>
@@ -77,4 +77,4 @@ function PpdbBuatPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ppdb/buat")({ component: PpdbBuatPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/ppdb/buat")({ component: PpdbBuatPage });
