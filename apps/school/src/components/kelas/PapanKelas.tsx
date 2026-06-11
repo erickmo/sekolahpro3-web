@@ -46,7 +46,8 @@ const QUICK_LINKS = [
 ] as const;
 
 export function PapanKelas() {
-  // `taParam` is the URL segment (encoded) for intra-module Links; the TA *value*
+  // `taParam` is the decoded TA value from the route (`useParams()` already
+  // decodes); TanStack re-encodes it when building Link params. The TA *value*
   // used to scope data comes from the period context below (`ta`).
   const { sekolah, ta: taParam } = useParams({ from: "/sch/$sekolah/akademik/$ta/kelas" });
   const qc = useQueryClient();

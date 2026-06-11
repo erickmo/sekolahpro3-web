@@ -1,10 +1,11 @@
 // kelasPeriode — period (Tahun Ajaran) context for the Kelas module.
 //
-// Built on the shared createPeriodContext factory; the Kelas layout provides the
-// value via usePeriodeSwitcher, and TA-scoped surfaces (Papan Kelas board, the
-// rombel/daftar lists) read it to filter data and gate writes when an archived
-// year is selected. Note: Rombongan Belajar has no semester axis, so the Kelas
-// strip switches Tahun Ajaran only.
+// Built on the shared createPeriodContext factory; the value is provided by the
+// akademik workspace context (`useAkademikContext()` passthrough in the `$ta`
+// kelas layout) — not via usePeriodeSwitcher. TA-scoped surfaces (Papan Kelas
+// board, the rombel/daftar lists) read it to filter data and gate writes when
+// an archived year is selected. Note: Rombongan Belajar has no semester axis,
+// so the Kelas strip switches Tahun Ajaran only.
 import { createPeriodContext } from "./periodContext";
 
 const ctx = createPeriodContext("Kelas");

@@ -93,9 +93,11 @@ function AkademikWorkspaceLayout() {
   const navigate = useNavigate({ from: "/sch/$sekolah/akademik/$ta" });
   const [dirty, setDirty] = useState(false);
 
-  // The path segment is URL-encoded (a TA `name` may contain "/"); decode to match
-  // against the fetched list and to expose a clean value through the context.
-  const decodedTa = useMemo(() => decodeURIComponent(ta), [ta]);
+  // `useParams()` already returns the decoded value — `$ta` may contain "/"
+  // (TanStack router-core processRouteTree decodes path segments); Links
+  // re-encode via taPath when building hrefs. A manual decodeURIComponent would
+  // double-decode and throw URIError on a TA name containing a literal "%".
+  const decodedTa = ta;
 
   const taQ = useResourceList<TahunAjaranRow>("Tahun Ajaran", {
     fields: TA_FIELDS,
