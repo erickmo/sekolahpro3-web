@@ -1,5 +1,5 @@
 /**
- * sch.$sekolah.ekstrakurikuler.sesi.$id.tsx — Daftar hadir satu sesi.
+ * sch.$sekolah.akademik.$ta.ekskul.sesi.$id.tsx — Daftar hadir satu sesi.
  *
  * Layar absensi utama pembina. Roster diisi otomatis dari pendaftaran aktif;
  * SEMUA peserta default "Hadir" sehingga kasus umum butuh nol ketukan. Pembina

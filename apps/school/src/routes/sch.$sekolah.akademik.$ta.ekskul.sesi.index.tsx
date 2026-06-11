@@ -1,5 +1,5 @@
 /**
- * sch.$sekolah.ekstrakurikuler.sesi.index.tsx — "Sesi hari ini".
+ * sch.$sekolah.akademik.$ta.ekskul.sesi.index.tsx — "Sesi hari ini".
  *
  * Layar utama mobile untuk PEMBINA (pelatih). Alur satu ketuk:
  *   pilih ekstrakurikuler → "Mulai Sesi Hari Ini" → tandai yang tidak hadir.
@@ -231,10 +231,15 @@ function SesiHariIni() {
             placeholder="Pilih ekstrakurikuler…"
             className="w-full"
           />
-          <Button onClick={mulaiSesi} disabled={!program || creating} className="w-full">
+          <Button onClick={mulaiSesi} disabled={!program || !ctx.semester || creating} className="w-full">
             <IconPlus className="mr-1.5 h-4 w-4 shrink-0" />
             {creating ? "Memulai…" : "Mulai Sesi Hari Ini"}
           </Button>
+          {!ctx.semester ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              Pilih semester terlebih dahulu.
+            </div>
+          ) : null}
           {error ? (
             <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
               {error}
