@@ -11,6 +11,9 @@ describe("ROLE_MENU_MAP single-door entries", () => {
   it("petugas_koperasi keeps /koperasi (pilih cards + kop shell key off it)", () => {
     expect(ROLE_MENU_MAP.petugas_koperasi).toContain("/koperasi");
   });
+  it("guru gains /akademik (single-door for kelas, jadwal, ekskul)", () => {
+    expect(ROLE_MENU_MAP.guru).toContain("/akademik");
+  });
 });
 
 describe("canSee", () => {
@@ -22,5 +25,8 @@ describe("canSee", () => {
   });
   it("denies when no role allows", () => {
     expect(canSee("/akademik", ["pustakawan"])).toBe(false);
+  });
+  it("guru sees /akademik (single-door entry for kelas/jadwal/ekskul)", () => {
+    expect(canSee("/akademik", ["guru"])).toBe(true);
   });
 });

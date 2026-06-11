@@ -37,6 +37,11 @@ export const ROLE_MENU_MAP: Record<string, string[]> = {
   petugas_aset: ["/", "/aset", "/siswa", "/pesan"],
 };
 
+/**
+ * Returns true if any role in `roles` allows `to`.
+ * Matches `to` EXACTLY against each role's allowlist (role-union OR, `*` wildcard).
+ * Pass top-level route strings only — sub-paths (e.g. "/akademik/ppdb") never match.
+ */
 export function canSee(to: string, roles: string[]): boolean {
   for (const role of roles) {
     const allowed = ROLE_MENU_MAP[role];
