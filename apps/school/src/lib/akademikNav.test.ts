@@ -132,6 +132,11 @@ describe("parseGoParam", () => {
     expect(parseGoParam("")).toBeNull();
     expect(parseGoParam(undefined)).toBeNull();
   });
+  it("returns the DECODED value so encoded separators cannot smuggle into hrefs", () => {
+    expect(parseGoParam("kelas%2Fpapan")).toBe("kelas/papan");
+    expect(parseGoParam("kelas%2Fpapan%3Ffake%3Dx")).toBeNull();
+    expect(parseGoParam("kelas/papan%23frag")).toBeNull();
+  });
 });
 
 describe("isSubmodulePath", () => {

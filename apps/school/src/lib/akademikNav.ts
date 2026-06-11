@@ -140,7 +140,7 @@ export type WorkspaceModuleRoot = (typeof WORKSPACE_MODULE_ROOTS)[number];
  * subpath or null.
  *
  * @param go - Raw query-param value; may be undefined or empty.
- * @returns The validated subpath string, or null if invalid.
+ * @returns The validated DECODED subpath string, or null if invalid.
  */
 export function parseGoParam(go: string | undefined): string | null {
   if (!go || go.startsWith("/") || go.includes("://")) return null;
@@ -151,8 +151,8 @@ export function parseGoParam(go: string | undefined): string | null {
     return null;
   }
   const segments = decoded.split("/");
-  if (segments.some((s) => s === "" || s === "." || s === "..")) return null;
-  return (WORKSPACE_MODULE_ROOTS as readonly string[]).includes(segments[0] ?? "") ? go : null;
+  if (segments.some((s) => s === "" || s === "." || s === ".." || /[?#\\]/.test(s))) return null;
+  return (WORKSPACE_MODULE_ROOTS as readonly string[]).includes(segments[0] ?? "") ? decoded : null;
 }
 
 /**
