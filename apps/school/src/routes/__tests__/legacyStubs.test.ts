@@ -3,6 +3,8 @@ import { Route as KelasIndexStub } from "../sch.$sekolah.kelas.index";
 import { Route as KelasSplatStub } from "../sch.$sekolah.kelas.$";
 import { Route as JadwalIndexStub } from "../sch.$sekolah.jadwal.index";
 import { Route as JadwalSplatStub } from "../sch.$sekolah.jadwal.$";
+import { Route as EkskulIndexStub } from "../sch.$sekolah.ekstrakurikuler.index";
+import { Route as EkskulSplatStub } from "../sch.$sekolah.ekstrakurikuler.$";
 
 function goOf(route: { options: { beforeLoad?: (ctx: never) => unknown } }, params: Record<string, string>) {
   try {
@@ -28,5 +30,14 @@ describe("legacy /jadwal stubs", () => {
   });
   it("splat stub carries the deep subpath", () => {
     expect(goOf(JadwalSplatStub, { sekolah: "demo", _splat: "papan" })).toBe("jadwal/papan");
+  });
+});
+
+describe("legacy /ekstrakurikuler stubs", () => {
+  it("index stub forwards go=ekskul", () => {
+    expect(goOf(EkskulIndexStub, { sekolah: "demo" })).toBe("ekskul");
+  });
+  it("splat stub carries the deep subpath", () => {
+    expect(goOf(EkskulSplatStub, { sekolah: "demo", _splat: "program" })).toBe("ekskul/program");
   });
 });

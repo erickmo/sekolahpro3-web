@@ -215,7 +215,7 @@ function AttendanceRow({
 }
 
 /** Header sesi: nama program + tanggal + pertemuan ke-N. */
-function SesiHeader({ doc, sekolah }: { doc: SesiDoc; sekolah: string }) {
+function SesiHeader({ doc, sekolah, ta }: { doc: SesiDoc; sekolah: string; ta: string }) {
   return (
     <PageHeader
       eyebrow="Ekstrakurikuler · Daftar Hadir"
@@ -223,8 +223,8 @@ function SesiHeader({ doc, sekolah }: { doc: SesiDoc; sekolah: string }) {
       description={`${doc.tanggal ?? "—"} · Pertemuan ke-${doc.pertemuan_ke ?? "?"}`}
       actions={
         <Link
-          to="/sch/$sekolah/ekstrakurikuler/sesi"
-          params={{ sekolah }}
+          to="/sch/$sekolah/akademik/$ta/ekskul/sesi"
+          params={{ sekolah, ta }}
           className="inline-flex h-10 items-center justify-center rounded-md border border-border px-4 text-sm font-medium hover:bg-muted"
         >
           <IconArrowLeft className="mr-1.5 h-4 w-4 shrink-0" />
@@ -325,7 +325,9 @@ function useSesiDoc(id: string) {
 }
 
 function SesiDetail() {
-  const { sekolah, id } = useParams({ from: "/sch/$sekolah/ekstrakurikuler/sesi/$id" });
+  // `routeTa` is the workspace TA segment from the URL (for intra-module Links);
+  // the doc's own `tahun_ajaran` below (`ta`) scopes the roster query.
+  const { sekolah, ta: routeTa, id } = useParams({ from: "/sch/$sekolah/akademik/$ta/ekskul/sesi/$id" });
   const { doc, loading, error, reload } = useSesiDoc(id);
 
   const [rows, setRows] = useState<AttendanceRowState[]>([]);
@@ -428,7 +430,7 @@ function SesiDetail() {
 
   return (
     <div className="space-y-6">
-      <SesiHeader doc={doc} sekolah={sekolah} />
+      <SesiHeader doc={doc} sekolah={sekolah} ta={routeTa} />
 
       <div className="flex items-center gap-2 text-xs">
         {savingAny ? (
@@ -456,8 +458,8 @@ function SesiDetail() {
           <div className="px-4 py-10 text-center text-sm text-muted-fg">
             Belum ada peserta aktif pada ekstrakurikuler ini.{" "}
             <Link
-              to="/sch/$sekolah/ekstrakurikuler/pendaftaran"
-              params={{ sekolah }}
+              to="/sch/$sekolah/akademik/$ta/ekskul/pendaftaran"
+              params={{ sekolah, ta: routeTa }}
               className="text-brand hover:underline"
             >
               Daftarkan peserta dulu
@@ -492,6 +494,6 @@ function SesiDetail() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ekstrakurikuler/sesi/$id")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/ekskul/sesi/$id")({
   component: SesiDetail,
 });

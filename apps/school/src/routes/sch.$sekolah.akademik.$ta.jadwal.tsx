@@ -6,7 +6,7 @@ import { useAkademikRole, ROLE_LABEL } from "../lib/akademikRole";
 import { filterJadwalNav } from "../lib/jadwalNav";
 import { useAkademikContext } from "../lib/akademikContext";
 import { JadwalPeriodProvider } from "../lib/jadwalPeriode";
-import { useSemesterDoc } from "../lib/jadwalSemester";
+import { useSemesterDoc } from "../lib/semesterDoc";
 
 // Layout shell for the Jadwal module, now living inside the per-Tahun-Ajaran
 // Akademik workspace (Fase 1 single-door). The sub-nav is role-filtered (Tata
@@ -25,7 +25,7 @@ function JadwalLayout() {
   const { primary } = useAkademikRole();
   const navGroups = filterJadwalNav(primary);
   const akademik = useAkademikContext();
-  const { semester, setSemester, semOptions } = useSemesterDoc(sekolah, akademik.tahunAjaran);
+  const { semester, setSemester, semOptions } = useSemesterDoc(sekolah, akademik.tahunAjaran, "jadwal");
 
   // Provider value: workspace period for TA/flags, LOCAL Semester docname (NOT
   // akademik.semester) + its setter for the strip dropdown. Memoised on the

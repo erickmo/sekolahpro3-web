@@ -737,6 +737,6 @@ function errMsg(err: unknown): string {
   return err instanceof Error ? err.message : "Gagal menyimpan";
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ekstrakurikuler/raport/")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/ekskul/raport/")({
   component: RaportManager,
 });

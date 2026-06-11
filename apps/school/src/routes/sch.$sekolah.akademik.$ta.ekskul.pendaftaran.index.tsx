@@ -447,6 +447,6 @@ function PendaftaranPage(): ReactNode {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ekstrakurikuler/pendaftaran/")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/ekskul/pendaftaran/")({
   component: PendaftaranPage,
 });

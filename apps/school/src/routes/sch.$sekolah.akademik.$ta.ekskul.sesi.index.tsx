@@ -82,11 +82,11 @@ function EmptyState({ message }: { message: string }) {
 }
 
 /** Satu baris sesi terakhir yang bisa diketuk untuk membuka absensi. */
-function SesiListItem({ row, sekolah }: { row: SesiRow; sekolah: string }) {
+function SesiListItem({ row, sekolah, ta }: { row: SesiRow; sekolah: string; ta: string }) {
   return (
     <Link
-      to="/sch/$sekolah/ekstrakurikuler/sesi/$id"
-      params={{ sekolah, id: row.name }}
+      to="/sch/$sekolah/akademik/$ta/ekskul/sesi/$id"
+      params={{ sekolah, ta, id: row.name }}
       className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/40"
     >
       <div className="min-w-0">
@@ -108,10 +108,12 @@ function RecentSesiList({
   program,
   semester,
   sekolah,
+  ta,
 }: {
   program: string;
   semester: string;
   sekolah: string;
+  ta: string;
 }) {
   const sesiQ = useResourceList<SesiRow>(
     SESI_DOCTYPE,
@@ -135,14 +137,14 @@ function RecentSesiList({
   return (
     <ul className="divide-y divide-border">
       {rows.map((row) => (
-        <SesiListItem key={row.name} row={row} sekolah={sekolah} />
+        <SesiListItem key={row.name} row={row} sekolah={sekolah} ta={ta} />
       ))}
     </ul>
   );
 }
 
 function SesiHariIni() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/ekskul" });
   const ctx = useEkskulContext();
   const { primary } = useEkskulRole();
   const navigate = useNavigate();
@@ -186,14 +188,14 @@ function SesiHariIni() {
         semester: ctx.semester,
       });
       navigate({
-        to: "/sch/$sekolah/ekstrakurikuler/sesi/$id",
-        params: { sekolah, id: created.name },
+        to: "/sch/$sekolah/akademik/$ta/ekskul/sesi/$id",
+        params: { sekolah, ta, id: created.name },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memulai sesi.");
       setCreating(false);
     }
-  }, [program, creating, ctx.semester, navigate, sekolah]);
+  }, [program, creating, ctx.semester, navigate, sekolah, ta]);
 
   return (
     <div className="space-y-6">
@@ -247,7 +249,7 @@ function SesiHariIni() {
         padded={false}
       >
         {program ? (
-          <RecentSesiList program={program} semester={ctx.semester} sekolah={sekolah} />
+          <RecentSesiList program={program} semester={ctx.semester} sekolah={sekolah} ta={ta} />
         ) : (
           <EmptyState message="Pilih ekstrakurikuler dulu untuk melihat daftar sesi." />
         )}
@@ -256,6 +258,6 @@ function SesiHariIni() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ekstrakurikuler/sesi/")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/ekskul/sesi/")({
   component: SesiHariIni,
 });

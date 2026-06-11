@@ -513,6 +513,6 @@ function MitraPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ekstrakurikuler/mitra/")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/ekskul/mitra/")({
   component: MitraPage,
 });

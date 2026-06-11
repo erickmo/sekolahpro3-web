@@ -547,6 +547,6 @@ function ProgramCatalog() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/ekstrakurikuler/program/")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/ekskul/program/")({
   component: ProgramCatalog,
 });
