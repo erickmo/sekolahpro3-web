@@ -12,7 +12,6 @@ import { useResourceList } from "@sekolahpro/api-client";
 import { Breadcrumb, SectionCard } from "@sekolahpro/ui";
 import { AkademikContextProvider } from "../lib/akademikContext";
 import { AkademikContextBar } from "../components/akademik/AkademikContextBar";
-import { type NavTabGroup } from "../components/GroupedNavTabs";
 import { ModuleShell } from "../components/shell/ModuleShell";
 import { PageGuide, type PageGuideStep } from "../components/guide";
 import { DistributionBar } from "../components/viz";
@@ -25,7 +24,9 @@ import {
 } from "../lib/akademikPeriode";
 import {
   buildTaSegments,
+  buildWorkspaceNavGroups,
   isPeriodeSelfManaged,
+  isSubmodulePath,
   showContextBar,
   showPeriodeIntro,
   taPath,
@@ -48,22 +49,9 @@ const TA_FIELDS = [
 // Grouped sub-navigation for the workspace ModuleShell. Every `to` carries the
 // `$ta` segment; TanStack inherits the active `ta` param (as it does `$sekolah`),
 // so the pill bar stays on the same Tahun Ajaran while switching feature pages.
-// Akademik = operasional saja. Setup (Tahun Ajaran, Kurikulum, Mapel, KKM,
-// Komponen Nilai, Konfigurasi) tetap di modul Master Data.
-const NAV_GROUPS: NavTabGroup[] = [
-  {
-    label: "Ringkasan",
-    items: [{ to: "/sch/$sekolah/akademik/$ta", label: "Dashboard", exact: true }],
-  },
-  {
-    label: "Penilaian",
-    items: [
-      { to: "/sch/$sekolah/akademik/$ta/asesmen", label: "Input Nilai Test" },
-      { to: "/sch/$sekolah/akademik/$ta/entri-nilai", label: "Entri Nilai" },
-      { to: "/sch/$sekolah/akademik/$ta/raport", label: "Raport" },
-    ],
-  },
-];
+// Setup (Tahun Ajaran, Kurikulum, Mapel, KKM, Komponen Nilai) tetap di Master Data;
+// kelas/jadwal/ekskul kini hidup di workspace ini (Fase 1 single-door).
+const NAV_GROUPS = buildWorkspaceNavGroups();
 
 // Panduan singkat fitur Konteks Periode — muncul bersama context bar di halaman
 // operasional. Per-langkah diberi badge peran agar 3 alur (admin/guru/kepala)
@@ -99,6 +87,7 @@ const CONTEXT_GUIDE_TIPS = [
  */
 function AkademikWorkspaceLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const submodule = isSubmodulePath(pathname);
   const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta" });
   const search = useSearch({ from: "/sch/$sekolah/akademik/$ta" });
   const navigate = useNavigate({ from: "/sch/$sekolah/akademik/$ta" });
@@ -142,10 +131,12 @@ function AkademikWorkspaceLayout() {
   // Normalise the URL so the resolved semester is always explicit (one source of
   // truth). Skipped in the grid editor, which manages its own period.
   useEffect(() => {
+    // Sub-modules don't use the Ganjil/Genap semester axis — kelas has none, ekskul/jadwal use Semester docnames.
+    if (submodule) return;
     if (isPeriodeSelfManaged(pathname)) return;
     if (!semester || search.semester === semester) return;
     navigate({ to: ".", search: (prev) => ({ ...prev, semester }), replace: true });
-  }, [semester, search.semester, navigate, pathname]);
+  }, [semester, search.semester, navigate, pathname, submodule]);
 
   // Persist the active {ta, semester} — drives the hub's auto-redirect into the
   // last-opened TA. Skipped in the editor so a temporary edit period never sticks.
@@ -173,6 +164,64 @@ function AkademikWorkspaceLayout() {
   const taLabel = taRow?.nama ?? decodedTa;
   const subLabel = workspaceSubLabel(pathname);
 
+  // Sub-modules (kelas/jadwal/ekskul) bring their own ModuleShell chrome;
+  // rendering ours would create a shell-in-shell double header.
+  const chrome = submodule ? (
+    <Outlet />
+  ) : (
+    <ModuleShell
+      navGroups={NAV_GROUPS}
+      pathname={pathname}
+      {...(showBar ? { context: <AkademikContextBar taLabel={taLabel} /> } : {})}
+    >
+      <div className="mb-4">
+        <Breadcrumb
+          items={[
+            {
+              label: "Akademik",
+              render: ({ className, children }) => (
+                <Link
+                  to="/sch/$sekolah/akademik"
+                  params={{ sekolah }}
+                  search={{ pick: 1 }}
+                  className={className}
+                >
+                  {children}
+                </Link>
+              ),
+            },
+            { label: taLabel },
+            { label: subLabel },
+          ]}
+        />
+      </div>
+      {showIntro ? (
+        <>
+          <PageGuide
+            storageId="layout-contextbar"
+            title="Cara pakai Konteks Periode"
+            intro="Anda di ruang kerja satu Tahun Ajaran. Bar di atas menentukan Semester untuk seluruh data nilai; ganti Tahun Ajaran lewat menu Akademik."
+            steps={CONTEXT_GUIDE_STEPS}
+            tips={CONTEXT_GUIDE_TIPS}
+          />
+          <SectionCard
+            title="Sebaran Tahun Ajaran"
+            description="Status semua Tahun Ajaran yang tersedia. Pindah TA lewat menu Akademik."
+          >
+            {taList.length > 0 ? (
+              <DistributionBar segments={taSegments} />
+            ) : (
+              <p className="text-sm text-muted-fg">
+                Belum ada Tahun Ajaran. Tambahkan di Master Data agar periode bisa dipilih.
+              </p>
+            )}
+          </SectionCard>
+        </>
+      ) : null}
+      <Outlet />
+    </ModuleShell>
+  );
+
   return (
     <AkademikContextProvider
       value={{
@@ -188,57 +237,7 @@ function AkademikWorkspaceLayout() {
         setDirty,
       }}
     >
-      <ModuleShell
-        navGroups={NAV_GROUPS}
-        pathname={pathname}
-        {...(showBar ? { context: <AkademikContextBar taLabel={taLabel} /> } : {})}
-      >
-        <div className="mb-4">
-          <Breadcrumb
-            items={[
-              {
-                label: "Akademik",
-                render: ({ className, children }) => (
-                  <Link
-                    to="/sch/$sekolah/akademik"
-                    params={{ sekolah }}
-                    search={{ pick: 1 }}
-                    className={className}
-                  >
-                    {children}
-                  </Link>
-                ),
-              },
-              { label: taLabel },
-              { label: subLabel },
-            ]}
-          />
-        </div>
-        {showIntro ? (
-          <>
-            <PageGuide
-              storageId="layout-contextbar"
-              title="Cara pakai Konteks Periode"
-              intro="Anda di ruang kerja satu Tahun Ajaran. Bar di atas menentukan Semester untuk seluruh data nilai; ganti Tahun Ajaran lewat menu Akademik."
-              steps={CONTEXT_GUIDE_STEPS}
-              tips={CONTEXT_GUIDE_TIPS}
-            />
-            <SectionCard
-              title="Sebaran Tahun Ajaran"
-              description="Status semua Tahun Ajaran yang tersedia. Pindah TA lewat menu Akademik."
-            >
-              {taList.length > 0 ? (
-                <DistributionBar segments={taSegments} />
-              ) : (
-                <p className="text-sm text-muted-fg">
-                  Belum ada Tahun Ajaran. Tambahkan di Master Data agar periode bisa dipilih.
-                </p>
-              )}
-            </SectionCard>
-          </>
-        ) : null}
-        <Outlet />
-      </ModuleShell>
+      {chrome}
     </AkademikContextProvider>
   );
 }
