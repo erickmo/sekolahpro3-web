@@ -1,7 +1,7 @@
 # Akademik Single-Door IA — Design Spec
 
 **Date:** 2026-06-10
-**Status:** Approved design, pending implementation plan
+**Status:** Fase 1 implemented (2026-06-11, PR ini); Fase 0 backend & Fase 2 pending
 **Repos affected:** sekolahpro-web (primary), sekolahpro3 backend (Phase 0)
 
 ## Context
