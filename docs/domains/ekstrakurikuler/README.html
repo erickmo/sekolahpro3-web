@@ -114,5 +114,14 @@
 <li><strong>Live rekap updates:</strong> Raport snapshot stabil saat tersimpan. Kehadiran perubahan setelah itu → Raport refresh hanya when user re-open + save. Accepted trade-off untuk avoid N+1 on frequent autosave di layar absensi.</li>
 </ul>
 
+<h2>Fase 1 — Satu Pintu Akademik (2026-06-11)</h2>
+<p>Rute Ekstrakurikuler dipindah ke bawah workspace Akademik per-TA, dengan segmen URL disingkat.</p>
+<ul>
+<li><strong>Rute baru:</strong> <code>/sch/$sekolah/akademik/$ta/ekskul/*</code> (8 rute: index, program, program.$name, pendaftaran, sesi, raport, mitra, mitra.$name). Segmen URL disingkat <code>ekstrakurikuler</code> → <code>ekskul</code>.</li>
+<li><strong>Rute lama:</strong> <code>/sch/$sekolah/ekstrakurikuler/*</code> — stub redirect (<code>sch.$sekolah.ekstrakurikuler.index.tsx</code> + <code>sch.$sekolah.ekstrakurikuler.$.tsx</code>) redirect ke hub <code>/akademik?go=ekskul</code>.</li>
+<li><strong>EkskulContextProvider:</strong> Tetap aktif di bawah layout <code>sch.$sekolah.akademik.$ta.ekskul.tsx</code>; mengonsumsi <code>$ta</code> dari workspace untuk set default TA.</li>
+<li><strong>Nav grup Kegiatan:</strong> Ekskul masuk grup <em>Kegiatan</em> di workspace nav (bersama Jadwal).</li>
+</ul>
+
 </body>
 </html>

@@ -21,7 +21,7 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 | Koperasi | 4 | 4 | 0 | 0 | [koperasi](domains/koperasi/README.html) |
 | Situs Sekolah | 4 | 4 | 0 | 0 | [situs](domains/situs/README.html) |
 | Manajemen Aset | 4 | 4 | 0 | 0 | [aset](domains/aset/README.html) |
-| Akademik | 5 | 5 | 0 | 0 | [akademik](domains/akademik/README.html) |
+| Akademik | 6 | 6 | 0 | 0 | [akademik](domains/akademik/README.html) |
 | Akuntansi | 4 | 4 | 0 | 0 | [akuntansi](domains/akuntansi/README.html) |
 | Keuangan | 4 | 4 | 0 | 0 | [keuangan](domains/keuangan/README.html) |
 | PPDB | 4 | 4 | 0 | 0 | [ppdb](domains/ppdb/README.html) |
@@ -36,7 +36,7 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 | Audit Log | 4 | 4 | 0 | 0 | [audit](domains/audit/README.html) |
 | Verifikasi Penjemputan | 4 | 4 | 0 | 0 | [pickup-verify](domains/pickup-verify/README.html) |
 | OCR Identitas | 4 | 4 | 0 | 0 | [ocr](domains/ocr/README.html) |
-| **Total** | **84** | **84** | **0** | **0** | |
+| **Total** | **85** | **85** | **0** | **0** | |
 
 ## Ads Manager
 
@@ -113,6 +113,7 @@ ADR: [ASE-ADR-0001 — Tenant registry + isolasi transfer](domains/aset/ADR/ASE-
 | AKA-FEAT-03 | Entri nilai — editor grid per komponen | Feature | Done | `EntriNilaiGrid.test.ts` |
 | AKA-FEAT-04 | Raport — susun, review, submit, cetak (workflow) | Feature | Done | `GenerateRaportModal.test.tsx` |
 | AKA-FEAT-05 | Navigasi period-first: hub Tahun Ajaran (berjalan + arsip, auto-redirect) → workspace per-TA (`/akademik/$ta`) submenu datar + breadcrumb | Feature | Done | `akademikNav.test.ts`, `akademik-layout.test.ts`, `AkademikContextBar.test.tsx` |
+| AKA-FEAT-06 | Satu Pintu Akademik Fase 1 — Kelas (7 rute), Jadwal (13 rute), Ekskul (8 rute), PPDB (11 rute) dipindah ke bawah `/akademik`; sidebar 21→16 pintu; stub redirect di rute lama; workspace nav grup (Ringkasan/Pengaturan/Penilaian/Kegiatan); hub `?go=` deep-link; kartu Tautan Modul di dashboard workspace | Feature | Done (2026-06-11) | `akademikNav.test.ts`, `akademik-layout.test.ts`, `jadwalExport.test.ts` + 1408 vitest hijau total |
 
 ADR: [AKA-ADR-0001 — Periode aktif default + predikat dari kehadiran](domains/akademik/ADR/AKA-ADR-0001-periode-default-predikat.md)
 

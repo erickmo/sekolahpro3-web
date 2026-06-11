@@ -140,5 +140,68 @@
     <li><strong>Custom predikat mapping:</strong> Predikat ekstrakurikuler (<code>Sangat Baik / Baik / Cukup / Kurang</code>) dari % kehadiran adalah helper pure <code>predikatFromKehadiran()</code>. Predikat nilai akademik (A/B/C/D) adalah konfigurasi backend Frappe.</li>
     <li><strong>Laporan akademik kompleks (trend per siswa, analisis gap KKM, etc):</strong> Backend laporan Frappe atau BI tools. Web hanya dashboard ringkas + sparkline trend dasar.</li>
   </ul>
+
+  <h2>Fase 1 — Satu Pintu Akademik (2026-06-11)</h2>
+  <p>Refactor IA: Kelas, Jadwal, Ekskul, dan PPDB disatukan di bawah Akademik. Sidebar sekolah berkurang dari 21 → 16 pintu. Semua akses modul akademik melalui hub <code>/akademik</code> terlebih dahulu.</p>
+
+  <h3>Perubahan Rute</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Rute Lama</th>
+        <th>Rute Baru</th>
+        <th>Catatan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>/sch/$sekolah/kelas/*</code></td>
+        <td><code>/sch/$sekolah/akademik/$ta/kelas/*</code></td>
+        <td>7 rute. Stub redirect di <code>sch.$sekolah.kelas.index.tsx</code> + <code>sch.$sekolah.kelas.$.tsx</code>.</td>
+      </tr>
+      <tr>
+        <td><code>/sch/$sekolah/jadwal/*</code></td>
+        <td><code>/sch/$sekolah/akademik/$ta/jadwal/*</code></td>
+        <td>13 rute. Stub redirect di <code>sch.$sekolah.jadwal.index.tsx</code> + <code>sch.$sekolah.jadwal.$.tsx</code>. Semester docname diformat lokal (<code>TA-XXXX-XX-SEM-{Ganjil|Genap}</code>).</td>
+      </tr>
+      <tr>
+        <td><code>/sch/$sekolah/ekstrakurikuler/*</code></td>
+        <td><code>/sch/$sekolah/akademik/$ta/ekskul/*</code></td>
+        <td>8 rute. Segmen URL disingkat <code>ekstrakurikuler</code> → <code>ekskul</code>. Stub redirect di <code>sch.$sekolah.ekstrakurikuler.index.tsx</code> + <code>sch.$sekolah.ekstrakurikuler.$.tsx</code>.</td>
+      </tr>
+      <tr>
+        <td><code>/sch/$sekolah/ppdb/*</code></td>
+        <td><code>/sch/$sekolah/akademik/ppdb/*</code></td>
+        <td>11 rute. PPDB tidak di bawah <code>$ta</code> (lintas-TA). Stub redirect di <code>sch.$sekolah.ppdb.index.tsx</code> + <code>sch.$sekolah.ppdb.$.tsx</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Hub &amp; Workspace</h3>
+  <ul>
+    <li><strong>Hub <code>/akademik</code>:</strong> Kartu TA berjalan + arsip. URL <code>?go=kelas|jadwal|ekskul|ppdb</code> untuk deep-link langsung ke sub-modul (auto-resolve TA aktif). Kartu PPDB next-TA untuk sekolah belum ada TA aktif.</li>
+    <li><strong>Workspace <code>/akademik/$ta</code>:</strong> Layout ModuleShell dengan nav grup: <em>Ringkasan</em> (dashboard), <em>Pengaturan</em> (kelas), <em>Penilaian</em> (asesmen, entri nilai, raport), <em>Kegiatan</em> (jadwal, ekskul). Context bar menampilkan nama TA berjalan.</li>
+    <li><strong>PPDB cross-TA:</strong> PPDB diakses via kartu di workspace dashboard (Tautan Modul), bukan di nav workspace per-TA, karena PPDB bersifat lintas-TA.</li>
+    <li><strong>Absensi &amp; Laporan cross-link:</strong> Kartu Tautan Modul di dashboard workspace juga menyediakan akses ke Absensi Harian dan Laporan Akademik (tetap di domain masing-masing).</li>
+  </ul>
+
+  <h3>Aturan Semester Docname</h3>
+  <p>Format: <code>TA-{tahun_awal}-{tahun_akhir_2digit}-SEM-{Ganjil|Genap}</code>. Contoh: <code>TA-2024-25-SEM-Ganjil</code>. Nilai string <code>"Ganjil"</code> / <code>"Genap"</code> (bukan angka) sesuai konvensi doctype backend. Resolver lokal di <code>lib/jadwalExport.ts</code>.</p>
+
+  <h3>Kelas Bebas-TA</h3>
+  <p>Halaman Kelas (rombel, anggota, detail) tidak memerlukan <code>$ta</code> untuk query data — scoping dilakukan by-convention di backend. Param <code>$ta</code> hadir di URL sebagai konteks workspace tapi tidak dikirim ke API kelas.</p>
+
+  <h3>Sidebar 21 → 16</h3>
+  <p>Kelas, Jadwal, Ekstrakurikuler, dan PPDB dihapus dari <code>ROLE_MENU_MAP</code> sebagai pintu langsung. Koperasi cross-link dihapus (akses via kartu /pilih). Tersisa 16 grup sidebar utama di <code>lib/menuGating.ts</code>.</p>
+
+  <h3>Library Baru</h3>
+  <ul>
+    <li><code>lib/akademikNav.ts</code> — konstanta grup nav workspace, helper <code>linkParamsFor</code> untuk Link berparam <code>$ta</code>.</li>
+    <li><code>lib/legacyRedirects.ts</code> — util <code>redirectToAkademik()</code> + <code>redirectToAkademikPpdb()</code> untuk stub redirect.</li>
+    <li><code>lib/menuGating.ts</code> — <code>ROLE_MENU_MAP</code> dipindah dari sidebar inline + helper <code>getMenuGroups()</code>.</li>
+  </ul>
+
+  <h3>Test</h3>
+  <p>196 file uji, 1408 tests hijau (vitest, 2026-06-11). Semua gate: generate ✓, typecheck (0 error) ✓, lint (0 error) ✓, build ✓.</p>
 </body>
 </html>
