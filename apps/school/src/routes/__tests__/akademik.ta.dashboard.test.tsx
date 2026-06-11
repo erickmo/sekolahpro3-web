@@ -18,7 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { Route } from "../sch.$sekolah.akademik.$ta.index";
+import { AkademikDashboardPage } from "../sch.$sekolah.akademik.$ta.index";
 
 const TEST_SEKOLAH = "sd-aletheia-malang";
 const TEST_TA = "2024-2025";
@@ -133,8 +133,7 @@ describe("Dashboard workspace — Tautan Modul card", () => {
   afterEach(cleanup);
 
   it("renders 'Buka PPDB' link pointing at /akademik/ppdb", () => {
-    const Component = Route.component as React.ComponentType;
-    render(<Component />, { wrapper: makeWrapper() });
+    render(<AkademikDashboardPage />, { wrapper: makeWrapper() });
 
     const link = screen.getByRole("link", { name: /Buka PPDB/i });
     expect(link).toBeTruthy();
@@ -143,8 +142,7 @@ describe("Dashboard workspace — Tautan Modul card", () => {
   });
 
   it("renders 'Buka Absensi' link pointing at /absensi", () => {
-    const Component = Route.component as React.ComponentType;
-    render(<Component />, { wrapper: makeWrapper() });
+    render(<AkademikDashboardPage />, { wrapper: makeWrapper() });
 
     const link = screen.getByRole("link", { name: /Buka Absensi/i });
     expect(link).toBeTruthy();
@@ -152,8 +150,7 @@ describe("Dashboard workspace — Tautan Modul card", () => {
   });
 
   it("renders 'Buka Laporan' link pointing at /laporan", () => {
-    const Component = Route.component as React.ComponentType;
-    render(<Component />, { wrapper: makeWrapper() });
+    render(<AkademikDashboardPage />, { wrapper: makeWrapper() });
 
     const link = screen.getByRole("link", { name: /Buka Laporan/i });
     expect(link).toBeTruthy();

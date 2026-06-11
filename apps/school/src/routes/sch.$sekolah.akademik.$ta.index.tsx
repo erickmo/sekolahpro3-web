@@ -245,7 +245,7 @@ function linkParamsFor(sekolah: string, ta: string): { sekolah: string; ta: stri
   return { sekolah, ta };
 }
 
-function AkademikDashboardPage() {
+export function AkademikDashboardPage() {
   const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/" });
 
   const ctx = useAkademikContextOptional();
