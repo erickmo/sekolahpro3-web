@@ -40,13 +40,15 @@ import { GeneratorModal } from "./GeneratorModal";
 import { BumpModal } from "./BumpModal";
 
 const QUICK_LINKS = [
-  { to: "/sch/$sekolah/kelas/daftar", label: "Daftar Kelas", icon: <IconBook /> },
-  { to: "/sch/$sekolah/kelas/rombel", label: "Rombongan Belajar", icon: <IconUsers /> },
-  { to: "/sch/$sekolah/kelas/anggota", label: "Anggota Rombel", icon: <IconCheck /> },
+  { to: "/sch/$sekolah/akademik/$ta/kelas/daftar", label: "Daftar Kelas", icon: <IconBook /> },
+  { to: "/sch/$sekolah/akademik/$ta/kelas/rombel", label: "Rombongan Belajar", icon: <IconUsers /> },
+  { to: "/sch/$sekolah/akademik/$ta/kelas/anggota", label: "Anggota Rombel", icon: <IconCheck /> },
 ] as const;
 
 export function PapanKelas() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  // `taParam` is the URL segment (encoded) for intra-module Links; the TA *value*
+  // used to scope data comes from the period context below (`ta`).
+  const { sekolah, ta: taParam } = useParams({ from: "/sch/$sekolah/akademik/$ta/kelas" });
   const qc = useQueryClient();
 
   const taQuery = useResourceList<TahunAjaranRow>("Tahun Ajaran", {
@@ -145,15 +147,15 @@ export function PapanKelas() {
           renderItem={(r) => (
             <div className="flex items-center justify-between gap-2 text-sm">
               <Link
-                to="/sch/$sekolah/kelas/$kodeKelas"
-                params={{ sekolah, kodeKelas: r.name }}
+                to="/sch/$sekolah/akademik/$ta/kelas/$kodeKelas"
+                params={{ sekolah, ta: taParam, kodeKelas: r.name }}
                 className="min-w-0 truncate font-medium text-fg hover:underline"
               >
                 {r.nama_rombel ?? r.name}
               </Link>
               <Link
-                to="/sch/$sekolah/kelas/rombel"
-                params={{ sekolah }}
+                to="/sch/$sekolah/akademik/$ta/kelas/rombel"
+                params={{ sekolah, ta: taParam }}
                 className="shrink-0 text-xs text-brand hover:underline"
               >
                 Tunjuk Wali
@@ -175,8 +177,8 @@ export function PapanKelas() {
             return (
               <div className="flex items-center justify-between gap-2 text-sm">
                 <Link
-                  to="/sch/$sekolah/kelas/$kodeKelas"
-                  params={{ sekolah, kodeKelas: r.name }}
+                  to="/sch/$sekolah/akademik/$ta/kelas/$kodeKelas"
+                  params={{ sekolah, ta: taParam, kodeKelas: r.name }}
                   className="min-w-0 truncate font-medium text-fg hover:underline"
                 >
                   {r.nama_rombel ?? r.name}
@@ -208,7 +210,7 @@ export function PapanKelas() {
             <Link
               key={q.to}
               to={q.to}
-              params={{ sekolah }}
+              params={{ sekolah, ta: taParam }}
               className="flex items-center gap-3 rounded-md border border-border bg-bg px-3 py-2.5 text-sm hover:border-brand/40 hover:bg-brand/5 transition-colors"
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-md bg-brand/10 text-brand">

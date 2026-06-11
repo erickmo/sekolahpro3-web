@@ -226,6 +226,6 @@ function KelaskuPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/kelas/saya")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/kelas/saya")({
   component: KelaskuPage,
 });

@@ -46,7 +46,12 @@ export function PesanWaliSaya() {
             </li>
           </ul>
           <div>
-            <Link to="/sch/$sekolah/kelas/saya" params={{ sekolah }} className={LINK_BUTTON}>
+            <Link
+              to="/sch/$sekolah/akademik"
+              params={{ sekolah }}
+              search={{ go: "kelas/saya" }}
+              className={LINK_BUTTON}
+            >
               Buka Kelas Saya
             </Link>
           </div>

@@ -539,9 +539,7 @@ const VALID_TABS = new Set<TabKey>([
 ]);
 
 function KelasDetailPage() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
-
-  const { kodeKelas } = Route.useParams();
+  const { sekolah, ta, kodeKelas } = Route.useParams();
   const search = Route.useSearch();
   const docQ = useResourceDoc<RombelDoc>("Rombongan Belajar", kodeKelas);
   // Active Jadwal Pelajaran for this rombel (2-hop chain: list returns name,
@@ -611,7 +609,7 @@ function KelasDetailPage() {
   const navigate = useNavigate();
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
-    navigate({ to: "/sch/$sekolah/kelas/$kodeKelas", params: { sekolah, kodeKelas }, search: { tab: next === "ringkasan" ? undefined : next } });
+    navigate({ to: "/sch/$sekolah/akademik/$ta/kelas/$kodeKelas", params: { sekolah, ta, kodeKelas }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
   if (!kelas) {
@@ -662,7 +660,7 @@ function KelasDetailPage() {
           <Breadcrumb
             items={[
               { label: "Dashboard", render: ({ className, children }) => <Link to="/sch/$sekolah" params={{ sekolah }} className={className}>{children}</Link> },
-              { label: "Kelas", render: ({ className, children }) => <Link to="/sch/$sekolah/kelas" params={{ sekolah }} className={className}>{children}</Link> },
+              { label: "Kelas", render: ({ className, children }) => <Link to="/sch/$sekolah/akademik/$ta/kelas" params={{ sekolah, ta }} className={className}>{children}</Link> },
               { label: kelas.kodeKelas },
             ]}
           />
@@ -671,7 +669,7 @@ function KelasDetailPage() {
             title={kelas.nama}
             description={`${kelas.kodeKelas} · ${kelas.waliKelas} · ${kelas.tahunAjaran} ${kelas.semester}`}
             actions={
-              <Button variant="outline" onClick={() => navigate({ to: "/sch/$sekolah/kelas", params: { sekolah } })}>
+              <Button variant="outline" onClick={() => navigate({ to: "/sch/$sekolah/akademik/$ta/kelas", params: { sekolah, ta } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
                 Kembali ke daftar
               </Button>
@@ -688,21 +686,21 @@ function KelasDetailPage() {
 
 type SearchParams = { tab?: TabKey | undefined };
 
-export const Route = createFileRoute("/sch/$sekolah/kelas/$kodeKelas")({
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/kelas/$kodeKelas")({
   component: KelasDetailPage,
   validateSearch: (raw: Record<string, unknown>): SearchParams => {
     const t = typeof raw.tab === "string" ? raw.tab : undefined;
     return { tab: t && VALID_TABS.has(t as TabKey) ? (t as TabKey) : undefined };
   },
   notFoundComponent: function NotFound() {
-    const { sekolah } = useParams({ from: "/sch/$sekolah" });
+    const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/kelas/$kodeKelas" });
     return (
     <div className="py-16">
       <EmptyState
         title="Kelas tidak ditemukan"
         description="Kode kelas yang diminta tidak ada di sistem. Periksa kembali atau kembali ke daftar kelas."
         action={
-          <Link to="/sch/$sekolah/kelas" params={{ sekolah }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
+          <Link to="/sch/$sekolah/akademik/$ta/kelas" params={{ sekolah, ta }} className="inline-flex items-center gap-2 text-sm text-brand hover:underline">
             <span className="h-4 w-4"><IconArrowLeft /></span> Kembali ke daftar
           </Link>
         }

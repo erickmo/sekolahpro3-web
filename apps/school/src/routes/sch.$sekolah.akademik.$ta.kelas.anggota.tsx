@@ -58,4 +58,4 @@ function AnggotaRombelPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/kelas/anggota")({ component: AnggotaRombelPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/kelas/anggota")({ component: AnggotaRombelPage });

@@ -8,30 +8,20 @@ import { KELAS_PAGE_GUIDES } from "../components/kelas/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 import { useKelasPeriode } from "../lib/kelasPeriode";
 
-type Row = {
-  name: string;
-  nama_rombel?: string;
-  tingkat?: number | string;
-  jumlah_siswa?: number;
-  wali_kelas?: string;
-  kapasitas?: number;
-  tahun_ajaran?: string;
-  status?: string;
-};
+type Row = { name: string; nama_rombel: string; tingkat?: string; wali_kelas?: string; jumlah_siswa?: number; tahun_ajaran?: string; status?: string };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "nama_rombel", header: "Nama Rombel", sortable: true, cell: (r) => r.nama_rombel ?? "—" },
-  { key: "tingkat", header: "Tingkat", align: "right", cell: (r) => r.tingkat ?? "—" },
+  { key: "nama_rombel", header: "Nama Rombel", sortable: true, cell: (r) => r.nama_rombel },
+  { key: "tingkat", header: "Tingkat", cell: (r) => <Badge tone="neutral">{r.tingkat ?? "—"}</Badge> },
   { key: "wali_kelas", header: "Wali Kelas", cell: (r) => r.wali_kelas ?? "—" },
-  { key: "jumlah_siswa", header: "Siswa", align: "right",
-    cell: (r) => <span className="tabular-nums">{r.jumlah_siswa ?? 0}{r.kapasitas ? ` / ${r.kapasitas}` : ""}</span> },
+  { key: "jumlah_siswa", header: "Siswa", align: "right", cell: (r) => r.jumlah_siswa ?? 0 },
   { key: "tahun_ajaran", header: "TA", cell: (r) => r.tahun_ajaran ?? "—" },
   { key: "status", header: "Status",
     cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : r.status === "Ditutup" ? "neutral" : "neutral"} dot>{r.status ?? "—"}</Badge> },
 ];
 
-function KelasListPage() {
+function RombelPage() {
   const [showCreate, setShowCreate] = useState(false);
   // Scope to the selected Tahun Ajaran; gate creation in an archived year.
   const { tahunAjaran, isPastPeriod } = useKelasPeriode();
@@ -39,25 +29,24 @@ function KelasListPage() {
     <div className="space-y-6">
       <PageGuide
         storageNamespace="kelas-guide:"
-        storageId="daftar"
-        title={KELAS_PAGE_GUIDES.daftar.title}
-        intro={KELAS_PAGE_GUIDES.daftar.intro}
-        steps={KELAS_PAGE_GUIDES.daftar.steps}
-        tips={KELAS_PAGE_GUIDES.daftar.tips}
+        storageId="rombel"
+        title={KELAS_PAGE_GUIDES.rombel.title}
+        intro={KELAS_PAGE_GUIDES.rombel.intro}
+        steps={KELAS_PAGE_GUIDES.rombel.steps}
+        tips={KELAS_PAGE_GUIDES.rombel.tips}
         roleLabels={SCHOOL_ROLE_LABEL}
       />
       <ResourceListPage<Row>
-        eyebrow="Akademik"
-        title="Kelas"
-        description="Atur rombongan belajar, kapasitas, dan wali kelas."
+        eyebrow="Kelas"
+        title="Rombongan Belajar"
         doctype="Rombongan Belajar"
-        fields={["name", "nama_rombel", "tingkat", "jumlah_siswa", "wali_kelas", "kapasitas", "tahun_ajaran", "status"]}
+        fields={["name", "nama_rombel", "tingkat", "wali_kelas", "jumlah_siswa", "tahun_ajaran", "status"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
-        defaultSort={{ key: "name", dir: "asc" }}
-        searchFields={["name", "nama_rombel", "wali_kelas"]}
+        defaultSort={{ key: "nama_rombel", dir: "asc" }}
+        searchFields={["name", "nama_rombel"]}
         {...(tahunAjaran ? { baseFilters: [["tahun_ajaran", "=", tahunAjaran]] } : {})}
-        addLabel="Tambah Kelas"
+        addLabel="Buat Rombel"
         {...(isPastPeriod ? {} : { onAdd: () => setShowCreate(true) })}
       />
       <RombelFormModal open={showCreate} onClose={() => setShowCreate(false)} />
@@ -65,4 +54,4 @@ function KelasListPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/kelas/daftar")({ component: KelasListPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/kelas/rombel")({ component: RombelPage });

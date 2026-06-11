@@ -8,9 +8,10 @@ vi.mock("../MejaPersetujuanKelas", () => ({
 }));
 
 // Mock the router primitives the route module touches at import + render time.
+// The index now lives under the per-TA workspace, so useParams exposes `ta` too.
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (opts: unknown) => opts,
-  useParams: () => ({ sekolah: "s1" }),
+  useParams: () => ({ sekolah: "s1", ta: "2024-2025" }),
   Navigate: ({ to }: { to: string }) => <div>REDIRECT:{to}</div>,
 }));
 
@@ -18,7 +19,7 @@ vi.mock("@tanstack/react-router", () => ({
 const useKelasRole = vi.fn();
 vi.mock("../../../lib/kelasRole", () => ({ useKelasRole: () => useKelasRole() }));
 
-import { Route } from "../../../routes/sch.$sekolah.kelas.index";
+import { Route } from "../../../routes/sch.$sekolah.akademik.$ta.kelas.index";
 
 const Surface = (Route as unknown as { component: () => JSX.Element }).component;
 
@@ -45,6 +46,6 @@ describe("kelas index — role switch", () => {
   it("redirects a Wali Kelas to the /saya cockpit", () => {
     useKelasRole.mockReturnValue({ primary: "wali_kelas", roles: ["wali_kelas"] });
     render(<Surface />);
-    expect(screen.getByText("REDIRECT:/sch/$sekolah/kelas/saya")).toBeTruthy();
+    expect(screen.getByText("REDIRECT:/sch/$sekolah/akademik/$ta/kelas/saya")).toBeTruthy();
   });
 });
