@@ -30,7 +30,7 @@ const FIELDS: ResourceFieldDef[] = [
 ];
 
 function SlotJadwalPage() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/jadwal" });
 
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
@@ -57,7 +57,7 @@ function SlotJadwalPage() {
         searchFields={["name", "hari"]}
         addLabel="Tambah Slot"
         onAdd={() => setOpen(true)}
-        onRowClick={(r) => navigate({ to: "/sch/$sekolah/jadwal/slot/$name", params: { sekolah, name: r.name } })}
+        onRowClick={(r) => navigate({ to: "/sch/$sekolah/akademik/$ta/jadwal/slot/$name", params: { sekolah, ta, name: r.name } })}
       />
       <ResourceCreateModal
         open={open}
@@ -71,4 +71,4 @@ function SlotJadwalPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/slot")({ component: SlotJadwalPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/slot")({ component: SlotJadwalPage });

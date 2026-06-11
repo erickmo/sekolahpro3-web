@@ -164,4 +164,4 @@ function AgendaSayaPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/agenda")({ component: AgendaSayaPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/agenda")({ component: AgendaSayaPage });

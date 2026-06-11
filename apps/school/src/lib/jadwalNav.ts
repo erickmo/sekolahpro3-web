@@ -40,41 +40,41 @@ interface JadwalNavGroup {
 export const JADWAL_NAV_GROUPS: readonly JadwalNavGroup[] = [
   {
     label: "Ringkasan",
-    items: [{ to: "/sch/$sekolah/jadwal", label: "Dashboard", exact: true }],
+    items: [{ to: "/sch/$sekolah/akademik/$ta/jadwal", label: "Dashboard", exact: true }],
   },
   {
     label: "Pengawasan",
     items: [
-      { to: "/sch/$sekolah/jadwal/pantauan", label: "Pantauan", roles: ["kepala"] },
-      { to: "/sch/$sekolah/jadwal/persetujuan", label: "Persetujuan", roles: ["kepala"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/pantauan", label: "Pantauan", roles: ["kepala"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/persetujuan", label: "Persetujuan", roles: ["kepala"] },
     ],
   },
   {
     label: "Saya",
     items: [
-      { to: "/sch/$sekolah/jadwal/agenda", label: "Agenda Saya", roles: ["guru"] },
-      { to: "/sch/$sekolah/jadwal/permintaan", label: "Permintaan Saya", roles: ["guru"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/agenda", label: "Agenda Saya", roles: ["guru"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/permintaan", label: "Permintaan Saya", roles: ["guru"] },
     ],
   },
   {
     label: "Susun",
     items: [
-      { to: "/sch/$sekolah/jadwal/papan", label: "Papan Susun", roles: ["admin"] },
-      { to: "/sch/$sekolah/jadwal/kotak", label: "Kotak Permintaan", roles: ["admin"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/papan", label: "Papan Susun", roles: ["admin"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/kotak", label: "Kotak Permintaan", roles: ["admin"] },
     ],
   },
   {
     label: "Jadwal",
     items: [
-      { to: "/sch/$sekolah/jadwal/daftar", label: "Jadwal Pelajaran", roles: ["admin", "kepala"] },
-      { to: "/sch/$sekolah/jadwal/slot", label: "Slot Jadwal", roles: ["admin"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/daftar", label: "Jadwal Pelajaran", roles: ["admin", "kepala"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/slot", label: "Slot Jadwal", roles: ["admin"] },
     ],
   },
   {
     label: "Override",
     items: [
-      { to: "/sch/$sekolah/jadwal/override", label: "Jadwal Override", roles: ["admin", "kepala"] },
-      { to: "/sch/$sekolah/jadwal/slot-override", label: "Slot Override", roles: ["admin"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/override", label: "Jadwal Override", roles: ["admin", "kepala"] },
+      { to: "/sch/$sekolah/akademik/$ta/jadwal/slot-override", label: "Slot Override", roles: ["admin"] },
     ],
   },
 ];

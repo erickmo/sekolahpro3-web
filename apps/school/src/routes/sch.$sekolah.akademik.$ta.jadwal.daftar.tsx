@@ -79,4 +79,4 @@ function JadwalDaftarPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/daftar")({ component: JadwalDaftarPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/daftar")({ component: JadwalDaftarPage });

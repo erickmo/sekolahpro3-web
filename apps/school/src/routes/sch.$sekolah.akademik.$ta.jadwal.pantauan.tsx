@@ -141,7 +141,7 @@ function PantauanPage() {
           icon={<IconAlert />}
           accent={tanpaAntrean ? "emerald" : "brand"}
           urgency={tanpaAntrean ? "normal" : "warn"}
-          actionHref="/sch/$sekolah/jadwal/persetujuan"
+          actionHref="/sch/$sekolah/akademik/$ta/jadwal/persetujuan"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>
@@ -226,4 +226,4 @@ function PantauanPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/pantauan")({ component: PantauanPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/pantauan")({ component: PantauanPage });

@@ -100,4 +100,4 @@ function KotakPermintaanPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/kotak")({ component: KotakPermintaanPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/kotak")({ component: KotakPermintaanPage });

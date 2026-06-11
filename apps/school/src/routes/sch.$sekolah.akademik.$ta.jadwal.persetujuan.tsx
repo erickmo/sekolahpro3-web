@@ -127,4 +127,4 @@ function PersetujuanPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/persetujuan")({ component: PersetujuanPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/persetujuan")({ component: PersetujuanPage });

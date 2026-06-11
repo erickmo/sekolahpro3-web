@@ -57,7 +57,7 @@ interface BlankForm {
 const FORM_KOSONG: BlankForm = { hari: "Senin", jam_mulai: "07:00:00", jam_selesai: "08:00:00", mapel: "", guru: "", ruangan: "" };
 
 function PapanSusunPage() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/jadwal" });
   const [rombel, setRombel] = useState<string>("");
   const [form, setForm] = useState<BlankForm>(FORM_KOSONG);
   const [msg, setMsg] = useState<string | null>(null);
@@ -175,7 +175,7 @@ function PapanSusunPage() {
         title="Papan Susun"
         description="Susun jadwal mingguan per rombel: tambah slot, cek bentrok guru, lalu ajukan untuk diterbitkan."
         actions={
-          <Link to="/sch/$sekolah/jadwal/daftar" params={{ sekolah }}>
+          <Link to="/sch/$sekolah/akademik/$ta/jadwal/daftar" params={{ sekolah, ta }}>
             <Button variant="outline">
               <span className="h-4 w-4 mr-1.5"><IconCalendar /></span>
               Daftar Jadwal
@@ -333,4 +333,4 @@ function PapanSusunPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/papan")({ component: PapanSusunPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/papan")({ component: PapanSusunPage });

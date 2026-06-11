@@ -56,4 +56,4 @@ function JadwalOverridePage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/override")({ component: JadwalOverridePage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/override")({ component: JadwalOverridePage });

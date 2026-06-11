@@ -21,12 +21,12 @@ function SlotJadwalDetailPage() {
   return (
     <DomainDetailScaffold
       eyebrow="Slot Jadwal"
-      domain={{ label: "Jadwal", to: "/sch/$sekolah/jadwal" }}
-      crumbParent={{ label: "Slot Jadwal", to: "/sch/$sekolah/jadwal/slot" }}
+      domain={{ label: "Jadwal", to: "/sch/$sekolah/akademik/$ta/jadwal" }}
+      crumbParent={{ label: "Slot Jadwal", to: "/sch/$sekolah/akademik/$ta/jadwal/slot" }}
       crumbSelf={name}
       title={d?.hari ? `${d.hari} · ${d.jam_mulai ?? ""}–${d.jam_selesai ?? ""}` : name}
       description={d?.tipe ? `Tipe: ${d.tipe}` : undefined}
-      backTo="/sch/$sekolah/jadwal/slot"
+      backTo="/sch/$sekolah/akademik/$ta/jadwal/slot"
       loading={q.isLoading}
       errorMessage={q.isError ? (q.error as Error).message : undefined}
       primaryInfo={[
@@ -45,4 +45,4 @@ function SlotJadwalDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/slot/$name")({ component: SlotJadwalDetailPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/slot/$name")({ component: SlotJadwalDetailPage });

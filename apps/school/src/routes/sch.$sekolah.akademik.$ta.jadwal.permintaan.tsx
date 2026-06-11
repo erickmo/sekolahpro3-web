@@ -198,4 +198,4 @@ function PermintaanSayaPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/jadwal/permintaan")({ component: PermintaanSayaPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/jadwal/permintaan")({ component: PermintaanSayaPage });
