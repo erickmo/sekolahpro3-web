@@ -40,7 +40,7 @@ export const KOPERASI_NAV: KoperasiNavSection[] = [
   {
     title: "Operasional",
     items: [
-      { to: "/workspace", label: "Workspace" },
+      { to: "/workspace", label: "Layanan Cepat" },
       { to: "/transaksi", label: "Transaksi" },
       { to: "/kas-teller", label: "Kas Teller" },
       { to: "/kartu", label: "Kartu RFID" },
@@ -67,7 +67,7 @@ export const KOPERASI_NAV: KoperasiNavSection[] = [
     title: "Admin",
     items: [
       { to: "/persetujuan", label: "Persetujuan" },
-      { to: "/period-close", label: "Period Close" },
+      { to: "/period-close", label: "Tutup Periode" },
       { to: "/shu", label: "SHU" },
       { to: "/ppatk", label: "PPATK" },
       { to: "/laporan", label: "Laporan" },

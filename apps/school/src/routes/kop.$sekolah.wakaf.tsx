@@ -4,6 +4,7 @@ import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { ASET_WAKAF_FIELDS } from "../data/create-schemas";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 type Row = {
   name: string;
@@ -29,6 +30,7 @@ function WakafPage() {
   const [open, setOpen] = useState(false);
   return (
     <>
+      <KoperasiPageGuide id="wakaf" />
       <ResourceListPage<Row>
         eyebrow="Koperasi"
         title="Aset Wakaf"

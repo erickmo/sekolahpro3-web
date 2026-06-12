@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { PermohonanModal } from "../components/koperasi-simpanan/permohonanForms";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 type Row = {
   name: string;
@@ -35,6 +36,7 @@ function RekeningPage() {
   const [openBuka, setOpenBuka] = useState(false);
   return (
     <>
+      <KoperasiPageGuide id="rekening" />
       <ResourceListPage<Row>
         eyebrow="Koperasi"
         title="Rekening Simpanan"

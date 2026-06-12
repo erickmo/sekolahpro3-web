@@ -7,6 +7,7 @@ import {
   JADWAL_ANGSURAN_BASE_VALUES,
   JADWAL_ANGSURAN_FIELDS,
 } from "../data/create-schemas";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 type Row = {
   name: string;
@@ -34,6 +35,7 @@ function AngsuranPage() {
   const [open, setOpen] = useState(false);
   return (
     <>
+    <KoperasiPageGuide id="angsuran" />
     <ResourceListPage<Row>
       eyebrow="Koperasi"
       title="Jadwal & Pembayaran Angsuran"

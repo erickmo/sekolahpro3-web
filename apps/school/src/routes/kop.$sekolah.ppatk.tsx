@@ -4,6 +4,7 @@ import { useSession } from "@sekolahpro/auth";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { StatusActionModal } from "../components/koperasi-admin/StatusActionModal";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 /**
  * Laporan PPATK — submit ke goAML.
@@ -73,6 +74,7 @@ function PpatkPage() {
 
   return (
     <>
+      <KoperasiPageGuide id="ppatk" />
       <ResourceListPage<Row>
         eyebrow="Koperasi"
         title="Laporan PPATK"

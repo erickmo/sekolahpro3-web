@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { TopUpModal, TransaksiKartuModal } from "../components/koperasi-kartu/EmoneyModals";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 type Row = {
   name: string;
@@ -36,6 +37,7 @@ function EmoneyPage() {
 
   return (
     <>
+      <KoperasiPageGuide id="emoney" />
       <ResourceListPage<Row>
         eyebrow="Koperasi"
         title="E-Money & Transaksi Kartu"

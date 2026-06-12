@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import {
   Alert,
@@ -11,17 +11,13 @@ import {
   SkeletonText,
   StatCard,
   IconUsers,
-  IconWallet,
-  IconChart,
   IconAlert,
-  IconFile,
-  IconId,
-  IconCheck,
-  IconSettings,
   ModuleFlow,
   type ModuleFlowStep,
 } from "@sekolahpro/ui";
 import { DashboardWorklist } from "../components/koperasi/DashboardWorklist";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
+import { RhythmShortcuts } from "../components/koperasi/RhythmShortcuts";
 
 const KOPERASI_FLOW_STEPS: ModuleFlowStep[] = [
   { key: "pengaturan", label: "Pengaturan", hint: "Konfigurasi awal koperasi", href: "/kop/$sekolah/pengaturan" },
@@ -37,15 +33,16 @@ import { useResourceList } from "@sekolahpro/api-client";
 /**
  * Dashboard Koperasi.
  *
- * Audit UX 2026-05-26:
- *   - Hapus `SALDO_KAS_STUB` (hard-coded) — supervisor tidak boleh sign-off
- *     dari angka palsu. Saldo kas wajib dari GL backend, belum siap.
- *   - Hapus `KAS_TELLER_BELUM_CLOSING_STUB` (= 1) — gantikan dengan query nyata.
- *   - Hapus agregasi dari mock `ANGGOTA_LIST` — UI tidak ikut me-mock data.
- *
- * Yang masih ditampilkan = data yang otoritatif (count Anggota Koperasi
- * status=Aktif + count Sesi Kas Teller status=Aktif). Kartu lain dipindah ke
- * placeholder agar tidak menyesatkan.
+ * Audit UX 2026-05-26: stub kas/anggota dihapus — hanya angka otoritatif.
+ * Audit UX 2026-06-13 (konsultasi UI/UX + COO + teller):
+ *   - Tambah PageGuide + banner "kas belum dibuka" (cek sesi ber-tanggal hari
+ *     ini, bukan sekadar tidak ada sesi Aktif, agar tidak salah nag sore hari).
+ *   - Hapus StatCard "Saldo Kas (GL)" placeholder beserta alert penjelasnya —
+ *     kartu "—" permanen = noise; integrasi GL menyusul dari backend.
+ *   - "Aksi Cepat" 13 item rata diganti RHYTHM_GROUPS — pintasan dikelompokkan
+ *     per irama kerja (harian/berkala/tahunan) supaya staf baru tahu mulai dari
+ *     mana; menu lengkap tetap di sidebar.
+ *   - ModuleFlow diturunkan ke bawah: edukasi setup sekali jalan, bukan tugas harian.
  */
 
 type AnggotaRow = {
@@ -57,28 +54,7 @@ type AnggotaRow = {
   tanggal_masuk?: string;
 };
 
-type SesiAktifRow = { name: string };
-
-const QUICK_ACTIONS: {
-  to: string;
-  label: string;
-  description: string;
-  icon: ReactNode;
-}[] = [
-  { to: "/kop/$sekolah/onboarding", label: "Pendaftaran Anggota", description: "Onboarding terpandu anggota baru.", icon: <IconUsers /> },
-  { to: "/kop/$sekolah/transaksi", label: "Transaksi", description: "Setor, tarik, dan transaksi simpanan.", icon: <IconWallet /> },
-  { to: "/kop/$sekolah/pembiayaan", label: "Pembiayaan", description: "Pengajuan dan pencairan pinjaman.", icon: <IconFile /> },
-  { to: "/kop/$sekolah/angsuran", label: "Angsuran", description: "Pembayaran cicilan pinjaman anggota.", icon: <IconChart /> },
-  { to: "/kop/$sekolah/rekening", label: "Rekening", description: "Kelola rekening simpanan anggota.", icon: <IconId /> },
-  { to: "/kop/$sekolah/kartu", label: "Kartu RFID", description: "Pengelolaan kartu anggota.", icon: <IconId /> },
-  { to: "/kop/$sekolah/emoney", label: "E-Money", description: "Saldo dan top up e-money.", icon: <IconWallet /> },
-  { to: "/kop/$sekolah/kas-teller", label: "Kas Teller", description: "Pembukaan dan tutup kas harian.", icon: <IconWallet /> },
-  { to: "/kop/$sekolah/persetujuan", label: "Persetujuan", description: "Approval permohonan supervisor.", icon: <IconCheck /> },
-  { to: "/kop/$sekolah/zis", label: "ZIS", description: "Zakat, Infak, dan Sedekah.", icon: <IconCheck /> },
-  { to: "/kop/$sekolah/wakaf", label: "Wakaf", description: "Catatan program wakaf.", icon: <IconCheck /> },
-  { to: "/kop/$sekolah/shu", label: "SHU", description: "Sisa Hasil Usaha tahunan.", icon: <IconChart /> },
-  { to: "/kop/$sekolah/pengaturan", label: "Pengaturan", description: "Konfigurasi modul koperasi.", icon: <IconSettings /> },
-];
+type SesiRow = { name: string };
 
 const STATUS_TONE: Record<string, "success" | "neutral" | "danger" | "warning"> = {
   Aktif: "success",
@@ -90,6 +66,7 @@ const STATUS_TONE: Record<string, "success" | "neutral" | "danger" | "warning"> 
 function KoperasiDashboardPage() {
   const { sekolah } = useParams({ from: "/kop/$sekolah" });
   const navigate = useNavigate();
+  const today = new Date().toISOString().slice(0, 10);
 
   const anggotaQ = useResourceList<AnggotaRow>("Anggota Koperasi", {
     fields: ["name", "nomor_anggota", "nasabah", "status", "jenis_anggota", "tanggal_masuk"],
@@ -97,10 +74,18 @@ function KoperasiDashboardPage() {
   });
 
   // Sesi Kas Teller yang belum di-closing — otoritatif (BUKAN stub).
-  const sesiAktifQ = useResourceList<SesiAktifRow>("Sesi Kas Teller", {
+  const sesiAktifQ = useResourceList<SesiRow>("Sesi Kas Teller", {
     fields: ["name"],
     filters: [["status", "=", "Aktif"]],
     limit_page_length: 50,
+  });
+
+  // Sesi apa pun yang tercatat hari ini — pembeda "belum buka kas" vs "sudah
+  // tutup sore ini", supaya banner pagi tidak salah nag (SA review 2026-06-13).
+  const sesiTodayQ = useResourceList<SesiRow>("Sesi Kas Teller", {
+    fields: ["name"],
+    filters: [["tanggal", "=", today]],
+    limit_page_length: 1,
   });
 
   const rows = anggotaQ.data ?? [];
@@ -112,6 +97,9 @@ function KoperasiDashboardPage() {
   }, [rows, sesiAktifQ.data]);
 
   const isZeroState = !anggotaQ.isLoading && !anggotaQ.isError && rows.length === 0;
+
+  const kasBelumDibuka =
+    !sesiTodayQ.isLoading && !sesiTodayQ.isError && (sesiTodayQ.data?.length ?? 0) === 0;
 
   const terbaru = useMemo(() => {
     return [...rows]
@@ -158,9 +146,25 @@ function KoperasiDashboardPage() {
         }
       />
 
+      <KoperasiPageGuide id="dashboard" />
+
+      {kasBelumDibuka ? (
+        <Alert tone="warning" title="Kas belum dibuka hari ini" statusRole>
+          Belum ada sesi kas tercatat hari ini. Buka sesi kas dulu supaya transaksi tunai bisa
+          dilayani.{" "}
+          <Link
+            to="/kop/$sekolah/kas-teller"
+            params={{ sekolah }}
+            className="font-medium text-brand underline"
+          >
+            Buka Kas Teller →
+          </Link>
+        </Alert>
+      ) : null}
+
       <DashboardWorklist sekolah={sekolah} />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <StatCard
           label="Total Anggota (Aktif)"
           value={anggotaQ.isLoading ? "…" : stats.aktif.toLocaleString("id-ID")}
@@ -176,8 +180,8 @@ function KoperasiDashboardPage() {
           value={sesiAktifQ.isLoading ? "…" : stats.kasTellerBelumClosing.toLocaleString("id-ID")}
           hint={
             stats.kasTellerBelumClosing > 0
-              ? "wajib tutup kas hari ini"
-              : "semua teller sudah closing"
+              ? "sesi Aktif — ajukan tutup kas sebelum pulang"
+              : "tidak ada sesi Aktif menggantung"
           }
           icon={<IconAlert />}
           accent="amber"
@@ -185,25 +189,13 @@ function KoperasiDashboardPage() {
           actionHref="/kop/$sekolah/kas-teller"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
-        <StatCard
-          label="Saldo Kas (GL)"
-          value="—"
-          hint="Belum tersedia: butuh integrasi akun kas GL backend."
-          icon={<IconWallet />}
-          accent="emerald"
-          urgency="normal"
-        />
       </div>
 
-      <Alert tone="info" statusRole>
-        <strong>Saldo Kas (GL)</strong> menunggu integrasi akun kas General Ledger backend, jadi belum
-        ditampilkan agar tidak menyesatkan. Metrik operasional lain (closing, persetujuan, tunggakan,
-        volume transaksi) sudah ditarik langsung dari data koperasi di panel <em>Tugas Hari Ini</em>.
-      </Alert>
+      <RhythmShortcuts />
 
       <ModuleFlow
         title="Alur Operasi Koperasi"
-        description="Langkah membuka & menjalankan koperasi sekolah."
+        description="Langkah setup awal menjalankan koperasi — panduan sekali jalan, bukan rutinitas harian."
         steps={KOPERASI_FLOW_STEPS}
         renderLink={(href, children) => (
           <Link to={href as "/kop/$sekolah/pengaturan"} params={{ sekolah }}>
@@ -211,29 +203,6 @@ function KoperasiDashboardPage() {
           </Link>
         )}
       />
-
-      <SectionCard
-        title="Aksi Cepat"
-        description="Pintasan ke modul-modul koperasi yang umum digunakan."
-      >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {QUICK_ACTIONS.map((q) => (
-            <Link
-              key={q.to}
-              to={q.to}
-              className="group flex items-start gap-3 rounded-lg border border-border bg-bg p-3 hover:border-brand hover:bg-muted/30 transition-colors"
-            >
-              <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md bg-muted text-fg group-hover:bg-brand/10 group-hover:text-brand">
-                {q.icon}
-              </span>
-              <div className="min-w-0">
-                <div className="font-medium text-fg group-hover:text-brand">{q.label}</div>
-                <div className="text-xs text-muted-fg">{q.description}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </SectionCard>
 
       <SectionCard
         title="Anggota Terbaru"

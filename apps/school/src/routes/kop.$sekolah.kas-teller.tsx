@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { SesiKasForm } from "../components/koperasi/SesiKasForm";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 type Row = {
   name: string;
@@ -88,6 +89,7 @@ function KasTellerPage() {
 
   return (
     <>
+      <KoperasiPageGuide id="kas-teller" />
       <ResourceListPage<Row>
         key={refreshKey}
         eyebrow="Koperasi"

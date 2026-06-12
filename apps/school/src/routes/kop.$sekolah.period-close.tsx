@@ -5,6 +5,7 @@ import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { GenericFormModal, type MasterField } from "../components/koperasi-master/GenericFormModal";
 import { StatusActionModal } from "../components/koperasi-admin/StatusActionModal";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 /**
  * Period Close — Supervisor tutup/reopen periode operasional.
@@ -78,9 +79,10 @@ function PeriodClosePage() {
 
   return (
     <>
+      <KoperasiPageGuide id="period-close" />
       <ResourceListPage<Row>
         eyebrow="Koperasi"
-        title="Period Close"
+        title="Tutup Periode"
         description="Tutup periode operasional sebagai gate transaksi backdated."
         doctype="Periode Tutup Koperasi"
         fields={["name", "nama_periode", "status", "tanggal_mulai", "tanggal_akhir", "tanggal_tutup", "oleh_user"]}

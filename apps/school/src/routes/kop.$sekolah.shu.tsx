@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ShuWizard } from "../components/koperasi/ShuWizard";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 type Row = {
   name: string;
@@ -29,6 +30,7 @@ function ShuPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
   return (
     <>
+      <KoperasiPageGuide id="shu" />
       <ResourceListPage<Row>
         eyebrow="Koperasi"
         title="Pembagian SHU"

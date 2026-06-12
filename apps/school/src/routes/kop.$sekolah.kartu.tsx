@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { KartuCreateModal } from "../components/koperasi-kartu/KartuCreateModal";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 type Row = {
   name: string;
@@ -30,6 +31,7 @@ function KartuPage() {
   const navigate = useNavigate();
   return (
     <>
+      <KoperasiPageGuide id="kartu" />
       <ResourceListPage<Row>
         eyebrow="Koperasi"
         title="Kartu RFID"
