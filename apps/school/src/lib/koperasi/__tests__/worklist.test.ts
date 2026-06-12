@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { isOverdue, summarizeApprovals, splitTransaksiByJenis, capLabel } from "../worklist";
+import {
+  isOverdue,
+  summarizeApprovals,
+  splitTransaksiByJenis,
+  capLabel,
+  countDueWithin,
+  splitByStatus,
+  isPeriodePastDue,
+} from "../worklist";
 
 describe("isOverdue", () => {
   const today = "2026-06-02";
@@ -64,5 +72,68 @@ describe("capLabel", () => {
   it("shows cap+ when at or above the cap", () => {
     expect(capLabel(100, 100)).toBe("100+");
     expect(capLabel(250, 100)).toBe("100+");
+  });
+});
+
+describe("countDueWithin", () => {
+  const today = "2026-06-02";
+
+  it("counts Belum rows due from today through the horizon", () => {
+    const rows = [
+      { status: "Belum", tanggal_jatuh_tempo: "2026-06-02" }, // today: in
+      { status: "Belum", tanggal_jatuh_tempo: "2026-06-09" }, // horizon edge: in
+      { status: "Belum", tanggal_jatuh_tempo: "2026-06-10" }, // past horizon: out
+      { status: "Belum", tanggal_jatuh_tempo: "2026-06-01" }, // already overdue: out
+      { status: "Lunas", tanggal_jatuh_tempo: "2026-06-03" }, // paid: out
+      { status: "Belum" }, // no due date: out
+    ];
+    expect(countDueWithin(rows, today, 7)).toBe(2);
+  });
+
+  it("crosses month boundaries correctly", () => {
+    expect(
+      countDueWithin([{ status: "Belum", tanggal_jatuh_tempo: "2026-07-01" }], "2026-06-29", 7),
+    ).toBe(1);
+  });
+
+  it("returns zero for empty input", () => {
+    expect(countDueWithin([], today, 7)).toBe(0);
+  });
+});
+
+describe("splitByStatus", () => {
+  it("counts rows per status and skips missing status", () => {
+    const out = splitByStatus([
+      { status: "Draft" },
+      { status: "Draft" },
+      { status: "Rejected" },
+      {},
+    ]);
+    expect(out).toEqual({ Draft: 2, Rejected: 1 });
+  });
+
+  it("returns empty map for no rows", () => {
+    expect(splitByStatus([])).toEqual({});
+  });
+});
+
+describe("isPeriodePastDue", () => {
+  const today = "2026-06-02";
+
+  it("flags an Open period whose end date has passed", () => {
+    expect(isPeriodePastDue({ status: "Open", tanggal_akhir: "2026-05-31" }, today)).toBe(true);
+  });
+
+  it("does not flag an Open period still inside its range", () => {
+    expect(isPeriodePastDue({ status: "Open", tanggal_akhir: "2026-06-30" }, today)).toBe(false);
+  });
+
+  it("does not flag a period ending today", () => {
+    expect(isPeriodePastDue({ status: "Open", tanggal_akhir: today }, today)).toBe(false);
+  });
+
+  it("ignores Closed/Reopened periods and rows without an end date", () => {
+    expect(isPeriodePastDue({ status: "Closed", tanggal_akhir: "2026-05-31" }, today)).toBe(false);
+    expect(isPeriodePastDue({ status: "Open" }, today)).toBe(false);
   });
 });

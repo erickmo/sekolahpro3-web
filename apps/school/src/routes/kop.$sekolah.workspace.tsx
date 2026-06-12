@@ -3,6 +3,7 @@ import { useSession } from "@sekolahpro/auth";
 import { useResourceList } from "@sekolahpro/api-client";
 import { Alert, PageHeader } from "@sekolahpro/ui";
 import { TellerWorkspace } from "../components/koperasi/TellerWorkspace";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 type SesiRow = { name: string; status: string };
 
@@ -31,17 +32,20 @@ function WorkspaceGate() {
   const active = q.data?.[0];
   if (!active) {
     return (
-      <Alert tone="warning" title="Sesi kas belum dibuka">
-        <div className="space-y-2">
-          <p className="text-sm">Buka sesi kas di halaman Kas Teller untuk mulai bekerja di Workspace.</p>
-          <Link
-            to="/kop/$sekolah/kas-teller" params={{ sekolah }}
-            className="inline-flex items-center rounded-md border border-border bg-bg px-3 py-1.5 text-sm font-medium hover:bg-bg-subtle"
-          >
-            Buka di Kas Teller
-          </Link>
-        </div>
-      </Alert>
+      <div className="space-y-4">
+        <KoperasiPageGuide id="workspace" />
+        <Alert tone="warning" title="Sesi kas belum dibuka">
+          <div className="space-y-2">
+            <p className="text-sm">Buka sesi kas di halaman Kas Teller untuk mulai melayani lewat Layanan Cepat.</p>
+            <Link
+              to="/kop/$sekolah/kas-teller" params={{ sekolah }}
+              className="inline-flex items-center rounded-md border border-border bg-bg px-3 py-1.5 text-sm font-medium hover:bg-bg-subtle"
+            >
+              Buka di Kas Teller
+            </Link>
+          </div>
+        </Alert>
+      </div>
     );
   }
 
@@ -49,9 +53,10 @@ function WorkspaceGate() {
     <div className="space-y-4">
       <PageHeader
         eyebrow="Koperasi"
-        title="Teller Workspace"
+        title="Layanan Cepat"
         description={`Sesi aktif ${active.name} — Scan RFID, hotkey F2-F5, Esc untuk reset.`}
       />
+      <KoperasiPageGuide id="workspace" />
       <TellerWorkspace />
     </div>
   );

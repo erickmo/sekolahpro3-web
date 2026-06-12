@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 type Row = {
   name: string;
@@ -23,17 +24,20 @@ const COLUMNS: Column<Row>[] = [
 
 function SukuBungaPage() {
   return (
-    <ResourceListPage<Row>
-      eyebrow="Koperasi"
-      title="Suku Bunga"
-      description="Daftar suku bunga / margin produk pembiayaan koperasi konvensional."
-      doctype="Produk Pembiayaan"
-      fields={["name", "nama_produk", "mode", "margin_pa", "skema_angsuran", "maksimal_tenor"]}
-      rowKey={(r) => r.name}
-      columns={COLUMNS}
-      defaultSort={{ key: "nama_produk", dir: "asc" }}
-      searchFields={["name", "nama_produk"]}
-    />
+    <>
+      <KoperasiPageGuide id="suku-bunga" />
+      <ResourceListPage<Row>
+        eyebrow="Koperasi"
+        title="Suku Bunga"
+        description="Daftar suku bunga / margin produk pembiayaan koperasi konvensional."
+        doctype="Produk Pembiayaan"
+        fields={["name", "nama_produk", "mode", "margin_pa", "skema_angsuran", "maksimal_tenor"]}
+        rowKey={(r) => r.name}
+        columns={COLUMNS}
+        defaultSort={{ key: "nama_produk", dir: "asc" }}
+        searchFields={["name", "nama_produk"]}
+      />
+    </>
   );
 }
 

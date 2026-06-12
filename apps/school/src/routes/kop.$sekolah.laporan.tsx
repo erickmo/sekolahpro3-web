@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, SectionCard, StatCard, IconWallet, IconCheck, IconAlert, IconUsers } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 function LaporanKoperasiPage() {
   const rekening = useResourceList<{ name: string; saldo: number; status: string }>(
@@ -20,6 +21,7 @@ function LaporanKoperasiPage() {
   return (
     <div className="space-y-6">
       <PageHeader eyebrow="Koperasi" title="Laporan" description="Ringkasan simpanan, pembiayaan, & anggota." />
+      <KoperasiPageGuide id="laporan" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total Simpanan" value={`Rp ${totalSimpanan.toLocaleString("id-ID")}`} icon={<IconWallet />} accent="emerald" />
         <StatCard label="Pembiayaan Berjalan" value={`Rp ${totalPembiayaan.toLocaleString("id-ID")}`} hint={`${pembiayaanBerjalan.length} akad`} icon={<IconCheck />} accent="brand" />

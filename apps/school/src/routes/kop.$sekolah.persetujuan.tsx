@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 import {
   Alert,
   Avatar,
@@ -124,6 +125,7 @@ function PersetujuanPage() {
         title="Persetujuan Permohonan"
         description="Antrian permohonan menunggu keputusan supervisor."
       />
+      <KoperasiPageGuide id="persetujuan" />
       <Tabs items={tabs} />
       <PermohonanList type={activeType} />
     </div>

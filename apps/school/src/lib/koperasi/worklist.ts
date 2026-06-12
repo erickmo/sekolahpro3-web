@@ -59,3 +59,51 @@ export function splitTransaksiByJenis(rows: Array<{ jenis: string }>): Record<st
 export function capLabel(count: number, cap: number): string {
   return count >= cap ? `${cap}+` : String(count);
 }
+
+const DAY_MS = 86_400_000;
+
+/** Shift an ISO yyyy-mm-dd date by `days` using UTC math so tests stay stable. */
+function addDaysIso(isoDate: string, days: number): string {
+  return new Date(Date.parse(`${isoDate}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+/**
+ * Count unpaid installments (status Belum) due within the next `days` days,
+ * today inclusive — the proactive "chase before it becomes tunggakan" number.
+ */
+export function countDueWithin(rows: JadwalAngsuranRow[], today: string, days: number): number {
+  const horizon = addDaysIso(today, days);
+  return rows.filter(
+    (r) =>
+      r.status === "Belum" &&
+      !!r.tanggal_jatuh_tempo &&
+      r.tanggal_jatuh_tempo >= today &&
+      r.tanggal_jatuh_tempo <= horizon,
+  ).length;
+}
+
+/** Count rows per `status` (e.g. PPATK reports split Draft/Pending Submit/Rejected). */
+export function splitByStatus(rows: Array<{ status?: string }>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of rows) {
+    if (!r.status) continue;
+    out[r.status] = (out[r.status] ?? 0) + 1;
+  }
+  return out;
+}
+
+export interface PeriodeRow {
+  status?: string;
+  tanggal_akhir?: string;
+}
+
+/**
+ * True when an operating period is past its planned end date but still not
+ * closed (status Open). Open itself is the normal working state — only a
+ * past-due Open period is an attention condition (SA review 2026-06-13).
+ */
+export function isPeriodePastDue(row: PeriodeRow, today: string): boolean {
+  if (row.status && row.status !== "Open") return false;
+  if (!row.tanggal_akhir) return false;
+  return row.tanggal_akhir < today;
+}

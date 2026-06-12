@@ -4,6 +4,7 @@ import { PageHeader, SectionCard, Tabs, type TabItem } from "@sekolahpro/ui";
 import { useResourceList } from "@sekolahpro/api-client";
 import { MASTER_CONFIGS } from "../lib/koperasi/masterConfigs";
 import { MasterCRUD } from "../components/koperasi-master/MasterCRUD";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 /**
  * Pengaturan koperasi — 6 tab master.
@@ -97,6 +98,7 @@ function PengaturanKoperasiPage() {
         title="Pengaturan"
         description="Master produk, fatwa, denominasi, merchant, dan daftar sanksi."
       />
+      <KoperasiPageGuide id="pengaturan" />
       <Tabs items={items} />
       {active === "produk-simpanan" ? <ProdukSimpananReadonly /> : null}
       {active === "produk-pembiayaan" ? <ProdukPembiayaanReadonly /> : null}

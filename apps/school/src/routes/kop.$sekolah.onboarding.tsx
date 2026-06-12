@@ -22,6 +22,7 @@ import {
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { PermohonanModal } from "../components/koperasi-simpanan/permohonanForms";
 import { TransaksiModal } from "../components/koperasi-simpanan/transaksiForm";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 import { ANGGOTA_KOPERASI_FIELDS } from "../data/create-schemas";
 import {
   deriveOnboardingStep,
@@ -109,6 +110,8 @@ function OnboardingWizardPage() {
           </Button>
         }
       />
+
+      <KoperasiPageGuide id="onboarding" />
 
       <SectionCard title="Progres Onboarding">
         <WorkflowStepper steps={steps} />

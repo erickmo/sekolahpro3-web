@@ -4,6 +4,7 @@ import { Badge, Button, IconUsers, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { ANGGOTA_KOPERASI_FIELDS } from "../data/create-schemas";
+import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
 // Verified fields on `Anggota Koperasi` doctype:
 // nomor_anggota (Data), nasabah (Link Nasabah), jenis_anggota (Select),
@@ -84,6 +85,7 @@ function KoperasiDaftarPage() {
   const [open, setOpen] = useState(false);
   return (
     <>
+    <KoperasiPageGuide id="daftar" />
     <ResourceListPage<Row>
       eyebrow="Layanan"
       title="Koperasi"
