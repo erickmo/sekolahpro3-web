@@ -59,11 +59,15 @@ export function PilihSekolahPage() {
       { name: koperasiName },
       {
         onSuccess: (resp) => {
+          // Anchor langsung sebagai tenant koperasi. `schools` sengaja TIDAK
+          // diisi di sini — shell /kop mendeteksi schools===undefined dan
+          // melengkapinya dari doc Koperasi (sekolah_utama + tercakup).
           setActiveSekolah({
-            name: resp.sekolah,
+            name: resp.koperasi,
             nama: resp.nama,
             subdomain: null,
             slug: resp.slug,
+            kind: "koperasi",
           });
           // Koperasi punya shell sendiri di /kop/$sekolah (sidebar khusus
           // koperasi). Param tetap `sekolah` (= kode_pendek), dipakai bersama

@@ -43,7 +43,7 @@ export function summarizeApprovals(perType: ApprovalCount[]): ApprovalSummary {
   return { total, byType };
 }
 
-/** Count rows per `jenis` (e.g. today's transactions split Setor/Tarik/…). */
+/** Count rows per `jenis` (e.g. today's transactions split Setoran/Penarikan/…). */
 export function splitTransaksiByJenis(rows: Array<{ jenis: string }>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const r of rows) {

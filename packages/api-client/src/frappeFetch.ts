@@ -1,9 +1,16 @@
-import { ACTIVE_SEKOLAH_HEADER, configureResource } from "./frappeResource";
+import {
+  ACTIVE_KOPERASI_HEADER,
+  ACTIVE_SEKOLAH_HEADER,
+  configureResource,
+  type ActiveTenant,
+} from "./frappeResource";
 
 type Config = {
   baseUrl: string;
   csrfToken?: string;
   getActiveSekolah?: () => string | null | undefined;
+  /** Full tenant descriptor — wins over getActiveSekolah when provided. */
+  getActiveTenant?: () => ActiveTenant | null | undefined;
 };
 
 let config: Config = { baseUrl: "" };
@@ -32,11 +39,17 @@ export async function frappeFetch<T = unknown>(
   args: Record<string, unknown> = {},
 ): Promise<T> {
   const url = `${config.baseUrl}/api/method/${method}`;
+  const tenant = config.getActiveTenant?.() ?? null;
+  const sekolah =
+    tenant?.kind === "koperasi"
+      ? (tenant.schools[0] ?? "")
+      : (tenant?.sekolah ?? config.getActiveSekolah?.() ?? "");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
     "X-Frappe-CSRF-Token": config.csrfToken ?? "",
-    [ACTIVE_SEKOLAH_HEADER]: config.getActiveSekolah?.() ?? "",
+    [ACTIVE_SEKOLAH_HEADER]: sekolah,
+    [ACTIVE_KOPERASI_HEADER]: tenant?.kind === "koperasi" ? tenant.koperasi : "",
   };
 
   const res = await fetch(url, {

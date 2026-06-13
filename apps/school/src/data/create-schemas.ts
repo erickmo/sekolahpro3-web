@@ -200,15 +200,16 @@ export const JADWAL_ANGSURAN_BASE_VALUES = {
 };
 
 // ============================================================ Koperasi Sosial
-// Penerimaan ZIS = dana sosial masuk (Zakat/Infak/Sedekah/Wakaf Tunai).
-// jenis_dana options match the existing list filter on the ZIS route.
+// Penerimaan ZIS = dana sosial masuk. jenis_dana adalah Link ke master
+// "Jenis Dana ZIS" (bukan enum bebas); program opsional dan harus se-jenis
+// dana (divalidasi controller).
 export const PENERIMAAN_ZIS_FIELDS: ResourceFieldDef[] = [
   {
     name: "jenis_dana",
     label: "Jenis Dana",
-    type: "select",
+    type: "link",
     required: true,
-    options: ["Zakat", "Infak", "Sedekah", "Wakaf Tunai"].map((v) => ({ value: v, label: v })),
+    linkDoctype: "Jenis Dana ZIS",
   },
   { name: "jumlah", label: "Nominal (Rp)", type: "number", required: true, positive: true },
   { name: "tanggal", label: "Tanggal", type: "date", required: true, defaultValue: "@today" },
@@ -220,17 +221,40 @@ export const PENERIMAAN_ZIS_FIELDS: ResourceFieldDef[] = [
     hint: "Opsional — kosongkan untuk infak anonim.",
   },
   {
-    name: "status",
-    label: "Status",
-    type: "select",
-    required: true,
-    defaultValue: "Diterima",
-    options: ["Diterima", "Disalurkan"].map((v) => ({ value: v, label: v })),
+    name: "program_penyaluran",
+    label: "Program Penyaluran",
+    type: "link",
+    linkDoctype: "Program Penyaluran",
+    hint: "Opsional — program harus Aktif dan se-jenis dana.",
   },
   { name: "keterangan", label: "Keterangan", type: "textarea", colSpan: 2 },
 ];
 
-// Aset Wakaf = aset wakaf yang dikelola koperasi.
+// Program Penyaluran = wadah target & realisasi penyaluran per jenis dana.
+// terkumpul/tersalurkan dihitung backend (read-only, kolom list saja).
+export const PROGRAM_PENYALURAN_FIELDS: ResourceFieldDef[] = [
+  { name: "nama_program", label: "Nama Program", type: "text", required: true, colSpan: 2 },
+  {
+    name: "jenis_dana",
+    label: "Jenis Dana",
+    type: "link",
+    required: true,
+    linkDoctype: "Jenis Dana ZIS",
+  },
+  { name: "target_dana", label: "Target Dana (Rp)", type: "number", positive: true },
+  {
+    name: "status",
+    label: "Status",
+    type: "select",
+    required: true,
+    defaultValue: "Aktif",
+    options: ["Aktif", "Selesai"].map((v) => ({ value: v, label: v })),
+  },
+  { name: "periode_mulai", label: "Periode Mulai", type: "date" },
+  { name: "periode_selesai", label: "Periode Selesai", type: "date" },
+];
+
+// Aset Wakaf = aset wakaf yang dikelola koperasi (nazhir wajib per BE).
 export const ASET_WAKAF_FIELDS: ResourceFieldDef[] = [
   { name: "nama_aset", label: "Nama Aset", type: "text", required: true, colSpan: 2 },
   {
@@ -238,7 +262,7 @@ export const ASET_WAKAF_FIELDS: ResourceFieldDef[] = [
     label: "Jenis Wakaf",
     type: "select",
     required: true,
-    options: ["Tunai", "Tanah", "Bangunan", "Kendaraan", "Lainnya"].map((v) => ({ value: v, label: v })),
+    options: ["Uang", "Benda Tidak Bergerak", "Benda Bergerak"].map((v) => ({ value: v, label: v })),
   },
   { name: "nilai", label: "Nilai (Rp)", type: "number", required: true, positive: true },
   {
@@ -248,15 +272,17 @@ export const ASET_WAKAF_FIELDS: ResourceFieldDef[] = [
     linkDoctype: "Nasabah",
     hint: "Opsional — pemberi wakaf.",
   },
+  { name: "nazhir", label: "Nazhir", type: "text", required: true, hint: "Pengelola aset wakaf." },
   {
     name: "status",
     label: "Status",
     type: "select",
     required: true,
-    defaultValue: "Produktif",
-    options: ["Produktif", "Tidak Produktif"].map((v) => ({ value: v, label: v })),
+    defaultValue: "Aktif",
+    options: ["Aktif", "Habis"].map((v) => ({ value: v, label: v })),
   },
-  { name: "keterangan", label: "Keterangan", type: "textarea", colSpan: 2 },
+  { name: "no_aiw", label: "No. AIW", type: "text", hint: "Akta Ikrar Wakaf (opsional)." },
+  { name: "tanggal_aiw", label: "Tanggal AIW", type: "date" },
 ];
 
 // ============================================================ Laporan

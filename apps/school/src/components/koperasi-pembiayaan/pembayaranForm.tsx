@@ -1,130 +1,124 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   DatePicker,
   FormField,
-  FormGrid,
   Input,
   Modal,
   SearchableSelect,
-  Textarea,
-  type SearchableOption,
 } from "@sekolahpro/ui";
-import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+import {
+  humanizeFrappeError,
+  useResourceCreate,
+  useResourceDoc,
+} from "@sekolahpro/api-client";
+import { FormSection } from "../shared/FormSection";
+import { searchLink } from "../shared/searchLink";
 
 const PEMBAYARAN_DOCTYPE = "Pembayaran Angsuran";
-const JADWAL_DOCTYPE = "Jadwal Angsuran";
 const AKAD_DOCTYPE = "Akad Pembiayaan";
-const NUMERIC_FIELDS = new Set(["nominal", "denda"]);
-const METODE_OPTIONS = ["Tunai", "Transfer", "Auto Debit", "Potong Gaji"] as const;
 
 // Payment dates stay near the present — narrow year range for fast jumping.
 const MIN_YEAR = new Date().getFullYear() - 10;
 const MAX_YEAR = new Date().getFullYear() + 1;
 
-/** Async option loader for a Frappe link field. */
-async function searchLink(
-  doctype: string,
-  labelField: string,
-  q: string,
-): Promise<SearchableOption[]> {
-  const rows = await listResource<Record<string, string>>(doctype, {
-    fields: ["name", labelField],
-    ...(q
-      ? {
-          or_filters: [
-            ["name", "like", `%${q}%`],
-            [labelField, "like", `%${q}%`],
-          ] as [string, string, unknown][],
-        }
-      : {}),
-    limit_page_length: 20,
-    order_by: "modified desc",
-  });
-  return rows.map((r) => ({
-    value: r.name ?? "",
-    label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? ""),
-  }));
+// Jadwal Angsuran child rows as embedded in the Akad Pembiayaan doc.
+interface JadwalRow {
+  ke?: number;
+  tanggal_jatuh_tempo?: string;
+  total?: number;
+  status?: string;
 }
 
-/** Section heading + grid wrapper for one logical group of fields. */
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-fg">{title}</h3>
-        {description ? (
-          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
-        ) : null}
-      </div>
-      <FormGrid>{children}</FormGrid>
-    </section>
-  );
+interface AkadDoc {
+  name: string;
+  jadwal_angsuran?: JadwalRow[];
 }
 
 interface PembayaranModalProps {
   open: boolean;
   onClose: () => void;
-  /** Pre-fill jadwal (Jadwal Angsuran name). */
-  jadwal?: string | undefined;
   /** Pre-fill akad (Akad Pembiayaan name). */
   akad?: string | undefined;
-  /** Pre-fill default nominal from the jadwal row. */
-  defaultNominal?: number | undefined;
+  /** Pre-select installment number (Jadwal Angsuran `ke`). */
+  angsuranKe?: number | undefined;
   onSuccess?: ((createdName: string) => void) | undefined;
 }
 
 /**
  * Modal to record a Pembayaran Angsuran (installment payment).
- * Links the payment to the corresponding Jadwal Angsuran and Akad Pembiayaan.
+ *
+ * Backend contract: { akad_pembiayaan*, angsuran_ke*, jumlah_bayar*,
+ * tanggal_bayar*, denda? }. The installment picker reads the akad doc's
+ * embedded jadwal_angsuran child rows (no standalone child-table query).
  */
 export function PembayaranAngsuranModal(props: PembayaranModalProps) {
-  const { open, onClose, jadwal, akad, defaultNominal, onSuccess } = props;
+  const { open, onClose, akad, angsuranKe, onSuccess } = props;
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>(PEMBAYARAN_DOCTYPE);
   const [error, setError] = useState<string | null>(null);
   const [tanggalBayar, setTanggalBayar] = useState<string>(new Date().toISOString().slice(0, 10));
-  const [metode, setMetode] = useState<string>("Tunai");
-  const [jadwalVal, setJadwalVal] = useState<string>(jadwal ?? "");
   const [akadVal, setAkadVal] = useState<string>(akad ?? "");
+  const [keVal, setKeVal] = useState<string>(angsuranKe !== undefined ? String(angsuranKe) : "");
+
+  // The akad doc carries its installment schedule as child rows.
+  const akadQ = useResourceDoc<AkadDoc>(AKAD_DOCTYPE, akadVal || undefined, {
+    enabled: open && Boolean(akadVal),
+  });
+
+  const angsuranOptions = useMemo(() => {
+    const rows = akadQ.data?.jadwal_angsuran ?? [];
+    return rows
+      .filter((r) => r.ke !== undefined)
+      .map((r) => ({
+        value: String(r.ke),
+        label: `Ke-${r.ke} · jatuh tempo ${r.tanggal_jatuh_tempo ?? "—"} · Rp ${(r.total ?? 0).toLocaleString("id-ID")}${r.status && r.status !== "Belum" ? ` (${r.status})` : ""}`,
+      }));
+  }, [akadQ.data]);
+
+  const pickedRow = useMemo(
+    () => (akadQ.data?.jadwal_angsuran ?? []).find((r) => String(r.ke) === keVal),
+    [akadQ.data, keVal],
+  );
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
-    const doc: Record<string, unknown> = {};
-    fd.forEach((v, k) => {
-      if (typeof v !== "string" || v.trim() === "") return;
-      if (NUMERIC_FIELDS.has(k)) {
-        const n = Number(v);
-        if (!Number.isNaN(n)) doc[k] = n;
-      } else {
-        doc[k] = v;
-      }
-    });
+    const jumlahBayar = Number(fd.get("jumlah_bayar"));
+    const denda = Number(fd.get("denda") || 0);
+    if (!akadVal) {
+      setError("Akad wajib dipilih.");
+      return;
+    }
+    if (!keVal) {
+      setError("Angsuran wajib dipilih.");
+      return;
+    }
+    if (!Number.isFinite(jumlahBayar) || jumlahBayar <= 0) {
+      setError("Nominal harus lebih dari nol.");
+      return;
+    }
+    const doc: Record<string, unknown> = {
+      akad_pembiayaan: akadVal,
+      angsuran_ke: Number(keVal),
+      jumlah_bayar: jumlahBayar,
+      tanggal_bayar: tanggalBayar,
+    };
+    if (denda > 0) doc["denda"] = denda;
     try {
       const created = await create.mutateAsync(doc);
       await qc.invalidateQueries({ queryKey: ["resource:list", PEMBAYARAN_DOCTYPE] });
-      await qc.invalidateQueries({ queryKey: ["resource:list", JADWAL_DOCTYPE] });
-      if (jadwal) {
-        await qc.invalidateQueries({ queryKey: ["resource:doc", JADWAL_DOCTYPE, jadwal] });
-      }
-      if (akad) {
-        await qc.invalidateQueries({ queryKey: ["resource:doc", AKAD_DOCTYPE, akad] });
-      }
+      await qc.invalidateQueries({ queryKey: ["resource:list", AKAD_DOCTYPE] });
+      await qc.invalidateQueries({ queryKey: ["resource:doc", AKAD_DOCTYPE] });
       onSuccess?.(created.name);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mencatat pembayaran");
+      setError(
+        humanizeFrappeError(err) ??
+          (err instanceof Error ? err.message : "Gagal mencatat pembayaran"),
+      );
     }
   };
 
@@ -133,43 +127,49 @@ export function PembayaranAngsuranModal(props: PembayaranModalProps) {
       open={open}
       onClose={onClose}
       title="Bayar Angsuran"
-      description="Catat pembayaran angsuran untuk jadwal yang dipilih. Tanda * wajib diisi."
+      description="Catat pembayaran angsuran untuk akad yang dipilih. Tanda * wajib diisi."
       size="mega"
       tone="brand"
     >
       <form onSubmit={onSubmit} className="space-y-5">
         <FormSection
           title="Referensi Angsuran"
-          description="Jadwal dan akad yang dibayar."
+          description="Pilih akad, lalu nomor angsuran dari jadwalnya."
         >
-          <FormField label="Jadwal Angsuran" required>
-            <SearchableSelect
-              value={jadwalVal}
-              onChange={(v) => setJadwalVal(v)}
-              loadOptions={(q) => searchLink(JADWAL_DOCTYPE, "name", q)}
-              placeholder="Cari jadwal…"
-              disabled={!!jadwal}
-            />
-            <input type="hidden" name="jadwal" value={jadwalVal} />
-          </FormField>
           <FormField label="Akad" required>
             <SearchableSelect
               value={akadVal}
-              onChange={(v) => setAkadVal(v)}
-              loadOptions={(q) => searchLink(AKAD_DOCTYPE, "name", q)}
+              onChange={(v) => {
+                setAkadVal(v);
+                setKeVal("");
+              }}
+              loadOptions={(q) => searchLink(AKAD_DOCTYPE, "nasabah", q)}
               placeholder="Cari akad…"
               disabled={!!akad}
             />
-            <input type="hidden" name="akad" value={akadVal} />
+          </FormField>
+          <FormField
+            label="Angsuran"
+            required
+            {...(akadVal && !akadQ.isLoading && angsuranOptions.length === 0
+              ? { hint: "Akad ini belum memiliki jadwal angsuran." }
+              : {})}
+          >
+            <SearchableSelect
+              value={keVal}
+              onChange={(v) => setKeVal(v)}
+              options={angsuranOptions}
+              placeholder={akadVal ? "— pilih angsuran —" : "Pilih akad dulu"}
+              disabled={!akadVal || akadQ.isLoading}
+            />
           </FormField>
         </FormSection>
         <FormSection
           title="Detail Pembayaran"
-          description="Tanggal, metode, nominal, dan denda."
+          description="Tanggal, nominal, dan denda (bila ada)."
         >
           <FormField label="Tanggal Bayar" required>
             <DatePicker
-              name="tanggal_bayar"
               value={tanggalBayar}
               onChange={(v) => setTanggalBayar(v)}
               required
@@ -178,31 +178,26 @@ export function PembayaranAngsuranModal(props: PembayaranModalProps) {
               toYear={MAX_YEAR}
             />
           </FormField>
-          <FormField label="Metode" required>
-            <SearchableSelect
-              value={metode}
-              onChange={(v) => setMetode(v)}
-              options={METODE_OPTIONS.map((m) => ({ value: m, label: m }))}
-              placeholder="— pilih —"
-            />
-            <input type="hidden" name="metode" value={metode} />
-          </FormField>
-          <FormField label="Nominal (Rp)" required>
+          <FormField
+            label="Nominal (Rp)"
+            required
+            {...(pickedRow?.total !== undefined
+              ? { hint: `Tagihan angsuran: Rp ${pickedRow.total.toLocaleString("id-ID")}` }
+              : {})}
+          >
             <Input
-              name="nominal"
+              key={keVal}
+              name="jumlah_bayar"
               type="number"
-              min={0}
+              min={1}
               step="1"
               required
-              defaultValue={defaultNominal !== undefined ? String(defaultNominal) : ""}
+              defaultValue={pickedRow?.total !== undefined ? String(pickedRow.total) : ""}
               placeholder="0"
             />
           </FormField>
           <FormField label="Denda (Rp)">
             <Input name="denda" type="number" min={0} step="1" placeholder="0" />
-          </FormField>
-          <FormField label="Catatan" className="col-span-2">
-            <Textarea name="catatan" placeholder="Catatan pembayaran (opsional)" />
           </FormField>
         </FormSection>
         {error ? (

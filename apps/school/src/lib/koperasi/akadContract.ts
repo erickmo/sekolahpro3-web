@@ -1,50 +1,45 @@
 /**
  * Single source of truth for the Akad Pembiayaan field contract.
  *
- * Bug this guards: the create form posts `pokok_pembiayaan` (and the detail
- * page reads it), but the list + member-detail map previously read the legacy
- * `jumlah_pokok`, so every freshly-created akad showed "—" for its principal.
- * Routing both the create payload and the reads through these constants keeps
- * the write key and read key from drifting apart again.
+ * Backend doctype (akad_pembiayaan.json) verified 2026-06-13:
+ *   nasabah* (Link Nasabah), produk_pembiayaan* (Link Produk Pembiayaan),
+ *   jumlah_pokok* (Currency), tenor* (Int, bulan), tanggal_akad* (Date),
+ *   status (Aktif|Lunas|Macet). margin_total/total_kewajiban/kolektibilitas
+ *   are read-only, derived by the controller. There is NO anggota/produk/
+ *   akad/pokok_pembiayaan/tenor_bulan/margin/jaminan/catatan field — the old
+ *   contract here posted those and every create failed/showed "—".
  */
 
 /** Canonical field storing the financing principal on Akad Pembiayaan. */
-export const AKAD_POKOK_FIELD = "pokok_pembiayaan";
+export const AKAD_POKOK_FIELD = "jumlah_pokok";
 
 /** Fields coerced to numbers before POST. */
 export const AKAD_NUMERIC_FIELDS: ReadonlySet<string> = new Set([
   AKAD_POKOK_FIELD,
-  "margin",
-  "tenor_bulan",
+  "tenor",
 ]);
 
 export interface AkadPayloadInput {
-  anggota: string;
-  produk: string;
-  akad: string;
+  /** Nasabah doc-ID (NSB-…) — the financing counterparty. */
+  nasabah: string;
+  /** Produk Pembiayaan doc-ID. */
+  produk_pembiayaan: string;
   tanggal_akad: string;
-  pokok_pembiayaan: number;
-  tenor_bulan: number;
-  margin?: number;
-  jaminan?: string;
-  catatan?: string;
+  jumlah_pokok: number;
+  /** Tenor in months. */
+  tenor: number;
 }
 
 /**
- * Build the Akad Pembiayaan create payload using canonical keys; optional
- * fields are omitted when empty so they do not overwrite with blanks.
+ * Build the Akad Pembiayaan create payload using canonical keys only —
+ * read-only/derived fields are never sent.
  */
 export function buildAkadPayload(input: AkadPayloadInput): Record<string, unknown> {
-  const out: Record<string, unknown> = {
-    anggota: input.anggota,
-    produk: input.produk,
-    akad: input.akad,
+  return {
+    nasabah: input.nasabah,
+    produk_pembiayaan: input.produk_pembiayaan,
     tanggal_akad: input.tanggal_akad,
-    [AKAD_POKOK_FIELD]: input.pokok_pembiayaan,
-    tenor_bulan: input.tenor_bulan,
+    [AKAD_POKOK_FIELD]: input.jumlah_pokok,
+    tenor: input.tenor,
   };
-  if (input.margin !== undefined && !Number.isNaN(input.margin)) out.margin = input.margin;
-  if (input.jaminan?.trim()) out.jaminan = input.jaminan;
-  if (input.catatan?.trim()) out.catatan = input.catatan;
-  return out;
 }

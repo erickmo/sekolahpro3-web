@@ -12,6 +12,7 @@ type Row = {
   jenis_wakaf: string;
   nilai: number;
   wakif?: string;
+  nazhir?: string;
   status: string;
 };
 
@@ -22,8 +23,9 @@ const COLUMNS: Column<Row>[] = [
   { key: "nilai", header: "Nilai", align: "right",
     cell: (r) => <span className="tabular-nums">Rp {r.nilai.toLocaleString("id-ID")}</span> },
   { key: "wakif", header: "Wakif", cell: (r) => r.wakif ?? "—" },
+  { key: "nazhir", header: "Nazhir", cell: (r) => r.nazhir ?? "—" },
   { key: "status", header: "Status",
-    cell: (r) => <Badge tone={r.status === "Produktif" ? "success" : r.status === "Tidak Produktif" ? "warning" : "neutral"} dot>{r.status}</Badge> },
+    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : "neutral"} dot>{r.status}</Badge> },
 ];
 
 function WakafPage() {
@@ -35,7 +37,7 @@ function WakafPage() {
         eyebrow="Koperasi"
         title="Aset Wakaf"
         doctype="Aset Wakaf"
-        fields={["name", "nama_aset", "jenis_wakaf", "nilai", "wakif", "status"]}
+        fields={["name", "nama_aset", "jenis_wakaf", "nilai", "wakif", "nazhir", "status"]}
         rowKey={(r) => r.name}
         columns={COLUMNS}
         defaultSort={{ key: "name", dir: "desc" }}

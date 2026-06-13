@@ -28,7 +28,11 @@ export type KoperasiGuideId =
   | "pembiayaan"
   | "angsuran"
   | "suku-bunga"
+  | "nasabah"
+  | "wallet"
   | "zis"
+  | "zis-penyaluran"
+  | "zis-program"
   | "wakaf"
   | "persetujuan"
   | "period-close"
@@ -398,6 +402,64 @@ export const KOPERASI_PAGE_GUIDES: Record<KoperasiGuideId, KoperasiGuideContent>
       "Mode syariah memakai nisbah bagi hasil, bukan bunga.",
     ],
   },
+  nasabah: {
+    title: "Cara pakai halaman Nasabah",
+    intro:
+      "Nasabah adalah identitas pelanggan koperasi (siswa, pegawai, atau user) lengkap dengan profil KYC sesuai aturan PPATK. Semua rekening, akad, dan keanggotaan menempel ke nasabah.",
+    steps: [
+      {
+        title: "Daftarkan pihak sebagai nasabah",
+        detail:
+          "Klik Daftarkan Nasabah, pilih tipe pihak (Siswa/Pegawai/User) lalu cari orangnya. Nomor nasabah (NSB-…) dibuat otomatis.",
+        roles: ["teller", "admin"],
+      },
+      {
+        title: "Isi profil KYC dengan jujur",
+        detail:
+          "Tier Low untuk transaksi kecil; Medium wajib mengisi sumber dana; PEP atau negara berisiko otomatis menjadi High dan butuh due diligence ekstra.",
+        roles: ["admin", "supervisor"],
+      },
+      {
+        title: "Tindak lanjuti review yang jatuh tempo",
+        detail:
+          "Badge merah Overdue berarti review KYC melewati batas (Medium 12 bulan, High 6 bulan). Buka detailnya, selesaikan review, lalu perbarui tanggal review.",
+        roles: ["supervisor"],
+      },
+    ],
+    tips: [
+      "Satu orang cukup satu nasabah — sistem memperingatkan kalau pihak sudah terdaftar.",
+      "Nasabah berstatus Tidak Aktif tidak bisa membuka rekening atau akad baru.",
+    ],
+  },
+  wallet: {
+    title: "Cara pakai halaman Wallet E-Money",
+    intro:
+      "Wallet menyimpan saldo e-money satu kartu. Atur batas saldo, sumber dana top-up, dan auto top-up di sini; riwayat pengisian tercatat per wallet.",
+    steps: [
+      {
+        title: "Buat wallet untuk kartu e-money",
+        detail:
+          "Hanya kartu bertipe emoney yang bisa punya wallet, dan satu kartu satu wallet. Tentukan batas saldo maksimal sesuai kebijakan koperasi.",
+        roles: ["admin"],
+      },
+      {
+        title: "Aktifkan auto top-up bila perlu",
+        detail:
+          "Auto top-up menarik dana dari rekening simpanan sumber setiap saldo turun di bawah ambang. Ketiga isian (ambang, nominal, rekening) wajib saat fitur ini menyala.",
+        roles: ["admin"],
+      },
+      {
+        title: "Top-up manual dari halaman ini",
+        detail:
+          "Gunakan tombol Top-up: pilih kartu, nominal (Rp 1.000–10.000.000), dan sumber dana Tunai atau debit rekening. Saldo wallet terpotong otomatis saat jajan di kantin.",
+        roles: ["teller"],
+      },
+    ],
+    tips: [
+      "Saldo wallet dihitung backend dari top-up dan transaksi — tidak bisa diedit manual.",
+      "Kartu hilang? Blokir kartunya di halaman Kartu; wallet ikut terkunci.",
+    ],
+  },
   zis: {
     title: "Cara pakai ZIS",
     intro:
@@ -424,6 +486,56 @@ export const KOPERASI_PAGE_GUIDES: Record<KoperasiGuideId, KoperasiGuideContent>
     tips: [
       "Penyaluran zakat mengikuti 8 golongan penerima (asnaf).",
       "Dana ZIS terpisah dari simpanan anggota — jangan sampai tercampur.",
+    ],
+  },
+  "zis-penyaluran": {
+    title: "Cara pakai halaman Penyaluran ZIS",
+    intro:
+      "Penyaluran mencatat dana sosial yang keluar ke penerima manfaat, selalu menempel ke satu Program Penyaluran agar saldo program terjaga.",
+    steps: [
+      {
+        title: "Pilih program yang masih aktif",
+        detail:
+          "Dana hanya bisa disalurkan dari program berstatus Aktif dan tidak boleh melebihi sisa dana program (terkumpul − tersalurkan).",
+        roles: ["admin"],
+      },
+      {
+        title: "Isi asnaf untuk dana zakat",
+        detail:
+          "Untuk program berkategori Zakat, golongan penerima (8 asnaf) wajib dipilih — bagian Amil dibatasi 12,5% dari penerimaan program.",
+        roles: ["admin", "supervisor"],
+      },
+      {
+        title: "Catat penerima bila ada",
+        detail:
+          "Penerima boleh diisi (Siswa/Pegawai/User) atau dikosongkan untuk penyaluran kolektif. Simpan bukti serah terima fisik untuk audit.",
+        roles: ["teller", "admin"],
+      },
+    ],
+    tips: [
+      "Saldo program tampil di form — kalau kurang, tambah penerimaan dulu di halaman ZIS.",
+    ],
+  },
+  "zis-program": {
+    title: "Cara pakai halaman Program Penyaluran",
+    intro:
+      "Program adalah wadah penyaluran per jenis dana (mis. Beasiswa Zakat, Infaq Renovasi). Penerimaan dan penyaluran ZIS mengalir lewat program ini.",
+    steps: [
+      {
+        title: "Buat program per tujuan",
+        detail:
+          "Tentukan nama, jenis dana, dan target. Penerimaan yang ditautkan ke program otomatis menambah angka terkumpul.",
+        roles: ["admin"],
+      },
+      {
+        title: "Pantau realisasi",
+        detail:
+          "Kolom terkumpul vs tersalurkan menunjukkan progres program. Selesaikan program (status Selesai) bila target tercapai agar tidak menerima dana baru.",
+        roles: ["supervisor"],
+      },
+    ],
+    tips: [
+      "Jenis dana program harus sama dengan jenis dana penerimaannya — sistem menolak campur dana.",
     ],
   },
   wakaf: {

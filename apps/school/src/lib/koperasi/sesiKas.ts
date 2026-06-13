@@ -49,18 +49,19 @@ export interface TransaksiCashRow {
 }
 
 /**
- * Cash-drawer effect per transaction jenis. Only Setor (cash in) and Tarik
- * (cash out) move physical cash in a teller drawer; Transfer / Bagi Hasil /
- * Koreksi are book entries that do not change the cash on hand, so they are
- * excluded from the reconciliation expected-balance. (+1 = setoran, -1 =
- * penarikan, 0 = non-cash.)
+ * Cash-drawer effect per transaction jenis. Only Setoran (cash in), Penarikan
+ * (cash out), and Pelunasan Denda Perpus (cash in at the teller) move physical
+ * cash in a teller drawer; Bagi Hasil / Bunga / Biaya Admin Dormant are book
+ * entries that do not change the cash on hand, so they are excluded from the
+ * reconciliation expected-balance. (+1 = setoran, -1 = penarikan, 0 = non-cash.)
  */
 const CASH_SIGN: Record<string, 1 | -1 | 0> = {
-  Setor: 1,
-  Tarik: -1,
-  Transfer: 0,
+  Setoran: 1,
+  Penarikan: -1,
   "Bagi Hasil": 0,
-  Koreksi: 0,
+  Bunga: 0,
+  "Biaya Admin Dormant": 0,
+  "Pelunasan Denda Perpus": 1,
 };
 
 /**

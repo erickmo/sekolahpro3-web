@@ -8,10 +8,27 @@ import {
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useSessionStore } from "@sekolahpro/auth";
-import { TenantMismatchError } from "@sekolahpro/api-client";
+import { TenantMismatchError, useResourceDoc } from "@sekolahpro/api-client";
 import { useMySchools } from "../data/sekolah";
 import { findKoperasiBySlug } from "../lib/koperasi/resolveKoperasi";
 import { SesiKasBanner } from "../components/koperasi/SesiKasBanner";
+
+// Koperasi doc shape used to resolve the covered-schools tenant scope.
+type KoperasiDoc = {
+  name: string;
+  sekolah_utama?: string | null;
+  sekolah_tercakup?: Array<{ sekolah?: string | null }>;
+};
+
+/** Covered Sekolah doc-IDs, sekolah_utama first, deduplicated. */
+function coveredSchools(doc: KoperasiDoc): string[] {
+  const out: string[] = [];
+  if (doc.sekolah_utama) out.push(doc.sekolah_utama);
+  for (const row of doc.sekolah_tercakup ?? []) {
+    if (row.sekolah && !out.includes(row.sekolah)) out.push(row.sekolah);
+  }
+  return out;
+}
 
 /**
  * Layout top-level shell Koperasi (`/kop/$sekolah`).
@@ -33,23 +50,40 @@ function KoperasiTenantLayout() {
 
   const match = findKoperasiBySlug(data?.koperasi, sekolah);
 
+  // Resolve the koperasi's covered schools BEFORE anchoring the tenant —
+  // KOPERASI-tier lists pin by `koperasi`, while SCHOOL-tier pickers (Siswa,
+  // Pegawai) need the covered-school set. "Koperasi" is tenant-blocklisted,
+  // so this fetch itself is scope-free.
+  const kopDocQ = useResourceDoc<KoperasiDoc>("Koperasi", match?.koperasi, {
+    enabled: Boolean(match),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const tenantReady =
+    active?.slug === sekolah && active?.kind === "koperasi" && active.schools !== undefined;
+
   useEffect(() => {
-    if (!match) return;
-    if (active?.slug === match.slug) return;
+    // Anchor once the coverage fetch settles; on read failure (e.g. role
+    // without Koperasi read perm) anchor with an empty school set so the
+    // KOPERASI-tier pages still work — only SCHOOL-tier pickers degrade.
+    if (!match || (!kopDocQ.data && !kopDocQ.isError)) return;
+    if (active?.slug === match.slug && active?.kind === "koperasi" && active.schools) return;
     setActiveSekolah({
       name: match.koperasi,
       nama: match.nama,
       subdomain: null,
       slug: match.slug,
+      kind: "koperasi",
+      schools: kopDocQ.data ? coveredSchools(kopDocQ.data) : [],
     });
-  }, [match, active, setActiveSekolah]);
+  }, [match, kopDocQ.data, kopDocQ.isError, active, setActiveSekolah]);
 
   if (data && !match) throw notFound();
 
-  if (active?.slug !== sekolah) {
+  if (!tenantReady) {
     return (
       <div className="min-h-screen flex items-center justify-center text-muted-fg text-sm">
-        {isLoading ? "Memuat koperasi..." : "Menyiapkan..."}
+        {isLoading || kopDocQ.isLoading ? "Memuat koperasi..." : "Menyiapkan..."}
       </div>
     );
   }

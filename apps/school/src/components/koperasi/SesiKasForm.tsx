@@ -1,20 +1,19 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import {
   Alert,
   Button,
   FormField,
-  FormGrid,
   Input,
   Modal,
   SearchableSelect,
   Textarea,
-  type SearchableOption,
 } from "@sekolahpro/ui";
 import {
-  listResource,
+  humanizeFrappeError,
+  runDocMethod,
+  updateResource,
   useResourceCreate,
   useResourceList,
-  useResourceUpdate,
 } from "@sekolahpro/api-client";
 import { useSession } from "@sekolahpro/auth";
 import {
@@ -27,67 +26,50 @@ import {
   type DenominasiItem,
   type Shift,
 } from "../../lib/koperasi/sesiKas";
+import { FormSection } from "../shared/FormSection";
+import { searchLink } from "../shared/searchLink";
 
 /**
  * Form Buka/Tutup Sesi Kas Teller.
  *
- * Source schema: docs/domains/koperasi/entities/sesi-kas-teller.html
- * Replaces `alert("Form buka sesi kas (P2)")` stub di koperasi.kas-teller.tsx.
+ * Backend contract (sesi_kas_teller.json — submittable doctype):
+ *   Buka  = create { teller*, tanggal*, shift*, supervisor_buka*, modal_kas*,
+ *           denominasi_buka*: [{ denominasi (Link Denominasi Uang), jumlah_lembar }] }
+ *           lalu SUBMIT (docstatus 1) → controller men-set status Aktif.
+ *   Tutup = patch { denominasi_tutup, catatan_selisih } lalu panggil method
+ *           whitelisted `tutup_kas` → status Pending Approval; supervisor
+ *           approve via `approve_tutup` (lihat halaman Kas Teller).
  */
 
-const DEFAULT_NOMINAL: number[] = [
-  100_000, 50_000, 20_000, 10_000, 5_000, 2_000, 1_000, 500, 200, 100,
-];
-
 const SHIFTS: Shift[] = ["Pagi", "Siang", "Sore"];
+const DOCTYPE = "Sesi Kas Teller";
 
-function emptyDenominasi(): DenominasiItem[] {
-  return DEFAULT_NOMINAL.map((nominal) => ({ nominal, jumlah: 0 }));
+// One editable row of the denomination breakdown — bound to a Denominasi Uang
+// master row (Link) with its nilai used for client-side math.
+interface DenominasiRow {
+  denominasi: string;
+  nominal: number;
+  jumlah: number;
 }
 
-/** Async loader for the supervisor (User) link field. */
-async function searchSupervisor(q: string): Promise<SearchableOption[]> {
-  const rows = await listResource<Record<string, string>>("User", {
-    fields: ["name", "full_name"],
-    filters: [["enabled", "=", 1]],
-    ...(q
-      ? {
-          or_filters: [
-            ["name", "like", `%${q}%`],
-            ["full_name", "like", `%${q}%`],
-          ] as [string, string, unknown][],
-        }
-      : {}),
-    limit_page_length: 20,
-    order_by: "full_name asc",
-  });
-  return rows.map((u) => ({
-    value: u.name ?? "",
-    label: u.full_name ? `${u.full_name} (${u.name})` : (u.name ?? ""),
-  }));
+interface MasterDenominasi {
+  name: string;
+  nama?: string;
+  nilai?: number;
+  urutan?: number;
+  aktif?: 0 | 1;
 }
 
-/** Section heading + grid wrapper for one logical group of fields. */
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-fg">{title}</h3>
-        {description ? (
-          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
-        ) : null}
-      </div>
-      <FormGrid>{children}</FormGrid>
-    </section>
-  );
+/** Map editable rows → backend child rows ({denominasi, jumlah_lembar}). */
+function toChildRows(rows: DenominasiRow[]): Array<Record<string, unknown>> {
+  return rows
+    .filter((r) => r.jumlah > 0)
+    .map((r) => ({ denominasi: r.denominasi, jumlah_lembar: r.jumlah }));
+}
+
+/** Editable rows as lib DenominasiItem for the pure validators. */
+function toItems(rows: DenominasiRow[]): DenominasiItem[] {
+  return rows.filter((r) => r.jumlah > 0).map((r) => ({ nominal: r.nominal, jumlah: r.jumlah }));
 }
 
 interface BukaProps {
@@ -115,12 +97,39 @@ export function SesiKasForm(props: BukaProps | TutupProps) {
   return <TutupSesiForm {...props} />;
 }
 
+/** Load active Denominasi Uang rows as an editable breakdown table. */
+function useDenominasiRows(): {
+  rows: DenominasiRow[];
+  setRows: (next: DenominasiRow[]) => void;
+  loading: boolean;
+} {
+  const masterQ = useResourceList<MasterDenominasi>("Denominasi Uang", {
+    fields: ["name", "nama", "nilai", "urutan", "aktif"],
+    filters: [["aktif", "=", 1]],
+    order_by: "urutan asc",
+    limit_page_length: 50,
+  });
+  const [edits, setEdits] = useState<Record<string, number>>({});
+  const rows = useMemo(
+    () =>
+      (masterQ.data ?? []).map((m) => ({
+        denominasi: m.name,
+        nominal: m.nilai ?? 0,
+        jumlah: edits[m.name] ?? 0,
+      })),
+    [masterQ.data, edits],
+  );
+  const setRows = (next: DenominasiRow[]) =>
+    setEdits(Object.fromEntries(next.map((r) => [r.denominasi, r.jumlah])));
+  return { rows, setRows, loading: masterQ.isLoading };
+}
+
 function DenominasiTable({
   rows,
   onChange,
 }: {
-  rows: DenominasiItem[];
-  onChange: (next: DenominasiItem[]) => void;
+  rows: DenominasiRow[];
+  onChange: (next: DenominasiRow[]) => void;
 }) {
   return (
     <div className="rounded-md border border-border">
@@ -134,7 +143,7 @@ function DenominasiTable({
         </thead>
         <tbody className="divide-y divide-border">
           {rows.map((r, i) => (
-            <tr key={r.nominal}>
+            <tr key={r.denominasi}>
               <td className="px-3 py-1.5 tabular-nums">
                 Rp {r.nominal.toLocaleString("id-ID")}
               </td>
@@ -156,6 +165,13 @@ function DenominasiTable({
               </td>
             </tr>
           ))}
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="px-3 py-4 text-center text-xs text-muted-fg">
+                Master Denominasi Uang kosong — isi dulu di Pengaturan.
+              </td>
+            </tr>
+          ) : null}
         </tbody>
         <tfoot className="border-t border-border bg-muted/40">
           <tr>
@@ -163,7 +179,7 @@ function DenominasiTable({
               Total
             </td>
             <td className="px-3 py-2 text-right font-semibold tabular-nums">
-              Rp {computeTotalDenominasi(rows).toLocaleString("id-ID")}
+              Rp {computeTotalDenominasi(toItems(rows)).toLocaleString("id-ID")}
             </td>
           </tr>
         </tfoot>
@@ -172,42 +188,50 @@ function DenominasiTable({
   );
 }
 
+function failMessage(e: unknown, fallback: string): string {
+  return humanizeFrappeError(e) ?? (e instanceof Error ? e.message : fallback);
+}
+
 function BukaSesiForm({ onClose, onSuccess }: BukaProps) {
   const session = useSession();
+  const today = new Date().toISOString().slice(0, 10);
   const [shift, setShift] = useState<Shift>("Pagi");
   const [modalKas, setModalKas] = useState<number>(0);
-  const [denominasi, setDenominasi] = useState<DenominasiItem[]>(emptyDenominasi);
+  const [supervisor, setSupervisor] = useState("");
+  const { rows, setRows, loading } = useDenominasiRows();
   const [error, setError] = useState<string | null>(null);
-  const createMut = useResourceCreate("Sesi Kas Teller");
+  const [submitting, setSubmitting] = useState(false);
+  const createMut = useResourceCreate<{ name: string }>(DOCTYPE);
 
-  const filledDenominasi = useMemo(
-    () => denominasi.filter((d) => d.jumlah > 0),
-    [denominasi],
-  );
-
-  const handleSubmit = () => {
-    const err = validateBukaSesi({ shift, modalKas, denominasiBuka: filledDenominasi });
+  const handleSubmit = async () => {
+    const err = validateBukaSesi({ shift, modalKas, denominasiBuka: toItems(rows) });
     if (err) {
       setError(err);
       return;
     }
+    if (!supervisor) {
+      setError("Pilih supervisor pembuka sesi.");
+      return;
+    }
     setError(null);
-    createMut.mutate(
-      {
+    setSubmitting(true);
+    try {
+      const created = await createMut.mutateAsync({
         teller: session.user,
+        tanggal: today,
         shift,
+        supervisor_buka: supervisor,
         modal_kas: modalKas,
-        denominasi_buka: filledDenominasi.map((d) => ({
-          nominal: d.nominal,
-          jumlah: d.jumlah,
-        })),
-        status: "Aktif",
-      },
-      {
-        onSuccess: () => onSuccess?.(),
-        onError: (e) => setError(e.message),
-      },
-    );
+        denominasi_buka: toChildRows(rows),
+      });
+      // Submittable doctype: submit mengaktifkan sesi (on_submit → Aktif).
+      await updateResource(DOCTYPE, created.name, { docstatus: 1 });
+      onSuccess?.();
+    } catch (e) {
+      setError(failMessage(e, "Gagal membuka sesi kas"));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -222,7 +246,7 @@ function BukaSesiForm({ onClose, onSuccess }: BukaProps) {
       <div className="space-y-5">
         <FormSection
           title="Detail Sesi"
-          description="Shift dan modal kas awal teller."
+          description="Shift, modal kas awal, dan supervisor pembuka."
         >
           <FormField label="Shift" required>
             <SearchableSelect
@@ -245,21 +269,34 @@ function BukaSesiForm({ onClose, onSuccess }: BukaProps) {
               onChange={(e) => setModalKas(Number(e.target.value) || 0)}
             />
           </FormField>
+
+          <FormField label="Supervisor Pembuka" required className="col-span-2">
+            <SearchableSelect
+              value={supervisor}
+              onChange={(v) => setSupervisor(v)}
+              placeholder="Cari supervisor…"
+              loadOptions={(q) => searchLink("User", "full_name", q, [["enabled", "=", 1]])}
+            />
+          </FormField>
         </FormSection>
 
         <div className="space-y-1.5">
           <div className="text-sm font-medium">Rincian Denominasi Awal</div>
-          <DenominasiTable rows={denominasi} onChange={setDenominasi} />
+          {loading ? (
+            <div className="py-6 text-center text-xs text-muted-fg">Memuat denominasi…</div>
+          ) : (
+            <DenominasiTable rows={rows} onChange={setRows} />
+          )}
         </div>
 
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose} disabled={createMut.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
             Batal
           </Button>
-          <Button onClick={handleSubmit} disabled={createMut.isPending}>
-            {createMut.isPending ? "Menyimpan..." : "Buka Sesi"}
+          <Button onClick={() => void handleSubmit()} disabled={submitting || loading}>
+            {submitting ? "Menyimpan..." : "Buka Sesi"}
           </Button>
         </div>
       </div>
@@ -268,11 +305,10 @@ function BukaSesiForm({ onClose, onSuccess }: BukaProps) {
 }
 
 function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
-  const [denominasi, setDenominasi] = useState<DenominasiItem[]>(emptyDenominasi);
+  const { rows, setRows, loading } = useDenominasiRows();
   const [catatan, setCatatan] = useState("");
-  const [supervisor, setSupervisor] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const updateMut = useResourceUpdate("Sesi Kas Teller");
+  const [submitting, setSubmitting] = useState(false);
 
   // Saldo seharusnya = modal awal + setoran − penarikan hari ini. Setoran &
   // penarikan diturunkan dari Transaksi Simpanan tanggal sesi (client-side)
@@ -289,7 +325,7 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
     { enabled: Boolean(sesi.tanggal) },
   );
 
-  const filled = useMemo(() => denominasi.filter((d) => d.jumlah > 0), [denominasi]);
+  const filled = useMemo(() => toItems(rows), [rows]);
   const totalTutup = computeTotalDenominasi(filled);
 
   const canCompute = Boolean(sesi.tanggal) && !txQ.isError && txQ.data !== undefined;
@@ -306,7 +342,7 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
     saldoSeharusnya,
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (filled.length === 0) {
       setError("Rincian denominasi tutup wajib diisi.");
       return;
@@ -326,29 +362,21 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
       setError("Selisih belum dapat dihitung otomatis — isi catatan kondisi kas terlebih dahulu.");
       return;
     }
-    if (!supervisor) {
-      setError("Pilih supervisor untuk approval tutup kas.");
-      return;
-    }
     setError(null);
-    updateMut.mutate(
-      {
-        name: sesi.name,
-        patch: {
-          denominasi_tutup: filled.map((d) => ({
-            nominal: d.nominal,
-            jumlah: d.jumlah,
-          })),
-          catatan_selisih: catatan,
-          supervisor_tutup: supervisor,
-          status: "Pending Approval",
-        },
-      },
-      {
-        onSuccess: () => onSuccess?.(),
-        onError: (e) => setError(e.message),
-      },
-    );
+    setSubmitting(true);
+    try {
+      // Patch isian, lalu jalankan aksi controller (recompute + status).
+      await updateResource(DOCTYPE, sesi.name, {
+        denominasi_tutup: toChildRows(rows),
+        catatan_selisih: catatan,
+      });
+      await runDocMethod({ dt: DOCTYPE, dn: sesi.name, method: "tutup_kas" });
+      onSuccess?.();
+    } catch (e) {
+      setError(failMessage(e, "Gagal menutup sesi kas"));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -409,12 +437,16 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
 
         <div className="space-y-1.5">
           <div className="text-sm font-medium">Rincian Denominasi Akhir</div>
-          <DenominasiTable rows={denominasi} onChange={setDenominasi} />
+          {loading ? (
+            <div className="py-6 text-center text-xs text-muted-fg">Memuat denominasi…</div>
+          ) : (
+            <DenominasiTable rows={rows} onChange={setRows} />
+          )}
         </div>
 
         <FormSection
-          title="Persetujuan & Catatan"
-          description="Supervisor approval dan keterangan selisih."
+          title="Catatan"
+          description="Keterangan selisih kas. Approval dilakukan supervisor dari halaman Kas Teller."
         >
           <FormField
             label="Catatan Selisih"
@@ -429,25 +461,16 @@ function TutupSesiForm({ sesi, onClose, onSuccess }: TutupProps) {
               placeholder="Misal: kelebihan setoran teller, kekurangan uang receh, dll."
             />
           </FormField>
-
-          <FormField label="Supervisor untuk Approval" required className="col-span-2">
-            <SearchableSelect
-              value={supervisor}
-              onChange={(v) => setSupervisor(v)}
-              placeholder="Cari supervisor…"
-              loadOptions={searchSupervisor}
-            />
-          </FormField>
         </FormSection>
 
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose} disabled={updateMut.isPending}>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
             Batal
           </Button>
-          <Button onClick={handleSubmit} disabled={updateMut.isPending}>
-            {updateMut.isPending ? "Menyimpan..." : "Ajukan Tutup Kas"}
+          <Button onClick={() => void handleSubmit()} disabled={submitting || loading}>
+            {submitting ? "Menyimpan..." : "Ajukan Tutup Kas"}
           </Button>
         </div>
       </div>

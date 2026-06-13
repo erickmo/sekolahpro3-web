@@ -11,23 +11,41 @@ import {
   Modal,
   SectionCard,
 } from "@sekolahpro/ui";
-import { useResourceCreate, useResourceDoc, useResourceUpdate } from "@sekolahpro/api-client";
+import {
+  humanizeFrappeError,
+  useDocMethod,
+  useResourceCreate,
+  useResourceDoc,
+  useResourceUpdate,
+} from "@sekolahpro/api-client";
 import { DetailShell, ErrorState, LoadingState, formatTanggal } from "../components/koperasi-kartu/shared";
 
 type Kartu = {
   name: string;
-  uid_rfid: string;
+  uid_nfc: string;
+  tipe_kartu?: string;
   anggota: string;
+  rekening_simpanan?: string;
   status: string;
-  tanggal_terbit: string;
-  tanggal_kedaluwarsa?: string;
+  creation?: string;
+  tanggal_expired?: string;
 };
 
+// Exact backend Select values (kartu.json) — lifecycle aktif|blokir|expired.
+const STATUS_AKTIF = "aktif";
+const STATUS_BLOKIR = "blokir";
+const STATUS_EXPIRED = "expired";
+
 const STATUS_TONE: Record<string, "success" | "brand" | "neutral" | "warning" | "danger"> = {
-  Aktif: "success",
-  Blokir: "danger",
-  Hilang: "warning",
-  Kedaluwarsa: "neutral",
+  aktif: "success",
+  blokir: "danger",
+  expired: "neutral",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  aktif: "Aktif",
+  blokir: "Blokir",
+  expired: "Kedaluwarsa",
 };
 
 function KartuDetail() {
@@ -39,35 +57,53 @@ function KartuDetail() {
   const q = useResourceDoc<Kartu>("Kartu", name);
   const update = useResourceUpdate<Kartu>("Kartu");
   const createKartu = useResourceCreate<{ name: string }>("Kartu");
+  // Status lifecycle berjalan lewat method controller (Kartu.blokir/aktifkan)
+  // — bukan PATCH manual — supaya guard failed_pin/reset ikut jalan.
+  const blokirMut = useDocMethod("Kartu", "blokir");
+  const aktifkanMut = useDocMethod("Kartu", "aktifkan");
 
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [newUid, setNewUid] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const setStatus = (next: string) => {
-    update.mutate(
-      { name, patch: { status: next } },
-      {
-        onSuccess: () => {
-          void qc.invalidateQueries({ queryKey: ["resource:doc", "Kartu", name] });
-          void qc.invalidateQueries({ queryKey: ["resource:list", "Kartu"] });
-        },
-      },
-    );
+  const actionPending = update.isPending || blokirMut.isPending || aktifkanMut.isPending;
+
+  const refresh = () => {
+    void qc.invalidateQueries({ queryKey: ["resource:doc", "Kartu"] });
+    void qc.invalidateQueries({ queryKey: ["resource:list", "Kartu"] });
+  };
+
+  const onActionError = (e: unknown) =>
+    setActionError(humanizeFrappeError(e) ?? (e instanceof Error ? e.message : "Gagal memproses kartu"));
+
+  const handleBlokir = () => {
+    setActionError(null);
+    blokirMut.mutate({ name }, { onSuccess: refresh, onError: onActionError });
+  };
+
+  const handleAktifkan = () => {
+    setActionError(null);
+    aktifkanMut.mutate({ name }, { onSuccess: refresh, onError: onActionError });
   };
 
   const handleReplace = () => {
     if (!q.data || !newUid.trim()) return;
+    setActionError(null);
+    // Kartu lama ditandai expired, lalu kartu baru terbit untuk anggota sama.
     update.mutate(
-      { name, patch: { status: "Kedaluwarsa" } },
+      { name, patch: { status: STATUS_EXPIRED } },
       {
+        onError: onActionError,
         onSuccess: () => {
           const payload: Record<string, unknown> = {
-            uid_rfid: newUid.trim(),
+            uid_nfc: newUid.trim(),
+            tipe_kartu: q.data!.tipe_kartu ?? "debit",
             anggota: q.data!.anggota,
-            tanggal_terbit: new Date().toISOString().slice(0, 10),
-            status: "Aktif",
+            status: STATUS_AKTIF,
           };
+          if (q.data!.rekening_simpanan) payload["rekening_simpanan"] = q.data!.rekening_simpanan;
           createKartu.mutate(payload, {
+            onError: onActionError,
             onSuccess: (doc) => {
               void qc.invalidateQueries({ queryKey: ["resource:list", "Kartu"] });
               setReplaceOpen(false);
@@ -88,7 +124,7 @@ function KartuDetail() {
     <DetailShell
       eyebrow="Detail Kartu"
       title={k.name}
-      description={`UID ${k.uid_rfid} · Anggota ${k.anggota}`}
+      description={`UID ${k.uid_nfc} · Anggota ${k.anggota}`}
       backTo="/kop/$sekolah/kartu"
       backLabel="Kembali ke daftar"
       crumbParentLabel="Kartu RFID"
@@ -99,32 +135,36 @@ function KartuDetail() {
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-2xl font-bold text-fg truncate">{k.name}</h2>
-                <Badge tone={STATUS_TONE[k.status] ?? "neutral"} dot>{k.status}</Badge>
+                <Badge tone={STATUS_TONE[k.status] ?? "neutral"} dot>{STATUS_LABEL[k.status] ?? k.status}</Badge>
               </div>
               <div className="mt-1 text-sm text-muted-fg">
-                <span className="font-mono">{k.uid_rfid}</span>
+                <span className="font-mono">{k.uid_nfc}</span>
                 <span className="mx-2">·</span>
                 <span>Anggota {k.anggota}</span>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" disabled={update.isPending || k.status === "Aktif"} onClick={() => setStatus("Aktif")}>Aktivasi</Button>
-              <Button variant="outline" size="sm" disabled={update.isPending || k.status === "Blokir"} onClick={() => setStatus("Blokir")}>Blokir</Button>
-              <Button variant="outline" size="sm" disabled={update.isPending || k.status === "Hilang"} onClick={() => setStatus("Hilang")}>Tandai Hilang</Button>
+              <Button variant="outline" size="sm" disabled={actionPending || k.status === STATUS_AKTIF} onClick={handleAktifkan}>Aktivasi</Button>
+              <Button variant="outline" size="sm" disabled={actionPending || k.status === STATUS_BLOKIR} onClick={handleBlokir}>Blokir</Button>
               <Button size="sm" onClick={() => setReplaceOpen(true)}>Ganti Kartu</Button>
             </div>
           </div>
+          {actionError ? (
+            <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              {actionError}
+            </div>
+          ) : null}
         </div>
       }
     >
       <SectionCard title="Informasi Kartu">
         <InfoGrid cols={2}>
           <InfoField label="No. Kartu" value={<span className="font-mono">{k.name}</span>} />
-          <InfoField label="UID RFID" value={<span className="font-mono">{k.uid_rfid}</span>} />
+          <InfoField label="UID NFC" value={<span className="font-mono">{k.uid_nfc}</span>} />
           <InfoField label="Anggota" value={k.anggota} />
-          <InfoField label="Status" value={<Badge tone={STATUS_TONE[k.status] ?? "neutral"} dot>{k.status}</Badge>} />
-          <InfoField label="Tanggal Terbit" value={formatTanggal(k.tanggal_terbit)} />
-          <InfoField label="Kedaluwarsa" value={formatTanggal(k.tanggal_kedaluwarsa)} />
+          <InfoField label="Status" value={<Badge tone={STATUS_TONE[k.status] ?? "neutral"} dot>{STATUS_LABEL[k.status] ?? k.status}</Badge>} />
+          <InfoField label="Dibuat" value={formatTanggal(k.creation)} />
+          <InfoField label="Kedaluwarsa" value={formatTanggal(k.tanggal_expired)} />
         </InfoGrid>
       </SectionCard>
 
@@ -142,7 +182,7 @@ function KartuDetail() {
           </>
         }
       >
-        <FormField label="UID RFID Baru" required>
+        <FormField label="UID NFC Baru" required>
           <Input value={newUid} onChange={(e) => setNewUid(e.target.value)} />
         </FormField>
       </Modal>
@@ -150,4 +190,4 @@ function KartuDetail() {
   );
 }
 
-export const Route = createFileRoute("/kop/$sekolah/kartu/$name")({ component: KartuDetail });
+export const Route = createFileRoute("/kop/$sekolah/kartu_/$name")({ component: KartuDetail });

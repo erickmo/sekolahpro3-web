@@ -17,26 +17,30 @@ import { useResourceDoc } from "@sekolahpro/api-client";
 
 interface TransaksiDoc {
   name: string;
-  rekening?: string;
-  rekening_tujuan?: string;
+  rekening_simpanan?: string;
   jenis?: string;
-  nominal?: number;
-  saldo_akhir?: number;
+  jumlah?: number;
   tanggal?: string;
-  teller?: string;
+  sesi_kas?: string;
   keterangan?: string;
-  status?: string;
+  approval_status?: string;
   creation?: string;
   modified?: string;
   owner?: string;
 }
 
 const JENIS_TONE: Record<string, "success" | "warning" | "brand" | "neutral"> = {
-  Setor: "success",
-  Tarik: "warning",
-  Transfer: "brand",
-  "Bagi Hasil": "success",
-  Koreksi: "neutral",
+  Setoran: "success",
+  Penarikan: "warning",
+  "Bagi Hasil": "brand",
+  Bunga: "neutral",
+};
+
+const APPROVAL_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
+  Otomatis: "neutral",
+  "Menunggu Approval": "warning",
+  Disetujui: "success",
+  Ditolak: "danger",
 };
 
 const formatRupiah = (n: number | undefined) =>
@@ -84,13 +88,12 @@ function TransaksiDetailPage() {
             />
           ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <StatCard label="Nominal" value={formatRupiah(t?.nominal)} accent="brand" icon={<IconWallet />} />
-            <StatCard label="Saldo Akhir" value={formatRupiah(t?.saldo_akhir)} accent="emerald" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <StatCard label="Nominal" value={formatRupiah(t?.jumlah)} accent="brand" icon={<IconWallet />} />
             <StatCard
               label="Jenis"
               value={t?.jenis ?? "—"}
-              accent={t?.jenis === "Tarik" ? "amber" : "brand"}
+              accent={t?.jenis === "Penarikan" ? "amber" : "brand"}
             />
           </div>
 
@@ -101,40 +104,36 @@ function TransaksiDetailPage() {
             <InfoGrid cols={3}>
               <InfoField label="ID Transaksi" value={<span className="font-mono">{name}</span>} />
               <InfoField label="Tanggal" value={t?.tanggal ?? "—"} />
-              <InfoField label="Status" value={t?.status ?? "—"} />
+              <InfoField
+                label="Status Approval"
+                value={
+                  t?.approval_status ? (
+                    <Badge tone={APPROVAL_TONE[t.approval_status] ?? "neutral"} dot>
+                      {t.approval_status}
+                    </Badge>
+                  ) : (
+                    "—"
+                  )
+                }
+              />
               <InfoField
                 label="Rekening"
                 value={
-                  t?.rekening ? (
+                  t?.rekening_simpanan ? (
                     <Link
                       to="/kop/$sekolah/rekening/$name"
-                      params={{ sekolah, name: t.rekening }}
+                      params={{ sekolah, name: t.rekening_simpanan }}
                       className="font-mono text-brand hover:underline"
                     >
-                      {t.rekening}
+                      {t.rekening_simpanan}
                     </Link>
                   ) : (
                     "—"
                   )
                 }
               />
-              {t?.rekening_tujuan ? (
-                <InfoField
-                  label="Rekening Tujuan"
-                  value={
-                    <Link
-                      to="/kop/$sekolah/rekening/$name"
-                      params={{ sekolah, name: t.rekening_tujuan }}
-                      className="font-mono text-brand hover:underline"
-                    >
-                      {t.rekening_tujuan}
-                    </Link>
-                  }
-                />
-              ) : null}
-              <InfoField label="Teller" value={t?.teller ?? "—"} />
-              <InfoField label="Nominal" value={formatRupiah(t?.nominal)} />
-              <InfoField label="Saldo Akhir" value={formatRupiah(t?.saldo_akhir)} />
+              <InfoField label="Sesi Kas" value={t?.sesi_kas ?? "—"} />
+              <InfoField label="Nominal" value={formatRupiah(t?.jumlah)} />
               {t?.keterangan ? (
                 <InfoField label="Keterangan" value={t.keterangan} className="sm:col-span-3" />
               ) : null}
@@ -154,6 +153,6 @@ function TransaksiDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/kop/$sekolah/transaksi/$name")({
+export const Route = createFileRoute("/kop/$sekolah/transaksi_/$name")({
   component: TransaksiDetailPage,
 });

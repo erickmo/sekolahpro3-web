@@ -1,70 +1,27 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   DatePicker,
   FormField,
-  FormGrid,
   Input,
   Modal,
   SearchableSelect,
-  type SearchableOption,
 } from "@sekolahpro/ui";
-import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+import { humanizeFrappeError, useResourceCreate } from "@sekolahpro/api-client";
+import { FormSection } from "../shared/FormSection";
+import { searchLink } from "../shared/searchLink";
 
-// Card issue/expiry dates stay near the present — narrow year range.
-const MIN_YEAR = new Date().getFullYear() - 10;
-const MAX_YEAR = new Date().getFullYear() + 1;
+// Expiry dates stay near the present — narrow year range.
+const MIN_YEAR = new Date().getFullYear();
+const MAX_YEAR = new Date().getFullYear() + 10;
 
-const STATUS_OPTIONS = ["Aktif", "Blokir", "Hilang", "Kedaluwarsa"];
-
-/** Async option loader for a Frappe link field. */
-async function searchLink(
-  doctype: string,
-  labelField: string,
-  q: string,
-): Promise<SearchableOption[]> {
-  const rows = await listResource<Record<string, string>>(doctype, {
-    fields: ["name", labelField],
-    ...(q
-      ? {
-          or_filters: [
-            ["name", "like", `%${q}%`],
-            [labelField, "like", `%${q}%`],
-          ] as [string, string, unknown][],
-        }
-      : {}),
-    limit_page_length: 20,
-    order_by: "modified desc",
-  });
-  return rows.map((r) => ({
-    value: r.name ?? "",
-    label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? ""),
-  }));
-}
-
-/** Section heading + grid wrapper for one logical group of fields. */
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-fg">{title}</h3>
-        {description ? (
-          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
-        ) : null}
-      </div>
-      <FormGrid>{children}</FormGrid>
-    </section>
-  );
-}
+// Exact backend Select values (kartu.json).
+const TIPE_OPTIONS = [
+  { value: "debit", label: "Debit (terhubung rekening)" },
+  { value: "emoney", label: "E-Money (wallet)" },
+];
+const STATUS_AKTIF = "aktif";
 
 interface Props {
   open: boolean;
@@ -73,21 +30,25 @@ interface Props {
 }
 
 type Form = {
-  uid_rfid: string;
+  uid_nfc: string;
+  tipe_kartu: string;
   anggota: string;
-  tanggal_terbit: string;
-  tanggal_kedaluwarsa: string;
-  status: string;
+  rekening_simpanan: string;
+  tanggal_expired: string;
 };
 
+/**
+ * Terbitkan Kartu baru. Backend contract: { uid_nfc*, tipe_kartu*, status*,
+ * anggota*, rekening_simpanan?, tanggal_expired? }. Status awal selalu
+ * "aktif"; blokir/expired berjalan via aksi di halaman detail.
+ */
 export function KartuCreateModal({ open, onClose, onCreated }: Props) {
-  const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState<Form>({
-    uid_rfid: "",
+    uid_nfc: "",
+    tipe_kartu: "debit",
     anggota: "",
-    tanggal_terbit: today,
-    tanggal_kedaluwarsa: "",
-    status: "Aktif",
+    rekening_simpanan: "",
+    tanggal_expired: "",
   });
   const [err, setErr] = useState<Record<string, string>>({});
   const qc = useQueryClient();
@@ -96,17 +57,18 @@ export function KartuCreateModal({ open, onClose, onCreated }: Props) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
-    if (!form.uid_rfid.trim()) errs.uid_rfid = "Wajib";
+    if (!form.uid_nfc.trim()) errs.uid_nfc = "Wajib";
     if (!form.anggota.trim()) errs.anggota = "Wajib";
     if (Object.keys(errs).length) { setErr(errs); return; }
     setErr({});
     const payload: Record<string, unknown> = {
-      uid_rfid: form.uid_rfid.trim(),
+      uid_nfc: form.uid_nfc.trim(),
+      tipe_kartu: form.tipe_kartu,
       anggota: form.anggota.trim(),
-      tanggal_terbit: form.tanggal_terbit,
-      status: form.status,
+      status: STATUS_AKTIF,
     };
-    if (form.tanggal_kedaluwarsa) payload["tanggal_kedaluwarsa"] = form.tanggal_kedaluwarsa;
+    if (form.rekening_simpanan) payload["rekening_simpanan"] = form.rekening_simpanan;
+    if (form.tanggal_expired) payload["tanggal_expired"] = form.tanggal_expired;
     mutation.mutate(payload, {
       onSuccess: (doc) => {
         void qc.invalidateQueries({ queryKey: ["resource:list", "Kartu"] });
@@ -120,8 +82,8 @@ export function KartuCreateModal({ open, onClose, onCreated }: Props) {
     <Modal
       open={open}
       onClose={onClose}
-      title="Terbitkan Kartu RFID"
-      description="Tautkan UID RFID baru ke anggota koperasi. Tanda * wajib diisi."
+      title="Terbitkan Kartu"
+      description="Tautkan UID NFC baru ke anggota koperasi. Tanda * wajib diisi."
       size="mega"
       tone="brand"
       footer={
@@ -136,10 +98,18 @@ export function KartuCreateModal({ open, onClose, onCreated }: Props) {
       <form onSubmit={submit} className="space-y-5">
         <FormSection
           title="Data Kartu"
-          description="UID RFID dan anggota pemegang kartu."
+          description="UID NFC, tipe, dan anggota pemegang kartu."
         >
-          <FormField label="UID RFID" required error={err.uid_rfid}>
-            <Input value={form.uid_rfid} onChange={(e) => setForm({ ...form, uid_rfid: e.target.value })} />
+          <FormField label="UID NFC" required error={err.uid_nfc}>
+            <Input value={form.uid_nfc} onChange={(e) => setForm({ ...form, uid_nfc: e.target.value })} />
+          </FormField>
+          <FormField label="Tipe Kartu" required>
+            <SearchableSelect
+              value={form.tipe_kartu}
+              onChange={(v) => setForm({ ...form, tipe_kartu: v })}
+              options={TIPE_OPTIONS}
+              placeholder="— pilih —"
+            />
           </FormField>
           <FormField label="Anggota" required error={err.anggota} hint="Anggota Koperasi pemegang kartu">
             <SearchableSelect
@@ -149,33 +119,23 @@ export function KartuCreateModal({ open, onClose, onCreated }: Props) {
               placeholder="Cari anggota…"
             />
           </FormField>
-          <FormField label="Status" required>
+          <FormField label="Rekening Simpanan" hint="Wajib untuk kartu debit">
             <SearchableSelect
-              value={form.status}
-              onChange={(v) => setForm({ ...form, status: v })}
-              options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
-              placeholder="— pilih —"
+              value={form.rekening_simpanan}
+              onChange={(v) => setForm({ ...form, rekening_simpanan: v })}
+              loadOptions={(q) => searchLink("Rekening Simpanan", "name", q)}
+              placeholder="Cari rekening…"
             />
           </FormField>
         </FormSection>
         <FormSection
           title="Masa Berlaku"
-          description="Tanggal terbit dan kedaluwarsa kartu."
+          description="Tanggal kedaluwarsa kartu (opsional)."
         >
-          <FormField label="Tanggal Terbit" required>
-            <DatePicker
-              value={form.tanggal_terbit}
-              onChange={(v) => setForm({ ...form, tanggal_terbit: v })}
-              required
-              captionLayout="dropdown-buttons"
-              fromYear={MIN_YEAR}
-              toYear={MAX_YEAR}
-            />
-          </FormField>
           <FormField label="Kedaluwarsa">
             <DatePicker
-              value={form.tanggal_kedaluwarsa}
-              onChange={(v) => setForm({ ...form, tanggal_kedaluwarsa: v })}
+              value={form.tanggal_expired}
+              onChange={(v) => setForm({ ...form, tanggal_expired: v })}
               captionLayout="dropdown-buttons"
               fromYear={MIN_YEAR}
               toYear={MAX_YEAR}
@@ -183,7 +143,9 @@ export function KartuCreateModal({ open, onClose, onCreated }: Props) {
           </FormField>
         </FormSection>
         {mutation.isError ? (
-          <p className="text-xs text-rose-600">{(mutation.error as Error).message}</p>
+          <p className="text-xs text-rose-600">
+            {humanizeFrappeError(mutation.error) ?? (mutation.error as Error).message}
+          </p>
         ) : null}
       </form>
     </Modal>

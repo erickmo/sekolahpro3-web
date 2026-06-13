@@ -13,7 +13,7 @@ function LaporanKoperasiPage() {
   const anggota = useResourceList("Anggota Koperasi", { fields: ["name", "status"], limit_page_length: 0 });
 
   const totalSimpanan = (rekening.data ?? []).reduce((s, r) => s + (r.saldo ?? 0), 0);
-  const pembiayaanBerjalan = (pembiayaan.data ?? []).filter((p) => p.status === "Berjalan");
+  const pembiayaanBerjalan = (pembiayaan.data ?? []).filter((p) => p.status === "Aktif");
   const totalPembiayaan = pembiayaanBerjalan.reduce((s, p) => s + (p.jumlah_pokok ?? 0), 0);
   const macet = (pembiayaan.data ?? []).filter((p) => p.status === "Macet").length;
   const anggotaAktif = (anggota.data ?? []).filter((a: { status?: string }) => a.status === "Aktif").length;

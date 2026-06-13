@@ -24,33 +24,32 @@ import { PembayaranAngsuranModal } from "../components/koperasi-pembiayaan/pemba
 const JADWAL_DOCTYPE = "Jadwal Angsuran";
 const PEMBAYARAN_DOCTYPE = "Pembayaran Angsuran";
 
+// Jadwal Angsuran is a CHILD row of Akad Pembiayaan — its parent link lives
+// in the standard `parent` field (field contract per jadwal_angsuran.json).
 interface JadwalDoc {
   name: string;
+  parent?: string;
   ke?: number;
+  tanggal_jatuh_tempo?: string;
+  pokok?: number;
+  margin?: number;
   total?: number;
   status?: string;
-  // legacy/optional
-  akad?: string;
-  angsuran_ke?: number;
-  jatuh_tempo?: string;
-  nominal?: number;
-  tanggal_bayar?: string;
 }
 
 interface PembayaranRow {
   name: string;
-  jadwal: string;
-  akad: string;
+  akad_pembiayaan: string;
+  angsuran_ke?: number;
   tanggal_bayar: string;
-  metode: string;
-  nominal: number;
+  jumlah_bayar: number;
   denda?: number;
 }
 
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   Belum: "warning",
   Lunas: "success",
-  Tunggakan: "danger",
+  Terlambat: "danger",
 };
 
 function formatRupiah(n: number | undefined): string {
@@ -64,16 +63,25 @@ function JadwalDetailPage() {
   const { name } = Route.useParams();
   const navigate = useNavigate();
   const docQuery = useResourceDoc<JadwalDoc>(JADWAL_DOCTYPE, name);
+  const akadName = docQuery.data?.parent;
+  const angsuranKe = docQuery.data?.ke;
+  // Payments reference the parent akad + installment number — there is no
+  // jadwal link field on Pembayaran Angsuran.
   const payParams: ListParams = useMemo(
     () => ({
-      fields: ["name", "jadwal", "nominal"],
-      filters: [["jadwal", "=", name]],
-      order_by: "`name` desc",
+      fields: ["name", "akad_pembiayaan", "angsuran_ke", "tanggal_bayar", "jumlah_bayar", "denda"],
+      filters: [
+        ["akad_pembiayaan", "=", akadName ?? ""],
+        ["angsuran_ke", "=", angsuranKe ?? -1],
+      ],
+      order_by: "`tanggal_bayar` desc",
       limit_page_length: 50,
     }),
-    [name],
+    [akadName, angsuranKe],
   );
-  const payQuery = useResourceList<PembayaranRow>(PEMBAYARAN_DOCTYPE, payParams);
+  const payQuery = useResourceList<PembayaranRow>(PEMBAYARAN_DOCTYPE, payParams, {
+    enabled: Boolean(akadName) && angsuranKe !== undefined,
+  });
   const [payOpen, setPayOpen] = useState(false);
 
   const doc = docQuery.data;
@@ -104,11 +112,10 @@ function JadwalDetailPage() {
   const cols: Column<PembayaranRow>[] = [
     { key: "name", header: "ID Pembayaran", cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
     { key: "tanggal_bayar", header: "Tanggal", cell: (r) => r.tanggal_bayar },
-    { key: "metode", header: "Metode", cell: (r) => <Badge tone="neutral">{r.metode}</Badge> },
-    { key: "nominal", header: "Nominal", align: "right",
-      cell: (r) => <span className="tabular-nums">{formatRupiah(r.nominal)}</span> },
+    { key: "jumlah_bayar", header: "Nominal", align: "right",
+      cell: (r) => <span className="tabular-nums">{formatRupiah(r.jumlah_bayar)}</span> },
     { key: "denda", header: "Denda", align: "right",
-      cell: (r) => <span className="tabular-nums">{r.denda !== undefined ? formatRupiah(r.denda) : "—"}</span> },
+      cell: (r) => <span className="tabular-nums">{r.denda ? formatRupiah(r.denda) : "—"}</span> },
   ];
 
   return (
@@ -126,7 +133,7 @@ function JadwalDetailPage() {
           <PageHeader
             eyebrow="Detail Jadwal Angsuran"
             title={doc.name}
-            description={`Akad ${doc.akad ?? "—"} · angsuran ke ${doc.angsuran_ke ?? "—"} · ${status}`}
+            description={`Akad ${akadName ?? "—"} · angsuran ke ${doc.ke ?? "—"} · ${status}`}
             actions={
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => navigate({ to: "/kop/$sekolah/angsuran", params: { sekolah } })}>
@@ -147,17 +154,18 @@ function JadwalDetailPage() {
             <InfoGrid cols={2}>
               <InfoField label="ID Jadwal" value={<span className="font-mono">{doc.name}</span>} />
               <InfoField label="Akad" value={
-                doc.akad ? (
-                  <Link to="/kop/$sekolah/pembiayaan/$name" params={{ sekolah, name: doc.akad }} className="font-mono text-brand hover:underline">
-                    {doc.akad}
+                akadName ? (
+                  <Link to="/kop/$sekolah/pembiayaan/$name" params={{ sekolah, name: akadName }} className="font-mono text-brand hover:underline">
+                    {akadName}
                   </Link>
                 ) : "—"
               } />
-              <InfoField label="Angsuran Ke" value={<span className="tabular-nums">{doc.angsuran_ke ?? "—"}</span>} />
-              <InfoField label="Jatuh Tempo" value={doc.jatuh_tempo ?? "—"} />
-              <InfoField label="Nominal" value={<span className="tabular-nums">{formatRupiah(doc.nominal)}</span>} />
+              <InfoField label="Angsuran Ke" value={<span className="tabular-nums">{doc.ke ?? "—"}</span>} />
+              <InfoField label="Jatuh Tempo" value={doc.tanggal_jatuh_tempo ?? "—"} />
+              <InfoField label="Pokok" value={<span className="tabular-nums">{formatRupiah(doc.pokok)}</span>} />
+              <InfoField label="Margin" value={<span className="tabular-nums">{formatRupiah(doc.margin)}</span>} />
+              <InfoField label="Total Tagihan" value={<span className="tabular-nums">{formatRupiah(doc.total)}</span>} />
               <InfoField label="Status" value={<Badge tone={STATUS_TONE[status] ?? "neutral"} dot>{status}</Badge>} />
-              <InfoField label="Tanggal Bayar" value={doc.tanggal_bayar ?? "—"} />
             </InfoGrid>
           </SectionCard>
           <SectionCard
@@ -185,15 +193,15 @@ function JadwalDetailPage() {
         <PembayaranAngsuranModal
           open={payOpen}
           onClose={() => setPayOpen(false)}
-          jadwal={doc.name}
-          {...(doc.akad ? { akad: doc.akad } : {})}
-          {...(doc.nominal !== undefined ? { defaultNominal: doc.nominal } : {})}
+          {...(akadName ? { akad: akadName } : {})}
+          {...(doc.ke !== undefined ? { angsuranKe: doc.ke } : {})}
+          onSuccess={() => void payQuery.refetch()}
         />
       }
     />
   );
 }
 
-export const Route = createFileRoute("/kop/$sekolah/angsuran/$name")({
+export const Route = createFileRoute("/kop/$sekolah/angsuran_/$name")({
   component: JadwalDetailPage,
 });

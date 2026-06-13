@@ -1,16 +1,16 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
+  DatePicker,
   FormField,
-  FormGrid,
   Input,
   Modal,
   SearchableSelect,
-  Textarea,
-  type SearchableOption,
 } from "@sekolahpro/ui";
-import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+import { humanizeFrappeError, useResourceCreate } from "@sekolahpro/api-client";
+import { FormSection } from "../shared/FormSection";
+import { searchLink } from "../shared/searchLink";
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -30,7 +30,7 @@ const KIND_META: Record<
   buka: {
     doctype: "Permohonan Buka Rekening",
     title: "Buka Rekening Simpanan",
-    description: "Ajukan pembukaan rekening baru untuk anggota koperasi.",
+    description: "Ajukan pembukaan rekening baru untuk nasabah koperasi.",
     submitLabel: "Ajukan Buka Rekening",
   },
   tutup: {
@@ -59,80 +59,21 @@ const KIND_META: Record<
   },
 };
 
-const AKAD_OPTIONS = ["Wadiah", "Mudharabah", "Wadiah Yad Dhamanah"];
+// Status awal saat operator mengajukan dari UI (Draft = belum diajukan).
+const STATUS_DIAJUKAN = "Diajukan";
 
-/** Convert plain string values into SearchableSelect options. */
-function toOptions(values: string[]): SearchableOption[] {
-  return values.map((v) => ({ value: v, label: v }));
-}
-
-/** Name-only loader for a master link field (label = doc name). */
-async function searchByName(doctype: string, q: string): Promise<SearchableOption[]> {
-  const rows = await listResource<{ name: string }>(doctype, {
-    fields: ["name"],
-    ...(q ? { or_filters: [["name", "like", `%${q}%`]] as [string, string, unknown][] } : {}),
-    limit_page_length: 20,
-    order_by: "modified desc",
-  });
-  return rows.map((r) => ({ value: r.name, label: r.name }));
-}
-
-/** Async option loader for a Frappe link field. */
-async function searchLink(
-  doctype: string,
-  labelField: string,
-  q: string,
-): Promise<SearchableOption[]> {
-  const rows = await listResource<Record<string, string>>(doctype, {
-    fields: ["name", labelField],
-    ...(q
-      ? {
-          or_filters: [
-            ["name", "like", `%${q}%`],
-            [labelField, "like", `%${q}%`],
-          ] as [string, string, unknown][],
-        }
-      : {}),
-    limit_page_length: 20,
-    order_by: "modified desc",
-  });
-  return rows.map((r) => ({
-    value: r.name ?? "",
-    label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? ""),
-  }));
-}
-
-/** Section heading + grid wrapper for one logical group of fields. */
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-fg">{title}</h3>
-        {description ? (
-          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
-        ) : null}
-      </div>
-      <FormGrid>{children}</FormGrid>
-    </section>
-  );
-}
+// Permohonan dates stay near the present — narrow year range.
+const MIN_YEAR = new Date().getFullYear() - 1;
+const MAX_YEAR = new Date().getFullYear() + 1;
 
 interface PermohonanModalProps {
   kind: PermohonanKind;
   open: boolean;
   onClose: () => void;
-  /** Pre-fill rekening field (detail page). When omitted, user types it. */
+  /** Pre-fill rekening field (detail page). When omitted, user picks it. */
   rekening?: string;
-  /** Pre-fill anggota field (detail page). */
-  anggota?: string;
+  /** Pre-fill nasabah field — kind "buka" only. */
+  nasabah?: string;
   /** Called after successful create — useful for closing/refresh. */
   onSuccess?: (createdName: string) => void;
 }
@@ -140,18 +81,15 @@ interface PermohonanModalProps {
 /**
  * Generic permohonan modal — backs all 5 approval-flow DocTypes.
  *
- * Field assumptions (documented for backend alignment):
- *   - buka:     anggota, produk, akad, setoran_awal, catatan
- *   - tutup:    rekening, alasan, catatan
- *   - blokir:   rekening, alasan, catatan
- *   - unblokir: rekening, catatan
- *   - dormant:  rekening, catatan
- *
- * If real DocType fields differ, only the inner <Fields/> per-kind component
- * needs to change — the submit pipeline stays identical.
+ * Backend field contract (verified against doctype JSONs):
+ *   - buka:     nasabah*, produk_simpanan*, tanggal_buka*
+ *   - blokir:   rekening_simpanan*, alasan_blokir*
+ *   - tutup/unblokir/dormant: rekening_simpanan*
+ * status_permohonan dikirim "Diajukan" agar langsung masuk antrean
+ * persetujuan supervisor (default backend = Draft).
  */
 export function PermohonanModal(props: PermohonanModalProps) {
-  const { kind, open, onClose, rekening, anggota, onSuccess } = props;
+  const { kind, open, onClose, rekening, nasabah, onSuccess } = props;
   const meta = KIND_META[kind];
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>(meta.doctype);
@@ -161,17 +99,9 @@ export function PermohonanModal(props: PermohonanModalProps) {
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
-    const doc: Record<string, unknown> = {};
+    const doc: Record<string, unknown> = { status_permohonan: STATUS_DIAJUKAN };
     formData.forEach((v, k) => {
-      if (typeof v === "string" && v.trim() !== "") {
-        // numeric fields: setoran_awal
-        if (k === "setoran_awal") {
-          const n = Number(v);
-          if (!Number.isNaN(n)) doc[k] = n;
-        } else {
-          doc[k] = v;
-        }
-      }
+      if (typeof v === "string" && v.trim() !== "") doc[k] = v;
     });
     try {
       const created = await create.mutateAsync(doc);
@@ -180,7 +110,10 @@ export function PermohonanModal(props: PermohonanModalProps) {
       onSuccess?.(created.name);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengirim permohonan");
+      setError(
+        humanizeFrappeError(err) ??
+          (err instanceof Error ? err.message : "Gagal mengirim permohonan"),
+      );
     }
   };
 
@@ -197,7 +130,7 @@ export function PermohonanModal(props: PermohonanModalProps) {
         <PermohonanFields
           kind={kind}
           {...(rekening !== undefined ? { rekening } : {})}
-          {...(anggota !== undefined ? { anggota } : {})}
+          {...(nasabah !== undefined ? { nasabah } : {})}
         />
         {error ? (
           <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
@@ -224,60 +157,56 @@ export function PermohonanModal(props: PermohonanModalProps) {
 interface FieldsProps {
   kind: PermohonanKind;
   rekening?: string;
-  anggota?: string;
+  nasabah?: string;
 }
 
 /** Render the per-kind field set inside a labeled section. */
-function PermohonanFields({ kind, rekening, anggota }: FieldsProps) {
-  const [akad, setAkad] = useState("Wadiah");
-  const [anggotaVal, setAnggotaVal] = useState(anggota ?? "");
+function PermohonanFields({ kind, rekening, nasabah }: FieldsProps) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [nasabahVal, setNasabahVal] = useState(nasabah ?? "");
   const [rekeningVal, setRekeningVal] = useState(rekening ?? "");
   const [produkVal, setProdukVal] = useState("");
+  const [tanggalBuka, setTanggalBuka] = useState(today);
 
   if (kind === "buka") {
     return (
       <FormSection
         title="Detail Pembukaan Rekening"
-        description="Pilih anggota dan tentukan produk simpanan."
+        description="Pilih nasabah dan tentukan produk simpanan. Akad mengikuti produk."
       >
-        <FormField label="Anggota" required>
+        <FormField label="Nasabah" required>
           <SearchableSelect
-            value={anggotaVal}
-            onChange={(v) => setAnggotaVal(v)}
-            loadOptions={(q) => searchLink("Anggota Koperasi", "nasabah", q)}
-            placeholder="Cari anggota…"
+            value={nasabahVal}
+            onChange={(v) => setNasabahVal(v)}
+            loadOptions={(q) => searchLink("Nasabah", "pihak", q)}
+            placeholder="Cari nasabah…"
           />
-          <input type="hidden" name="anggota" value={anggotaVal} />
+          <input type="hidden" name="nasabah" value={nasabahVal} />
         </FormField>
-        <FormField label="Produk" required>
+        <FormField label="Produk Simpanan" required>
           <SearchableSelect
             value={produkVal}
             onChange={(v) => setProdukVal(v)}
-            loadOptions={(q) => searchByName("Produk Simpanan", q)}
+            loadOptions={(q) => searchLink("Produk Simpanan", "name", q)}
             placeholder="Cari produk simpanan…"
           />
-          <input type="hidden" name="produk" value={produkVal} />
+          <input type="hidden" name="produk_simpanan" value={produkVal} />
         </FormField>
-        <FormField label="Akad" required>
-          <SearchableSelect
-            value={akad}
-            onChange={(v) => setAkad(v)}
-            options={toOptions(AKAD_OPTIONS)}
-            placeholder="— pilih —"
+        <FormField label="Tanggal Buka" required>
+          <DatePicker
+            value={tanggalBuka}
+            onChange={(v) => setTanggalBuka(v)}
+            required
+            captionLayout="dropdown-buttons"
+            fromYear={MIN_YEAR}
+            toYear={MAX_YEAR}
           />
-          <input type="hidden" name="akad" value={akad} />
-        </FormField>
-        <FormField label="Setoran Awal (Rp)">
-          <Input name="setoran_awal" type="number" min={0} placeholder="0" />
-        </FormField>
-        <FormField label="Catatan" className="col-span-2">
-          <Textarea name="catatan" placeholder="Catatan permohonan (opsional)" />
+          <input type="hidden" name="tanggal_buka" value={tanggalBuka} />
         </FormField>
       </FormSection>
     );
   }
-  // tutup / blokir share alasan + catatan; unblokir/dormant only catatan
-  const needsAlasan = kind === "tutup" || kind === "blokir";
+  // blokir butuh alasan_blokir; tutup/unblokir/dormant hanya rekening.
   return (
     <FormSection
       title="Detail Permohonan"
@@ -290,16 +219,13 @@ function PermohonanFields({ kind, rekening, anggota }: FieldsProps) {
           loadOptions={(q) => searchLink("Rekening Simpanan", "name", q)}
           placeholder="Cari rekening…"
         />
-        <input type="hidden" name="rekening" value={rekeningVal} />
+        <input type="hidden" name="rekening_simpanan" value={rekeningVal} />
       </FormField>
-      {needsAlasan ? (
-        <FormField label="Alasan" required className="col-span-2">
-          <Input name="alasan" required placeholder="Alasan permohonan" />
+      {kind === "blokir" ? (
+        <FormField label="Alasan Blokir" required className="col-span-2">
+          <Input name="alasan_blokir" required placeholder="Alasan pemblokiran" />
         </FormField>
       ) : null}
-      <FormField label="Catatan" className="col-span-2">
-        <Textarea name="catatan" placeholder="Catatan tambahan (opsional)" />
-      </FormField>
     </FormSection>
   );
 }

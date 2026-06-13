@@ -16,6 +16,16 @@ configure({
   // synchronously from the persisted session store on each request so the
   // value tracks setActiveSekolah without prop drilling.
   getActiveSekolah: () => useSessionStore.getState().activeSekolah?.name ?? null,
+  // Full tenant descriptor: under /kop the anchor is a Koperasi (name =
+  // Koperasi doc-ID + covered schools); everywhere else it is a Sekolah.
+  getActiveTenant: () => {
+    const a = useSessionStore.getState().activeSekolah;
+    if (!a) return null;
+    if (a.kind === "koperasi") {
+      return { kind: "koperasi", koperasi: a.name, schools: a.schools ?? [] };
+    }
+    return { kind: "sekolah", sekolah: a.name };
+  },
 });
 
 const qc = createQueryClient();

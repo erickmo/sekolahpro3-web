@@ -58,9 +58,7 @@ type SesiRow = { name: string };
 
 const STATUS_TONE: Record<string, "success" | "neutral" | "danger" | "warning"> = {
   Aktif: "success",
-  "Non-aktif": "neutral",
   Keluar: "danger",
-  Pending: "warning",
 };
 
 function KoperasiDashboardPage() {

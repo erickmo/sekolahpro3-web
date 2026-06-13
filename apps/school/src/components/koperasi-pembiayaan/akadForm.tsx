@@ -1,105 +1,47 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Button,
   DatePicker,
   FormField,
-  FormGrid,
   Input,
   Modal,
   SearchableSelect,
-  Textarea,
-  type SearchableOption,
 } from "@sekolahpro/ui";
-import { listResource, useResourceCreate } from "@sekolahpro/api-client";
+import { humanizeFrappeError, useResourceCreate } from "@sekolahpro/api-client";
 import { AKAD_POKOK_FIELD, buildAkadPayload } from "../../lib/koperasi/akadContract";
+import { FormSection } from "../shared/FormSection";
+import { searchLink } from "../shared/searchLink";
 
 const AKAD_DOCTYPE = "Akad Pembiayaan";
-const AKAD_TYPES = ["Murabahah", "Ijarah", "Qardh", "Musyarakah"] as const;
-
-/** Name-only loader for a master link field (label = doc name). */
-async function searchByName(doctype: string, q: string): Promise<SearchableOption[]> {
-  const rows = await listResource<{ name: string }>(doctype, {
-    fields: ["name"],
-    ...(q ? { or_filters: [["name", "like", `%${q}%`]] as [string, string, unknown][] } : {}),
-    limit_page_length: 20,
-    order_by: "modified desc",
-  });
-  return rows.map((r) => ({ value: r.name, label: r.name }));
-}
 
 // Akad dates stay near the present — narrow year range for fast jumping.
 const MIN_YEAR = new Date().getFullYear() - 10;
 const MAX_YEAR = new Date().getFullYear() + 1;
 
-/** Async option loader for a Frappe link field. */
-async function searchLink(
-  doctype: string,
-  labelField: string,
-  q: string,
-): Promise<SearchableOption[]> {
-  const rows = await listResource<Record<string, string>>(doctype, {
-    fields: ["name", labelField],
-    ...(q
-      ? {
-          or_filters: [
-            ["name", "like", `%${q}%`],
-            [labelField, "like", `%${q}%`],
-          ] as [string, string, unknown][],
-        }
-      : {}),
-    limit_page_length: 20,
-    order_by: "modified desc",
-  });
-  return rows.map((r) => ({
-    value: r.name ?? "",
-    label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? ""),
-  }));
-}
-
-/** Section heading + grid wrapper for one logical group of fields. */
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-fg">{title}</h3>
-        {description ? (
-          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
-        ) : null}
-      </div>
-      <FormGrid>{children}</FormGrid>
-    </section>
-  );
-}
-
 interface AkadCreateModalProps {
   open: boolean;
   onClose: () => void;
-  /** Pre-fill anggota field (e.g. when opened from a member detail page). */
-  anggota?: string | undefined;
+  /** Pre-fill nasabah field (e.g. when opened from a member detail page). */
+  nasabah?: string | undefined;
   onSuccess?: ((createdName: string) => void) | undefined;
 }
 
 /**
  * Modal to create a new Akad Pembiayaan (financing contract).
- * Fields: anggota, produk, akad, pokok_pembiayaan, margin, tenor_bulan, jaminan, tanggal_akad.
+ *
+ * Backend contract: { nasabah*, produk_pembiayaan*, jumlah_pokok*, tenor*,
+ * tanggal_akad* }. Jenis akad/margin mengikuti Produk Pembiayaan — bukan
+ * input form (margin_total dihitung controller).
  */
 export function AkadCreateModal(props: AkadCreateModalProps) {
-  const { open, onClose, anggota, onSuccess } = props;
+  const { open, onClose, nasabah, onSuccess } = props;
   const qc = useQueryClient();
   const create = useResourceCreate<{ name: string }>(AKAD_DOCTYPE);
   const [error, setError] = useState<string | null>(null);
-  const [akad, setAkad] = useState<string>("Murabahah");
-  const [tanggalAkad, setTanggalAkad] = useState<string>("");
-  const [anggotaVal, setAnggotaVal] = useState<string>(anggota ?? "");
+  const today = new Date().toISOString().slice(0, 10);
+  const [tanggalAkad, setTanggalAkad] = useState<string>(today);
+  const [nasabahVal, setNasabahVal] = useState<string>(nasabah ?? "");
   const [produkVal, setProdukVal] = useState<string>("");
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -111,31 +53,20 @@ export function AkadCreateModal(props: AkadCreateModalProps) {
       const n = Number(v);
       return typeof v === "string" && v.trim() !== "" && !Number.isNaN(n) ? n : undefined;
     };
-    const str = (k: string) => {
-      const v = fd.get(k);
-      return typeof v === "string" && v.trim() !== "" ? v.trim() : undefined;
-    };
 
     const pokok = num(AKAD_POKOK_FIELD);
-    const tenor = num("tenor_bulan");
-    if (!anggotaVal || !produkVal || pokok === undefined || tenor === undefined) {
-      setError("Lengkapi anggota, produk, pokok pembiayaan, dan tenor.");
+    const tenor = num("tenor");
+    if (!nasabahVal || !produkVal || pokok === undefined || tenor === undefined) {
+      setError("Lengkapi nasabah, produk, pokok pembiayaan, dan tenor.");
       return;
     }
 
-    const margin = num("margin");
-    const jaminan = str("jaminan");
-    const catatan = str("catatan");
     const doc = buildAkadPayload({
-      anggota: anggotaVal,
-      produk: produkVal,
-      akad,
+      nasabah: nasabahVal,
+      produk_pembiayaan: produkVal,
       tanggal_akad: tanggalAkad,
-      pokok_pembiayaan: pokok,
-      tenor_bulan: tenor,
-      ...(margin !== undefined ? { margin } : {}),
-      ...(jaminan ? { jaminan } : {}),
-      ...(catatan ? { catatan } : {}),
+      jumlah_pokok: pokok,
+      tenor,
     });
     try {
       const created = await create.mutateAsync(doc);
@@ -143,7 +74,10 @@ export function AkadCreateModal(props: AkadCreateModalProps) {
       onSuccess?.(created.name);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mengajukan pembiayaan");
+      setError(
+        humanizeFrappeError(err) ??
+          (err instanceof Error ? err.message : "Gagal mengajukan pembiayaan"),
+      );
     }
   };
 
@@ -152,44 +86,33 @@ export function AkadCreateModal(props: AkadCreateModalProps) {
       open={open}
       onClose={onClose}
       title="Ajukan Pembiayaan"
-      description="Buat akad pembiayaan baru untuk anggota koperasi. Tanda * wajib diisi."
+      description="Buat akad pembiayaan baru untuk nasabah koperasi. Tanda * wajib diisi."
       size="mega"
       tone="brand"
     >
       <form onSubmit={onSubmit} className="space-y-5">
         <FormSection
           title="Akad Pembiayaan"
-          description="Anggota, produk, dan jenis akad."
+          description="Nasabah dan produk pembiayaan. Jenis akad mengikuti produk."
         >
-          <FormField label="Anggota" required>
+          <FormField label="Nasabah" required>
             <SearchableSelect
-              value={anggotaVal}
-              onChange={(v) => setAnggotaVal(v)}
-              loadOptions={(q) => searchLink("Anggota Koperasi", "nasabah", q)}
-              placeholder="Cari anggota…"
+              value={nasabahVal}
+              onChange={(v) => setNasabahVal(v)}
+              loadOptions={(q) => searchLink("Nasabah", "pihak", q)}
+              placeholder="Cari nasabah…"
             />
-            <input type="hidden" name="anggota" value={anggotaVal} />
           </FormField>
-          <FormField label="Produk" required>
+          <FormField label="Produk Pembiayaan" required>
             <SearchableSelect
               value={produkVal}
               onChange={(v) => setProdukVal(v)}
-              loadOptions={(q) => searchByName("Produk Pembiayaan", q)}
+              loadOptions={(q) => searchLink("Produk Pembiayaan", "name", q)}
               placeholder="Cari produk pembiayaan…"
             />
           </FormField>
-          <FormField label="Akad" required>
-            <SearchableSelect
-              value={akad}
-              onChange={(v) => setAkad(v)}
-              options={AKAD_TYPES.map((t) => ({ value: t, label: t }))}
-              placeholder="— pilih —"
-            />
-            <input type="hidden" name="akad" value={akad} />
-          </FormField>
           <FormField label="Tanggal Akad" required>
             <DatePicker
-              name="tanggal_akad"
               value={tanggalAkad}
               onChange={(v) => setTanggalAkad(v)}
               required
@@ -201,22 +124,13 @@ export function AkadCreateModal(props: AkadCreateModalProps) {
         </FormSection>
         <FormSection
           title="Nilai & Tenor"
-          description="Pokok, margin, tenor, dan jaminan pembiayaan."
+          description="Pokok dan tenor pembiayaan. Margin dihitung dari produk."
         >
           <FormField label="Pokok Pembiayaan (Rp)" required>
             <Input name={AKAD_POKOK_FIELD} type="number" min={1} step="1" required placeholder="0" />
           </FormField>
-          <FormField label="Margin (Rp)">
-            <Input name="margin" type="number" min={0} step="1" placeholder="0" />
-          </FormField>
           <FormField label="Tenor (bulan)" required>
-            <Input name="tenor_bulan" type="number" min={1} step="1" required placeholder="12" />
-          </FormField>
-          <FormField label="Jaminan">
-            <Input name="jaminan" placeholder="Deskripsi jaminan (opsional)" />
-          </FormField>
-          <FormField label="Catatan" className="col-span-2">
-            <Textarea name="catatan" placeholder="Catatan tambahan (opsional)" />
+            <Input name="tenor" type="number" min={1} step="1" required placeholder="12" />
           </FormField>
         </FormSection>
         {error ? (

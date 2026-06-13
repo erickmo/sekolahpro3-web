@@ -1,9 +1,35 @@
 import { useMutation, useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import {
+  injectTenantFilter,
+  isTenantMismatch,
+  isTenantedDoctype,
+  tenantCacheKey,
+  TENANT_BLOCKLIST,
+  type ActiveTenant,
+  type FilterTuple,
+  type FilterTuple3,
+  type FilterTuple4,
+} from "./tenant";
+
+export {
+  isTenantedDoctype,
+  TENANT_BLOCKLIST,
+  type ActiveTenant,
+  type FilterTuple,
+  type FilterTuple3,
+  type FilterTuple4,
+};
 
 type Config = {
   baseUrl: string;
   csrfToken?: string;
   getActiveSekolah?: () => string | null | undefined;
+  /**
+   * Full tenant descriptor (sekolah OR koperasi context). When provided it
+   * wins over getActiveSekolah; the latter stays as back-compat for apps that
+   * only ever anchor to a school.
+   */
+  getActiveTenant?: () => ActiveTenant | null | undefined;
 };
 
 let cfg: Config = { baseUrl: "" };
@@ -14,6 +40,10 @@ let cfg: Config = { baseUrl: "" };
 // user's memberships. Sent on ALL requests so server-side scoping never has
 // to fall back to guessing the tenant from the session.
 export const ACTIVE_SEKOLAH_HEADER = "X-Active-Sekolah";
+
+// Companion header for koperasi-context writes: the backend KOPERASI tier
+// resolves `koperasi` (and derives `sekolah`) from this value.
+export const ACTIVE_KOPERASI_HEADER = "X-Active-Koperasi";
 
 export function configureResource(next: Partial<Config>) {
   cfg = { ...cfg, ...next };
@@ -36,90 +66,31 @@ export class TenantMismatchError extends Error {
   }
 }
 
-// Doctypes that have NO `sekolah` link field — global/master data shared
-// across all schools. Auto-scope injection is skipped for these.
-const TENANT_BLOCKLIST = new Set<string>([
-  "Tahun Ajaran",
-  "Semester",
-  "User",
-  "Role",
-  "DocType",
-  "Modul",
-  "Feature Flag",
-  "Organisasi",
-  "Sekolah",
-  // vernon_ads — platform-level ad doctypes; no `sekolah` field. Without this,
-  // auto-injected tenant filters target a non-existent column and break lists.
-  "Property",
-  "Property Group",
-  "Ad Slot",
-  "Campaign",
-  "Ad Creative",
-  "Ad Event",
-  "Ads Customer",
-  "File",
-  "Communication",
-  // ORG_ONLY tier (ADR-0043) — anchored by `organisasi`, no `sekolah` column.
-  // The provider/SaaS console queries these by `organisasi`; injecting a
-  // `sekolah` filter would target a non-existent column → empty result.
-  // (`Organisasi` itself is already listed above.)
-  "Langganan",
-  "Invoice Tenant",
-  // Child tables tenanted via their parent (istable=1, no own `sekolah` field).
-  // Injecting a `sekolah` filter would target a non-existent column → empty
-  // result. Scope is enforced through the parent doc instead.
-  "Fasilitas Ruangan",
-  // Vernon Accounting doctypes — tenanted by `company`, not `sekolah`.
-  // Until Sekolah↔Company mapping is wired, callers pass `company`
-  // filters explicitly; auto-injection of `sekolah` would break queries.
-  "Account",
-  "Account Party Type",
-  "Journal Entry",
-  "Journal Entry Account",
-  "Payment Entry",
-  "Payment Entry Reference",
-  "GL Entry",
-  "Opening Balance Entry",
-  "Opening Balance Entry Account",
-  "Period Closing Voucher",
-  "Budget",
-  "Budget Account",
-  "Budget Amendment",
-  "Budget Amendment Detail",
-  "Cost Center",
-  "Accounting Dimension",
-  "SPT Masa PPN",
-  "e-Faktur Export",
-  "Withholding Tax Entry",
-  "PPh 21 TER Rate",
-  "PPh 4a2 Rate",
-  "Tax Period",
-  "Tax Template",
-  "Tax Template Detail",
-  "Fiscal Year",
-  "Accounting Period",
-  "Currency Exchange",
-  "Vernon Accounting Settings",
-]);
-
-export function isTenantedDoctype(doctype: string): boolean {
-  return !TENANT_BLOCKLIST.has(doctype);
-}
-
-// Returns the active Sekolah's doc-ID (the value stored in `sekolah` link
-// fields server-side), NOT the URL slug. Filters/comparisons must use the
-// doc-ID because Frappe's link fields point to primary keys.
-function activeSekolah(): string | null {
+// (moved to ./tenant.ts — kept here only as a reference of the old shape)
+/**
+ * Resolve the active tenant: prefer the full descriptor, fall back to the
+ * legacy sekolah-only getter so existing apps keep working unchanged.
+ */
+function activeTenant(): ActiveTenant | null {
+  const t = cfg.getActiveTenant?.();
+  if (t) return t;
   const s = cfg.getActiveSekolah?.();
-  return s ?? null;
+  return s ? { kind: "sekolah", sekolah: s } : null;
 }
 
 function buildHeaders(extra?: Record<string, string>): Record<string, string> {
+  const tenant = activeTenant();
+  // Anchor school: the koperasi's primary school rides along so SCHOOL-tier
+  // writes issued from a koperasi context stay sanely anchored server-side.
+  const sekolah =
+    tenant?.kind === "koperasi" ? (tenant.schools[0] ?? "") : (tenant?.sekolah ?? "");
+  const koperasi = tenant?.kind === "koperasi" ? tenant.koperasi : "";
   return {
     "Content-Type": "application/json",
     Accept: "application/json",
     "X-Frappe-CSRF-Token": cfg.csrfToken ?? "",
-    [ACTIVE_SEKOLAH_HEADER]: activeSekolah() ?? "",
+    [ACTIVE_SEKOLAH_HEADER]: sekolah,
+    [ACTIVE_KOPERASI_HEADER]: koperasi,
     ...(extra ?? {}),
   };
 }
@@ -151,14 +122,6 @@ async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
   return (json as { data: T }).data;
 }
 
-// Frappe REST filter tuple. The 3-tuple `[field, op, val]` targets the
-// queried doctype directly. The 4-tuple `[child_doctype, field, op, val]`
-// filters the parent doc by a value on one of its child rows — Frappe's
-// canonical way to query parents by child columns without writing SQL.
-export type FilterTuple3 = [string, string, unknown];
-export type FilterTuple4 = [string, string, string, unknown];
-export type FilterTuple = FilterTuple3 | FilterTuple4;
-
 export interface ListParams {
   fields?: string[];
   filters?: FilterTuple[] | Record<string, unknown>;
@@ -166,30 +129,12 @@ export interface ListParams {
   limit_start?: number;
   limit_page_length?: number;
   or_filters?: FilterTuple[];
-}
-
-function hasSekolahFilter(filters: FilterTuple[] | Record<string, unknown>): boolean {
-  if (Array.isArray(filters)) {
-    return filters.some((f) => f[0] === "sekolah" || (f.length === 4 && f[1] === "sekolah"));
-  }
-  return Object.prototype.hasOwnProperty.call(filters, "sekolah");
-}
-
-function injectSekolahFilter(
-  doctype: string,
-  filters: FilterTuple[] | Record<string, unknown> | undefined,
-): FilterTuple[] | Record<string, unknown> | undefined {
-  if (!isTenantedDoctype(doctype)) return filters;
-  const slug = activeSekolah();
-  if (!slug) return filters;
-  if (filters && hasSekolahFilter(filters)) return filters;
-  if (Array.isArray(filters)) {
-    return [...filters, ["sekolah", "=", slug] as FilterTuple3];
-  }
-  if (filters && typeof filters === "object") {
-    return { ...filters, sekolah: slug };
-  }
-  return [["sekolah", "=", slug] as FilterTuple3];
+  /**
+   * Parent doctype — REQUIRED when listing a child table (istable) doctype.
+   * Maps to Frappe's `parent` query param (frappe.client.get_list), which
+   * both permits the read (check_parent_permission) and scopes the join.
+   */
+  parent?: string;
 }
 
 // A bare order-by segment: a single column identifier with an optional asc/desc
@@ -221,23 +166,20 @@ export function qualifyOrderBy(doctype: string, fields: string[] | undefined, or
 export function listResource<T = Record<string, unknown>>(doctype: string, params: ListParams = {}): Promise<T[]> {
   const q: Record<string, unknown> = {};
   if (params.fields) q["fields"] = params.fields;
-  const filters = injectSekolahFilter(doctype, params.filters);
+  const filters = injectTenantFilter(doctype, activeTenant(), params.filters);
   if (filters) q["filters"] = filters;
   if (params.or_filters) q["or_filters"] = params.or_filters;
   if (params.order_by) q["order_by"] = qualifyOrderBy(doctype, params.fields, params.order_by);
   if (params.limit_start !== undefined) q["limit_start"] = params.limit_start;
   if (params.limit_page_length !== undefined) q["limit_page_length"] = params.limit_page_length;
+  if (params.parent) q["parent"] = params.parent;
   return req<T[]>("GET", buildUrl(doctype, q));
 }
 
 export async function getResource<T = Record<string, unknown>>(doctype: string, name: string): Promise<T> {
   const doc = await req<T>("GET", buildUrl(`${doctype}/${encodeURIComponent(name)}`));
-  if (isTenantedDoctype(doctype)) {
-    const slug = activeSekolah();
-    const docSekolah = (doc as { sekolah?: unknown } | null)?.sekolah;
-    if (slug && typeof docSekolah === "string" && docSekolah && docSekolah !== slug) {
-      throw new TenantMismatchError(doctype, name);
-    }
+  if (isTenantMismatch(doctype, activeTenant(), doc as { sekolah?: unknown; koperasi?: unknown } | null)) {
+    throw new TenantMismatchError(doctype, name);
   }
   return doc;
 }
@@ -254,12 +196,12 @@ export function deleteResource(doctype: string, name: string): Promise<unknown> 
   return req<unknown>("DELETE", buildUrl(`${doctype}/${encodeURIComponent(name)}`));
 }
 
-// Partition the react-query cache by active sekolah so switching schools never
-// surfaces another tenant's cached rows. The server-side filter is correct,
-// but without this, a stale cache entry from school A would be returned for
-// school B until the background refetch completes.
+// Partition the react-query cache by active tenant (sekolah OR koperasi) so
+// switching tenants never surfaces another tenant's cached rows. The
+// server-side filter is correct, but without this a stale cache entry from
+// tenant A would be returned for tenant B until the background refetch lands.
 function tenantKey(doctype: string): string | null {
-  return isTenantedDoctype(doctype) ? activeSekolah() : null;
+  return tenantCacheKey(doctype, activeTenant());
 }
 
 export function useResourceList<T = Record<string, unknown>>(

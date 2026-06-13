@@ -133,29 +133,34 @@ describe("sumTransaksiSigned", () => {
     expect(sumTransaksiSigned([])).toEqual({ totalSetoran: 0, totalPenarikan: 0 });
   });
 
-  it("adds Setor to setoran and Tarik to penarikan", () => {
+  it("adds Setoran to setoran and Penarikan to penarikan", () => {
     const out = sumTransaksiSigned([
-      { jenis: "Setor", jumlah: 100_000 },
-      { jenis: "Setor", jumlah: 50_000 },
-      { jenis: "Tarik", jumlah: 30_000 },
+      { jenis: "Setoran", jumlah: 100_000 },
+      { jenis: "Setoran", jumlah: 50_000 },
+      { jenis: "Penarikan", jumlah: 30_000 },
     ]);
     expect(out.totalSetoran).toBe(150_000);
     expect(out.totalPenarikan).toBe(30_000);
   });
 
-  it("ignores non-cash jenis (Transfer, Bagi Hasil, Koreksi) for the drawer", () => {
+  it("counts Pelunasan Denda Perpus as cash in (setoran)", () => {
+    const out = sumTransaksiSigned([{ jenis: "Pelunasan Denda Perpus", jumlah: 15_000 }]);
+    expect(out).toEqual({ totalSetoran: 15_000, totalPenarikan: 0 });
+  });
+
+  it("ignores book-only jenis (Bagi Hasil, Bunga, Biaya Admin Dormant) for the drawer", () => {
     const out = sumTransaksiSigned([
-      { jenis: "Transfer", jumlah: 100_000 },
       { jenis: "Bagi Hasil", jumlah: 25_000 },
-      { jenis: "Koreksi", jumlah: 10_000 },
+      { jenis: "Bunga", jumlah: 10_000 },
+      { jenis: "Biaya Admin Dormant", jumlah: 5_000 },
     ]);
     expect(out).toEqual({ totalSetoran: 0, totalPenarikan: 0 });
   });
 
   it("feeds computeSaldoSeharusnya so saldo reflects the day's cash", () => {
     const { totalSetoran, totalPenarikan } = sumTransaksiSigned([
-      { jenis: "Setor", jumlah: 300_000 },
-      { jenis: "Tarik", jumlah: 100_000 },
+      { jenis: "Setoran", jumlah: 300_000 },
+      { jenis: "Penarikan", jumlah: 100_000 },
     ]);
     expect(
       computeSaldoSeharusnya({ modalKas: 1_000_000, totalSetoran, totalPenarikan }),

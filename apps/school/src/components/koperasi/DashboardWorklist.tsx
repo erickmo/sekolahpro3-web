@@ -65,13 +65,15 @@ export function DashboardWorklist({ sekolah }: { sekolah: string }) {
 
   const tunggakanQ = useResourceList<{ name: string }>("Jadwal Angsuran", {
     fields: ["name"],
-    filters: [["status", "=", "Tunggakan"]],
+    parent: "Akad Pembiayaan",
+    filters: [["status", "=", "Terlambat"]],
     limit_page_length: CAP,
   });
   const belumQ = useResourceList<{ name: string; status?: string; tanggal_jatuh_tempo?: string }>(
     "Jadwal Angsuran",
     {
       fields: ["name", "status", "tanggal_jatuh_tempo"],
+      parent: "Akad Pembiayaan",
       filters: [["status", "=", "Belum"]],
       limit_page_length: CAP,
     },
@@ -108,7 +110,15 @@ export function DashboardWorklist({ sekolah }: { sekolah: string }) {
 
   const pipelineQ = useResourceList<{ name: string }>("Anggota Koperasi", {
     fields: ["name"],
-    filters: [["status", "=", "Calon Anggota"]],
+    filters: [["jenis_anggota", "=", "Calon Anggota"]],
+    limit_page_length: CAP,
+  });
+
+  // Flag di-set scheduler KYC harian (kyc_review.py) — server-side filter,
+  // bukan hitung ulang client (mirror detail ada di lib/koperasi/nasabahKyc).
+  const kycOverdueQ = useResourceList<{ name: string }>("Nasabah", {
+    fields: ["name"],
+    filters: [["kyc_review_overdue", "=", 1]],
     limit_page_length: CAP,
   });
 
@@ -119,11 +129,12 @@ export function DashboardWorklist({ sekolah }: { sekolah: string }) {
   });
   const txSplit = splitTransaksiByJenis(txTodayQ.data ?? []);
   const txTotal = txTodayQ.data?.length ?? 0;
-  const txHint = `Setor ${txSplit.Setor ?? 0} · Tarik ${txSplit.Tarik ?? 0} · Transfer ${txSplit.Transfer ?? 0}`;
+  const txHint = `Setoran ${txSplit.Setoran ?? 0} · Penarikan ${txSplit.Penarikan ?? 0}`;
 
   const closingCount = closingQ.data?.length ?? 0;
   const dormantCount = dormantQ.data?.length ?? 0;
   const pipelineCount = pipelineQ.data?.length ?? 0;
+  const kycOverdueCount = kycOverdueQ.data?.length ?? 0;
 
   return (
     <SectionCard
@@ -199,6 +210,27 @@ export function DashboardWorklist({ sekolah }: { sekolah: string }) {
           hint="Perlu aktivasi atau tindak lanjut"
           zeroLabel="Tidak ada rekening dormant"
           action={<Link to="/kop/$sekolah/rekening" params={{ sekolah }} className={ctaClass}>Kelola rekening →</Link>}
+        />
+        <WorklistCard
+          title="Review KYC Overdue"
+          value={capLabel(kycOverdueCount, CAP)}
+          attention={kycOverdueCount > 0}
+          tone="warning"
+          icon={<IconUsers />}
+          loading={kycOverdueQ.isLoading}
+          isError={kycOverdueQ.isError}
+          hint="Nasabah Medium/High melewati interval review PPATK"
+          zeroLabel="Tidak ada review KYC tertunda"
+          action={
+            <Link
+              to="/kop/$sekolah/nasabah"
+              params={{ sekolah }}
+              search={{ overdue: true }}
+              className={ctaClass}
+            >
+              Tinjau nasabah →
+            </Link>
+          }
         />
         <WorklistCard
           title="Pipeline Calon Anggota"

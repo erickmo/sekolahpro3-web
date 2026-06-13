@@ -10,10 +10,10 @@ function itemLabels(sections: KoperasiNavSection[], title: string): string[] {
 }
 
 describe("filterKoperasiNav", () => {
-  it("syariah: Baitul Maal (ZIS+Wakaf), Akad label, no Suku Bunga, SHU in Admin", () => {
+  it("syariah: Baitul Maal (ZIS+Penyaluran+Program+Wakaf), Akad label, no Suku Bunga, SHU in Admin", () => {
     const out = filterKoperasiNav(KOPERASI_NAV, true);
     expect(titles(out)).toContain("Baitul Maal");
-    expect(itemLabels(out, "Baitul Maal")).toEqual(["ZIS", "Wakaf"]);
+    expect(itemLabels(out, "Baitul Maal")).toEqual(["ZIS", "Penyaluran", "Program", "Wakaf"]);
     expect(itemLabels(out, "Pembiayaan")).toContain("Akad");
     expect(itemLabels(out, "Pembiayaan")).not.toContain("Suku Bunga");
     expect(itemLabels(out, "Admin")).toContain("SHU");

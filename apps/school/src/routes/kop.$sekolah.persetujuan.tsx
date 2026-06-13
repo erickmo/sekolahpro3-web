@@ -14,8 +14,9 @@ import {
   type TabItem,
 } from "@sekolahpro/ui";
 import {
+  humanizeFrappeError,
+  useDocMethod,
   useResourceList,
-  useResourceUpdate,
 } from "@sekolahpro/api-client";
 
 /**
@@ -44,45 +45,48 @@ interface PermohonanRow {
   nasabah?: string;
   tanggal_diajukan?: string;
   produk_simpanan?: string;
-  rekening?: string;
-  alasan?: string;
+  rekening_simpanan?: string;
+  alasan_blokir?: string;
 }
 
+// `nasabah` hanya ada di Permohonan Buka Rekening; jenis lain memakai
+// `rekening_simpanan` (field contract per doctype JSON — kolom tak dikenal
+// membuat seluruh query list gagal di server).
 const TYPES: PermohonanType[] = [
   {
     key: "buka",
     label: "Buka Rekening",
     doctype: "Permohonan Buka Rekening",
-    subtitleFields: ["produk_simpanan"],
+    subtitleFields: ["nasabah", "produk_simpanan"],
     renderSubtitle: (r) => `Produk: ${r.produk_simpanan ?? "—"}`,
   },
   {
     key: "tutup",
     label: "Tutup Rekening",
     doctype: "Permohonan Tutup Rekening",
-    subtitleFields: ["rekening", "alasan"],
-    renderSubtitle: (r) => `Rekening: ${r.rekening ?? "—"} · ${r.alasan ?? "tanpa alasan"}`,
+    subtitleFields: ["rekening_simpanan"],
+    renderSubtitle: (r) => `Rekening: ${r.rekening_simpanan ?? "—"}`,
   },
   {
     key: "blokir",
     label: "Blokir",
     doctype: "Permohonan Blokir Rekening",
-    subtitleFields: ["rekening", "alasan"],
-    renderSubtitle: (r) => `Rekening: ${r.rekening ?? "—"} · ${r.alasan ?? "—"}`,
+    subtitleFields: ["rekening_simpanan", "alasan_blokir"],
+    renderSubtitle: (r) => `Rekening: ${r.rekening_simpanan ?? "—"} · ${r.alasan_blokir ?? "—"}`,
   },
   {
     key: "unblokir",
     label: "Unblokir",
     doctype: "Permohonan Unblokir Rekening",
-    subtitleFields: ["rekening", "alasan"],
-    renderSubtitle: (r) => `Rekening: ${r.rekening ?? "—"} · ${r.alasan ?? "—"}`,
+    subtitleFields: ["rekening_simpanan"],
+    renderSubtitle: (r) => `Rekening: ${r.rekening_simpanan ?? "—"}`,
   },
   {
     key: "dormant",
     label: "Aktivasi Dormant",
     doctype: "Permohonan Aktivasi Dormant",
-    subtitleFields: ["rekening"],
-    renderSubtitle: (r) => `Rekening: ${r.rekening ?? "—"}`,
+    subtitleFields: ["rekening_simpanan"],
+    renderSubtitle: (r) => `Rekening: ${r.rekening_simpanan ?? "—"}`,
   },
 ];
 
@@ -134,24 +138,31 @@ function PersetujuanPage() {
 
 function PermohonanList({ type }: { type: PermohonanType }) {
   const q = useResourceList<PermohonanRow>(type.doctype, {
-    fields: ["name", "status_permohonan", "nasabah", "tanggal_diajukan", ...type.subtitleFields],
+    fields: ["name", "status_permohonan", "tanggal_diajukan", ...type.subtitleFields],
     filters: [["status_permohonan", "=", "Diajukan"]],
     order_by: "tanggal_diajukan asc",
     limit_page_length: 50,
   });
 
-  const updateMut = useResourceUpdate(type.doctype);
+  // status_permohonan adalah field read-only; keputusan berjalan lewat
+  // method whitelisted BasePermohonan.approve()/reject() yang juga
+  // menstempel supervisor + tanggal_diputuskan dan menjalankan execute().
+  const approveMut = useDocMethod(type.doctype, "approve");
+  const rejectMut = useDocMethod(type.doctype, "reject");
   const [rejectFor, setRejectFor] = useState<string | null>(null);
   const [busyName, setBusyName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const rows = useMemo(() => q.data ?? [], [q.data]);
 
+  const failMessage = (e: unknown) =>
+    humanizeFrappeError(e) ?? (e instanceof Error ? e.message : "Gagal memproses permohonan");
+
   const handleApprove = (name: string) => {
     setBusyName(name);
     setError(null);
-    updateMut.mutate(
-      { name, patch: { status_permohonan: "Disetujui" } },
+    approveMut.mutate(
+      { name },
       {
         onSuccess: () => {
           setBusyName(null);
@@ -159,7 +170,7 @@ function PermohonanList({ type }: { type: PermohonanType }) {
         },
         onError: (e) => {
           setBusyName(null);
-          setError(e.message);
+          setError(failMessage(e));
         },
       },
     );
@@ -168,11 +179,8 @@ function PermohonanList({ type }: { type: PermohonanType }) {
   const handleReject = (name: string, alasan: string) => {
     setBusyName(name);
     setError(null);
-    updateMut.mutate(
-      {
-        name,
-        patch: { status_permohonan: "Ditolak", alasan_penolakan: alasan },
-      },
+    rejectMut.mutate(
+      { name, args: { alasan } },
       {
         onSuccess: () => {
           setBusyName(null);
@@ -181,7 +189,7 @@ function PermohonanList({ type }: { type: PermohonanType }) {
         },
         onError: (e) => {
           setBusyName(null);
-          setError(e.message);
+          setError(failMessage(e));
         },
       },
     );

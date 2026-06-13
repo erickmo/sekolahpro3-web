@@ -52,11 +52,11 @@ describe("summarizeApprovals", () => {
 describe("splitTransaksiByJenis", () => {
   it("counts rows per jenis", () => {
     const out = splitTransaksiByJenis([
-      { jenis: "Setor" },
-      { jenis: "Setor" },
-      { jenis: "Tarik" },
+      { jenis: "Setoran" },
+      { jenis: "Setoran" },
+      { jenis: "Penarikan" },
     ]);
-    expect(out).toEqual({ Setor: 2, Tarik: 1 });
+    expect(out).toEqual({ Setoran: 2, Penarikan: 1 });
   });
 
   it("returns empty map for no rows", () => {
