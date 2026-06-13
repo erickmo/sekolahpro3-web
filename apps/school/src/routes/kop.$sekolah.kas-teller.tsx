@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, type Column } from "@sekolahpro/ui";
+import { Badge, Button, type Column } from "@sekolahpro/ui";
+import { humanizeFrappeError, useDocMethod } from "@sekolahpro/api-client";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { SesiKasForm } from "../components/koperasi/SesiKasForm";
 import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
@@ -85,11 +86,55 @@ const COLUMNS: Column<Row>[] = [
 
 function KasTellerPage() {
   const [bukaOpen, setBukaOpen] = useState(false);
+  const [tutupSesi, setTutupSesi] = useState<Row | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Approval tutup kas berjalan via method controller `approve_tutup`
+  // (Supervisor-only, stamp waktu + supervisor di backend).
+  const approveMut = useDocMethod("Sesi Kas Teller", "approve_tutup");
+
+  const refresh = () => setRefreshKey((k) => k + 1);
+
+  const handleApprove = (name: string) => {
+    setActionError(null);
+    approveMut.mutate(
+      { name },
+      {
+        onSuccess: refresh,
+        onError: (e) =>
+          setActionError(humanizeFrappeError(e) ?? (e instanceof Error ? e.message : "Gagal approve")),
+      },
+    );
+  };
+
+  const columns: Column<Row>[] = [
+    ...COLUMNS,
+    {
+      key: "aksi",
+      header: "",
+      cell: (r) =>
+        r.status === "Aktif" ? (
+          <Button size="sm" variant="outline" onClick={() => setTutupSesi(r)}>
+            Tutup
+          </Button>
+        ) : r.status === "Pending Approval" ? (
+          <Button size="sm" disabled={approveMut.isPending} onClick={() => handleApprove(r.name)}>
+            Approve
+          </Button>
+        ) : (
+          <span className="text-xs text-muted-fg">—</span>
+        ),
+    },
+  ];
 
   return (
     <>
       <KoperasiPageGuide id="kas-teller" />
+      {actionError ? (
+        <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+          {actionError}
+        </div>
+      ) : null}
       <ResourceListPage<Row>
         key={refreshKey}
         eyebrow="Koperasi"
@@ -107,7 +152,7 @@ function KasTellerPage() {
           "status",
         ]}
         rowKey={(r) => r.name}
-        columns={COLUMNS}
+        columns={columns}
         defaultSort={{ key: "name", dir: "desc" }}
         searchFields={["name", "teller"]}
         selectFilters={[
@@ -131,7 +176,24 @@ function KasTellerPage() {
           onClose={() => setBukaOpen(false)}
           onSuccess={() => {
             setBukaOpen(false);
-            setRefreshKey((k) => k + 1);
+            refresh();
+          }}
+        />
+      ) : null}
+
+      {tutupSesi ? (
+        <SesiKasForm
+          mode="tutup"
+          sesi={{
+            name: tutupSesi.name,
+            modalKas: tutupSesi.modal_kas ?? 0,
+            shift: (tutupSesi.shift as "Pagi" | "Siang" | "Sore") ?? "Pagi",
+            ...(tutupSesi.tanggal ? { tanggal: tutupSesi.tanggal } : {}),
+          }}
+          onClose={() => setTutupSesi(null)}
+          onSuccess={() => {
+            setTutupSesi(null);
+            refresh();
           }}
         />
       ) : null}

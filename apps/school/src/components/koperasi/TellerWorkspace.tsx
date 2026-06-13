@@ -8,7 +8,7 @@ import {
   ACTION_SALDO,
   ACTION_SETOR,
   ACTION_TARIK,
-  ACTION_TOPUP,
+  ACTION_BAGI_HASIL,
   QuickActionGrid,
   type QuickAction,
 } from "./QuickActionGrid";
@@ -131,7 +131,8 @@ export function TellerWorkspace() {
       nomorAnggota: anggota.nomor_anggota,
       nasabah: anggota.nasabah,
       status: anggota.status,
-      rekening: rek?.nomor_rekening ?? rek?.name,
+      // Link value MUST be the doc name; nomor_rekening is a display mirror.
+      rekening: rek?.name,
       saldo: rek?.saldo,
       kartuUid: lookupKey?.kind === "uid" ? lookupKey.value : undefined,
     });
@@ -173,7 +174,7 @@ export function TellerWorkspace() {
       },
       F4: (e: KeyboardEvent) => {
         e.preventDefault();
-        onQuickAction(ACTION_TOPUP);
+        onQuickAction(ACTION_BAGI_HASIL);
       },
       F5: (e: KeyboardEvent) => {
         e.preventDefault();

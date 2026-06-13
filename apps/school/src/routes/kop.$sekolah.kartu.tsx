@@ -10,17 +10,21 @@ type Row = {
   uid_nfc: string;
   anggota: string;
   status: string;
-  tanggal_terbit?: string;
   tanggal_expired?: string;
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  aktif: "Aktif",
+  blokir: "Blokir",
+  expired: "Kedaluwarsa",
 };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "No. Kartu", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "uid_nfc", header: "UID RFID", cell: (r) => <span className="font-mono text-xs">{r.uid_nfc}</span> },
+  { key: "uid_nfc", header: "UID NFC", cell: (r) => <span className="font-mono text-xs">{r.uid_nfc}</span> },
   { key: "anggota", header: "Anggota", sortable: true, cell: (r) => r.anggota },
   { key: "status", header: "Status",
-    cell: (r) => <Badge tone={r.status === "Aktif" ? "success" : r.status === "Blokir" ? "danger" : r.status === "Hilang" ? "warning" : "neutral"} dot>{r.status}</Badge> },
-  { key: "tanggal_terbit", header: "Tgl Terbit", sortable: true, cell: (r) => r.tanggal_terbit ?? "—" },
+    cell: (r) => <Badge tone={r.status === "aktif" ? "success" : r.status === "blokir" ? "danger" : "neutral"} dot>{STATUS_LABEL[r.status] ?? r.status}</Badge> },
   { key: "tanggal_expired", header: "Kedaluwarsa", cell: (r) => r.tanggal_expired ?? "—" },
 ];
 
@@ -44,7 +48,12 @@ function KartuPage() {
         searchFields={["name", "uid_nfc", "anggota"]}
         selectFilters={[
           { key: "status", label: "Status", field: "status",
-            options: ["Semua", "Aktif", "Blokir", "Hilang", "Kedaluwarsa"].map((v) => ({ value: v, label: v })) },
+            options: [
+              { value: "Semua", label: "Semua" },
+              { value: "aktif", label: "Aktif" },
+              { value: "blokir", label: "Blokir" },
+              { value: "expired", label: "Kedaluwarsa" },
+            ] },
         ]}
         addLabel="Terbitkan Kartu"
         onAdd={() => setOpen(true)}

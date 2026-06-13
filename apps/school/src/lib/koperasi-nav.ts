@@ -33,6 +33,7 @@ export const KOPERASI_NAV: KoperasiNavSection[] = [
     title: "Anggota & Rekening",
     items: [
       { to: "/onboarding", label: "Pendaftaran Anggota" },
+      { to: "/nasabah", label: "Nasabah" },
       { to: "/daftar", label: "Anggota" },
       { to: "/rekening", label: "Rekening" },
     ],
@@ -45,6 +46,7 @@ export const KOPERASI_NAV: KoperasiNavSection[] = [
       { to: "/kas-teller", label: "Kas Teller" },
       { to: "/kartu", label: "Kartu RFID" },
       { to: "/emoney", label: "E-Money" },
+      { to: "/wallet", label: "Wallet E-Money" },
     ],
   },
   {
@@ -60,6 +62,8 @@ export const KOPERASI_NAV: KoperasiNavSection[] = [
     mode: "syariah",
     items: [
       { to: "/zis", label: "ZIS" },
+      { to: "/zis-penyaluran", label: "Penyaluran" },
+      { to: "/zis-program", label: "Program" },
       { to: "/wakaf", label: "Wakaf" },
     ],
   },

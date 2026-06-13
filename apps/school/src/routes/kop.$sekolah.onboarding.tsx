@@ -21,6 +21,7 @@ import {
 } from "@sekolahpro/api-client";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
 import { PermohonanModal } from "../components/koperasi-simpanan/permohonanForms";
+import { NasabahFormModal } from "../components/koperasi-nasabah/NasabahFormModal";
 import { TransaksiModal } from "../components/koperasi-simpanan/transaksiForm";
 import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 import { ANGGOTA_KOPERASI_FIELDS } from "../data/create-schemas";
@@ -182,12 +183,12 @@ function OnboardingWizardPage() {
         />
       ) : null}
 
-      {modal === "rekening" && state.anggotaName ? (
+      {modal === "rekening" && state.nasabah ? (
         <PermohonanModal
           kind="buka"
           open
           onClose={() => setModal(null)}
-          anggota={state.anggotaName}
+          nasabah={state.nasabah}
           onSuccess={(name) => {
             setModal(null);
             setState((s) => ({ ...s, rekeningName: name, rekeningStatus: "Diajukan" }));
@@ -200,7 +201,7 @@ function OnboardingWizardPage() {
           open
           onClose={() => setModal(null)}
           rekening={aktifRekening.name}
-          defaultJenis="Setor"
+          defaultJenis="Setoran"
           onSuccess={handlePokokDone}
         />
       ) : null}
@@ -210,6 +211,7 @@ function OnboardingWizardPage() {
 
 function StepNasabah({ value, onPick }: { value: string; onPick: (v: string) => void }) {
   const [picked, setPicked] = useState(value);
+  const [createOpen, setCreateOpen] = useState(false);
   return (
     <SectionCard title="1. Pilih Nasabah" description="Cari identitas orang yang akan menjadi anggota.">
       <div className="max-w-md space-y-3">
@@ -219,13 +221,24 @@ function StepNasabah({ value, onPick }: { value: string; onPick: (v: string) => 
           loadOptions={searchNasabah}
           placeholder="Cari nasabah berdasarkan nama/ID…"
         />
-        <Alert tone="info" statusRole>
-          Nasabah belum terdaftar? Tambahkan dulu di modul Nasabah, lalu kembali ke sini.
-        </Alert>
-        <Button disabled={!picked} onClick={() => onPick(picked)}>
-          Lanjut
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={!picked} onClick={() => onPick(picked)}>
+            Lanjut
+          </Button>
+          <Button variant="outline" onClick={() => setCreateOpen(true)}>
+            Buat Nasabah Baru
+          </Button>
+        </div>
       </div>
+      <NasabahFormModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(name) => {
+          // Nasabah baru langsung mengunci langkah 1 dan lanjut ke keanggotaan.
+          setPicked(name);
+          onPick(name);
+        }}
+      />
     </SectionCard>
   );
 }

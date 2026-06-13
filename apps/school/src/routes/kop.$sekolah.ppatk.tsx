@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useSession } from "@sekolahpro/auth";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { StatusActionModal } from "../components/koperasi-admin/StatusActionModal";
@@ -36,7 +35,6 @@ const STATUS_TONE: Record<string, "warning" | "brand" | "success" | "danger" | "
 };
 
 function PpatkPage() {
-  const session = useSession();
   const [actionRow, setActionRow] = useState<Row | null>(null);
   const [actionTarget, setActionTarget] = useState<"Pending Submit" | "Submitted" | null>(null);
 
@@ -123,9 +121,6 @@ function PpatkPage() {
               ? [{ name: "referensi_goaml", label: "Referensi goAML", type: "data", required: true, placeholder: "GOAML-…" }]
               : []
           }
-          timestampField={actionTarget === "Submitted" ? "tanggal_submit" : undefined as unknown as string}
-          operatorField="operator"
-          currentUser={session.user ?? undefined}
         />
       ) : null}
     </>

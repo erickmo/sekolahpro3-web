@@ -1,28 +1,32 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   Button,
   DatePicker,
   FormField,
-  FormGrid,
   Input,
   Modal,
   SearchableSelect,
   Textarea,
   type SearchableOption,
 } from "@sekolahpro/ui";
-import { listResource, useResourceCreate, useResourceList } from "@sekolahpro/api-client";
+import { humanizeFrappeError, useResourceCreate, useResourceList } from "@sekolahpro/api-client";
 import { useSession } from "@sekolahpro/auth";
-import { validateTransaksi, hasActiveSession } from "../../lib/koperasi/transaksiGuard";
+import {
+  validateTransaksi,
+  hasActiveSession,
+  type TransaksiJenis,
+} from "../../lib/koperasi/transaksiGuard";
 import { SesiKasForm } from "../koperasi/SesiKasForm";
+import { FormSection } from "../shared/FormSection";
+import { searchLink } from "../shared/searchLink";
 
 /** Jenis transaksi yang menggerakkan kas fisik → wajib ada sesi kas aktif. */
-const CASH_JENIS: ReadonlySet<string> = new Set(["Setor", "Tarik"]);
+const CASH_JENIS: ReadonlySet<string> = new Set(["Setoran", "Penarikan"]);
 
-export type TransaksiJenis = "Setor" | "Tarik" | "Transfer" | "Bagi Hasil" | "Koreksi";
-
-const JENIS_OPTIONS: TransaksiJenis[] = ["Setor", "Tarik", "Transfer", "Bagi Hasil", "Koreksi"];
+// Exact backend Select values (Transaksi Simpanan.jenis) a teller may create.
+const JENIS_OPTIONS: TransaksiJenis[] = ["Setoran", "Penarikan", "Bagi Hasil"];
 
 const DOCTYPE = "Transaksi Simpanan";
 
@@ -35,79 +39,29 @@ function toOptions(values: string[]): SearchableOption[] {
   return values.map((v) => ({ value: v, label: v }));
 }
 
-/** Async option loader for a Frappe link field. */
-async function searchLink(
-  doctype: string,
-  labelField: string,
-  q: string,
-): Promise<SearchableOption[]> {
-  const rows = await listResource<Record<string, string>>(doctype, {
-    fields: ["name", labelField],
-    ...(q
-      ? {
-          or_filters: [
-            ["name", "like", `%${q}%`],
-            [labelField, "like", `%${q}%`],
-          ] as [string, string, unknown][],
-        }
-      : {}),
-    limit_page_length: 20,
-    order_by: "modified desc",
-  });
-  return rows.map((r) => ({
-    value: r.name ?? "",
-    label: r[labelField] ? `${r[labelField]} (${r.name})` : (r.name ?? ""),
-  }));
-}
-
-/** Section heading + grid wrapper for one logical group of fields. */
-function FormSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold text-fg">{title}</h3>
-        {description ? (
-          <p className="text-xs text-muted-fg mt-0.5">{description}</p>
-        ) : null}
-      </div>
-      <FormGrid>{children}</FormGrid>
-    </section>
-  );
-}
-
 interface TransaksiModalProps {
   open: boolean;
   onClose: () => void;
   /** Pre-fill rekening (when launched from detail page). */
   rekening?: string;
-  /** Default jenis (Setor by default). */
+  /** Default jenis (Setoran by default). */
   defaultJenis?: TransaksiJenis;
   onSuccess?: (createdName: string) => void;
 }
 
 /**
- * Transaksi Simpanan create modal — covers all 5 jenis.
+ * Transaksi Simpanan create modal — Setoran / Penarikan / Bagi Hasil.
  *
- * Field assumptions:
- *   - rekening (required)
- *   - jenis (required, enum)
- *   - nominal (required, number)
- *   - tanggal (required, date)
- *   - rekening_tujuan (only when jenis = Transfer)
- *   - keterangan (optional textarea)
- *
- * Backend should derive saldo_akhir + teller from session/posting logic.
+ * Field contract (backend doctype Transaksi Simpanan):
+ *   - rekening_simpanan (required, Link Rekening Simpanan)
+ *   - jenis (required, exact Select value)
+ *   - jumlah (required, Currency > 0)
+ *   - tanggal (required, Date)
+ *   - keterangan (optional)
+ * approval_status / sesi_kas / saldo dihitung backend — tidak dikirim.
  */
 export function TransaksiModal(props: TransaksiModalProps) {
-  const { open, onClose, rekening, defaultJenis = "Setor", onSuccess } = props;
+  const { open, onClose, rekening, defaultJenis = "Setoran", onSuccess } = props;
   const qc = useQueryClient();
   const session = useSession();
   const create = useResourceCreate<{ name: string }>(DOCTYPE);
@@ -115,7 +69,6 @@ export function TransaksiModal(props: TransaksiModalProps) {
   const today = new Date().toISOString().slice(0, 10);
   const [tanggal, setTanggal] = useState<string>(today);
   const [rekeningVal, setRekeningVal] = useState<string>(rekening ?? "");
-  const [rekeningTujuan, setRekeningTujuan] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [bukaSesiOpen, setBukaSesiOpen] = useState(false);
 
@@ -144,7 +97,7 @@ export function TransaksiModal(props: TransaksiModalProps) {
       filters: [["name", "=", rekeningVal]],
       limit_page_length: 1,
     },
-    { enabled: open && jenis === "Tarik" && Boolean(rekeningVal) },
+    { enabled: open && jenis === "Penarikan" && Boolean(rekeningVal) },
   );
   const saldoSumber = saldoQ.data?.[0]?.saldo;
 
@@ -152,15 +105,14 @@ export function TransaksiModal(props: TransaksiModalProps) {
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
-    const nominal = Number(fd.get("nominal"));
+    const jumlah = Number(fd.get("jumlah"));
 
     // Guard sisi-klien sebelum POST: cegah salah ketik & selisih kas.
     const guardError = validateTransaksi({
       jenis,
-      nominal,
+      nominal: jumlah,
       rekening: rekeningVal,
-      ...(jenis === "Transfer" ? { rekeningTujuan } : {}),
-      ...(jenis === "Tarik" && saldoSumber !== undefined ? { saldo: saldoSumber } : {}),
+      ...(jenis === "Penarikan" && saldoSumber !== undefined ? { saldo: saldoSumber } : {}),
     });
     if (guardError) {
       setError(guardError);
@@ -171,18 +123,14 @@ export function TransaksiModal(props: TransaksiModalProps) {
       return;
     }
 
-    const doc: Record<string, unknown> = {};
-    fd.forEach((v, k) => {
-      if (typeof v === "string" && v.trim() !== "") {
-        if (k === "nominal") {
-          const n = Number(v);
-          if (!Number.isNaN(n)) doc[k] = n;
-        } else {
-          doc[k] = v;
-        }
-      }
-    });
-    doc.jenis = jenis;
+    const doc: Record<string, unknown> = {
+      rekening_simpanan: rekeningVal,
+      jenis,
+      jumlah,
+      tanggal,
+    };
+    const keterangan = String(fd.get("keterangan") ?? "").trim();
+    if (keterangan) doc["keterangan"] = keterangan;
     try {
       const created = await create.mutateAsync(doc);
       await qc.invalidateQueries({ queryKey: ["resource:list", DOCTYPE] });
@@ -190,7 +138,10 @@ export function TransaksiModal(props: TransaksiModalProps) {
       onSuccess?.(created.name);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal mencatat transaksi");
+      setError(
+        humanizeFrappeError(err) ??
+          (err instanceof Error ? err.message : "Gagal mencatat transaksi"),
+      );
     }
   };
 
@@ -199,7 +150,7 @@ export function TransaksiModal(props: TransaksiModalProps) {
       open={open}
       onClose={onClose}
       title="Transaksi Simpanan"
-      description="Setor, tarik, transfer, bagi hasil, atau koreksi. Tanda * wajib diisi."
+      description="Setoran, penarikan, atau bagi hasil. Tanda * wajib diisi."
       size="mega"
       tone="brand"
     >
@@ -244,28 +195,16 @@ export function TransaksiModal(props: TransaksiModalProps) {
               loadOptions={(q) => searchLink("Rekening Simpanan", "name", q)}
               placeholder="Cari rekening…"
             />
-            <input type="hidden" name="rekening" value={rekeningVal} />
           </FormField>
           <FormField
             label="Nominal (Rp)"
             required
-            {...(jenis === "Tarik" && saldoSumber !== undefined
+            {...(jenis === "Penarikan" && saldoSumber !== undefined
               ? { hint: `Saldo tersedia: Rp ${saldoSumber.toLocaleString("id-ID")}` }
               : {})}
           >
-            <Input name="nominal" type="number" min={1} step={1} required placeholder="0" />
+            <Input name="jumlah" type="number" min={1} step={1} required placeholder="0" />
           </FormField>
-          {jenis === "Transfer" ? (
-            <FormField label="Rekening Tujuan" required className="col-span-2">
-              <SearchableSelect
-                value={rekeningTujuan}
-                onChange={(v) => setRekeningTujuan(v)}
-                loadOptions={(q) => searchLink("Rekening Simpanan", "name", q)}
-                placeholder="Cari rekening tujuan…"
-              />
-              <input type="hidden" name="rekening_tujuan" value={rekeningTujuan} />
-            </FormField>
-          ) : null}
           <FormField label="Keterangan" className="col-span-2">
             <Textarea name="keterangan" placeholder="Catatan tambahan (opsional)" />
           </FormField>
@@ -300,3 +239,5 @@ export function TransaksiModal(props: TransaksiModalProps) {
     </Modal>
   );
 }
+
+export type { TransaksiJenis };

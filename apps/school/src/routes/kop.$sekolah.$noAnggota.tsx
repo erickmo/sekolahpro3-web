@@ -64,11 +64,10 @@ const STATUS_TONE: Record<StatusAnggota, "success" | "brand" | "neutral" | "warn
   Pending: "warning",
 };
 
-const TIPE_TONE: Record<TipeAnggota, "success" | "brand" | "neutral" | "warning" | "danger"> = {
-  Siswa: "brand",
-  Guru: "success",
-  Staff: "neutral",
-  "Orang Tua": "warning",
+const TIPE_TONE: Record<string, "success" | "brand" | "neutral" | "warning" | "danger"> = {
+  Anggota: "brand",
+  "Calon Anggota": "warning",
+  "Anggota Luar Biasa": "neutral",
 };
 
 const SIMPANAN_TIPE_TONE = {
@@ -112,7 +111,7 @@ function Hero({ anggota, actions }: { anggota: Anggota; actions: MemberActions }
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-bold text-fg truncate">{anggota.nama}</h2>
             <Badge tone={STATUS_TONE[anggota.status]} dot>{anggota.status}</Badge>
-            <Badge tone={TIPE_TONE[anggota.tipeAnggota]}>{anggota.tipeAnggota}</Badge>
+            <Badge tone={TIPE_TONE[anggota.tipeAnggota] ?? "neutral"}>{anggota.tipeAnggota}</Badge>
           </div>
           <div className="mt-1 text-sm text-muted-fg">
             <span className="tabular-nums">{anggota.noAnggota}</span>
@@ -313,7 +312,7 @@ function ProfilTab({ anggota }: { anggota: Anggota }) {
         <InfoGrid cols={3}>
           <InfoField label="No Anggota" icon={<IconId />} value={<span className="tabular-nums">{anggota.noAnggota}</span>} />
           <InfoField label="Nama" value={anggota.nama} />
-          <InfoField label="Tipe Anggota" value={<Badge tone={TIPE_TONE[anggota.tipeAnggota]}>{anggota.tipeAnggota}</Badge>} />
+          <InfoField label="Tipe Anggota" value={<Badge tone={TIPE_TONE[anggota.tipeAnggota] ?? "neutral"}>{anggota.tipeAnggota}</Badge>} />
           <InfoField label="NIS" value={anggota.nis ? <span className="tabular-nums">{anggota.nis}</span> : "—"} />
           <InfoField label="NIP" value={anggota.nip ? <span className="tabular-nums">{anggota.nip}</span> : "—"} />
           <InfoField label="Jenis Kelamin" value={anggota.jenisKelamin} />
@@ -557,7 +556,7 @@ type AnggotaDoc = {
 type AkadPembiayaanRow = {
   name: string;
   nomor_akad?: string;
-  pokok_pembiayaan?: number;
+  jumlah_pokok?: number;
   margin_total?: number;
   total_kewajiban?: number;
   tenor?: number;
@@ -574,7 +573,7 @@ const AKAD_STATUS_MAP: Record<string, PinjamanRow["status"]> = {
 
 function mapAkadToPinjamanRows(rows: AkadPembiayaanRow[]): PinjamanRow[] {
   return rows.map((r) => {
-    const pokok = r.pokok_pembiayaan ?? 0;
+    const pokok = r.jumlah_pokok ?? 0;
     const margin = r.margin_total ?? 0;
     const tenor = r.tenor ?? 0;
     const totalKewajiban = r.total_kewajiban ?? pokok + margin;
@@ -610,7 +609,7 @@ function AnggotaDetailPage() {
       fields: [
         "name",
         "nomor_akad",
-        "pokok_pembiayaan",
+        "jumlah_pokok",
         "margin_total",
         "total_kewajiban",
         "tenor",
@@ -667,8 +666,8 @@ function AnggotaDetailPage() {
 
   const memberActions: MemberActions = {
     hasActiveRekening,
-    onSetor: () => setTxJenis("Setor"),
-    onTarik: () => setTxJenis("Tarik"),
+    onSetor: () => setTxJenis("Setoran"),
+    onTarik: () => setTxJenis("Penarikan"),
     onPinjaman: () => setAkadOpen(true),
     onAngsuran: () => setBayarOpen(true),
   };
@@ -750,7 +749,7 @@ function AnggotaDetailPage() {
     <AkadCreateModal
       open={akadOpen}
       onClose={() => setAkadOpen(false)}
-      anggota={docQ.data?.name ?? noAnggota}
+      {...(nasabah ? { nasabah } : {})}
       onSuccess={() => setAkadOpen(false)}
     />
     <PembayaranAngsuranModal

@@ -4,12 +4,12 @@ export type QuickAction =
   | { kind: "transaksi"; jenis: TransaksiJenis; label: string; hotkey: string }
   | { kind: "cek-saldo"; label: string; hotkey: string };
 
-export const ACTION_SETOR: QuickAction = { kind: "transaksi", jenis: "Setor", label: "Setor Tunai", hotkey: "F2" };
-export const ACTION_TARIK: QuickAction = { kind: "transaksi", jenis: "Tarik", label: "Tarik Tunai", hotkey: "F3" };
-export const ACTION_TOPUP: QuickAction = { kind: "transaksi", jenis: "Transfer", label: "Top-up / Transfer", hotkey: "F4" };
+export const ACTION_SETOR: QuickAction = { kind: "transaksi", jenis: "Setoran", label: "Setor Tunai", hotkey: "F2" };
+export const ACTION_TARIK: QuickAction = { kind: "transaksi", jenis: "Penarikan", label: "Tarik Tunai", hotkey: "F3" };
+export const ACTION_BAGI_HASIL: QuickAction = { kind: "transaksi", jenis: "Bagi Hasil", label: "Bagi Hasil", hotkey: "F4" };
 export const ACTION_SALDO: QuickAction = { kind: "cek-saldo", label: "Cek Saldo", hotkey: "F5" };
 
-export const QUICK_ACTIONS: QuickAction[] = [ACTION_SETOR, ACTION_TARIK, ACTION_TOPUP, ACTION_SALDO];
+export const QUICK_ACTIONS: QuickAction[] = [ACTION_SETOR, ACTION_TARIK, ACTION_BAGI_HASIL, ACTION_SALDO];
 
 interface QuickActionGridProps {
   disabled?: boolean;

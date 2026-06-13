@@ -16,7 +16,6 @@ import {
   IconWallet,
   IconCalendar,
   IconCheck,
-  IconClock,
 } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
@@ -27,14 +26,12 @@ import { TransaksiModal } from "../components/koperasi-simpanan/transaksiForm";
 
 interface RekeningDoc {
   name: string;
-  anggota?: string;
-  produk?: string;
-  akad?: string;
+  nomor_rekening?: string;
+  nasabah?: string;
+  produk_simpanan?: string;
   saldo?: number;
   status?: string;
   tanggal_buka?: string;
-  saldo_tertahan?: number;
-  catatan?: string;
 }
 
 interface TransaksiRow {
@@ -48,16 +45,15 @@ interface TransaksiRow {
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   Aktif: "success",
   Dormant: "warning",
-  Blokir: "danger",
+  Diblokir: "danger",
   Tutup: "neutral",
 };
 
 const JENIS_TONE: Record<string, "success" | "warning" | "brand" | "neutral"> = {
-  Setor: "success",
-  Tarik: "warning",
-  Transfer: "brand",
-  "Bagi Hasil": "success",
-  Koreksi: "neutral",
+  Setoran: "success",
+  Penarikan: "warning",
+  "Bagi Hasil": "brand",
+  Bunga: "neutral",
 };
 
 const formatRupiah = (n: number | undefined) =>
@@ -87,7 +83,7 @@ function RekeningDetailPage() {
   // Workflow buttons depend on current status (graceful: show all when unknown)
   const canTutup = !r || (status !== "Tutup");
   const canBlokir = !r || (status === "Aktif" || status === "Dormant");
-  const canUnblokir = !r || status === "Blokir";
+  const canUnblokir = !r || status === "Diblokir";
   const canAktivasi = !r || status === "Dormant";
 
   const afterPermohonan = () => {
@@ -110,7 +106,7 @@ function RekeningDetailPage() {
           <PageHeader
             eyebrow="Detail Rekening"
             title={name}
-            description={r ? `${r.anggota ?? "—"} · ${r.produk ?? "—"} · ${r.akad ?? "—"}` : "Memuat..."}
+            description={r ? `${r.nasabah ?? "—"} · ${r.produk_simpanan ?? "—"}` : "Memuat..."}
             actions={
               <Button variant="outline" onClick={() => navigate({ to: "/kop/$sekolah/rekening", params: { sekolah } })}>
                 <span className="h-4 w-4 mr-1.5"><IconArrowLeft /></span>
@@ -131,7 +127,7 @@ function RekeningDetailPage() {
             </SectionCard>
           ) : null}
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <StatCard
               label="Saldo"
               value={formatRupiah(r?.saldo)}
@@ -139,15 +135,9 @@ function RekeningDetailPage() {
               icon={<IconWallet />}
             />
             <StatCard
-              label="Saldo Tertahan"
-              value={formatRupiah(r?.saldo_tertahan ?? 0)}
-              accent="amber"
-              icon={<IconClock />}
-            />
-            <StatCard
               label="Status"
               value={status}
-              accent={status === "Aktif" ? "emerald" : status === "Blokir" ? "rose" : "violet"}
+              accent={status === "Aktif" ? "emerald" : status === "Diblokir" ? "rose" : "violet"}
               icon={<IconCheck />}
             />
             <StatCard
@@ -163,15 +153,11 @@ function RekeningDetailPage() {
             action={r?.status ? <Badge tone={STATUS_TONE[r.status] ?? "neutral"} dot>{r.status}</Badge> : null}
           >
             <InfoGrid cols={3}>
-              <InfoField label="No. Rekening" value={<span className="font-mono">{name}</span>} />
-              <InfoField label="Anggota" value={r?.anggota ?? "—"} />
-              <InfoField label="Produk" value={r?.produk ?? "—"} />
-              <InfoField label="Akad" value={r?.akad ?? "—"} />
+              <InfoField label="No. Rekening" value={<span className="font-mono">{r?.nomor_rekening ?? name}</span>} />
+              <InfoField label="Nasabah" value={r?.nasabah ?? "—"} />
+              <InfoField label="Produk" value={r?.produk_simpanan ?? "—"} />
               <InfoField label="Tanggal Buka" value={r?.tanggal_buka ?? "—"} />
               <InfoField label="Saldo" value={formatRupiah(r?.saldo)} />
-              {r?.catatan ? (
-                <InfoField label="Catatan" value={r.catatan} className="sm:col-span-3" />
-              ) : null}
             </InfoGrid>
           </SectionCard>
 
@@ -244,7 +230,7 @@ function RekeningDetailPage() {
           open={!!permohonan}
           onClose={() => setPermohonan(null)}
           rekening={name}
-          {...(r?.anggota ? { anggota: r.anggota } : {})}
+          {...(r?.nasabah ? { nasabah: r.nasabah } : {})}
           onSuccess={afterPermohonan}
         />
       ) : null}
@@ -260,6 +246,6 @@ function RekeningDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/kop/$sekolah/rekening/$name")({
+export const Route = createFileRoute("/kop/$sekolah/rekening_/$name")({
   component: RekeningDetailPage,
 });

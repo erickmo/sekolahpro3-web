@@ -70,6 +70,12 @@ export interface ResourceListPageProps<T extends Record<string, unknown>> {
    */
   baseFilters?: FilterTuple[];
   /**
+   * Parent doctype — REQUIRED when `doctype` is a child table (istable).
+   * Forwarded as Frappe's `parent` list param; without it the server rejects
+   * the query outright.
+   */
+  listParent?: string;
+  /**
    * Async post-processor invoked on each loaded page. Receives the visible rows and
    * returns a (possibly enriched / filtered) array used for render. Use to fetch
    * derived data per page (e.g. denda summary) without coupling to the list endpoint.
@@ -106,6 +112,7 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
     searchFields = ["name"],
     selectFilters = [],
     baseFilters,
+    listParent,
     decorateRows,
     extraActions,
     onAdd,
@@ -154,6 +161,7 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
       limit_start: (page - 1) * pageSize,
       limit_page_length: pageSize + 1,
     };
+    if (listParent) p.parent = listParent;
     if (orFilters) {
       p.or_filters = orFilters;
       // strip the name-like from filters when using or_filters
@@ -165,7 +173,7 @@ export function ResourceListPage<T extends Record<string, unknown>>(props: Resou
       p.filters = filters;
     }
     return p;
-  }, [fields, sort, page, pageSize, filters, orFilters]);
+  }, [fields, sort, page, pageSize, filters, orFilters, listParent]);
 
   const q = useResourceList<T>(doctype, params);
 

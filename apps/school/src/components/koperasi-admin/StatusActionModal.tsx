@@ -8,7 +8,7 @@ import {
   Modal,
   Textarea,
 } from "@sekolahpro/ui";
-import { useResourceUpdate } from "@sekolahpro/api-client";
+import { humanizeFrappeError, runDocMethod, useResourceUpdate } from "@sekolahpro/api-client";
 
 export interface ExtraField {
   name: string;
@@ -23,24 +23,26 @@ interface StatusActionModalProps {
   onClose: () => void;
   doctype: string;
   recordName: string;
-  /** Status target setelah confirm. */
+  /** Status target setelah confirm (label tombol; nilai PATCH bila tanpa docMethod). */
   targetStatus: string;
   title: string;
   description?: string;
   /** Field tambahan ditulis bersama status (mis. referensi_goaml). */
   extraFields?: ExtraField[];
-  /** Field stempel waktu yang otomatis di-set ke `now()` (ISO datetime). */
-  timestampField?: string;
-  /** Field operator (User) — di-set ke user aktif bila supplied. */
-  operatorField?: string;
-  currentUser?: string | undefined;
+  /**
+   * Nama method whitelisted controller (mis. "tutup"). Bila di-set, aksi
+   * berjalan via run_doc_method dengan extraFields sebagai args — status,
+   * stempel waktu, dan operator semuanya di-stamp backend. PATCH hanya untuk
+   * doctype yang statusnya memang writable.
+   */
+  docMethod?: string;
   onSuccess?: () => void;
 }
 
 export function StatusActionModal(props: StatusActionModalProps) {
   const {
     open, onClose, doctype, recordName, targetStatus, title, description,
-    extraFields = [], timestampField, operatorField, currentUser, onSuccess,
+    extraFields = [], docMethod, onSuccess,
   } = props;
   const qc = useQueryClient();
   const update = useResourceUpdate<{ name: string }>(doctype);
@@ -50,28 +52,26 @@ export function StatusActionModal(props: StatusActionModalProps) {
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
-    const patch: Record<string, unknown> = { status: targetStatus };
+    const fieldValues: Record<string, unknown> = {};
     for (const f of extraFields) {
       const v = values[f.name];
       if (f.required && (!v || !v.trim())) {
         setError(`${f.label} wajib diisi.`);
         return;
       }
-      if (v && v.trim()) patch[f.name] = v.trim();
-    }
-    if (timestampField) {
-      patch[timestampField] = new Date().toISOString().slice(0, 19).replace("T", " ");
-    }
-    if (operatorField && currentUser) {
-      patch[operatorField] = currentUser;
+      if (v && v.trim()) fieldValues[f.name] = v.trim();
     }
     try {
-      await update.mutateAsync({ name: recordName, patch });
+      if (docMethod) {
+        await runDocMethod({ dt: doctype, dn: recordName, method: docMethod, args: fieldValues });
+      } else {
+        await update.mutateAsync({ name: recordName, patch: { status: targetStatus, ...fieldValues } });
+      }
       await qc.invalidateQueries({ queryKey: ["resource:list", doctype] });
       onSuccess?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan.");
+      setError(humanizeFrappeError(err) ?? (err instanceof Error ? err.message : "Gagal menyimpan."));
     }
   };
 

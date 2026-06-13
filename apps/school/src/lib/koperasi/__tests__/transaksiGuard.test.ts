@@ -1,90 +1,59 @@
 import { describe, it, expect } from "vitest";
 import { validateTransaksi, hasActiveSession } from "../transaksiGuard";
 
+// Jenis values mirror the backend Transaksi Simpanan Select exactly
+// (Setoran|Penarikan|Bagi Hasil) — the old UI-only vocabulary
+// (Setor/Tarik/Transfer/Koreksi) never matched a backend row.
 describe("validateTransaksi", () => {
-  const base = { jenis: "Setor" as const, nominal: 50_000, rekening: "REK-001" };
+  const base = { jenis: "Setoran" as const, nominal: 50_000, rekening: "REK-001" };
 
-  it("returns null for a valid Setor", () => {
+  it("returns null for a valid Setoran", () => {
     expect(validateTransaksi(base)).toBeNull();
   });
 
-  it("rejects nominal of 0", () => {
-    expect(validateTransaksi({ ...base, nominal: 0 })).toMatch(/nominal/i);
+  it("requires rekening", () => {
+    expect(validateTransaksi({ ...base, rekening: "  " })).toMatch(/rekening/i);
   });
 
-  it("rejects negative nominal", () => {
-    expect(validateTransaksi({ ...base, nominal: -1 })).toMatch(/nominal/i);
+  it("rejects zero / negative / NaN nominal", () => {
+    for (const nominal of [0, -10, Number.NaN]) {
+      expect(validateTransaksi({ ...base, nominal })).toMatch(/nominal/i);
+    }
   });
 
-  it("rejects NaN nominal", () => {
-    expect(validateTransaksi({ ...base, nominal: Number.NaN })).toMatch(/nominal/i);
-  });
-
-  it("rejects empty rekening", () => {
-    expect(validateTransaksi({ ...base, rekening: "" })).toMatch(/rekening/i);
-  });
-
-  it("requires rekening_tujuan for Transfer", () => {
-    const err = validateTransaksi({ jenis: "Transfer", nominal: 50_000, rekening: "REK-001" });
-    expect(err).toMatch(/tujuan/i);
-  });
-
-  it("rejects Transfer to the same rekening", () => {
-    const err = validateTransaksi({
-      jenis: "Transfer",
-      nominal: 50_000,
-      rekening: "REK-001",
-      rekeningTujuan: "REK-001",
-    });
-    expect(err).toMatch(/sama/i);
-  });
-
-  it("accepts Transfer to a different rekening", () => {
+  it("blocks Penarikan exceeding known saldo", () => {
     expect(
-      validateTransaksi({
-        jenis: "Transfer",
-        nominal: 50_000,
-        rekening: "REK-001",
-        rekeningTujuan: "REK-002",
-      }),
+      validateTransaksi({ jenis: "Penarikan", nominal: 150_000, rekening: "REK-1", saldo: 100_000 }),
+    ).toMatch(/saldo/i);
+  });
+
+  it("allows Penarikan within saldo", () => {
+    expect(
+      validateTransaksi({ jenis: "Penarikan", nominal: 50_000, rekening: "REK-1", saldo: 100_000 }),
     ).toBeNull();
   });
 
-  it("blocks Tarik exceeding known saldo", () => {
-    const err = validateTransaksi({ jenis: "Tarik", nominal: 200_000, rekening: "REK-001", saldo: 150_000 });
-    expect(err).toMatch(/saldo/i);
-  });
-
-  it("allows Tarik within saldo", () => {
+  it("does not block Penarikan when saldo is unknown", () => {
     expect(
-      validateTransaksi({ jenis: "Tarik", nominal: 100_000, rekening: "REK-001", saldo: 150_000 }),
+      validateTransaksi({ jenis: "Penarikan", nominal: 150_000, rekening: "REK-1" }),
     ).toBeNull();
   });
 
-  it("does not block Tarik when saldo is unknown", () => {
-    expect(validateTransaksi({ jenis: "Tarik", nominal: 999_999, rekening: "REK-001" })).toBeNull();
+  it("accepts Bagi Hasil (book-only, no cash gate here)", () => {
+    expect(
+      validateTransaksi({ jenis: "Bagi Hasil", nominal: 10_000, rekening: "REK-1" }),
+    ).toBeNull();
   });
 });
 
 describe("hasActiveSession", () => {
-  const sessions = [
-    { teller: "kasir@a.id", status: "Aktif" },
-    { teller: "kasir@b.id", status: "Selesai" },
-  ];
-
-  it("returns true when the user has an Aktif session", () => {
-    expect(hasActiveSession(sessions, "kasir@a.id")).toBe(true);
-  });
-
-  it("returns false when the user's only session is closed", () => {
-    expect(hasActiveSession(sessions, "kasir@b.id")).toBe(false);
-  });
-
-  it("returns false when the user has no session", () => {
-    expect(hasActiveSession(sessions, "kasir@c.id")).toBe(false);
-  });
-
-  it("returns false for empty session list", () => {
-    expect(hasActiveSession([], "kasir@a.id")).toBe(false);
+  it("is true only for the user's own Aktif session", () => {
+    const rows = [
+      { teller: "a@x.id", status: "Closed" },
+      { teller: "b@x.id", status: "Aktif" },
+    ];
+    expect(hasActiveSession(rows, "b@x.id")).toBe(true);
+    expect(hasActiveSession(rows, "a@x.id")).toBe(false);
+    expect(hasActiveSession([], "a@x.id")).toBe(false);
   });
 });

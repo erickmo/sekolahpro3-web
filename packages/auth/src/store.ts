@@ -6,6 +6,17 @@ export interface ActiveSekolah {
   nama: string;
   subdomain: string | null;
   slug: string;
+  /**
+   * Anchor kind: "sekolah" (default when absent, back-compat with persisted
+   * sessions) or "koperasi" — set by the /kop shell where `name` is a
+   * Koperasi doc-ID, not a Sekolah.
+   */
+  kind?: "sekolah" | "koperasi";
+  /**
+   * For kind="koperasi": Sekolah doc-IDs covered by the koperasi,
+   * sekolah_utama first. Drives tenant scoping of SCHOOL-tier queries.
+   */
+  schools?: string[];
 }
 
 export interface SessionState {

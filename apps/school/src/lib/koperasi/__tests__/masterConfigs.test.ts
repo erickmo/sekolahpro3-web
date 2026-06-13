@@ -2,13 +2,14 @@ import { describe, it, expect } from "vitest";
 import { MASTER_CONFIGS } from "../masterConfigs";
 
 describe("MASTER_CONFIGS", () => {
-  it("contains expected doctypes", () => {
+  it("contains expected doctypes (exact backend names — no hyphen on Fatwa)", () => {
     const names = MASTER_CONFIGS.map((c) => c.doctype);
     expect(names).toEqual([
-      "Fatwa DSN-MUI",
+      "Fatwa DSN MUI",
       "Denominasi Uang",
       "Sanctions List Entry",
       "Merchant",
+      "Jenis Dana ZIS",
     ]);
   });
 

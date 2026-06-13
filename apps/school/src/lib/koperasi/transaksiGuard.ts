@@ -8,7 +8,10 @@
  * apply server-side; this is fast UX feedback, not the authority.
  */
 
-export type TransaksiJenis = "Setor" | "Tarik" | "Transfer" | "Bagi Hasil" | "Koreksi";
+// Jenis a teller can CREATE from the UI — exact backend Select values of
+// Transaksi Simpanan. The other backend values (Bunga, Biaya Admin Dormant,
+// Pelunasan Denda Perpus) are system-generated and never offered here.
+export type TransaksiJenis = "Setoran" | "Penarikan" | "Bagi Hasil";
 
 export interface ValidateTransaksiInput {
   jenis: TransaksiJenis;
@@ -16,9 +19,7 @@ export interface ValidateTransaksiInput {
   nominal: number;
   /** Source account name. Required. */
   rekening: string;
-  /** Destination account — only used (and required) when jenis = Transfer. */
-  rekeningTujuan?: string;
-  /** Known source balance, if available. When provided, Tarik cannot exceed it. */
+  /** Known source balance, if available. When provided, Penarikan cannot exceed it. */
   saldo?: number;
 }
 
@@ -32,15 +33,8 @@ export function validateTransaksi(input: ValidateTransaksiInput): string | null 
     return "Nominal harus lebih dari nol.";
   }
 
-  if (input.jenis === "Transfer") {
-    if (!input.rekeningTujuan?.trim()) return "Rekening tujuan wajib dipilih.";
-    if (input.rekeningTujuan === input.rekening) {
-      return "Rekening tujuan tidak boleh sama dengan rekening sumber.";
-    }
-  }
-
   // Only block over-withdrawal when we actually know the balance.
-  if (input.jenis === "Tarik" && input.saldo !== undefined && input.nominal > input.saldo) {
+  if (input.jenis === "Penarikan" && input.saldo !== undefined && input.nominal > input.saldo) {
     return `Nominal penarikan melebihi saldo (Rp ${input.saldo.toLocaleString("id-ID")}).`;
   }
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { Badge, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { ResourceCreateModal } from "../components/shared/ResourceCreateModal";
@@ -9,29 +9,38 @@ import {
 } from "../data/create-schemas";
 import { KoperasiPageGuide } from "../components/koperasi/KoperasiPageGuide";
 
+// Jadwal Angsuran rows are CHILDREN of Akad Pembiayaan — the list query needs
+// the `parent` param (listParent) and the akad reference is the `parent` field.
 type Row = {
   name: string;
-  akad?: string;
+  parent?: string;
   ke?: number;
-  jatuh_tempo?: string;
+  tanggal_jatuh_tempo?: string;
   total?: number;
   status: string;
-  tanggal_bayar?: string;
+};
+
+const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
+  Belum: "warning",
+  Lunas: "success",
+  Terlambat: "danger",
 };
 
 const COLUMNS: Column<Row>[] = [
   { key: "name", header: "ID", sortable: true, cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
-  { key: "akad", header: "Ref Akad", cell: (r) => <span className="font-mono text-xs">{r.akad ?? "—"}</span> },
+  { key: "parent", header: "Ref Akad", cell: (r) => <span className="font-mono text-xs">{r.parent ?? "—"}</span> },
   { key: "ke", header: "Angsuran #", align: "right", sortable: true,
     cell: (r) => <span className="tabular-nums">{r.ke ?? "—"}</span> },
-  { key: "jatuh_tempo", header: "Jatuh Tempo", sortable: true, cell: (r) => r.jatuh_tempo ?? "—" },
+  { key: "tanggal_jatuh_tempo", header: "Jatuh Tempo", sortable: true, cell: (r) => r.tanggal_jatuh_tempo ?? "—" },
   { key: "total", header: "Nominal", align: "right",
     cell: (r) => r.total !== undefined ? <span className="tabular-nums">Rp {r.total.toLocaleString("id-ID")}</span> : "—" },
   { key: "status", header: "Status",
-    cell: (r) => <Badge tone={r.status === "Lunas" ? "success" : r.status === "Tunggakan" ? "danger" : r.status === "Belum" ? "warning" : "neutral"} dot>{r.status}</Badge> },
+    cell: (r) => <Badge tone={STATUS_TONE[r.status] ?? "neutral"} dot>{r.status}</Badge> },
 ];
 
 function AngsuranPage() {
+  const { sekolah } = useParams({ from: "/kop/$sekolah" });
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -40,17 +49,19 @@ function AngsuranPage() {
       eyebrow="Koperasi"
       title="Jadwal & Pembayaran Angsuran"
       doctype="Jadwal Angsuran"
-      fields={["name", "ke", "total", "status"]}
+      listParent="Akad Pembiayaan"
+      fields={["name", "parent", "ke", "tanggal_jatuh_tempo", "total", "status"]}
       rowKey={(r) => r.name}
       columns={COLUMNS}
-      defaultSort={{ key: "ke", dir: "asc" }}
-      searchFields={["name"]}
+      defaultSort={{ key: "tanggal_jatuh_tempo", dir: "asc" }}
+      searchFields={["name", "parent"]}
       selectFilters={[
         { key: "status", label: "Status", field: "status",
-          options: ["Semua", "Belum", "Lunas", "Tunggakan"].map((v) => ({ value: v, label: v })) },
+          options: ["Semua", "Belum", "Lunas", "Terlambat"].map((v) => ({ value: v, label: v })) },
       ]}
       addLabel="Tambah Baris Angsuran"
       onAdd={() => setOpen(true)}
+      onRowClick={(r) => navigate({ to: "/kop/$sekolah/angsuran/$name", params: { sekolah, name: r.name } })}
     />
       <ResourceCreateModal
         open={open}

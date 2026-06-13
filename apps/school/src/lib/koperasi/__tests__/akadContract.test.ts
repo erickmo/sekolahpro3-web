@@ -6,40 +6,38 @@ import {
 } from "../akadContract";
 
 const baseInput = {
-  anggota: "ANG-1",
-  produk: "Pembiayaan Modal Usaha",
-  akad: "Murabahah",
+  nasabah: "NSB-0001",
+  produk_pembiayaan: "Pembiayaan Modal Usaha",
   tanggal_akad: "2026-06-02",
-  pokok_pembiayaan: 5_000_000,
-  tenor_bulan: 12,
+  jumlah_pokok: 5_000_000,
+  tenor: 12,
 };
 
 describe("akad contract", () => {
-  it("canonical pokok field is pokok_pembiayaan (matches create + detail reads)", () => {
-    expect(AKAD_POKOK_FIELD).toBe("pokok_pembiayaan");
+  it("canonical pokok field is jumlah_pokok (backend akad_pembiayaan.json)", () => {
+    expect(AKAD_POKOK_FIELD).toBe("jumlah_pokok");
   });
 
-  it("treats the canonical pokok field as numeric", () => {
+  it("treats the canonical numeric fields as numeric", () => {
     expect(AKAD_NUMERIC_FIELDS.has(AKAD_POKOK_FIELD)).toBe(true);
+    expect(AKAD_NUMERIC_FIELDS.has("tenor")).toBe(true);
   });
 
-  it("buildAkadPayload writes pokok under the canonical key, never the legacy jumlah_pokok", () => {
+  it("buildAkadPayload writes the exact backend keys", () => {
     const p = buildAkadPayload(baseInput);
-    expect(p[AKAD_POKOK_FIELD]).toBe(5_000_000);
-    expect("jumlah_pokok" in p).toBe(false);
+    expect(p).toEqual({
+      nasabah: "NSB-0001",
+      produk_pembiayaan: "Pembiayaan Modal Usaha",
+      tanggal_akad: "2026-06-02",
+      jumlah_pokok: 5_000_000,
+      tenor: 12,
+    });
   });
 
-  it("buildAkadPayload omits empty optional fields", () => {
+  it("never emits legacy/non-existent fields", () => {
     const p = buildAkadPayload(baseInput);
-    expect("margin" in p).toBe(false);
-    expect("jaminan" in p).toBe(false);
-    expect("catatan" in p).toBe(false);
-  });
-
-  it("buildAkadPayload keeps provided optional fields", () => {
-    const p = buildAkadPayload({ ...baseInput, margin: 600_000, jaminan: "BPKB", catatan: "tes" });
-    expect(p.margin).toBe(600_000);
-    expect(p.jaminan).toBe("BPKB");
-    expect(p.catatan).toBe("tes");
+    for (const dead of ["anggota", "produk", "akad", "pokok_pembiayaan", "tenor_bulan", "margin", "jaminan", "catatan"]) {
+      expect(dead in p).toBe(false);
+    }
   });
 });

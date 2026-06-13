@@ -22,6 +22,8 @@ export interface MasterConfig {
 }
 
 const KATEGORI_FATWA = ["Akad Pembiayaan", "Akad Simpanan", "Multiguna", "Lainnya"];
+// Exact backend Select values (jenis_dana_zis.json) — incl. "Infaq Sedekah".
+const KATEGORI_DANA_ZIS = ["Zakat", "Infaq Sedekah", "Wakaf"];
 const JENIS_DENOMINASI = ["Kertas", "Koin"];
 const TIPE_SANCTIONS = ["DTTOT", "PEP", "OFAC", "UN", "EU", "Lainnya"];
 const KATEGORI_MERCHANT = ["kantin", "toko", "lainnya"];
@@ -29,7 +31,7 @@ const STATUS_MERCHANT = ["aktif", "nonaktif"];
 
 export const MASTER_CONFIGS: MasterConfig[] = [
   {
-    doctype: "Fatwa DSN-MUI",
+    doctype: "Fatwa DSN MUI",
     label: "Fatwa DSN-MUI",
     singular: "Fatwa",
     fields: [
@@ -59,7 +61,7 @@ export const MASTER_CONFIGS: MasterConfig[] = [
     fields: [
       { name: "nama", label: "Nama", type: "data", required: true, placeholder: "100rb" },
       { name: "nilai", label: "Nilai (Rp)", type: "currency", required: true },
-      { name: "jenis", label: "Jenis", type: "select", options: JENIS_DENOMINASI },
+      { name: "jenis", label: "Jenis", type: "select", required: true, options: JENIS_DENOMINASI },
       { name: "urutan", label: "Urutan", type: "int", required: true },
       { name: "aktif", label: "Aktif", type: "check" },
     ],
@@ -105,9 +107,9 @@ export const MASTER_CONFIGS: MasterConfig[] = [
     singular: "Merchant",
     fields: [
       { name: "nama_merchant", label: "Nama Merchant", type: "data", required: true },
-      { name: "nasabah", label: "Nasabah (link)", type: "data", required: true, placeholder: "NSB-…" },
-      { name: "user", label: "User (link)", type: "data", required: true, placeholder: "email user" },
-      { name: "rekening_settlement", label: "Rekening Settlement", type: "data", required: true, placeholder: "REK-…" },
+      { name: "nasabah", label: "Nasabah", type: "link", required: true, linkDoctype: "Nasabah" },
+      { name: "user", label: "User", type: "link", required: true, linkDoctype: "User", linkLabelField: "full_name" },
+      { name: "rekening_settlement", label: "Rekening Settlement", type: "link", required: true, linkDoctype: "Rekening Simpanan" },
       { name: "kategori", label: "Kategori", type: "select", required: true, options: KATEGORI_MERCHANT },
       { name: "status", label: "Status", type: "select", required: true, options: STATUS_MERCHANT },
     ],
@@ -118,6 +120,23 @@ export const MASTER_CONFIGS: MasterConfig[] = [
       { key: "nasabah", header: "Nasabah" },
       { key: "kategori", header: "Kategori" },
       { key: "status", header: "Status" },
+    ],
+  },
+  {
+    doctype: "Jenis Dana ZIS",
+    label: "Jenis Dana ZIS",
+    singular: "Jenis Dana",
+    fields: [
+      { name: "nama", label: "Nama", type: "data", required: true, placeholder: "Zakat Maal" },
+      { name: "kategori", label: "Kategori", type: "select", required: true, options: KATEGORI_DANA_ZIS },
+      { name: "mustahiq_wajib", label: "Wajib 8 Asnaf (Zakat)", type: "check" },
+    ],
+    listFields: ["name", "nama", "kategori", "mustahiq_wajib"],
+    searchFields: ["name", "nama"],
+    columns: [
+      { key: "nama", header: "Nama" },
+      { key: "kategori", header: "Kategori" },
+      { key: "mustahiq_wajib", header: "Wajib Asnaf", format: "check" },
     ],
   },
 ];

@@ -21,16 +21,13 @@ type Row = {
 
 const STATUS_TONE: Record<string, "success" | "neutral" | "danger" | "warning"> = {
   Aktif: "success",
-  "Non-aktif": "neutral",
   Keluar: "danger",
-  Pending: "warning",
 };
 
 const JENIS_TONE: Record<string, "brand" | "success" | "neutral" | "warning"> = {
-  Siswa: "brand",
-  Guru: "success",
-  Staff: "neutral",
-  "Orang Tua": "warning",
+  Anggota: "brand",
+  "Calon Anggota": "warning",
+  "Anggota Luar Biasa": "neutral",
 };
 
 const COLUMNS: Column<Row>[] = [
@@ -110,7 +107,7 @@ function KoperasiDaftarPage() {
           key: "status",
           label: "Status",
           field: "status",
-          options: ["Semua", "Aktif", "Non-aktif", "Keluar", "Pending"].map((v) => ({
+          options: ["Semua", "Aktif", "Keluar"].map((v) => ({
             value: v,
             label: v,
           })),
@@ -119,7 +116,7 @@ function KoperasiDaftarPage() {
           key: "jenis",
           label: "Jenis",
           field: "jenis_anggota",
-          options: ["Semua", "Siswa", "Guru", "Staff", "Orang Tua"].map((v) => ({
+          options: ["Semua", "Anggota", "Calon Anggota", "Anggota Luar Biasa"].map((v) => ({
             value: v,
             label: v,
           })),

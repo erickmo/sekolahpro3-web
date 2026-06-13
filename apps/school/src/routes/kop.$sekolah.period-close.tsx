@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useSession } from "@sekolahpro/auth";
 import { Badge, Button, type Column } from "@sekolahpro/ui";
 import { ResourceListPage } from "../components/ResourceListPage";
 import { GenericFormModal, type MasterField } from "../components/koperasi-master/GenericFormModal";
@@ -31,14 +30,14 @@ const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> 
   Reopened: "warning",
 };
 
+// nama_periode adalah field read-only (derivasi autoname PTK-{YYYY}-{MM});
+// status default Open dari backend — keduanya tidak dikirim dari form.
 const CREATE_FIELDS: MasterField[] = [
-  { name: "nama_periode", label: "Nama Periode", type: "data", required: true, placeholder: "Mei 2026" },
   { name: "tanggal_mulai", label: "Tanggal Mulai", type: "date", required: true },
   { name: "tanggal_akhir", label: "Tanggal Akhir", type: "date", required: true },
 ];
 
 function PeriodClosePage() {
-  const session = useSession();
   const [createOpen, setCreateOpen] = useState(false);
   const [actionRow, setActionRow] = useState<Row | null>(null);
   const [actionTarget, setActionTarget] = useState<"Closed" | "Reopened" | null>(null);
@@ -122,11 +121,11 @@ function PeriodClosePage() {
               : "Reopen membuka kembali periode untuk koreksi. Perlu approval ulang saat tutup."
           }
           extraFields={[
-            { name: "catatan", label: "Catatan", type: "text", required: actionTarget === "Reopened", placeholder: "Alasan…" },
+            actionTarget === "Closed"
+              ? { name: "catatan", label: "Catatan", type: "text", placeholder: "Catatan (opsional)…" }
+              : { name: "alasan", label: "Alasan Reopen", type: "text", required: true, placeholder: "Alasan…" },
           ]}
-          timestampField={actionTarget === "Closed" ? "tanggal_tutup" : undefined as unknown as string}
-          operatorField="oleh_user"
-          currentUser={session.user ?? undefined}
+          docMethod={actionTarget === "Closed" ? "tutup" : "reopen"}
         />
       ) : null}
     </>
