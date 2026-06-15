@@ -16,7 +16,7 @@ describe("mapComponentDoc", () => {
     const ui = mapComponentDoc(doc);
     expect(ui.auto_generate).toBe(true);
     expect(ui.is_active).toBe(true);
-    expect(ui.rates[0].nominal).toBe(100000);
+    expect(ui.rates[0]?.nominal).toBe(100000);
   });
 
   it("omits jenjang when absent", () => {
