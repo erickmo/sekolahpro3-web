@@ -301,7 +301,17 @@ class SchoolFeeComponent(Document):
             if row.tingkat in seen:
                 frappe.throw(_("Tingkat {0} duplikat").format(row.tingkat))
             seen.add(row.tingkat)
+
+    @frappe.whitelist()
+    def generate_invoices(self, periode, dry_run=0):
+        """Generate THIS component's invoices for `periode`, called from the FE
+        via Frappe's standard `run_doc_method` transport (no bespoke endpoint).
+        Delegates to the shared fan-out so the scheduler reuses identical logic."""
+        from vernon_accounting.accounting.api.fee_generation import generate_for_component
+        return generate_for_component(self, periode, dry_run=bool(int(dry_run)))
 ```
+
+> NOTE: the `generate_invoices` instance method depends on `generate_for_component` (Task A5). It is added here but only exercised once A5 lands — its own test lives in Task A5.
 
 - [ ] **Step 6: Run test to verify it passes**
 ```bash
@@ -525,10 +535,11 @@ Expected: FAIL — `ModuleNotFoundError: fee_generation`.
 
 `fee_generation.py`:
 ```python
-# Fee-invoice generator: fans a School Fee Component's per-tingkat rates out
-# into School Fee Invoice rows for one period. Module-level (not an instance
-# method) because it orchestrates ACROSS components and is called by two
-# callers: the whitelisted manual endpoint and the daily scheduler.
+# Fee-invoice fan-out: turns a School Fee Component's per-tingkat rates into
+# School Fee Invoice rows for one period. `generate_for_component` is the core
+# unit, reused by TWO callers: the component's whitelisted `generate_invoices`
+# doc method (FE via run_doc_method) and the daily scheduler. No bespoke HTTP
+# endpoint — generation rides Frappe's standard run_doc_method transport.
 import frappe
 from frappe import _
 
@@ -537,6 +548,11 @@ from vernon_accounting.accounting.api.fee_period import normalize_period
 INVOICE = "School Fee Invoice"
 COMPONENT = "School Fee Component"
 GENERATED_STATUS = "Belum Dibayar"
+
+
+def _empty_summary():
+    return {"created": 0, "skipped": 0, "total_amount": 0,
+            "by_component": [], "warnings": [], "errors": []}
 
 
 def _resolve_sekolah(company: str) -> str:
@@ -571,80 +587,66 @@ def _exists(student, fee_component, periode, company) -> bool:
     }))
 
 
-def generate_fee_invoices(company, tahun_ajaran, periode, ritme=None,
-                          components=None, dry_run=False):
-    """Generate School Fee Invoices from active components for one period.
+def generate_for_component(comp, periode, dry_run=False):
+    """Generate invoices for ONE component's rates in a period.
 
     Returns {created, skipped, total_amount, by_component, warnings, errors}.
     Idempotent: an existing (student, fee_component, periode, company) is skipped.
+    `comp` is a School Fee Component document (the doc method passes `self`).
     """
-    sekolah = _resolve_sekolah(company)
-    ta_nama = frappe.db.get_value("Tahun Ajaran", tahun_ajaran, "nama") or tahun_ajaran
+    sekolah = _resolve_sekolah(comp.company)
+    ta_nama = frappe.db.get_value("Tahun Ajaran", comp.tahun_ajaran, "nama") or comp.tahun_ajaran
+    period = normalize_period(comp.ritme, periode, ta_nama, comp.nama_komponen,
+                              comp.due_day or 10)
+    summary = _empty_summary()
+    c_created = c_amount = 0
+    for rate in comp.rates:
+        students = _active_students(sekolah, comp.tahun_ajaran, rate.tingkat, comp.jenjang)
+        if not students:
+            summary["warnings"].append(
+                _("Tidak ada siswa aktif di tingkat {0} ({1})").format(
+                    rate.tingkat, comp.nama_komponen))
+            continue
+        for nis, nama, nama_rombel in students:
+            if _exists(nis, comp.name, period.marker, comp.company):
+                summary["skipped"] += 1
+                continue
+            if not dry_run:
+                try:
+                    _build_invoice(comp, period, nis, nama, nama_rombel, ta_nama, rate.nominal)
+                except Exception as exc:  # collect, do not abort the batch
+                    summary["errors"].append(f"{nis}: {exc}")
+                    continue
+            c_created += 1
+            c_amount += rate.nominal
+    summary["created"] = c_created
+    summary["total_amount"] = c_amount
+    summary["by_component"].append(
+        {"nama": comp.nama_komponen, "count": c_created, "amount": c_amount})
+    return summary
 
+
+def generate_fee_invoices(company, tahun_ajaran, periode, ritme=None,
+                          components=None, dry_run=False):
+    """Multi-component fan-out (scheduler + tests): select active components for
+    (company, TA[, ritme][, names]) and merge each `generate_for_component`."""
     filters = {"company": company, "tahun_ajaran": tahun_ajaran, "is_active": 1}
     if ritme:
         filters["ritme"] = ritme
     if components:
         filters["name"] = ["in", components]
-    comp_names = [c.name for c in frappe.get_all(COMPONENT, filters=filters, fields=["name"])]
+    names = [c.name for c in frappe.get_all(COMPONENT, filters=filters, fields=["name"])]
 
-    summary = {"created": 0, "skipped": 0, "total_amount": 0,
-               "by_component": [], "warnings": [], "errors": []}
-
-    for cname in comp_names:
-        comp = frappe.get_doc(COMPONENT, cname)
-        period = normalize_period(comp.ritme, periode, ta_nama, comp.nama_komponen,
-                                  comp.due_day or 10)
-        c_created = c_amount = 0
-        for rate in comp.rates:
-            students = _active_students(sekolah, tahun_ajaran, rate.tingkat, comp.jenjang)
-            if not students:
-                summary["warnings"].append(
-                    _("Tidak ada siswa aktif di tingkat {0} ({1})").format(
-                        rate.tingkat, comp.nama_komponen))
-                continue
-            for nis, nama, nama_rombel in students:
-                if _exists(nis, comp.name, period.marker, company):
-                    summary["skipped"] += 1
-                    continue
-                if not dry_run:
-                    try:
-                        _build_invoice(comp, period, nis, nama, nama_rombel, ta_nama)
-                    except Exception as exc:  # collect, do not abort the batch
-                        summary["errors"].append(f"{nis}: {exc}")
-                        continue
-                c_created += 1
-                c_amount += rate.nominal
-        summary["created"] += c_created
-        summary["total_amount"] += c_amount
-        summary["by_component"].append(
-            {"nama": comp.nama_komponen, "count": c_created, "amount": c_amount})
-
+    summary = _empty_summary()
+    for name in names:
+        part = generate_for_component(frappe.get_doc(COMPONENT, name), periode, dry_run=dry_run)
+        for k in ("created", "skipped", "total_amount"):
+            summary[k] += part[k]
+        for k in ("by_component", "warnings", "errors"):
+            summary[k].extend(part[k])
     return summary
 
 
-def _build_invoice(comp, period, nis, nama, nama_rombel, ta_nama):
-    nominal = next(r.nominal for r in comp.rates
-                   if r.tingkat == _tingkat_of(nama_rombel, comp))
-    frappe.get_doc({
-        "doctype": INVOICE, "posting_date": period.posting_date,
-        "due_date": period.due_date, "company": comp.company,
-        "student": nis, "student_name": nama, "kelas": nama_rombel,
-        "judul": period.label, "tahun_ajaran": ta_nama,
-        "jumlah": nominal, "status": GENERATED_STATUS,
-        "receivable_account": comp.receivable_account,
-        "income_account": comp.income_account,
-        "fee_component": comp.name, "periode": period.marker,
-        "remarks": f"Auto-generate dari {comp.name} periode {period.marker}",
-    }).insert(ignore_permissions=True)
-```
-
-> The `_build_invoice` helper above re-derives nominal awkwardly. Replace with passing `nominal` explicitly from the caller loop — adjust the call to `_build_invoice(comp, period, nis, nama, nama_rombel, ta_nama, rate.nominal)` and drop `_tingkat_of`. (Kept the loop's `rate.nominal` in scope — pass it through.)
-
-- [ ] **Step 3b: Fix the nominal pass-through (apply during impl)**
-
-Change the loop call to `_build_invoice(comp, period, nis, nama, nama_rombel, ta_nama, rate.nominal)` and the signature to accept `nominal` and use it directly:
-```python
 def _build_invoice(comp, period, nis, nama, nama_rombel, ta_nama, nominal):
     frappe.get_doc({
         "doctype": INVOICE, "posting_date": period.posting_date,
@@ -659,16 +661,23 @@ def _build_invoice(comp, period, nis, nama, nama_rombel, ta_nama, nominal):
     }).insert(ignore_permissions=True)
 ```
 
-- [ ] **Step 4: Add the whitelisted endpoint** (append to `fee_generation.py`)
+- [ ] **Step 4: No bespoke endpoint — add the doc-method test**
+
+The FE triggers generation through the component's whitelisted `generate_invoices`
+doc method (Task A2) via Frappe's standard `run_doc_method` — there is **no** new
+`api.py` endpoint (per the "use the resource/standard API, don't add new APIs"
+constraint). Add a test that exercises the doc-method path. Append to
+`test_fee_generation.py`:
 ```python
-@frappe.whitelist()
-def generate(company, tahun_ajaran, periode, ritme=None, components=None, dry_run=0):
-    """HTTP entry: validate access then delegate to generate_fee_invoices."""
-    if not frappe.has_permission(INVOICE, "create"):
-        frappe.throw(_("Tidak punya izin membuat tagihan"), frappe.PermissionError)
-    comps = frappe.parse_json(components) if isinstance(components, str) else components
-    return generate_fee_invoices(company, tahun_ajaran, periode, ritme=ritme,
-                                 components=comps, dry_run=bool(int(dry_run)))
+    def test_doc_method_generates_for_single_component(self):
+        comp = make_fee_component(nama_komponen="Seragam", ritme="Sekali",
+                                  rates=[(1, 500000)])
+        s = comp.generate_invoices(periode="", dry_run=0)
+        self.assertEqual(s["created"], 2)  # FEE-001, FEE-002 at tingkat 1
+        self.assertEqual(s["total_amount"], 1000000)
+        self.assertEqual(
+            frappe.db.count("School Fee Invoice",
+                            {"company": TEST_SEKOLAH, "fee_component": comp.name}), 2)
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
@@ -676,12 +685,13 @@ def generate(company, tahun_ajaran, periode, ritme=None, components=None, dry_ru
 docker exec frappe-backend-1 bench --site sekolahpro.localhost run-tests \
   --module vernon_accounting.accounting.api.test_fee_generation
 ```
-Expected: PASS (5 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 6: Commit**
 ```bash
-git add accounting/api/fee_generation.py accounting/api/test_fee_generation.py
-git commit -m "feat(accounting): generator tagihan biaya (fan-out per tingkat, idempoten) + endpoint"
+git add accounting/api/fee_generation.py accounting/api/test_fee_generation.py \
+        accounting/doctype/school_fee_component/school_fee_component.py
+git commit -m "feat(accounting): generator tagihan biaya (fan-out per tingkat, idempoten) + doc method"
 ```
 
 ---
@@ -821,7 +831,7 @@ Branch `feat/keuangan-struktur-biaya`. Run all FE commands from `apps/sekolahpro
 `fee-structure.test.ts`:
 ```ts
 import { describe, it, expect } from "vitest";
-import { summarizePreview, type GenerateSummary } from "./fee-structure";
+import { summarizePreview, mergeSummaries, type GenerateSummary } from "./fee-structure";
 
 describe("summarizePreview", () => {
   it("totals count and amount across components", () => {
@@ -837,6 +847,35 @@ describe("summarizePreview", () => {
     expect(r.totalSiswa).toBe(3);
     expect(r.totalRupiah).toBe(350000);
     expect(r.lines).toHaveLength(2);
+  });
+});
+
+describe("mergeSummaries", () => {
+  it("sums counts/amounts and concatenates lines + warnings", () => {
+    const a: GenerateSummary = {
+      created: 2, skipped: 0, total_amount: 200000,
+      by_component: [{ nama: "SPP", count: 2, amount: 200000 }],
+      warnings: ["w1"], errors: [],
+    };
+    const b: GenerateSummary = {
+      created: 1, skipped: 3, total_amount: 150000,
+      by_component: [{ nama: "Seragam", count: 1, amount: 150000 }],
+      warnings: [], errors: ["e1"],
+    };
+    const m = mergeSummaries([a, b]);
+    expect(m.created).toBe(3);
+    expect(m.skipped).toBe(3);
+    expect(m.total_amount).toBe(350000);
+    expect(m.by_component).toHaveLength(2);
+    expect(m.warnings).toEqual(["w1"]);
+    expect(m.errors).toEqual(["e1"]);
+  });
+
+  it("returns an empty summary for no inputs", () => {
+    expect(mergeSummaries([])).toEqual({
+      created: 0, skipped: 0, total_amount: 0,
+      by_component: [], warnings: [], errors: [],
+    });
   });
 });
 ```
@@ -897,6 +936,25 @@ export function summarizePreview(s: GenerateSummary): {
   lines: GenerateSummaryLine[];
 } {
   return { totalSiswa: s.created, totalRupiah: s.total_amount, lines: s.by_component };
+}
+
+/**
+ * Merge per-component generator summaries into one. The FE generates one
+ * component at a time via run_doc_method (no batch endpoint), so the modal
+ * folds the results here before previewing/confirming.
+ */
+export function mergeSummaries(parts: GenerateSummary[]): GenerateSummary {
+  return parts.reduce<GenerateSummary>(
+    (acc, p) => ({
+      created: acc.created + p.created,
+      skipped: acc.skipped + p.skipped,
+      total_amount: acc.total_amount + p.total_amount,
+      by_component: [...acc.by_component, ...p.by_component],
+      warnings: [...acc.warnings, ...p.warnings],
+      errors: [...acc.errors, ...p.errors],
+    }),
+    { created: 0, skipped: 0, total_amount: 0, by_component: [], warnings: [], errors: [] },
+  );
 }
 
 export const MOCK_FEE_COMPONENTS: FeeComponent[] = [
@@ -965,16 +1023,16 @@ Expected: FAIL — cannot resolve module.
 ```ts
 /**
  * Live (Frappe-backed) data for Struktur Biaya. Lists School Fee Component
- * scoped to the active company, and calls the whitelisted generator endpoint.
- * Mirrors `data/keuangan-live.ts` (useResourceList + useActiveCompany).
+ * scoped to the active company, and triggers generation through the component's
+ * `generate_invoices` doc method via Frappe's standard run_doc_method transport
+ * (no bespoke endpoint). Mirrors `data/keuangan-live.ts` (useResourceList).
  */
-import { useResourceList, useFrappeMutation } from "@sekolahpro/api-client";
+import { useResourceList, runDocMethod } from "@sekolahpro/api-client";
 import { useActiveCompany } from "../lib/akuntansi-scope";
 import type { FeeComponent, GenerateSummary, Ritme } from "./fee-structure";
 
 const SCHOOL_FEE_COMPONENT = "School Fee Component";
-const GENERATE_METHOD =
-  "vernon_accounting.accounting.api.fee_generation.generate";
+const GENERATE_DOC_METHOD = "generate_invoices";
 
 export interface FeeRateDoc {
   tingkat: number;
@@ -1030,18 +1088,23 @@ export function useFeeComponentsLive() {
   };
 }
 
-export interface GenerateArgs extends Record<string, unknown> {
-  company: string;
-  tahun_ajaran: string;
-  periode: string;
-  ritme?: string;
-  components?: string[];
-  dry_run: 0 | 1;
-}
-
-/** Mutation hook to call the generator (dry-run preview or real). */
-export function useGenerateInvoices() {
-  return useFrappeMutation<GenerateArgs, GenerateSummary>(GENERATE_METHOD);
+/**
+ * Generate invoices for ONE component (dry-run preview or real) through the
+ * `generate_invoices` doc method. The route loops selected components and folds
+ * the per-component summaries with `mergeSummaries` — keeping generation on the
+ * resource/standard API surface (run_doc_method), no custom endpoint.
+ */
+export function generateForComponent(
+  componentName: string,
+  periode: string,
+  dryRun: boolean,
+): Promise<GenerateSummary> {
+  return runDocMethod<GenerateSummary>({
+    dt: SCHOOL_FEE_COMPONENT,
+    dn: componentName,
+    method: GENERATE_DOC_METHOD,
+    args: { periode, dry_run: dryRun ? 1 : 0 },
+  });
 }
 ```
 
@@ -1053,7 +1116,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 ```bash
 git add apps/school/src/data/fee-structure-live.ts apps/school/src/data/fee-structure-live.test.ts
-git commit -m "feat(keuangan): live layer komponen biaya + hook generate"
+git commit -m "feat(keuangan): live layer komponen biaya + generateForComponent (run_doc_method)"
 ```
 
 ---
@@ -1114,7 +1177,8 @@ Expected: FAIL — cannot resolve `../GenerateTagihanModal`.
 /**
  * Modal: pick a period, preview (dry-run) the affected students + total per
  * component, then confirm to create the invoices. `onGenerate` is injected so
- * the component is pure-testable; the route wires it to useGenerateInvoices.
+ * the component is pure-testable; the route wires it to runGenerate (which
+ * fans out one run_doc_method call per active component, then merges).
  */
 import { useState } from "react";
 import { Modal, Button } from "@sekolahpro/ui";
@@ -1254,9 +1318,8 @@ import { useState } from "react";
 import { Button } from "@sekolahpro/ui";
 import { ModuleShell } from "../components/shell/ModuleShell";
 import { GenerateTagihanModal } from "../components/keuangan/GenerateTagihanModal";
-import { useFeeComponentsLive, useGenerateInvoices } from "../data/fee-structure-live";
-import { useActiveCompany } from "../lib/akuntansi-scope";
-import type { FeeComponent, GenerateSummary } from "../data/fee-structure";
+import { useFeeComponentsLive, generateForComponent } from "../data/fee-structure-live";
+import { mergeSummaries, type FeeComponent, type GenerateSummary } from "../data/fee-structure";
 import { useKeuanganRole } from "../lib/keuanganRole";
 
 const RUPIAH = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 });
@@ -1293,15 +1356,24 @@ export function StrukturBiayaView(props: {
 }
 
 function StrukturBiayaRoute() {
-  const company = useActiveCompany();
   const { components } = useFeeComponentsLive();
-  const generate = useGenerateInvoices();
   const role = useKeuanganRole();
   const [modalOpen, setModalOpen] = useState(false);
   const periode = new Date().toISOString().slice(0, 7); // current YYYY-MM
 
   function onConfirmed(_s: GenerateSummary) {
     setModalOpen(false);
+  }
+
+  // Generate each active component via its doc method, then fold the results.
+  // TA/sekolah are derived server-side from each component doc — no client-side
+  // company/TA threading needed.
+  async function runGenerate({ periode: p, dry_run }: { periode: string; dry_run: 0 | 1 }) {
+    const active = components.filter((c) => c.is_active);
+    const parts = await Promise.all(
+      active.map((c) => generateForComponent(c.name, p, dry_run === 1)),
+    );
+    return mergeSummaries(parts);
   }
 
   return (
@@ -1315,10 +1387,7 @@ function StrukturBiayaRoute() {
         open={modalOpen}
         periode={periode}
         onClose={() => setModalOpen(false)}
-        onGenerate={(args) =>
-          generate.mutateAsync({
-            ...args, company, tahun_ajaran: "", ritme: "Bulanan",
-          } as Parameters<typeof generate.mutateAsync>[0])}
+        onGenerate={runGenerate}
         onConfirmed={onConfirmed}
       />
     </ModuleShell>
@@ -1330,7 +1399,7 @@ export const Route = createFileRoute("/sch/$sekolah/keuangan/biaya")({
 });
 ```
 
-> During impl, verify against the existing `keuangan.*.tsx` routes: (a) the exact `ModuleShell` import path + required props, (b) `useKeuanganRole` location/shape (or substitute the established keuangan role helper — grep `KeuanganRoleChips` for the source), (c) that `tahun_ajaran` is sourced from the active TA (the modal needs a real TA; thread it from a TA picker or the active-TA hook rather than `""`). Fix these three before the route is functional — the unit test covers `StrukturBiayaView` only.
+> During impl, verify against the existing `keuangan.*.tsx` routes: (a) the exact `ModuleShell` import path + required props, (b) `useKeuanganRole` location/shape (or substitute the established keuangan role helper — grep `KeuanganRoleChips` for the source). The `StrukturBiayaView` unit test covers presentation only; `runGenerate` fans out one `run_doc_method` call per active component (a handful per school) and folds them with `mergeSummaries` — no batch endpoint.
 
 - [ ] **Step 4: Generate the route tree + run test**
 ```bash
@@ -1467,4 +1536,5 @@ gh pr create --fill --base main
 
 - Spec §5 model → Tasks A1/A2/A3. §6 generator → A4 (period) + A5 (fan-out, idempotency, dry_run, ritme filter, scope). §7 scheduler → A6. §8 FE → B1–B5. §9 errors/perms → A2 validation + A5 whitelist permission + warnings. §10 tests → each task's TDD steps. §11 docs → D1–D4. §12 open items → resolved in "Verified codebase facts" (resolver=identity, TA join by name, autoname format set, scoping mirrors School Fee Invoice).
 - Type consistency: `GenerateSummary`/`summarizePreview`/`by_component[].{nama,count,amount}` consistent across `fee-structure.ts`, the modal, the live layer, and the BE summary dict keys.
-- Known impl-time verifications flagged inline (Modal/Button props, ModuleShell path, useKeuanganRole source, active-TA threading, Account/Company reqd fields, docker bind-mount visibility) — these need a 1-line grep each, not a redesign.
+- Known impl-time verifications flagged inline (Modal/Button props, ModuleShell path, useKeuanganRole source, Account/Company reqd fields, docker bind-mount visibility) — these need a 1-line grep each, not a redesign.
+- **No-new-API constraint (user):** generation rides Frappe's standard `run_doc_method` via the component's whitelisted `generate_invoices` doc method (vernon Priority 1). Component CRUD uses the resource API (doc list/create/update). No bespoke `api.py` endpoint exists. This refines spec §6 (which described a whitelisted module endpoint) — the plan is authoritative.
