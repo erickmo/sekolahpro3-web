@@ -20,7 +20,8 @@
 
   <h2>Arsitektur</h2>
   <ul>
-    <li><strong>Backend:</strong> Frappe module <code>vernon_accounting</code> (repo terpisah) — 3 doctype baru: <code>School Fee Invoice</code> (Tagihan), <code>School Expense</code> (Pengeluaran), dan <code>School Fee Payment</code> (Pembayaran, derivatif Payment Entry)</li>
+    <li><strong>Backend:</strong> Frappe module <code>vernon_accounting</code> (repo terpisah) — doctype: <code>School Fee Invoice</code> (Tagihan), <code>School Expense</code> (Pengeluaran), <code>School Fee Payment</code> (Pembayaran, derivatif Payment Entry), serta <code>School Fee Component</code> (+ child <code>School Fee Component Rate</code>) untuk struktur biaya per tingkat</li>
+    <li><strong>Struktur Biaya:</strong> definisi komponen biaya (SPP/Uang Pangkal/Seragam) ber-ritme + harga per tingkat → generator fan-out ke <code>School Fee Invoice</code>. Generate dipanggil FE via doc method <code>generate_invoices</code> (<code>run_doc_method</code>), tanpa endpoint baru. Lihat <code>routes/sch.$sekolah.keuangan.biaya.tsx</code> + <code>data/fee-structure-live.ts</code> + BE <code>accounting/api/fee_generation.py</code></li>
     <li><strong>Frontend:</strong> SekolahPro web app (<code>apps/school</code>) — satu hub "Keuangan" menyatukan dua route-tree: <code>/keuangan/*</code> (operasional, TanStack file-based) dan <code>/akuntansi/*</code> (accounting, 35 halaman redesain)</li>
     <li><strong>Route prefix operasional:</strong> <code>/sch/$sekolah/keuangan</code> → Tagihan, Pembayaran, Pengeluaran, Buku Kas, Dashboard</li>
     <li><strong>Route prefix akuntansi:</strong> <code>/sch/$sekolah/akuntansi</code> → Buku Besar, Anggaran, Pajak, Referensi</li>
@@ -42,7 +43,7 @@
       <tr>
         <td><code>School Fee Invoice</code></td>
         <td>Bendahara, Kasir</td>
-        <td>student, posting_date, due_date, judul, jumlah, dibayar, status (Draft|Belum Dibayar|Sebagian|Lunas|Dibatalkan), kelas, tahun_ajaran, company</td>
+        <td>student, posting_date, due_date, judul, jumlah, dibayar, status (Draft|Belum Dibayar|Sebagian|Lunas|Dibatalkan), kelas, tahun_ajaran, company, fee_component, periode (2 terakhir = jejak generator)</td>
         <td>Live (vernon_accounting)</td>
       </tr>
       <tr>
@@ -55,6 +56,18 @@
         <td><code>School Expense</code></td>
         <td>Bendahara, Akuntan</td>
         <td>posting_date, kategori, deskripsi, jumlah, penerima, metode, approver, status (Draft|Approval|Disetujui|Ditolak|Dibayar), company</td>
+        <td>Live (vernon_accounting)</td>
+      </tr>
+      <tr>
+        <td><code>School Fee Component</code></td>
+        <td>Bendahara, Akuntan</td>
+        <td>company, tahun_ajaran, jenjang, nama_komponen, ritme (Bulanan|Per Semester|Sekali), receivable_account, income_account, due_day, auto_generate, is_active, rates (child)</td>
+        <td>Live (vernon_accounting)</td>
+      </tr>
+      <tr>
+        <td><code>School Fee Component Rate</code> (child)</td>
+        <td>—</td>
+        <td>tingkat, nominal</td>
         <td>Live (vernon_accounting)</td>
       </tr>
       <tr>
@@ -82,6 +95,7 @@
     <li><strong>Company scoping:</strong> Dokumen School Fee Invoice, School Expense, School Fee Payment disaring oleh <code>company = useActiveCompany()</code> dari session aktif (<code>activeSekolah.name</code>). Admin backend harus memastikan Company dengan nama sama ada untuk setiap Sekolah.</li>
     <li><strong>Akun GL balans:</strong> On submit Tagihan → Dr Piutang (AR), Cr Pendapatan. On submit Pengeluaran → posting sesuai kategori (Gaji → Expense Gaji, dll) dengan saldo debit/kredit terjaga.</li>
     <li><strong>Status workflow Pengeluaran:</strong> Draft → Approval → Disetujui/Ditolak → Dibayar (final). Pengeluaran Draft dapat diedit; setelah submit tidak boleh edit tanpa cancel-resubmit.</li>
+    <li><strong>Struktur Biaya — generate tagihan:</strong> komponen aktif (company+TA) di-fan-out per tingkat. Pratinjau <code>dry_run</code> (jumlah siswa + total per komponen) sebelum konfirmasi. Idempoten: tagihan dengan <code>(student, fee_component, periode)</code> sama dilewati (re-run/retry aman). Tingkat tanpa siswa aktif = peringatan, bukan gagal. Periode: Bulanan <code>YYYY-MM</code>, Per Semester <code>YYYY-Ganjil|Genap</code>, Sekali per TA. Manage struktur: bendahara/akuntan/kepala; kasir read-only. <code>auto_generate</code> = scheduler harian buat SPP bulanan saat <code>due_day</code> = hari ini.</li>
     <li><strong>Visibilitas halaman per hub section:</strong> Operasional (Tagihan, Pembayaran, Pengeluaran, Buku Kas) menyorot bendahara/kasir; Akuntansi (Buku Besar, Anggaran, Pajak, Referensi) menyorot akuntan/kepala. Dashboard Ringkasan untuk semua. Navigasi hub (KeuanganHubNav) dipesan role via <code>isItemEmphasized()</code>.</li>
     <li><strong>Panduan role-aware:</strong> Setiap halaman menggunakan <code>KeuanganPageGuide</code> dengan langkah-langkah bertingkat peran (bendahara lihat prosedur approval, kasir lihat prosedur penerimaan, dll). Storage terpisah per halaman via <code>storageId</code> (localStorage namespace <code>keuangan-guide:</code>).</li>
   </ul>
@@ -93,6 +107,7 @@
     <li><strong>On-submit School Fee Invoice:</strong> Trigger GL entries (Dr Piutang, Cr Pendapatan) di vernon_accounting backend. No UI event published.</li>
     <li><strong>On-submit School Expense:</strong> Trigger GL entries sesuai kategori (Gaji → Payroll Accrual, ATK → Supplies Expense, dll). No UI event published.</li>
     <li><strong>On-submit School Fee Payment:</strong> Update parent School Fee Invoice: dekremen <code>dibayar</code> field, update status ke "Cicilan" (jika partial) atau "Lunas" (jika full). No UI event published.</li>
+    <li><strong>Generate dari School Fee Component:</strong> doc method <code>generate_invoices(periode, dry_run)</code> (atau scheduler harian untuk komponen <code>auto_generate</code>) men-fan-out per tingkat → membuat banyak <code>School Fee Invoice</code> baru (status "Belum Dibayar"). Idempoten via <code>(student, fee_component, periode, company)</code>. Membaca <code>Rombongan Belajar</code>/<code>Anggota Rombel</code> (domain Siswa) untuk resolusi siswa per tingkat.</li>
   </ul>
 
   <h3>Listens (bereaksi)</h3>
@@ -106,6 +121,7 @@
 
   <h2>Batas ruang lingkup (YAGNI)</h2>
   <ul>
+    <li><strong>Struktur Biaya — diskon/beasiswa per siswa:</strong> potongan saat generate → ditunda (rencana doctype <code>School Fee Adjustment</code>). Proration pendaftaran tengah periode → ditunda. Tampilan & bayar biaya untuk wali/siswa (portal) → fitur terpisah. Form create/edit komponen kaya di FE → sekarang halaman list + generate; CRUD via desk/resource. Lihat <a href="ADR/KEU-ADR-0002-struktur-biaya.md">KEU-ADR-0002</a>.</li>
     <li><strong>Dunning &amp; notifikasi otomatis:</strong> Kirim email reminder tagihan jatuh tempo → deferred. Notifikasi akan diimplementasikan saat email service tersedia.</li>
     <li><strong>Reconciliation engine:</strong> Match Pembayaran ke Invoice otomatis → deferred. Sekarang manual via UI (select invoice dari dropdown saat create Pembayaran).</li>
     <li><strong>Multi-currency support:</strong> Semua nilai in IDR. Multi-currency → future (enterprise).</li>

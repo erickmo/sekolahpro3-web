@@ -3,7 +3,7 @@
 - **Date:** 2026-06-15
 - **Domain:** Keuangan (FE: `apps/school`) + Accounting (BE: `vernon_accounting`)
 - **Task size:** L (new BE doctypes + generator + scheduler + new FE module, spans 2 repos)
-- **Status:** Approved design — pending implementation plan
+- **Status:** ✅ Implemented 2026-06-15 — FE PR #96 (sekolahpro3-web) + BE PR #1 (vernon_accounting), keduanya MERGED. Plan: `plans/2026-06-15-keuangan-struktur-biaya.md`. ADR: `docs/domains/keuangan/ADR/KEU-ADR-0002-struktur-biaya.md`. Catatan: generate via doc method `generate_invoices` (run_doc_method), bukan whitelisted endpoint §6 — lihat KEU-ADR-0002.
 
 ## 1. Problem
 
