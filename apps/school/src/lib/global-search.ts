@@ -38,6 +38,7 @@ interface FinanceAction {
 const FINANCE_ACTIONS: readonly FinanceAction[] = [
   { label: "Terima Pembayaran", href: "/keuangan/pembayaran", synonyms: ["terima bayar", "pembayaran", "bayar spp", "kasir"] },
   { label: "Tagihan SPP & Siswa", href: "/keuangan/tagihan", synonyms: ["tagih", "tagihan", "spp", "invoice"] },
+  { label: "Struktur Biaya", href: "/keuangan/biaya", synonyms: ["struktur biaya", "komponen biaya", "setup spp", "konfigurasi spp", "generate tagihan"] },
   { label: "Pengeluaran & Persetujuan", href: "/keuangan/pengeluaran", synonyms: ["belanja", "pengeluaran", "expense", "setujui"] },
   { label: "Buku Kas Harian", href: "/keuangan/kas", synonyms: ["buku kas", "kas", "cashbook", "setoran"] },
   { label: "Jurnal Baru", href: "/akuntansi/buku-besar/jurnal/new", synonyms: ["buat jurnal", "jurnal baru", "journal", "posting"] },

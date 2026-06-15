@@ -69,6 +69,7 @@ export const KEUANGAN_HUB_GROUPS: readonly KeuanganNavGroup[] = [
     roles: ["bendahara", "kasir"],
     items: [
       { to: "/sch/$sekolah/keuangan/tagihan", label: "Tagihan SPP & Siswa", roles: ["bendahara", "kasir"], hint: "Terbitkan & pantau tagihan siswa" },
+      { to: "/sch/$sekolah/keuangan/biaya", label: "Struktur Biaya", roles: ["bendahara", "akuntan"], hint: "Komponen biaya & generate tagihan" },
       { to: "/sch/$sekolah/akuntansi/buku-besar/jurnal/new", label: "Jurnal Penyesuaian", roles: ["akuntan"], hint: "Koreksi/penagihan manual" },
     ],
   },
