@@ -22,6 +22,8 @@ const TIPE_OPTIONS = [
   { value: "emoney", label: "E-Money (wallet)" },
 ];
 const STATUS_AKTIF = "aktif";
+// A debit card MUST be backed by a savings account to settle against.
+const TIPE_DEBIT = "debit";
 
 interface Props {
   open: boolean;
@@ -59,6 +61,9 @@ export function KartuCreateModal({ open, onClose, onCreated }: Props) {
     const errs: Record<string, string> = {};
     if (!form.uid_nfc.trim()) errs.uid_nfc = "Wajib";
     if (!form.anggota.trim()) errs.anggota = "Wajib";
+    if (form.tipe_kartu === TIPE_DEBIT && !form.rekening_simpanan.trim()) {
+      errs.rekening_simpanan = "Wajib untuk kartu debit";
+    }
     if (Object.keys(errs).length) { setErr(errs); return; }
     setErr({});
     const payload: Record<string, unknown> = {
@@ -119,7 +124,7 @@ export function KartuCreateModal({ open, onClose, onCreated }: Props) {
               placeholder="Cari anggota…"
             />
           </FormField>
-          <FormField label="Rekening Simpanan" hint="Wajib untuk kartu debit">
+          <FormField label="Rekening Simpanan" hint="Wajib untuk kartu debit" error={err.rekening_simpanan}>
             <SearchableSelect
               value={form.rekening_simpanan}
               onChange={(v) => setForm({ ...form, rekening_simpanan: v })}

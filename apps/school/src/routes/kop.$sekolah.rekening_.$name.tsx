@@ -40,7 +40,14 @@ interface TransaksiRow {
   jenis: string;
   jumlah: number;
   tanggal: string;
+  approval_status?: string;
 }
+
+// Approval states worth flagging on the row (posted/auto need no badge).
+const APPROVAL_TONE: Record<string, "warning" | "danger"> = {
+  "Menunggu Approval": "warning",
+  Ditolak: "danger",
+};
 
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
   Aktif: "success",
@@ -68,7 +75,7 @@ function RekeningDetailPage() {
 
   const doc = useResourceDoc<RekeningDoc>("Rekening Simpanan", name);
   const tx = useResourceList<TransaksiRow>("Transaksi Simpanan", {
-    fields: ["name", "rekening_simpanan", "jenis", "jumlah", "tanggal"],
+    fields: ["name", "rekening_simpanan", "jenis", "jumlah", "tanggal", "approval_status"],
     filters: [["rekening_simpanan", "=", name]],
     order_by: "`tanggal` desc",
     limit_page_length: 50,
@@ -204,11 +211,16 @@ function RekeningDetailPage() {
               <EmptyState title="Belum ada transaksi" description="Catat transaksi pertama untuk rekening ini." />
             ) : (
               <ul className="divide-y divide-border">
-                {(tx.data ?? []).map((t) => (
+                {(tx.data ?? []).map((t) => {
+                  const approvalTone = t.approval_status ? APPROVAL_TONE[t.approval_status] : undefined;
+                  return (
                   <li key={t.name} className="flex items-center gap-3 px-5 py-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <Badge tone={JENIS_TONE[t.jenis] ?? "neutral"}>{t.jenis}</Badge>
+                        {approvalTone ? (
+                          <Badge tone={approvalTone} dot>{t.approval_status}</Badge>
+                        ) : null}
                         <span className="font-mono text-xs text-muted-fg">{t.name}</span>
                       </div>
                       <div className="text-xs text-muted-fg mt-1">{t.tanggal}</div>
@@ -217,7 +229,8 @@ function RekeningDetailPage() {
                       <div className="text-sm font-semibold tabular-nums">{formatRupiah(t.jumlah)}</div>
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </SectionCard>

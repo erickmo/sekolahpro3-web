@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { Badge, InfoField, InfoGrid, SectionCard } from "@sekolahpro/ui";
 import { useResourceDoc } from "@sekolahpro/api-client";
 import { DetailShell, ErrorState, LoadingState, formatRupiah, formatTanggal } from "../components/koperasi-kartu/shared";
@@ -9,6 +9,7 @@ type Trx = {
   tipe: string;
   nominal: number;
   terminal_id?: string;
+  referensi?: string;
   status?: string;
   creation?: string;
 };
@@ -26,6 +27,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function EmoneyDetail() {
+  const { sekolah } = useParams({ from: "/kop/$sekolah" });
   const { name } = Route.useParams();
   const q = useResourceDoc<Trx>("Transaksi Kartu", name);
   if (q.isLoading) return <LoadingState />;
@@ -46,10 +48,18 @@ function EmoneyDetail() {
       <SectionCard title="Detail Transaksi">
         <InfoGrid cols={2}>
           <InfoField label="ID" value={<span className="font-mono">{t.name}</span>} />
-          <InfoField label="Kartu" value={<span className="font-mono">{t.kartu}</span>} />
+          <InfoField
+            label="Kartu"
+            value={
+              <Link to="/kop/$sekolah/kartu/$name" params={{ sekolah, name: t.kartu }} className="font-mono text-brand hover:underline">
+                {t.kartu}
+              </Link>
+            }
+          />
           <InfoField label="Jenis" value={<Badge tone={tone}>{TIPE_LABEL[t.tipe] ?? t.tipe}</Badge>} />
           <InfoField label="Nominal" value={<span className="tabular-nums font-semibold">{formatRupiah(t.nominal)}</span>} />
           <InfoField label="Terminal" value={t.terminal_id ?? "—"} />
+          <InfoField label="Referensi" value={t.referensi ?? "—"} />
           <InfoField label="Dibuat" value={formatTanggal(t.creation)} />
           {t.status ? <InfoField label="Status" value={<Badge tone={statusTone} dot>{STATUS_LABEL[t.status] ?? t.status}</Badge>} /> : null}
         </InfoGrid>

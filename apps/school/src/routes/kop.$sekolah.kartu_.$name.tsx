@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate, useParams} from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
@@ -46,6 +46,11 @@ const STATUS_LABEL: Record<string, string> = {
   aktif: "Aktif",
   blokir: "Blokir",
   expired: "Kedaluwarsa",
+};
+
+const TIPE_KARTU_LABEL: Record<string, string> = {
+  debit: "Debit",
+  emoney: "E-Money",
 };
 
 function KartuDetail() {
@@ -161,7 +166,20 @@ function KartuDetail() {
         <InfoGrid cols={2}>
           <InfoField label="No. Kartu" value={<span className="font-mono">{k.name}</span>} />
           <InfoField label="UID NFC" value={<span className="font-mono">{k.uid_nfc}</span>} />
+          <InfoField label="Tipe Kartu" value={k.tipe_kartu ? (TIPE_KARTU_LABEL[k.tipe_kartu] ?? k.tipe_kartu) : "—"} />
           <InfoField label="Anggota" value={k.anggota} />
+          <InfoField
+            label="Rekening Simpanan"
+            value={
+              k.rekening_simpanan ? (
+                <Link to="/kop/$sekolah/rekening/$name" params={{ sekolah, name: k.rekening_simpanan }} className="font-mono text-brand hover:underline">
+                  {k.rekening_simpanan}
+                </Link>
+              ) : (
+                "—"
+              )
+            }
+          />
           <InfoField label="Status" value={<Badge tone={STATUS_TONE[k.status] ?? "neutral"} dot>{STATUS_LABEL[k.status] ?? k.status}</Badge>} />
           <InfoField label="Dibuat" value={formatTanggal(k.creation)} />
           <InfoField label="Kedaluwarsa" value={formatTanggal(k.tanggal_expired)} />

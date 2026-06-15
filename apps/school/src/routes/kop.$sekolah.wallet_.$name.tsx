@@ -42,6 +42,13 @@ const TOPUP_STATUS_TONE: Record<string, "success" | "danger" | "warning"> = {
   pending: "warning",
 };
 
+// Backend Top Up.tipe Select values → human labels.
+const TOPUP_TIPE_LABEL: Record<string, string> = {
+  manual: "Manual",
+  auto: "Otomatis",
+  qris: "QRIS",
+};
+
 function rupiah(n: number | undefined): string {
   return n !== undefined ? `Rp ${n.toLocaleString("id-ID")}` : "—";
 }
@@ -85,7 +92,7 @@ export function WalletDetailPage() {
   const cols: Column<TopUpRow>[] = [
     { key: "name", header: "ID", cell: (r) => <span className="font-mono text-xs">{r.name}</span> },
     { key: "creation", header: "Waktu", cell: (r) => r.creation?.slice(0, 16) ?? "—" },
-    { key: "tipe", header: "Tipe", cell: (r) => <Badge tone="neutral">{r.tipe ?? "—"}</Badge> },
+    { key: "tipe", header: "Tipe", cell: (r) => <Badge tone="neutral">{r.tipe ? (TOPUP_TIPE_LABEL[r.tipe] ?? r.tipe) : "—"}</Badge> },
     { key: "sumber", header: "Sumber", cell: (r) => r.sumber ?? "Tunai" },
     { key: "nominal", header: "Nominal", align: "right",
       cell: (r) => <span className="tabular-nums">{rupiah(r.nominal)}</span> },
