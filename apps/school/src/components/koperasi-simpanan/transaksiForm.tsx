@@ -118,6 +118,12 @@ export function TransaksiModal(props: TransaksiModalProps) {
       setError(guardError);
       return;
     }
+    // Block a cash transaction until the sesi-kas check has resolved — otherwise
+    // a submit during the loading window slips past the gate.
+    if (isCash && sesiQ.isLoading) {
+      setError("Memeriksa sesi kas aktif — tunggu sebentar lalu coba lagi.");
+      return;
+    }
     if (cashBlocked) {
       setError("Belum ada sesi kas aktif — buka sesi kas dulu sebelum transaksi tunai.");
       return;
