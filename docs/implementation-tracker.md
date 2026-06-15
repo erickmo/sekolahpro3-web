@@ -23,7 +23,7 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 | Manajemen Aset | 4 | 4 | 0 | 0 | [aset](domains/aset/README.html) |
 | Akademik | 6 | 6 | 0 | 0 | [akademik](domains/akademik/README.html) |
 | Akuntansi | 4 | 4 | 0 | 0 | [akuntansi](domains/akuntansi/README.html) |
-| Keuangan | 4 | 4 | 0 | 0 | [keuangan](domains/keuangan/README.html) |
+| Keuangan | 5 | 5 | 0 | 0 | [keuangan](domains/keuangan/README.html) |
 | PPDB | 4 | 4 | 0 | 0 | [ppdb](domains/ppdb/README.html) |
 | Siswa | 4 | 4 | 0 | 0 | [siswa](domains/siswa/README.html) |
 | Guru & Staf | 4 | 4 | 0 | 0 | [staff](domains/staff/README.html) |
@@ -36,7 +36,7 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 | Audit Log | 4 | 4 | 0 | 0 | [audit](domains/audit/README.html) |
 | Verifikasi Penjemputan | 4 | 4 | 0 | 0 | [pickup-verify](domains/pickup-verify/README.html) |
 | OCR Identitas | 4 | 4 | 0 | 0 | [ocr](domains/ocr/README.html) |
-| **Total** | **85** | **85** | **0** | **0** | |
+| **Total** | **86** | **86** | **0** | **0** | |
 
 ## Ads Manager
 
@@ -136,8 +136,9 @@ ADR: [AKU-ADR-0001 — Scoping per-company + pajak](domains/akuntansi/ADR/AKU-AD
 | KEU-002 | Tagihan & Pengeluaran operasional | Feature | Done | rute web |
 | KEU-003 | Pembayaran & Buku Kas (wiring `vernon_accounting` Invoice/Expense/Payment) | Feature | Done | rute web + _(BE)_ |
 | KEU-004 | Visualisasi hub (LineChart, StatCard) | Feature | Done | vitest hub |
+| KEU-005 | Struktur Biaya (`School Fee Component` + child Rate per tingkat → generator fan-out ke `School Fee Invoice`; generate via doc-method `generate_invoices`/`run_doc_method`, scheduler harian) | Feature | Done (2026-06-15) | FE: `fee-structure.test.ts`, `fee-structure-live.test.ts`, `GenerateTagihanModal.test.tsx`, `keuangan-biaya.test.tsx`, `onboarding.test.ts` (10 vitest) + _(BE: 16 FrappeTestCase bench-run hijau — fee_period 3, component 4, generation 6, scheduler 3)_ |
 
-ADR: [KEU-ADR-0001 — Unifikasi hub Keuangan+Akuntansi](domains/keuangan/ADR/KEU-ADR-0001-hub-terpadu.md)
+ADR: [KEU-ADR-0001 — Unifikasi hub Keuangan+Akuntansi](domains/keuangan/ADR/KEU-ADR-0001-hub-terpadu.md) · [KEU-ADR-0002 — Struktur Biaya component-centric + generate via doc method](domains/keuangan/ADR/KEU-ADR-0002-struktur-biaya.md)
 
 ## PPDB
 
