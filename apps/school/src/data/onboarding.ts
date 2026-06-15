@@ -16,6 +16,20 @@ export type OnboardingStep = {
 
 const PENGGUNA_MIN = 2;
 
+/**
+ * Fee-setup onboarding step. `done` once any School Fee Component exists, so the
+ * checklist reflects a configured fee structure (not just a visited page).
+ */
+export function buildSppStep(componentCount: number): OnboardingStep {
+  return {
+    id: "spp",
+    label: "Konfigurasi SPP",
+    description: "Komponen biaya & harga per tingkat.",
+    href: "/keuangan/biaya",
+    done: componentCount > 0,
+  };
+}
+
 export function useOnboardingSteps(): OnboardingStep[] {
   const taQ = useResourceList<{ name: string }>("Tahun Ajaran", {
     filters: { aktif: 1 },
@@ -36,6 +50,10 @@ export function useOnboardingSteps(): OnboardingStep[] {
     limit_page_length: 1,
   });
   const jadwalQ = useResourceList<{ name: string }>("Jadwal Pelajaran", {
+    fields: ["name"],
+    limit_page_length: 1,
+  });
+  const feeQ = useResourceList<{ name: string }>("School Fee Component", {
     fields: ["name"],
     limit_page_length: 1,
   });
@@ -90,13 +108,7 @@ export function useOnboardingSteps(): OnboardingStep[] {
       href: "/jadwal/slot",
       done: (jadwalQ.data?.length ?? 0) > 0,
     },
-    {
-      id: "spp",
-      label: "Konfigurasi SPP",
-      description: "Nominal & metode pembayaran.",
-      href: "/keuangan",
-      done: false,
-    },
+    buildSppStep(feeQ.data?.length ?? 0),
     {
       id: "modul",
       label: "Aktifkan modul opsional",
