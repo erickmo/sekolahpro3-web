@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { login } from "@sekolahpro/auth";
-import { Button } from "@sekolahpro/ui";
+import { Button, Input, Card, Alert } from "@sekolahpro/ui";
 
 function LoginPage() {
   const nav = useNavigate();
@@ -24,35 +24,50 @@ function LoginPage() {
     }
   };
   return (
-    <form onSubmit={submit} className="max-w-sm mx-auto p-6 flex flex-col gap-3">
-      <h1 className="text-xl font-semibold">Merchant Login</h1>
-      <input
-        className="border p-2 rounded"
-        placeholder="Username"
-        value={u}
-        onChange={(e) => setU(e.target.value)}
-      />
-      <input
-        className="border p-2 rounded"
-        type="password"
-        placeholder="Password"
-        value={p}
-        onChange={(e) => setP(e.target.value)}
-      />
-      <input
-        className="border p-2 rounded"
-        placeholder="Pairing code (6 digit)"
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        maxLength={6}
-      />
-      <Button type="submit">Masuk</Button>
-      {err && (
-        <div role="alert" className="text-red-600 text-sm">
-          {err}
+    <div className="flex min-h-full items-center justify-center bg-muted p-4">
+      <Card className="w-full max-w-sm p-6">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-lg font-bold text-white">
+            SP
+          </div>
+          <h1 className="text-xl font-semibold text-fg">SekolahPro POS</h1>
+          <p className="mt-1 text-sm text-muted-fg">Masuk untuk mulai transaksi</p>
         </div>
-      )}
-    </form>
+        <form onSubmit={submit} className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1 text-sm font-medium text-fg">
+            Username
+            <Input value={u} onChange={(e) => setU(e.target.value)} autoComplete="username" />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium text-fg">
+            Password
+            <Input
+              type="password"
+              value={p}
+              onChange={(e) => setP(e.target.value)}
+              autoComplete="current-password"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium text-fg">
+            Kode pairing
+            <Input
+              inputMode="numeric"
+              placeholder="6 digit"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              maxLength={6}
+            />
+          </label>
+          <Button type="submit" className="mt-2 h-12 w-full text-base">
+            Masuk
+          </Button>
+          {err && (
+            <Alert tone="danger" statusRole>
+              {err}
+            </Alert>
+          )}
+        </form>
+      </Card>
+    </div>
   );
 }
 
