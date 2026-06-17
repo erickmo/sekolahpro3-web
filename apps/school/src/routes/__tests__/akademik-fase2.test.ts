@@ -43,9 +43,10 @@ describe("buildWorkspaceNavGroups — Fase 2 entries", () => {
 
 describe("redirect stubs — Fase 2", () => {
   type RedirectShape = { to?: string; search?: { go?: string }; params?: { sekolah?: string } };
-  function caughtRedirect(fn: () => never, sekolah = "A", _splat?: string): RedirectShape {
+  type StubFn = (ctx: { params: { sekolah: string; _splat?: string }; location: { searchStr: string } }) => never;
+  function caughtRedirect(fn: StubFn, sekolah = "A", _splat?: string): RedirectShape {
     try {
-      fn({ params: { sekolah, ...(_splat ? { _splat } : {}) }, location: { searchStr: "" } } as never);
+      fn({ params: { sekolah, ...(_splat ? { _splat } : {}) }, location: { searchStr: "" } });
     } catch (e) {
       // TanStack's thrown redirect carries its target under `.options`; fall back
       // to the object itself for forward-compat with flatter shapes.

@@ -201,7 +201,7 @@ function JadwalDashboardPage() {
           icon={<IconUsers />}
           accent="violet"
           urgency="warn"
-          actionHref="/sch/$sekolah/absensi/guru"
+          actionHref="/sch/$sekolah/akademik/$ta/absensi/guru"
           renderLink={(href, children) => <Link to={href}>{children}</Link>}
         />
       </div>

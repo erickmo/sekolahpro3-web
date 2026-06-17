@@ -49,4 +49,4 @@ function AbsensiPelajaranPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/absensi/pelajaran")({ component: AbsensiPelajaranPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/absensi/pelajaran")({ component: AbsensiPelajaranPage });
