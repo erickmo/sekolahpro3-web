@@ -1,7 +1,7 @@
 # Akademik Single-Door — Fase 2 (IA-only FE)
 
 - **Date:** 2026-06-17
-- **Status:** Approved (design), pending implementation
+- **Status:** Implemented (2026-06-17) — tsc 0 / vitest 1453 / eslint 0 errors / build ok
 - **Scope size:** L (route migration, > 10 files, touches routing + nav libs)
 - **Predecessor:** `docs/superpowers/plans/2026-06-10-akademik-single-door-fase1.md` (Fase 1, merged PR #92)
 - **App:** `apps/school` (web)
