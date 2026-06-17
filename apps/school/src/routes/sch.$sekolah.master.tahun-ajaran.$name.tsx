@@ -1,13 +1,20 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Badge, Button, SectionCard } from "@sekolahpro/ui";
-import { useResourceList } from "@sekolahpro/api-client";
+import { Badge, Button, SectionCard, Alert } from "@sekolahpro/ui";
+import { useResourceList, runDocMethod } from "@sekolahpro/api-client";
 import { MasterDetailPage, StatusBadge } from "../components/master/MasterDetailPage";
 import { MasterCreateModal, type MasterFieldDef } from "../components/master/MasterCreateModal";
 import { TAHUN_AJARAN_FIELDS, SEMESTER_FIELDS } from "../components/master/schemas";
 import { CreateResourceModal, type FieldSpec } from "../components/akademik/CreateResourceModal";
 
-type Doc = { name: string; nama: string; tanggal_mulai?: string; tanggal_selesai?: string; status?: string };
+type Doc = {
+  name: string;
+  nama: string;
+  tanggal_mulai?: string;
+  tanggal_selesai?: string;
+  status?: string;
+  is_current?: 0 | 1 | boolean;
+};
 type Semester = {
   name: string;
   nama: string;
@@ -219,6 +226,68 @@ function KkmSection({ tahunAjaran }: { tahunAjaran: string }) {
   );
 }
 
+// ── Workflow (Aktifkan / Tutup) ──────────────────────────────────────────────
+
+const CLOSE_CONFIRM =
+  "Tutup tahun ajaran ini? Transaksi akademik (nilai, absensi, raport) di rentangnya akan terkunci dan tidak bisa diubah lagi.";
+
+/**
+ * Status actions for a Tahun Ajaran, rendered in the detail page's Workflow
+ * slot. Calls the existing whitelisted controller methods (`activate` /
+ * `close_tahun_ajaran`) via run_doc_method — the backend enforces the
+ * single-current/single-active invariant, the close-time raport guard, and the
+ * Kepala Sekolah / System Manager role (errors surfaced here). Exported for tests.
+ */
+export function TahunAjaranWorkflow({ doc, refresh }: { doc: Doc; refresh: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const aktif = doc.status === "Aktif";
+  const current = Boolean(doc.is_current);
+
+  const run = async (method: "activate" | "close_tahun_ajaran", confirmMsg?: string) => {
+    if (confirmMsg && !window.confirm(confirmMsg)) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await runDocMethod({ dt: "Tahun Ajaran", dn: doc.name, method });
+      refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Gagal menjalankan aksi.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      {current && (
+        <Badge tone="success" dot>
+          Sedang berjalan
+        </Badge>
+      )}
+      {!aktif ? (
+        <Button size="sm" disabled={busy} onClick={() => run("activate")}>
+          {busy ? "Memproses…" : "Aktifkan & jadikan berjalan"}
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => run("close_tahun_ajaran", CLOSE_CONFIRM)}
+        >
+          {busy ? "Memproses…" : "Tutup tahun ajaran"}
+        </Button>
+      )}
+      {err && (
+        <Alert tone="danger" statusRole>
+          {err}
+        </Alert>
+      )}
+    </div>
+  );
+}
+
 // ── Detail page ───────────────────────────────────────────────────────────────
 
 function TahunAjaranDetailPage() {
@@ -239,6 +308,7 @@ function TahunAjaranDetailPage() {
         { label: "Status", render: (d) => <StatusBadge status={d.status} /> },
       ]}
       editFields={TAHUN_AJARAN_FIELDS}
+      workflowActions={(d, refresh) => <TahunAjaranWorkflow doc={d} refresh={refresh} />}
       extraSections={(d) => (
         <>
           <SemesterSection tahunAjaran={d.name} />
