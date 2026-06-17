@@ -849,12 +849,8 @@ const MODUL_LINKS: ModulLink[] = [
     label: "Buka PPDB",
     caption: "Pendaftaran siswa baru (TA berikutnya)",
   },
-  {
-    key: "absensi",
-    to: "/sch/$sekolah/absensi",
-    label: "Buka Absensi",
-    caption: "Modul absensi — pintu sendiri sampai Fase 2",
-  },
+  // Absensi kini sub-modul di pill-nav workspace (Kehadiran → Absensi),
+  // bukan lagi modul pintu-sendiri (Fase 2 single-door).
   {
     key: "laporan",
     to: "/sch/$sekolah/laporan",

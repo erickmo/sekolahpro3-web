@@ -23,10 +23,13 @@ type StubCtx = {
  * Use for routes whose content lives under /akademik/$ta/<root>; the TA is
  * unknown here, so the hub resolves it after the redirect.
  *
- * @param root - The workspace module root ("kelas" | "jadwal" | "ekskul").
+ * @param root - The workspace module root (Fase 1: kelas | jadwal | ekskul;
+ *   Fase 2 added: absensi | pendaftaran).
  * @returns A beforeLoad function ready to drop into createFileRoute().
  */
-export function workspaceStubBeforeLoad(root: "kelas" | "jadwal" | "ekskul") {
+export function workspaceStubBeforeLoad(
+  root: "kelas" | "jadwal" | "ekskul" | "absensi" | "pendaftaran",
+) {
   return ({ params }: StubCtx): never => {
     const splat = params._splat;
     throw redirect({
@@ -56,5 +59,25 @@ export function directStubBeforeLoad(newBase: string) {
       ? `/sch/${params.sekolah}/${newBase}/${splat}`
       : `/sch/${params.sekolah}/${newBase}`;
     throw redirect({ href: `${path}${location.searchStr ?? ""}`, replace: true });
+  };
+}
+
+/**
+ * Factory for a beforeLoad that redirects a legacy URL into the Akademik hub
+ * with a FIXED `?go=` target (not derived from a splat). Use when a legacy route
+ * maps to one specific workspace sub-path — e.g. /siswa/rombel → kelas/anggota
+ * (Fase 2). The hub validates the target via parseGoParam before forwarding.
+ *
+ * @param go - The exact `?go=` value (must start with a known workspace root).
+ * @returns A beforeLoad function ready to drop into createFileRoute().
+ */
+export function hubGoStubBeforeLoad(go: string) {
+  return ({ params }: StubCtx): never => {
+    throw redirect({
+      to: "/sch/$sekolah/akademik",
+      params: { sekolah: params.sekolah },
+      search: { go },
+      replace: true,
+    });
   };
 }

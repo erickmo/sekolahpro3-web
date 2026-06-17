@@ -7,8 +7,9 @@
 // TanStack Router's typed Link would break.
 //
 // Routes confirmed present:
-//   Siswa: siswa(index), daftar, wali, rombel, pendaftaran, mutasi-masuk,
+//   Siswa: siswa(index), daftar, wali, mutasi-masuk,
 //          mutasi, kelulusan, ijazah, persetujuan, perubahan-data
+//   (rombel + pendaftaran moved under /akademik in Fase 2 single-door.)
 //   Staff: staff(index), daftar, jabatan, mapel-pengampu, penugasan,
 //          sk-mengajar, sk-jabatan, berkas
 
@@ -29,13 +30,13 @@ export const SISWA_NAV_GROUPS: NavTabGroup[] = [
     items: [
       { to: `${SISWA}/daftar`, label: "Daftar Siswa" },
       { to: `${SISWA}/wali`, label: "Wali Siswa" },
-      { to: `${SISWA}/rombel`, label: "Anggota Rombel" },
+      // Anggota Rombel moved to /akademik/$ta/kelas/anggota (Fase 2 single-door).
     ],
   },
   {
     label: "Penerimaan",
     items: [
-      { to: `${SISWA}/pendaftaran`, label: "Pendaftaran" },
+      // Pendaftaran Siswa moved to /akademik/$ta/pendaftaran (Fase 2 single-door).
       { to: `${SISWA}/mutasi-masuk`, label: "Mutasi Masuk" },
     ],
   },

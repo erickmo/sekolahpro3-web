@@ -474,8 +474,8 @@ function Layout() {
     {
       title: "Akademik",
       items: [
+        // Absensi kini sub-modul di dalam /akademik/$ta (Fase 2 single-door).
         mk("/akademik", "Akademik", <IconBook />),
-        mk("/absensi", "Absensi", <IconCheck />),
       ],
     },
     {

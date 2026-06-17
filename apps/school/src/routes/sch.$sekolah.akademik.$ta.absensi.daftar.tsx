@@ -52,4 +52,4 @@ function HarianPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/absensi/daftar")({ component: HarianPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/absensi/daftar")({ component: HarianPage });

@@ -171,7 +171,10 @@ describe("pickNextTa", () => {
 describe("buildWorkspaceNavGroups", () => {
   it("contains Pengaturan and Kegiatan groups with module links", () => {
     const groups = buildWorkspaceNavGroups();
-    expect(groups.map((g) => g.label)).toEqual(["Ringkasan", "Pengaturan", "Penilaian", "Kegiatan"]);
+    // Fase 2 single-door appended Kehadiran (Absensi) + Penerimaan (Pendaftaran Siswa).
+    expect(groups.map((g) => g.label)).toEqual([
+      "Ringkasan", "Pengaturan", "Penilaian", "Kegiatan", "Kehadiran", "Penerimaan",
+    ]);
     const pengaturan = groups.find((g) => g.label === "Pengaturan")!;
     expect(pengaturan.items.map((i) => i.to)).toEqual([
       "/sch/$sekolah/akademik/$ta/kelas",

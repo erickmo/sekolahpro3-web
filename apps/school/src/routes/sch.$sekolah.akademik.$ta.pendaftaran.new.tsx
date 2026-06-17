@@ -81,7 +81,7 @@ async function loadRombel(query: string): Promise<SearchableOption[]> {
 }
 
 function PendaftaranNewPage() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/pendaftaran/new" });
 
   const navigate = useNavigate();
   const create = useResourceCreate<{ name: string }>("Pendaftaran Siswa");
@@ -128,7 +128,7 @@ function PendaftaranNewPage() {
         catatan: v.catatan || undefined,
         status: "Draft",
       });
-      void navigate({ to: "/sch/$sekolah/siswa/pendaftaran/$id", params: { sekolah, id: doc.name } });
+      void navigate({ to: "/sch/$sekolah/akademik/$ta/pendaftaran/$id", params: { sekolah, ta, id: doc.name } });
     } catch (e2) {
       setErr(e2 instanceof Error ? e2.message : "Gagal menyimpan pendaftaran.");
     }
@@ -137,7 +137,7 @@ function PendaftaranNewPage() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <PageHeader
-        eyebrow="Siswa › Pendaftaran"
+        eyebrow="Akademik › Pendaftaran"
         title="Daftarkan Siswa Baru"
         description="Setelah Submitted dan diterima, sistem akan membuat record Siswa + Anggota Rombel otomatis."
       />
@@ -289,7 +289,7 @@ function PendaftaranNewPage() {
           Detail wali lengkap dapat ditambah setelah pendaftaran disubmit
         </Badge>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => navigate({ to: "/sch/$sekolah/siswa/pendaftaran", params: { sekolah } })}>
+          <Button type="button" variant="outline" onClick={() => navigate({ to: "/sch/$sekolah/akademik/$ta/pendaftaran", params: { sekolah, ta } })}>
             Batal
           </Button>
           <Button type="submit" disabled={create.isPending}>
@@ -301,4 +301,4 @@ function PendaftaranNewPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/siswa/pendaftaran/new")({ component: PendaftaranNewPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/pendaftaran/new")({ component: PendaftaranNewPage });

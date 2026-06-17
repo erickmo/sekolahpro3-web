@@ -37,9 +37,7 @@ const STATUS_TONE: Record<PendaftaranDoc["status"], "neutral" | "warning" | "suc
 };
 
 function PendaftaranDetailPage() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
-
-  const { id } = useParams({ from: "/sch/$sekolah/siswa/pendaftaran/$id" });
+  const { sekolah, ta, id } = useParams({ from: "/sch/$sekolah/akademik/$ta/pendaftaran/$id" });
   const qc = useQueryClient();
   const docQuery = useResourceDoc<PendaftaranDoc>("Pendaftaran Siswa", id);
 
@@ -61,7 +59,7 @@ function PendaftaranDetailPage() {
           Gagal memuat: {(docQuery.error as Error)?.message ?? "tidak ditemukan"}
         </Badge>
         <div className="mt-4">
-          <Link to="/sch/$sekolah/siswa/pendaftaran" params={{ sekolah }} className="text-brand hover:underline">
+          <Link to="/sch/$sekolah/akademik/$ta/pendaftaran" params={{ sekolah, ta }} className="text-brand hover:underline">
             ← Kembali ke daftar
           </Link>
         </div>
@@ -80,8 +78,8 @@ function PendaftaranDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-xs text-muted-fg">
-        <Link to="/sch/$sekolah/siswa/pendaftaran" params={{ sekolah }} className="text-brand hover:underline">
-          ← Siswa › Pendaftaran
+        <Link to="/sch/$sekolah/akademik/$ta/pendaftaran" params={{ sekolah, ta }} className="text-brand hover:underline">
+          ← Akademik › Pendaftaran
         </Link>
         <span>›</span>
         <span className="font-mono">{doc.name}</span>
@@ -201,4 +199,4 @@ function PendaftaranDetailPage() {
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/siswa/pendaftaran/$id")({ component: PendaftaranDetailPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/pendaftaran/$id")({ component: PendaftaranDetailPage });

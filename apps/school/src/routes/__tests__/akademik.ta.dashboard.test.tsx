@@ -141,12 +141,12 @@ describe("Dashboard workspace — Tautan Modul card", () => {
     expect(link.getAttribute("href")).toContain("/akademik/ppdb");
   });
 
-  it("renders 'Buka Absensi' link pointing at /absensi", () => {
+  it("no longer lists Absensi in Tautan Modul (moved into the $ta workspace, Fase 2)", () => {
     render(<AkademikDashboardPage />, { wrapper: makeWrapper() });
 
-    const link = screen.getByRole("link", { name: /Buka Absensi/i });
-    expect(link).toBeTruthy();
-    expect(link.getAttribute("href")).toContain("/absensi");
+    // Absensi is now a workspace sub-module reachable via the pill nav
+    // (Kehadiran → Absensi), not an external "Buka Absensi" card.
+    expect(screen.queryByRole("link", { name: /Buka Absensi/i })).toBeNull();
   });
 
   it("renders 'Buka Laporan' link pointing at /laporan", () => {
