@@ -127,9 +127,11 @@ export function buildTaSegments(taList: TaStatusRow[]): DistributionSegment[] {
 
 // ── Fase 1: single-door additions ────────────────────────────────────────────
 
-/** Module roots that live inside the per-TA workspace (spec §1.2).
- * These are the only values accepted as a `?go=` redirect target. */
-export const WORKSPACE_MODULE_ROOTS = ["kelas", "jadwal", "ekskul"] as const;
+/** Module roots that live inside the per-TA workspace (spec §1.2, Fase 2 added
+ * absensi + pendaftaran). These are the only values accepted as a `?go=` redirect
+ * target. Note: this is the `?go=` whitelist only — chrome-bypass is a narrower
+ * set (see isSubmodulePath); pendaftaran is a valid target but keeps akademik chrome. */
+export const WORKSPACE_MODULE_ROOTS = ["kelas", "jadwal", "ekskul", "absensi", "pendaftaran"] as const;
 export type WorkspaceModuleRoot = (typeof WORKSPACE_MODULE_ROOTS)[number];
 
 /**
@@ -159,13 +161,14 @@ export function parseGoParam(go: string | undefined): string | null {
  * True when the pathname is inside a sub-module under the TA workspace —
  * the workspace layout then skips its own chrome (spec §1.7).
  *
- * Matches kelas / jadwal / ekskul segments only (penilaian pages stay inside
- * workspace chrome because they don't have their own layout shell).
+ * Matches modules that bring their OWN ModuleShell: kelas / jadwal / ekskul /
+ * absensi (Fase 2). Penilaian pages AND pendaftaran (Fase 2) stay inside the
+ * workspace chrome because they have no layout shell of their own.
  *
  * @param pathname - Current window.location.pathname.
  */
 export function isSubmodulePath(pathname: string): boolean {
-  return /\/akademik\/[^/]+\/(kelas|jadwal|ekskul)(\/|$)/.test(pathname);
+  return /\/akademik\/[^/]+\/(kelas|jadwal|ekskul|absensi)(\/|$)/.test(pathname);
 }
 
 /**
@@ -197,9 +200,11 @@ export function pickNextTa<T extends { tanggal_mulai?: string }>(
  * - Pengaturan — annual-setup modules (kelas, jadwal, ekskul).
  * - Penilaian — assessment & report-card data entry.
  * - Kegiatan — operational/activity pages (agenda, ekskul sessions).
+ * - Kehadiran — Absensi sub-module (Fase 2; now lives under `$ta`).
+ * - Penerimaan — Pendaftaran Siswa (Fase 2; `$ta` scoped page).
  *
- * Absensi/Laporan/PPDB carry no `$ta` segment and cannot join this bar;
- * they link from the workspace dashboard instead (plan Task 9).
+ * Laporan/PPDB carry no `$ta` segment and cannot join this bar; they link from
+ * the workspace dashboard / hub instead.
  *
  * @returns Array of NavTabGroup ready to pass to GroupedNavTabs.
  */
@@ -232,6 +237,14 @@ export function buildWorkspaceNavGroups(): NavTabGroup[] {
         { to: "/sch/$sekolah/akademik/$ta/ekskul/pendaftaran", label: "Pendaftaran Ekskul" },
         { to: "/sch/$sekolah/akademik/$ta/ekskul/sesi", label: "Sesi Ekskul" },
       ],
+    },
+    {
+      label: "Kehadiran",
+      items: [{ to: "/sch/$sekolah/akademik/$ta/absensi", label: "Absensi" }],
+    },
+    {
+      label: "Penerimaan",
+      items: [{ to: "/sch/$sekolah/akademik/$ta/pendaftaran", label: "Pendaftaran Siswa" }],
     },
   ];
 }
