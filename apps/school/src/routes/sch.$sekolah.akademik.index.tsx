@@ -14,7 +14,7 @@ import {
   type HubTaRow,
 } from "../components/akademik/HubCards";
 import { readStoredPeriode } from "../lib/akademikPeriode";
-import { parseGoParam, pickAutoRedirectTa, pickNextTa, splitTaList, taPath } from "../lib/akademikNav";
+import { parseGoParam, pickAutoRedirectTa, pickNextTa, splitTaList } from "../lib/akademikNav";
 
 type PpdbRow = { name: string };
 
@@ -105,8 +105,10 @@ export function AkademikHubPage() {
       navigate({ href: workspaceGoHref(sekolah, target, go), replace: true });
     } else {
       navigate({
+        // RAW name — the router encodes the segment once; taPath here would
+        // double-encode and a TA name with "/" never matches → picker bounce.
         to: "/sch/$sekolah/akademik/$ta",
-        params: { sekolah, ta: taPath(target) },
+        params: { sekolah, ta: target },
         replace: true,
       });
     }
@@ -160,30 +162,6 @@ export function AkademikHubPage() {
               ))}
             </div>
           </SectionCard>
-
-          {archiveRest.length > 0 ? (
-            <SectionCard
-              title="Arsip"
-              description="Tahun Ajaran lampau / ditutup. Dibuka read-only untuk audit & cetak ulang."
-              action={
-                <Button variant="ghost" onClick={() => setShowArsip((v) => !v)}>
-                  {showArsip ? "Sembunyikan" : `Tampilkan (${archiveRest.length})`}
-                </Button>
-              }
-            >
-              {showArsip ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {archiveRest.map((ta) => (
-                    <TaCard key={ta.name} sekolah={sekolah} ta={ta} go={go} navigate={navigate} />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-fg">
-                  {archiveRest.length} Tahun Ajaran arsip. Klik “Tampilkan” untuk membuka daftar.
-                </p>
-              )}
-            </SectionCard>
-          ) : null}
         </>
       )}
 
@@ -201,6 +179,30 @@ export function AkademikHubPage() {
       >
         <PpdbHubCard sekolah={sekolah} nextTa={nextTa} count={ppdbCount} />
       </SectionCard>
+
+      {archiveRest.length > 0 ? (
+        <SectionCard
+          title="Arsip"
+          description="Tahun Ajaran lampau / ditutup. Dibuka read-only untuk audit & cetak ulang."
+          action={
+            <Button variant="ghost" onClick={() => setShowArsip((v) => !v)}>
+              {showArsip ? "Sembunyikan" : `Tampilkan (${archiveRest.length})`}
+            </Button>
+          }
+        >
+          {showArsip ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {archiveRest.map((ta) => (
+                <TaCard key={ta.name} sekolah={sekolah} ta={ta} go={go} navigate={navigate} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-fg">
+              {archiveRest.length} Tahun Ajaran arsip. Klik “Tampilkan” untuk membuka daftar.
+            </p>
+          )}
+        </SectionCard>
+      ) : null}
     </div>
   );
 }

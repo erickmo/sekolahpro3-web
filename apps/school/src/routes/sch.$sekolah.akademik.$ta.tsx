@@ -29,7 +29,6 @@ import {
   isSubmodulePath,
   showContextBar,
   showPeriodeIntro,
-  taPath,
   workspaceSubLabel,
 } from "../lib/akademikNav";
 
@@ -93,10 +92,11 @@ function AkademikWorkspaceLayout() {
   const navigate = useNavigate({ from: "/sch/$sekolah/akademik/$ta" });
   const [dirty, setDirty] = useState(false);
 
-  // `useParams()` already returns the decoded value — `$ta` may contain "/"
-  // (TanStack router-core processRouteTree decodes path segments); Links
-  // re-encode via taPath when building hrefs. A manual decodeURIComponent would
-  // double-decode and throw URIError on a TA name containing a literal "%".
+  // `useParams()` returns the SINGLE-decoded value — the router encodes the path
+  // segment once, so links MUST pass the RAW TA `name` to `params={{ ta }}`
+  // (never taPath/encodeURIComponent — that double-encodes and a name with "/"
+  // or spaces then never matches a row → bounce to the picker). No manual
+  // decode here: that would double-decode and throw on a literal "%".
   const decodedTa = ta;
 
   const taQ = useResourceList<TahunAjaranRow>("Tahun Ajaran", {
@@ -109,7 +109,21 @@ function AkademikWorkspaceLayout() {
   // Stable reference date per mount (avoid re-resolving every render).
   const refDate = useRef(new Date()).current;
 
-  const taRow = useMemo(() => taList.find((t) => t.name === decodedTa), [taList, decodedTa]);
+  // Resolve the TA row from the `$ta` param. Primary match is exact (links now
+  // pass the raw name). Defense-in-depth: also match a once-more-decoded form so
+  // a stray double-encoded URL (old bookmark, or a stored value corrupted by the
+  // pre-fix taPath double-encoding) self-heals instead of bouncing to the picker.
+  const taRow = useMemo(() => {
+    const exact = taList.find((t) => t.name === decodedTa);
+    if (exact) return exact;
+    let once = decodedTa;
+    try {
+      once = decodeURIComponent(decodedTa);
+    } catch {
+      // malformed "%" — leave as-is
+    }
+    return once !== decodedTa ? taList.find((t) => t.name === once) : undefined;
+  }, [taList, decodedTa]);
 
   // Unknown $ta (not in the list once loaded) → back to the hub picker.
   useEffect(() => {
@@ -150,8 +164,10 @@ function AkademikWorkspaceLayout() {
   // Switching TA navigates to the new TA's workspace root (period bar no longer
   // carries a TA dropdown; switching happens via the hub/breadcrumb).
   const setTahunAjaran = useCallback(
+    // Pass the RAW name — the router encodes the segment once (taPath would
+    // double-encode; see decodedTa note above).
     (v: string) =>
-      navigate({ to: "/sch/$sekolah/akademik/$ta", params: { sekolah, ta: taPath(v) }, replace: true }),
+      navigate({ to: "/sch/$sekolah/akademik/$ta", params: { sekolah, ta: v }, replace: true }),
     [navigate, sekolah],
   );
   const setSemester = useCallback(
