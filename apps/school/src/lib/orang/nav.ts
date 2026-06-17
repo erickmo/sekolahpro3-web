@@ -36,7 +36,7 @@ export const SISWA_NAV_GROUPS: NavTabGroup[] = [
   {
     label: "Penerimaan",
     items: [
-      { to: `${SISWA}/pendaftaran`, label: "Pendaftaran" },
+      // Pendaftaran Siswa moved to /akademik/$ta/pendaftaran (Fase 2 single-door).
       { to: `${SISWA}/mutasi-masuk`, label: "Mutasi Masuk" },
     ],
   },

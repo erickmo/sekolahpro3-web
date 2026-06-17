@@ -30,7 +30,7 @@ const JENIS_TONE: Record<Row["jenis_pendaftaran"], "neutral" | "brand"> = {
   Khusus: "brand",
 };
 
-function makeColumns(sekolah: string): Column<Row>[] {
+function makeColumns(sekolah: string, ta: string): Column<Row>[] {
   return [
   {
     key: "name",
@@ -38,8 +38,8 @@ function makeColumns(sekolah: string): Column<Row>[] {
     sortable: true,
     cell: (r) => (
       <Link
-        to="/sch/$sekolah/siswa/pendaftaran/$id"
-        params={{ sekolah, id: r.name }}
+        to="/sch/$sekolah/akademik/$ta/pendaftaran/$id"
+        params={{ sekolah, ta, id: r.name }}
         className="font-mono text-xs text-brand hover:underline"
       >
         {r.name}
@@ -68,8 +68,8 @@ function makeColumns(sekolah: string): Column<Row>[] {
 }
 
 function PendaftaranPage() {
-  const { sekolah } = useParams({ from: "/sch/$sekolah" });
-  const columns = useMemo(() => makeColumns(sekolah), [sekolah]);
+  const { sekolah, ta } = useParams({ from: "/sch/$sekolah/akademik/$ta/pendaftaran/" });
+  const columns = useMemo(() => makeColumns(sekolah, ta), [sekolah, ta]);
 
   const navigate = useNavigate();
   return (
@@ -84,7 +84,7 @@ function PendaftaranPage() {
         roleLabels={SCHOOL_ROLE_LABEL}
       />
       <ResourceListPage<Row>
-      eyebrow="Siswa"
+      eyebrow="Akademik"
       title="Pendaftaran Siswa"
       doctype="Pendaftaran Siswa"
       fields={[
@@ -121,10 +121,10 @@ function PendaftaranPage() {
         },
       ]}
       addLabel="Daftar Siswa Baru"
-      onAdd={() => navigate({ to: "/sch/$sekolah/siswa/pendaftaran/new", params: { sekolah } })}
+      onAdd={() => navigate({ to: "/sch/$sekolah/akademik/$ta/pendaftaran/new", params: { sekolah, ta } })}
       />
     </div>
   );
 }
 
-export const Route = createFileRoute("/sch/$sekolah/siswa/pendaftaran")({ component: PendaftaranPage });
+export const Route = createFileRoute("/sch/$sekolah/akademik/$ta/pendaftaran/")({ component: PendaftaranPage });
