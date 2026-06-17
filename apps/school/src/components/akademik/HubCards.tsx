@@ -85,7 +85,7 @@ export function TaCard({
           Buka
         </Button>
       ) : (
-        <Link to="/sch/$sekolah/akademik/$ta" params={{ sekolah, ta: taPath(ta.name) }} className="shrink-0">
+        <Link to="/sch/$sekolah/akademik/$ta" params={{ sekolah, ta: ta.name }} className="shrink-0">
           <Button variant={primary ? "default" : "outline"}>Buka</Button>
         </Link>
       )}

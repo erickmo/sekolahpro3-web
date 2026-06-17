@@ -144,10 +144,11 @@ describe("AkademikHubPage — go-forwarding (auto-redirect)", () => {
 
     expect(navigateSpy).toHaveBeenCalledTimes(1);
     const arg = navigateSpy.mock.calls[0][0];
-    // Byte-identical to the pre-Task-7 behaviour: typed to + params, no href.
+    // Typed to + params, no href. The TA name is passed RAW — the router encodes
+    // the segment once; taPath here would double-encode and break taRow lookup.
     expect(arg.href).toBeUndefined();
     expect(arg.to).toBe("/sch/$sekolah/akademik/$ta");
-    expect(arg.params).toEqual({ sekolah: "sek-uji", ta: "SEK-2025%2F2026" });
+    expect(arg.params).toEqual({ sekolah: "sek-uji", ta: "SEK-2025/2026" });
     expect(arg.replace).toBe(true);
   });
 
@@ -192,7 +193,8 @@ describe("AkademikHubPage — pick-link passthrough", () => {
 
     const openLink = screen.getByRole("link", { name: "Buka" });
     expect(openLink.getAttribute("data-to")).toBe("/sch/$sekolah/akademik/$ta");
-    expect(openLink.getAttribute("data-params")).toContain("SEK-2025%2F2026");
+    // RAW name in params (router encodes once); was %2F-double-encoded before the fix.
+    expect(openLink.getAttribute("data-params")).toContain("SEK-2025/2026");
   });
 });
 
