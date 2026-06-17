@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNfcReader, type CardToken } from "@sekolahpro/card";
+import { Button, Alert } from "@sekolahpro/ui";
 import { merchantApi, type CatalogItem } from "../lib/merchant-api";
 import { CatalogGrid } from "../components/CatalogGrid";
 import { Cart, type CartLine } from "../components/Cart";
@@ -90,9 +91,10 @@ function PosPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-auto">
-        <AdBanner slot="merchant-dashboard-top" className="mb-4 w-full" />
+    <div className="flex h-full flex-col lg:flex-row">
+      {/* Catalog pane */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-auto">
+        <AdBanner slot="merchant-dashboard-top" className="w-full" />
         {catalog.data && (
           <CatalogGrid
             items={catalog.data}
@@ -101,25 +103,35 @@ function PosPage() {
             onAdd={addItem}
           />
         )}
-        <button
-          className="mx-3 my-2 px-3 py-2 border rounded"
-          onClick={() => setQuickOpen(true)}
-        >
-          Manual amount
-        </button>
-      </div>
-      <Cart
-        lines={lines}
-        disabled={!online || busy}
-        onChangeQty={changeQty}
-        onRemove={remove}
-        onTap={onTap}
-      />
-      {err && (
-        <div role="alert" className="text-red-600 text-sm p-2">
-          {err}
+        <div className="px-3 pb-3">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => setQuickOpen(true)}
+          >
+            Nominal manual
+          </Button>
         </div>
-      )}
+      </div>
+
+      {/* Cart pane — persistent on tablet (right), bottom sheet on phone */}
+      <div className="flex max-h-[45vh] flex-col border-t border-border lg:max-h-none lg:w-96 lg:border-l lg:border-t-0">
+        {err && (
+          <Alert tone="danger" statusRole className="m-3">
+            {err}
+          </Alert>
+        )}
+        <div className="min-h-0 flex-1">
+          <Cart
+            lines={lines}
+            disabled={!online || busy}
+            onChangeQty={changeQty}
+            onRemove={remove}
+            onTap={onTap}
+          />
+        </div>
+      </div>
+
       <CardReaderSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}

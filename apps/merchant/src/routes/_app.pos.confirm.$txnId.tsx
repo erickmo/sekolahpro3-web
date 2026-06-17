@@ -29,17 +29,26 @@ function ConfirmPage() {
     return () => clearTimeout(id);
   }, [nav]);
 
-  if (!t) return <div className="p-4">Memuat…</div>;
+  if (!t)
+    return (
+      <div className="flex h-full items-center justify-center p-4 text-muted-fg">
+        Memuat…
+      </div>
+    );
   return (
-    <ReceiptSheet
-      txnId={t.name}
-      namaSiswa={t.nama_siswa ?? t.kartu}
-      nominal={t.nominal}
-      balanceAfter={0}
-      voidDeadlineIso={t.void_deadline_iso}
-      onClose={() => nav({ to: "/pos" })}
-      onVoid={() => voidMut.mutate()}
-    />
+    <div className="flex h-full items-center justify-center bg-muted p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-bg shadow-sm">
+        <ReceiptSheet
+          txnId={t.name}
+          namaSiswa={t.nama_siswa ?? t.kartu}
+          nominal={t.nominal}
+          balanceAfter={0}
+          voidDeadlineIso={t.void_deadline_iso}
+          onClose={() => nav({ to: "/pos" })}
+          onVoid={() => voidMut.mutate()}
+        />
+      </div>
+    </div>
   );
 }
 
