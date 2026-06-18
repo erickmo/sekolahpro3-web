@@ -1,29 +1,10 @@
-import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
-import type { NavTabGroup } from "../components/GroupedNavTabs";
+import { createFileRoute, Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { ModuleShell } from "../components/shell/ModuleShell";
 import { StripTahun } from "../components/shell/StripTahun";
+import { AkademikNav } from "../components/akademik/AkademikNav";
 import { useKelasRole, KELAS_ROLE_LABEL } from "../lib/kelasRole";
 import { useAkademikContext } from "../lib/akademikContext";
 import { KelasPeriodProvider } from "../lib/kelasPeriode";
-
-// Kelas sub-nav groups, rendered as the GroupedNavTabs header pill row. Every
-// `to` carries the `$ta` segment; TanStack inherits the active `ta` param (as it
-// does `$sekolah`), so the pill bar stays on the same Tahun Ajaran while
-// switching feature pages.
-const NAV_GROUPS: NavTabGroup[] = [
-  {
-    label: "Ringkasan",
-    items: [{ to: "/sch/$sekolah/akademik/$ta/kelas", label: "Dashboard", exact: true }],
-  },
-  {
-    label: "Kelas",
-    items: [
-      { to: "/sch/$sekolah/akademik/$ta/kelas/daftar", label: "Daftar Kelas" },
-      { to: "/sch/$sekolah/akademik/$ta/kelas/rombel", label: "Rombongan Belajar" },
-      { to: "/sch/$sekolah/akademik/$ta/kelas/anggota", label: "Anggota Rombel" },
-    ],
-  },
-];
 
 const LIST_SUFFIXES = ["/daftar", "/rombel", "/anggota"];
 
@@ -41,6 +22,7 @@ const LIST_SUFFIXES = ["/daftar", "/rombel", "/anggota"];
 // breadcrumb, so the strip renders the active TA as a read-only badge.
 function KelasLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const { primary } = useKelasRole();
   const akademik = useAkademikContext();
 
@@ -51,7 +33,7 @@ function KelasLayout() {
   return (
     <KelasPeriodProvider value={akademik}>
       <ModuleShell
-        navGroups={NAV_GROUPS}
+        navSlot={<AkademikNav sekolah={sekolah} ta={akademik.tahunAjaran} pathname={pathname} />}
         pathname={pathname}
         {...(showStrip
           ? {

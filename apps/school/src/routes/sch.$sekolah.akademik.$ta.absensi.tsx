@@ -1,29 +1,11 @@
-import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { ModuleShell } from "../components/shell/ModuleShell";
 import { StripTahun } from "../components/shell/StripTahun";
 import { TahunChip } from "../components/shell/TahunChip";
-import type { NavTabGroup } from "../components/GroupedNavTabs";
+import { AkademikNav } from "../components/akademik/AkademikNav";
 import { useGenericRoleLabel } from "../lib/genericRole";
 import { useAkademikContext } from "../lib/akademikContext";
 import { AbsensiPeriodProvider } from "../lib/absensiPeriode";
-
-// Grouped nav for the Absensi module shell; every `to` carries the `$ta` segment
-// (TanStack inherits the active `ta` param, like `$sekolah`), so the pill bar
-// stays on the same Tahun Ajaran while switching surfaces.
-const NAV_GROUPS: NavTabGroup[] = [
-  {
-    label: "Ringkasan",
-    items: [{ to: "/sch/$sekolah/akademik/$ta/absensi", label: "Dashboard", exact: true }],
-  },
-  {
-    label: "Kehadiran",
-    items: [
-      { to: "/sch/$sekolah/akademik/$ta/absensi/daftar", label: "Harian Siswa" },
-      { to: "/sch/$sekolah/akademik/$ta/absensi/pelajaran", label: "Per Pelajaran" },
-      { to: "/sch/$sekolah/akademik/$ta/absensi/guru", label: "Absensi Guru" },
-    ],
-  },
-];
 
 const CHIP_HINT = "otomatis ikut tanggal";
 
@@ -36,6 +18,7 @@ const CHIP_HINT = "otomatis ikut tanggal";
 // happens via the Akademik hub/breadcrumb, so the strip is a read-only badge.
 function AbsensiLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const roleLabel = useGenericRoleLabel();
   const akademik = useAkademikContext();
   const onGuru = pathname.endsWith("/guru");
@@ -54,7 +37,7 @@ function AbsensiLayout() {
 
   return (
     <AbsensiPeriodProvider value={akademik}>
-      <ModuleShell navGroups={NAV_GROUPS} pathname={pathname} {...(context ? { context } : {})}>
+      <ModuleShell navSlot={<AkademikNav sekolah={sekolah} ta={akademik.tahunAjaran} pathname={pathname} />} pathname={pathname} {...(context ? { context } : {})}>
         <Outlet />
       </ModuleShell>
     </AbsensiPeriodProvider>

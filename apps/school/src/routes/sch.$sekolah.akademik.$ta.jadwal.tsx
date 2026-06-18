@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { createFileRoute, Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { ModuleShell } from "../components/shell/ModuleShell";
 import { StripTahun } from "../components/shell/StripTahun";
+import { AkademikNav } from "../components/akademik/AkademikNav";
 import { useAkademikRole, ROLE_LABEL } from "../lib/akademikRole";
-import { filterJadwalNav } from "../lib/jadwalNav";
 import { useAkademikContext } from "../lib/akademikContext";
 import { JadwalPeriodProvider } from "../lib/jadwalPeriode";
 import { useSemesterDoc } from "../lib/semesterDoc";
@@ -23,7 +23,6 @@ function JadwalLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const { primary } = useAkademikRole();
-  const navGroups = filterJadwalNav(primary);
   const akademik = useAkademikContext();
   const { semester, setSemester, semOptions } = useSemesterDoc(sekolah, akademik.tahunAjaran, "jadwal");
 
@@ -39,7 +38,7 @@ function JadwalLayout() {
   return (
     <JadwalPeriodProvider value={value}>
       <ModuleShell
-        navGroups={navGroups}
+        navSlot={<AkademikNav sekolah={sekolah} ta={akademik.tahunAjaran} pathname={pathname} />}
         pathname={pathname}
         context={
           <StripTahun
