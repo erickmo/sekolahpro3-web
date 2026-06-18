@@ -101,6 +101,35 @@ export function pickAutoRedirectTa(
   return current ? current.name : null;
 }
 
+/**
+ * Resolve the Tahun Ajaran to feed the unified Akademik nav from a page that has
+ * NO `$ta` in its own URL (currently only PPDB). The scoped menu items (Dashboard,
+ * Kelas, Jadwal, …) need a real TA or they all collapse to the hub picker.
+ *
+ * Priority: the remembered TA while it is still writable (non-past) → the running
+ * (`is_current`) TA → "" (let AkademikNav fall back to the hub picker when there
+ * is genuinely no workspace to point at). Differs from {@link pickAutoRedirectTa}:
+ * that one is for AUTO-redirect (returns null on first visit so the hub stays the
+ * entry); here we want a usable TA even with no stored value so the menu links work.
+ *
+ * @param storedTa - Remembered TA name (from readStoredPeriode), may be undefined.
+ * @param list - Full Tahun Ajaran list.
+ * @param refDate - Reference date for the past-period check.
+ * @returns A TA `name` to scope the nav links, or "" when none is usable.
+ */
+export function resolveNavTa(
+  storedTa: string | undefined,
+  list: readonly TahunAjaranRow[],
+  refDate: Date,
+): string {
+  if (storedTa) {
+    const stored = list.find((t) => t.name === storedTa);
+    if (stored && !isPastPeriod(stored, refDate)) return storedTa;
+  }
+  const current = list.find((t) => t.is_current === 1);
+  return current ? current.name : "";
+}
+
 // Subset of TA fields needed for the distribution summary (structural so it does
 // not depend on the exact TahunAjaranRow shape from lib akademikPeriode).
 type TaStatusRow = { is_current?: number; status?: string };
