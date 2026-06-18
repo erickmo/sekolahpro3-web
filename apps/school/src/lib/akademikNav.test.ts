@@ -10,6 +10,7 @@ import { describe, it, expect } from "vitest";
 import {
   splitTaList,
   pickAutoRedirectTa,
+  resolveNavTa,
   workspaceSubLabel,
   taPath,
   parseGoParam,
@@ -84,6 +85,47 @@ describe("pickAutoRedirectTa", () => {
 
   it("returns null when there is no stored TA (first visit → hub)", () => {
     expect(pickAutoRedirectTa(undefined, list, ref)).toBeNull();
+  });
+});
+
+describe("resolveNavTa (unified nav TA for non-$ta pages, e.g. PPDB)", () => {
+  const ref = new Date(2025, 9, 15); // 2025-10-15
+  const running = {
+    name: "S-2025",
+    is_current: 1 as const,
+    status: "Aktif",
+    tanggal_mulai: "2025-07-01",
+    tanggal_selesai: "2026-06-30",
+  };
+  const closed = {
+    name: "S-2024",
+    is_current: 0 as const,
+    status: "Closed",
+    tanggal_mulai: "2024-07-01",
+    tanggal_selesai: "2025-06-30",
+  };
+  const list = [running, closed];
+
+  it("keeps the stored TA when it is still writable (continuity)", () => {
+    expect(resolveNavTa("S-2025", list, ref)).toBe("S-2025");
+  });
+
+  it("falls back to the running TA when nothing is stored (the PPDB bug)", () => {
+    // No localStorage periode → menu links must still target a real workspace,
+    // not collapse to the hub picker.
+    expect(resolveNavTa(undefined, list, ref)).toBe("S-2025");
+  });
+
+  it("falls back to the running TA when the stored TA is past/closed", () => {
+    expect(resolveNavTa("S-2024", list, ref)).toBe("S-2025");
+  });
+
+  it("falls back to the running TA when the stored TA is gone", () => {
+    expect(resolveNavTa("S-1999", list, ref)).toBe("S-2025");
+  });
+
+  it("returns '' when no running TA exists (genuine no-workspace → hub)", () => {
+    expect(resolveNavTa(undefined, [closed], ref)).toBe("");
   });
 });
 
