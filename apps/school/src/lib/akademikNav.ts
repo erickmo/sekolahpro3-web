@@ -248,3 +248,118 @@ export function buildWorkspaceNavGroups(): NavTabGroup[] {
     },
   ];
 }
+
+// ── Unified Akademik nav (one consistent menu across /akademik/**) ────────────
+
+export interface AkademikNavLink {
+  to: string;
+  label: string;
+  exact?: boolean;
+}
+
+/**
+ * One top-level entry of the unified Akademik menu. `scoped` modules live under
+ * a Tahun Ajaran (`$ta`); `ppdb` is not period-scoped. A module is either a
+ * direct link (`to`) or a dropdown of `items`.
+ */
+export interface AkademikNavModule {
+  key: string;
+  label: string;
+  scoped: boolean;
+  to?: string;
+  items?: AkademikNavLink[];
+}
+
+/** The single source of truth for the Akademik menu, shown on every akademik page. */
+export function buildAkademikModules(): AkademikNavModule[] {
+  return [
+    { key: "dashboard", label: "Dashboard", scoped: true, to: "/sch/$sekolah/akademik/$ta" },
+    {
+      key: "penilaian",
+      label: "Penilaian",
+      scoped: true,
+      items: [
+        { to: "/sch/$sekolah/akademik/$ta/asesmen", label: "Input Nilai Test" },
+        { to: "/sch/$sekolah/akademik/$ta/entri-nilai", label: "Entri Nilai" },
+        { to: "/sch/$sekolah/akademik/$ta/raport", label: "Raport" },
+      ],
+    },
+    {
+      key: "kelas",
+      label: "Kelas",
+      scoped: true,
+      items: [
+        { to: "/sch/$sekolah/akademik/$ta/kelas/daftar", label: "Daftar Kelas" },
+        { to: "/sch/$sekolah/akademik/$ta/kelas/rombel", label: "Rombongan Belajar" },
+        { to: "/sch/$sekolah/akademik/$ta/kelas/anggota", label: "Anggota Rombel" },
+      ],
+    },
+    {
+      key: "jadwal",
+      label: "Jadwal",
+      scoped: true,
+      items: [
+        { to: "/sch/$sekolah/akademik/$ta/jadwal/papan", label: "Papan Jadwal" },
+        { to: "/sch/$sekolah/akademik/$ta/jadwal/agenda", label: "Agenda" },
+        { to: "/sch/$sekolah/akademik/$ta/jadwal/daftar", label: "Daftar Jadwal" },
+        { to: "/sch/$sekolah/akademik/$ta/jadwal/slot", label: "Slot Waktu" },
+        { to: "/sch/$sekolah/akademik/$ta/jadwal/override", label: "Override" },
+        { to: "/sch/$sekolah/akademik/$ta/jadwal/permintaan", label: "Permintaan" },
+        { to: "/sch/$sekolah/akademik/$ta/jadwal/persetujuan", label: "Persetujuan" },
+        { to: "/sch/$sekolah/akademik/$ta/jadwal/pantauan", label: "Pantauan" },
+      ],
+    },
+    {
+      key: "ekskul",
+      label: "Ekskul",
+      scoped: true,
+      items: [
+        { to: "/sch/$sekolah/akademik/$ta/ekskul/program", label: "Program" },
+        { to: "/sch/$sekolah/akademik/$ta/ekskul/pendaftaran", label: "Pendaftaran" },
+        { to: "/sch/$sekolah/akademik/$ta/ekskul/sesi", label: "Sesi & Kehadiran" },
+        { to: "/sch/$sekolah/akademik/$ta/ekskul/raport", label: "Raport" },
+        { to: "/sch/$sekolah/akademik/$ta/ekskul/mitra", label: "Mitra" },
+      ],
+    },
+    {
+      key: "absensi",
+      label: "Absensi",
+      scoped: true,
+      items: [
+        { to: "/sch/$sekolah/akademik/$ta/absensi/daftar", label: "Harian Siswa" },
+        { to: "/sch/$sekolah/akademik/$ta/absensi/pelajaran", label: "Per Pelajaran" },
+        { to: "/sch/$sekolah/akademik/$ta/absensi/guru", label: "Absensi Guru" },
+      ],
+    },
+    {
+      key: "pendaftaran",
+      label: "Pendaftaran",
+      scoped: true,
+      to: "/sch/$sekolah/akademik/$ta/pendaftaran",
+    },
+    {
+      key: "ppdb",
+      label: "PPDB",
+      scoped: false,
+      items: [
+        { to: "/sch/$sekolah/akademik/ppdb/daftar", label: "Pendaftaran" },
+        { to: "/sch/$sekolah/akademik/ppdb/calon-siswa", label: "Calon Siswa" },
+        { to: "/sch/$sekolah/akademik/ppdb/gelombang", label: "Gelombang" },
+        { to: "/sch/$sekolah/akademik/ppdb/seleksi", label: "Seleksi" },
+        { to: "/sch/$sekolah/akademik/ppdb/pembayaran", label: "Pembayaran" },
+        { to: "/sch/$sekolah/akademik/ppdb/daftar-ulang", label: "Daftar Ulang" },
+        { to: "/sch/$sekolah/akademik/ppdb/pengaturan", label: "Pengaturan" },
+      ],
+    },
+  ];
+}
+
+/** Which module the current pathname belongs to (for active highlighting). */
+export function activeModuleKey(pathname: string): string {
+  if (/\/akademik\/ppdb(\/|$)/.test(pathname)) return "ppdb";
+  if (/\/akademik\/[^/]+\/(asesmen|entri-nilai|raport)(\/|$)/.test(pathname)) return "penilaian";
+  for (const m of ["kelas", "jadwal", "ekskul", "absensi", "pendaftaran"]) {
+    if (new RegExp(`/akademik/[^/]+/${m}(/|$)`).test(pathname)) return m;
+  }
+  return "dashboard";
+}

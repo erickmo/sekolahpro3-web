@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { createFileRoute, Outlet, useParams, useRouterState } from "@tanstack/react-router";
-import type { NavTabGroup } from "../components/GroupedNavTabs";
 import { ModuleShell } from "../components/shell/ModuleShell";
 import { StripTahun } from "../components/shell/StripTahun";
+import { AkademikNav } from "../components/akademik/AkademikNav";
 import { EkskulContextProvider } from "../lib/ekskulContext";
 import { useEkskulRole, ROLE_LABEL } from "../lib/ekskulRole";
 import { useAkademikContext } from "../lib/akademikContext";
@@ -10,32 +10,6 @@ import { useSemesterDoc } from "../lib/semesterDoc";
 
 // Per-module localStorage namespace for the remembered Semester docname.
 const PERIODE_NS = "ekskul";
-
-// Sub-navigation groups for the ekstrakurikuler module shell. Every `to` carries
-// the `$ta` segment; TanStack inherits the active `ta` param (as it does
-// `$sekolah`), so the pill bar stays on the same Tahun Ajaran while switching
-// feature pages.
-const NAV_GROUPS: NavTabGroup[] = [
-  {
-    label: "Ringkasan",
-    items: [{ to: "/sch/$sekolah/akademik/$ta/ekskul", label: "Dashboard", exact: true }],
-  },
-  {
-    label: "Kegiatan",
-    items: [
-      { to: "/sch/$sekolah/akademik/$ta/ekskul/sesi", label: "Sesi & Kehadiran" },
-      { to: "/sch/$sekolah/akademik/$ta/ekskul/raport", label: "Raport" },
-    ],
-  },
-  {
-    label: "Kelola",
-    items: [
-      { to: "/sch/$sekolah/akademik/$ta/ekskul/program", label: "Program" },
-      { to: "/sch/$sekolah/akademik/$ta/ekskul/pendaftaran", label: "Pendaftaran" },
-      { to: "/sch/$sekolah/akademik/$ta/ekskul/mitra", label: "Mitra" },
-    ],
-  },
-];
 
 // Layout shell for the Ekstrakurikuler module, now living inside the per-Tahun-
 // Ajaran Akademik workspace (Fase 1 single-door).
@@ -67,7 +41,7 @@ function EkskulLayout() {
   return (
     <EkskulContextProvider value={value}>
       <ModuleShell
-        navGroups={NAV_GROUPS}
+        navSlot={<AkademikNav sekolah={sekolah} ta={akademik.tahunAjaran} pathname={pathname} />}
         pathname={pathname}
         context={
           <StripTahun

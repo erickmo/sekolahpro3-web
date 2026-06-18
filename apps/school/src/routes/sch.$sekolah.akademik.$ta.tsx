@@ -24,13 +24,13 @@ import {
 } from "../lib/akademikPeriode";
 import {
   buildTaSegments,
-  buildWorkspaceNavGroups,
   isPeriodeSelfManaged,
   isSubmodulePath,
   showContextBar,
   showPeriodeIntro,
   workspaceSubLabel,
 } from "../lib/akademikNav";
+import { AkademikNav } from "../components/akademik/AkademikNav";
 
 /** Search params for the per-TA workspace. The Tahun Ajaran itself lives in the
  * path (`$ta`); only the semester is a query param (it switches often within a TA). */
@@ -44,13 +44,6 @@ const TA_FIELDS = [
   "semester_ganjil_mulai", "semester_ganjil_akhir",
   "semester_genap_mulai", "semester_genap_akhir",
 ];
-
-// Grouped sub-navigation for the workspace ModuleShell. Every `to` carries the
-// `$ta` segment; TanStack inherits the active `ta` param (as it does `$sekolah`),
-// so the pill bar stays on the same Tahun Ajaran while switching feature pages.
-// Setup (Tahun Ajaran, Kurikulum, Mapel, KKM, Komponen Nilai) tetap di Master Data;
-// kelas/jadwal/ekskul kini hidup di workspace ini (Fase 1 single-door).
-const NAV_GROUPS = buildWorkspaceNavGroups();
 
 // Panduan singkat fitur Konteks Periode — muncul bersama context bar di halaman
 // operasional. Per-langkah diberi badge peran agar 3 alur (admin/guru/kepala)
@@ -188,7 +181,7 @@ function AkademikWorkspaceLayout() {
     <Outlet />
   ) : (
     <ModuleShell
-      navGroups={NAV_GROUPS}
+      navSlot={<AkademikNav sekolah={sekolah} ta={decodedTa} pathname={pathname} />}
       pathname={pathname}
       {...(showBar ? { context: <AkademikContextBar taLabel={taLabel} /> } : {})}
     >

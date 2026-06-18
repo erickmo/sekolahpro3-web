@@ -1,47 +1,23 @@
-import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useParams, useRouterState } from "@tanstack/react-router";
 import { ModuleShell } from "../components/shell/ModuleShell";
-import type { NavTabGroup } from "../components/GroupedNavTabs";
+import { AkademikNav } from "../components/akademik/AkademikNav";
 import { useGenericRoleLabel } from "../lib/genericRole";
-
-// Grouped sub-nav for the PPDB module: 9 destinations bucketed into 4 themed
-// header-pill groups (summary → intake → process → admin).
-const NAV_GROUPS: NavTabGroup[] = [
-  {
-    label: "Ringkasan",
-    items: [{ to: "/sch/$sekolah/akademik/ppdb", label: "Dashboard", exact: true }],
-  },
-  {
-    label: "Pendaftaran",
-    items: [
-      { to: "/sch/$sekolah/akademik/ppdb/buat", label: "Buat PPDB" },
-      { to: "/sch/$sekolah/akademik/ppdb/daftar", label: "Pendaftaran" },
-      { to: "/sch/$sekolah/akademik/ppdb/calon-siswa", label: "Calon Siswa" },
-      { to: "/sch/$sekolah/akademik/ppdb/gelombang", label: "Gelombang" },
-    ],
-  },
-  {
-    label: "Proses",
-    items: [
-      { to: "/sch/$sekolah/akademik/ppdb/seleksi", label: "Seleksi" },
-      { to: "/sch/$sekolah/akademik/ppdb/pembayaran", label: "Pembayaran" },
-      { to: "/sch/$sekolah/akademik/ppdb/daftar-ulang", label: "Daftar Ulang" },
-    ],
-  },
-  {
-    label: "Kelola",
-    items: [{ to: "/sch/$sekolah/akademik/ppdb/pengaturan", label: "Pengaturan" }],
-  },
-];
+import { readStoredPeriode } from "../lib/akademikPeriode";
 
 // PPDB module layout: role-framed ModuleShell chrome wrapping the route outlet.
+// PPDB is NOT period-scoped, but the unified Akademik nav has `$ta`-scoped items;
+// resolve a TA from the last-opened periode so those links target a real workspace
+// (AkademikNav falls back to the hub picker when none is stored).
 function PpdbLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const ta = readStoredPeriode(sekolah).ta ?? "";
   return (
     <ModuleShell
       label="PPDB"
       framing="Kelola penerimaan peserta didik baru dari pendaftaran sampai daftar ulang."
       roleLabel={useGenericRoleLabel()}
-      navGroups={NAV_GROUPS}
+      navSlot={<AkademikNav sekolah={sekolah} ta={ta} pathname={pathname} />}
       pathname={pathname}
     >
       <Outlet />

@@ -183,3 +183,31 @@ describe("buildWorkspaceNavGroups", () => {
     ]);
   });
 });
+
+import { buildAkademikModules, activeModuleKey } from "./akademikNav";
+
+describe("unified akademik nav", () => {
+  it("activeModuleKey maps each path to its module", () => {
+    expect(activeModuleKey("/sch/x/akademik/2025")).toBe("dashboard");
+    expect(activeModuleKey("/sch/x/akademik/2025/kelas/daftar")).toBe("kelas");
+    expect(activeModuleKey("/sch/x/akademik/2025/jadwal/papan")).toBe("jadwal");
+    expect(activeModuleKey("/sch/x/akademik/2025/ekskul/program")).toBe("ekskul");
+    expect(activeModuleKey("/sch/x/akademik/2025/absensi/guru")).toBe("absensi");
+    expect(activeModuleKey("/sch/x/akademik/2025/asesmen")).toBe("penilaian");
+    expect(activeModuleKey("/sch/x/akademik/2025/entri-nilai")).toBe("penilaian");
+    expect(activeModuleKey("/sch/x/akademik/2025/raport")).toBe("penilaian");
+    expect(activeModuleKey("/sch/x/akademik/2025/pendaftaran")).toBe("pendaftaran");
+    expect(activeModuleKey("/sch/x/akademik/ppdb/seleksi")).toBe("ppdb");
+  });
+
+  it("buildAkademikModules lists every top entry; ppdb is non-scoped", () => {
+    const mods = buildAkademikModules();
+    expect(mods.map((m) => m.key)).toEqual([
+      "dashboard", "penilaian", "kelas", "jadwal", "ekskul", "absensi", "pendaftaran", "ppdb",
+    ]);
+    expect(mods.find((m) => m.key === "ppdb")!.scoped).toBe(false);
+    expect(mods.find((m) => m.key === "dashboard")!.scoped).toBe(true);
+    expect(mods.find((m) => m.key === "dashboard")!.to).toBeTruthy();
+    expect((mods.find((m) => m.key === "kelas")!.items ?? []).length).toBeGreaterThan(0);
+  });
+});

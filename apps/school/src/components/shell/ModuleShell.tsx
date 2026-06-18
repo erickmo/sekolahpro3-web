@@ -18,8 +18,14 @@ import { GroupedNavTabs, type NavTabGroup } from "../GroupedNavTabs";
 import { ModuleContextBar, type ModuleContextBarProps } from "./ModuleContextBar";
 
 export interface ModuleShellProps {
-  /** Sub-navigation groups rendered as the header pill row. */
-  navGroups: NavTabGroup[];
+  /** Sub-navigation groups rendered as the header pill row. Ignored when `navSlot` is set. */
+  navGroups?: NavTabGroup[];
+  /**
+   * Custom navigation node rendered in the header instead of the grouped pills.
+   * Used by Akademik to render one unified dropdown bar across every sub-module
+   * so the menu reads identically everywhere.
+   */
+  navSlot?: ReactNode;
   /** Current router pathname for active-tab detection. */
   pathname: string;
   /** Override the context row with a custom node (e.g. a period bar). */
@@ -38,6 +44,7 @@ export interface ModuleShellProps {
 
 export function ModuleShell({
   navGroups,
+  navSlot,
   pathname,
   context,
   label,
@@ -65,7 +72,7 @@ export function ModuleShell({
     <div className="space-y-4">
       <ModuleHeader
         context={contextNode}
-        nav={<GroupedNavTabs groups={navGroups} pathname={pathname} variant="header" />}
+        nav={navSlot ?? <GroupedNavTabs groups={navGroups ?? []} pathname={pathname} variant="header" />}
       />
       {children}
     </div>
