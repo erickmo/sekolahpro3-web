@@ -15,6 +15,7 @@ import {
   taPath,
   parseGoParam,
   isSubmodulePath,
+  submoduleRoot,
   pickNextTa,
   buildWorkspaceNavGroups,
 } from "./akademikNav";
@@ -190,6 +191,20 @@ describe("isSubmodulePath", () => {
   it("does not match workspace dashboard or penilaian pages", () => {
     expect(isSubmodulePath("/sch/a/akademik/2025%2F2026")).toBe(false);
     expect(isSubmodulePath("/sch/a/akademik/2025%2F2026/asesmen")).toBe(false);
+  });
+});
+
+describe("submoduleRoot", () => {
+  it("returns the sub-module root name for a sub-module path", () => {
+    expect(submoduleRoot("/sch/a/akademik/2025%2F2026/kelas/daftar")).toBe("kelas");
+    expect(submoduleRoot("/sch/a/akademik/2025%2F2026/jadwal/papan")).toBe("jadwal");
+    expect(submoduleRoot("/sch/a/akademik/2025%2F2026/ekskul")).toBe("ekskul");
+    expect(submoduleRoot("/sch/a/akademik/2025%2F2026/absensi/guru")).toBe("absensi");
+  });
+  it("returns null for the dashboard, penilaian, or non-akademik paths", () => {
+    expect(submoduleRoot("/sch/a/akademik/2025%2F2026")).toBeNull();
+    expect(submoduleRoot("/sch/a/akademik/2025%2F2026/asesmen")).toBeNull();
+    expect(submoduleRoot("/sch/a/akademik/ppdb/daftar")).toBeNull();
   });
 });
 

@@ -5,6 +5,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { type SearchableOption } from "@sekolahpro/ui";
 
 /**
  * Shared value shape for a module's period context (Tahun Ajaran + Semester).
@@ -25,6 +26,11 @@ export interface PeriodContextValue {
   // memakai untuk konfirmasi sebelum ganti periode.
   dirty: boolean;
   setDirty: (v: boolean) => void;
+  // Tahun Ajaran options for the in-place switcher, filled by the akademik `$ta`
+  // layout. Sub-module layouts (kelas/jadwal/ekskul/absensi) read it to render a
+  // TA dropdown so the user can switch year without going back to the hub.
+  // Optional: contexts built before the TA list loads simply omit the switcher.
+  taOptions?: SearchableOption[];
 }
 
 /** The provider + paired hooks a single module gets from {@link createPeriodContext}. */
@@ -71,6 +77,10 @@ export function createPeriodContext(name: string): PeriodContext {
         value.setTahunAjaran,
         value.setSemester,
         value.setDirty,
+        // TA options arrive async (after the TA list loads); without this dep the
+        // memo would keep returning the pre-load value and the switcher would never
+        // populate. Stable by reference (memoised in the layout) so no churn.
+        value.taOptions,
       ],
     );
     return <Ctx.Provider value={memo}>{children}</Ctx.Provider>;

@@ -4,6 +4,7 @@ import { StripTahun } from "../components/shell/StripTahun";
 import { AkademikNav } from "../components/akademik/AkademikNav";
 import { useKelasRole, KELAS_ROLE_LABEL } from "../lib/kelasRole";
 import { useAkademikContext } from "../lib/akademikContext";
+import { buildTaSwitch } from "../lib/akademikTaSwitch";
 import { KelasPeriodProvider } from "../lib/kelasPeriode";
 
 const LIST_SUFFIXES = ["/daftar", "/rombel", "/anggota"];
@@ -18,13 +19,15 @@ const LIST_SUFFIXES = ["/daftar", "/rombel", "/anggota"];
 // TU board (index) + the three lists. The wali cockpit (/saya), the kepsek
 // approval queue (index, cross-TA), and the read-only detail drilldown ignore
 // the period, so the strip stays hidden there — they remain provider children
-// but never read the context. Switching TA now happens via the Akademik hub /
-// breadcrumb, so the strip renders the active TA as a read-only badge.
+// but never read the context. The strip's Tahun Ajaran control is an in-place
+// dropdown (buildTaSwitch) so the user can switch year without leaving Kelas;
+// it falls back to a read-only badge when there is no other TA to switch to.
 function KelasLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const { primary } = useKelasRole();
   const akademik = useAkademikContext();
+  const taSwitch = buildTaSwitch(akademik);
 
   const onList = LIST_SUFFIXES.some((p) => pathname.endsWith(p));
   const onBoard = primary === "tu" && /\/kelas\/?$/.test(pathname);
@@ -40,7 +43,7 @@ function KelasLayout() {
               context: (
                 <StripTahun
                   moduleLabel="Kelas"
-                  taLabel={akademik.tahunAjaran}
+                  {...(taSwitch ? { taSwitch } : { taLabel: akademik.tahunAjaran })}
                   isPastPeriod={akademik.isPastPeriod}
                   noActiveTa={akademik.noActiveTa}
                   roleLabel={KELAS_ROLE_LABEL[primary]}

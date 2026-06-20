@@ -6,6 +6,7 @@ import { AkademikNav } from "../components/akademik/AkademikNav";
 import { EkskulContextProvider } from "../lib/ekskulContext";
 import { useEkskulRole, ROLE_LABEL } from "../lib/ekskulRole";
 import { useAkademikContext } from "../lib/akademikContext";
+import { buildTaSwitch } from "../lib/akademikTaSwitch";
 import { useSemesterDoc } from "../lib/semesterDoc";
 
 // Per-module localStorage namespace for the remembered Semester docname.
@@ -21,12 +22,14 @@ const PERIODE_NS = "ekskul";
 // "Genap" label akademik.semester carries would throw a LinkValidationError. So
 // we resolve Semester docs for this TA locally (useSemesterDoc, "ekskul" ns) and
 // feed ONLY that docname into the provider; akademik.semester is never used here.
-// The TA strip is a read-only badge (switching TA happens via the hub).
+// The TA strip carries an in-place dropdown (buildTaSwitch) so the user can switch
+// year without leaving Ekstrakurikuler; Semester stays a separate dropdown.
 function EkskulLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const { primary } = useEkskulRole();
   const akademik = useAkademikContext();
+  const taSwitch = buildTaSwitch(akademik);
   const { semester, setSemester, semOptions } = useSemesterDoc(sekolah, akademik.tahunAjaran, PERIODE_NS);
 
   // Provider value: workspace period for TA/flags, LOCAL Semester docname (NOT
@@ -46,7 +49,7 @@ function EkskulLayout() {
         context={
           <StripTahun
             moduleLabel="Ekstrakurikuler"
-            taLabel={akademik.tahunAjaran}
+            {...(taSwitch ? { taSwitch } : { taLabel: akademik.tahunAjaran })}
             semesterSwitch={{ value: semester, options: semOptions, onChange: setSemester }}
             isPastPeriod={akademik.isPastPeriod}
             noActiveTa={akademik.noActiveTa}

@@ -201,6 +201,23 @@ export function isSubmodulePath(pathname: string): boolean {
 }
 
 /**
+ * The sub-module root segment of a TA-workspace path (kelas/jadwal/ekskul/absensi),
+ * or null when the path is the dashboard, a penilaian page, or not a sub-module.
+ *
+ * Used by the workspace `setTahunAjaran` to keep the user inside the SAME sub-module
+ * when they switch Tahun Ajaran (navigate to the module root under the new `$ta`),
+ * instead of always bouncing to the dashboard. Deeper path/IDs are intentionally
+ * dropped to the module root so a switch never points at a row absent in the new year.
+ *
+ * @param pathname - Current window.location.pathname.
+ * @returns The matched module root, or null.
+ */
+export function submoduleRoot(pathname: string): string | null {
+  const m = pathname.match(/\/akademik\/[^/]+\/(kelas|jadwal|ekskul|absensi)(\/|$)/);
+  return m ? (m[1] ?? null) : null;
+}
+
+/**
  * Nearest Tahun Ajaran starting strictly after the reference local date.
  *
  * Compares date STRINGS (YYYY-MM-DD) — never `new Date(...)` on date-only
