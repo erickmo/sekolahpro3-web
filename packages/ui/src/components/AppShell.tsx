@@ -27,7 +27,13 @@ export function AppShell({
   return (
     <div
       className={cn(
-        "min-h-screen grid grid-cols-[260px_1fr] grid-rows-[64px_1fr]",
+        // `minmax(0,1fr)` (not a bare `1fr`, which means `minmax(auto,1fr)`):
+        // the `auto` minimum of a bare fr track is the content's min-content size,
+        // so an unshrinkable child (e.g. a module's wide sub-nav/charts) expands
+        // the column past the viewport → page-wide horizontal scroll. Capping the
+        // minimum at 0 makes the column authoritative; wide content scrolls/wraps
+        // locally instead of pushing the viewport.
+        "min-h-screen grid grid-cols-[260px_minmax(0,1fr)] grid-rows-[64px_1fr]",
         "bg-[hsl(220_20%_97%)] text-fg font-sans",
         className,
       )}
@@ -41,7 +47,10 @@ export function AppShell({
       <header className="sticky top-0 z-10 border-b border-border bg-bg/80 backdrop-blur flex items-center px-6">
         {topbar}
       </header>
-      <main className={cn(mainClassName)}>{children}</main>
+      {/* `min-w-0`: as a grid item, <main> defaults to min-width:auto, which would
+          let its content re-expand the column even with a minmax(0,1fr) track.
+          Pinning it to 0 keeps the content box bounded so children fit/scroll. */}
+      <main className={cn("min-w-0", mainClassName)}>{children}</main>
     </div>
   );
 }
