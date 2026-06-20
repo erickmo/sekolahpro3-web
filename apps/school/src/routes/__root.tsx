@@ -50,6 +50,13 @@ const SEARCH_MIN_QUERY = 2;
 const SEARCH_MAX_HITS = 8;
 const SEARCH_BLUR_DELAY_MS = 150;
 
+// Sidebar "Akademik" lands on the TA hub with the picker forced open (?pick=1),
+// so clicking the menu always asks which Tahun Ajaran to open instead of the hub
+// auto-redirecting into the last-opened TA. The auto-redirect is preserved for
+// other entry paths (refresh/deep-link) — only this explicit menu click pre-picks.
+// Mirrors HubSearch.pick in sch.$sekolah.akademik.index.tsx.
+const AKADEMIK_HUB_PICK_SEARCH = { pick: 1 } as const;
+
 function GlobalSearch({ sekolah }: { sekolah: string | undefined }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -399,7 +406,15 @@ function Layout() {
     );
   }
 
-  const mk = (to: string, label: string, icon: React.ReactNode, badge?: string | number): SidebarItem => {
+  const mk = (
+    to: string,
+    label: string,
+    icon: React.ReactNode,
+    badge?: string | number,
+    // Optional query for the scoped Link (e.g. force the Akademik hub picker
+    // open). Omitted entirely when absent so other items render a bare path.
+    search?: Record<string, unknown>,
+  ): SidebarItem => {
     const livePath = scopedActivePath(slug, to);
     // Sidebar parent stays highlighted on nested routes (e.g. /infrastruktur/**),
     // so deep-linking into a detail page keeps the module visibly active.
@@ -413,7 +428,12 @@ function Layout() {
       active: slug ? isActive : false,
       render: ({ className, children }: { className: string; children: React.ReactNode }) =>
         slug ? (
-          <Link to={scopedTo(slug, to)} params={scopedParams(slug)} className={className}>
+          <Link
+            to={scopedTo(slug, to)}
+            params={scopedParams(slug)}
+            {...(search ? { search: search as never } : {})}
+            className={className}
+          >
             {children}
           </Link>
         ) : (
@@ -475,7 +495,9 @@ function Layout() {
       title: "Akademik",
       items: [
         // Absensi kini sub-modul di dalam /akademik/$ta (Fase 2 single-door).
-        mk("/akademik", "Akademik", <IconBook />),
+        // Klik menu selalu buka pemilih Tahun Ajaran (?pick=1), tak auto-loncat
+        // ke TA terakhir — refresh/deep-link tetap auto-redirect seperti semula.
+        mk("/akademik", "Akademik", <IconBook />, undefined, AKADEMIK_HUB_PICK_SEARCH),
       ],
     },
     {
