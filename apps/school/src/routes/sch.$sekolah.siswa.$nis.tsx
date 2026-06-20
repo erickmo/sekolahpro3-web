@@ -74,7 +74,6 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
-  findSiswa,
   formatRupiah,
   formatTanggal,
   umur,
@@ -89,6 +88,17 @@ import {
   type TagihanRow,
   type WaliRow,
 } from "../data/siswa";
+import {
+  enforceSinglePrimary,
+  mapEntriNilaiRows,
+  mapMutasiRows,
+  mapWaliRowsToDoc,
+  siswaDocToView,
+  type EntriNilaiRow,
+  type MutasiSiswaDoc,
+  type SiswaDoc,
+} from "../lib/orang/siswaMapper";
+import { isMissingResource } from "../lib/resourceError";
 
 type TabKey = "ringkasan" | "profil" | "akademik" | "absensi" | "keuangan" | "wali" | "mutasi" | "dokumen" | "aktivitas";
 
@@ -608,28 +618,6 @@ function KeuanganTab({ siswa }: { siswa: Siswa }) {
   );
 }
 
-function serializeWali(rows: WaliRow[]): Record<string, unknown>[] {
-  return rows.map((w) => ({
-    hubungan: w.hubungan,
-    nama: w.nama,
-    nik: w.nik ?? null,
-    nik_ayah: w.nikAyah ?? null,
-    nik_ibu: w.nikIbu ?? null,
-    nama_ayah_kk: w.namaAyahKk ?? null,
-    is_primary: w.isPrimary ? 1 : 0,
-    pekerjaan: w.pekerjaan ?? null,
-    penghasilan: w.penghasilan ?? null,
-    pendidikan: w.pendidikan ?? null,
-    no_hp: w.telepon ?? null,
-    email: w.email ?? null,
-    alamat: w.alamat ?? null,
-  }));
-}
-
-function enforceSinglePrimary(rows: WaliRow[], primaryIdx: number): WaliRow[] {
-  return rows.map((r, i) => ({ ...r, isPrimary: i === primaryIdx }));
-}
-
 function WaliTab({ siswa }: { siswa: Siswa }) {
   const [openAdd, setOpenAdd] = useState(false);
   const [editIdx, setEditIdx] = useState<number | null>(null);
@@ -648,7 +636,7 @@ function WaliTab({ siswa }: { siswa: Siswa }) {
       try {
         await updateSiswa.mutateAsync({
           name: siswa.nis,
-          patch: { wali: serializeWali(next) },
+          patch: { wali: mapWaliRowsToDoc(next) },
         });
         setLocalWali(next);
         qc.invalidateQueries({ queryKey: ["resource:doc", "Siswa", siswa.nis] });
@@ -897,114 +885,14 @@ const VALID_TABS = new Set<TabKey>([
   "ringkasan","profil","akademik","absensi","keuangan","wali","mutasi","dokumen","aktivitas",
 ]);
 
-// Wali Siswa child row (siswa/doctype/wali_siswa). Returned inline on the
-// parent Siswa doc fetch.
-type WaliSiswaRow = {
-  name: string;
-  hubungan?: "Ayah" | "Ibu" | "Wali";
-  nama?: string;
-  nik_ortu?: string;
-  pendidikan?: string;
-  pekerjaan?: string;
-  no_hp?: string;
-  email?: string;
-};
-
-// Backend Siswa doctype shape (snake_case). Nested child tables not yet
-// embedded here (nilai, absensi, tagihan, mutasi, dokumen) need their own
-// queries in a follow-up sprint.
-type SiswaDoc = {
-  name: string;
-  nis?: string;
-  nisn?: string;
-  nik?: string;
-  nama_lengkap?: string;
-  nama_panggilan?: string;
-  jenis_kelamin?: "Laki-laki" | "Perempuan";
-  tempat_lahir?: string;
-  tanggal_lahir?: string;
-  agama?: string;
-  kewarganegaraan?: "WNI" | "WNA";
-  status?: string;
-  jenjang?: string;
-  tahun_masuk?: string;
-  asal_sekolah?: string;
-  kebutuhan_khusus?: string;
-  wali?: WaliSiswaRow[];
-};
-
-// Entri Nilai list-row shape (akademik/doctype/entri_nilai). Only ref fields
-// available from list; numeric components live in `Nilai Komponen` child
-// table fetched via a follow-up doc query (out of scope here).
-type EntriNilaiRow = {
-  name: string;
-  siswa?: string;
-  mata_pelajaran?: string;
-};
-
-// Mutasi Siswa list-row shape (siswa/doctype/mutasi_siswa).
-type MutasiSiswaDoc = {
-  name: string;
-  siswa?: string;
-  jenis_mutasi?: "Naik Kelas" | "Tinggal Kelas" | "Pindah Keluar" | "Drop Out";
-  tanggal_mutasi?: string;
-  rombel_asal?: string;
-  rombel_tujuan?: string;
-  sekolah_tujuan?: string;
-  alasan_pindah?: string;
-  alasan_do?: string;
-  keterangan_do?: string;
-};
-
-function mapMutasiRows(rows: MutasiSiswaDoc[]): MutasiRow[] {
-  return rows.map((r) => {
-    const jenis: MutasiRow["jenis"] =
-      r.jenis_mutasi === "Drop Out" ? "DO" : (r.jenis_mutasi ?? "Naik Kelas");
-    const ket = r.alasan_pindah ?? r.keterangan_do ?? r.alasan_do ?? undefined;
-    const row: MutasiRow = {
-      tanggal: r.tanggal_mutasi ?? "",
-      jenis,
-    };
-    if (r.rombel_asal) row.dari = r.rombel_asal;
-    if (r.rombel_tujuan ?? r.sekolah_tujuan) row.ke = r.rombel_tujuan ?? r.sekolah_tujuan;
-    if (ket) row.keterangan = ket;
-    return row;
-  });
-}
-
-function mapEntriNilaiRows(rows: EntriNilaiRow[]): NilaiRow[] {
-  return rows.map((r) => ({
-    mapel: r.mata_pelajaran ?? r.name,
-    guru: "—",
-    pengetahuan: 0,
-    keterampilan: 0,
-    predikat: "C",
-  }));
-}
-
-function mapWaliRows(wali: WaliSiswaRow[]): WaliRow[] {
-  return wali.map((w) => {
-    const row: WaliRow = {
-      hubungan: w.hubungan ?? "Wali",
-      nama: w.nama ?? "",
-    };
-    if (w.nik_ortu) row.nik = w.nik_ortu;
-    if (w.pekerjaan) row.pekerjaan = w.pekerjaan;
-    if (w.pendidikan) row.pendidikan = w.pendidikan;
-    if (w.no_hp) row.telepon = w.no_hp;
-    if (w.email) row.email = w.email;
-    return row;
-  });
-}
-
 function SiswaDetailPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
 
   const { nis } = Route.useParams();
   const search = Route.useSearch();
-  // Primary lookup from backend; nested arrays (nilai, absensi, tagihan, wali,
-  // mutasi, dokumen) still come from mock until each child-table endpoint
-  // gets its own useResourceList wiring.
+  // Primary lookup from the real "Siswa" doc. Relation tabs that have their own
+  // live source (nilai, mutasi) are overlaid below; the rest render empty until
+  // their backend endpoints are wired (no mock fallback).
   const docQ = useResourceDoc<SiswaDoc>("Siswa", nis);
   const nilaiQ = useResourceList<EntriNilaiRow>("Entri Nilai", {
     filters: { siswa: nis },
@@ -1021,36 +909,6 @@ function SiswaDetailPage() {
     order_by: "tanggal_mutasi desc",
     limit_page_length: 50,
   });
-  const mock = findSiswa(nis, sekolah);
-  // Merge: real top-level fields override mock; nested arrays fall back.
-  const siswa: Siswa | undefined = (() => {
-    if (!mock) return undefined;
-    const d = docQ.data;
-    const nilaiRows = nilaiQ.data?.length ? mapEntriNilaiRows(nilaiQ.data) : mock.nilai;
-    const mutasiRows = mutasiQ.data?.length ? mapMutasiRows(mutasiQ.data) : mock.mutasi;
-    if (!d) return { ...mock, nilai: nilaiRows, mutasi: mutasiRows };
-    return {
-      ...mock,
-      nilai: nilaiRows,
-      mutasi: mutasiRows,
-      nis: d.nis ?? d.name ?? mock.nis,
-      nisn: d.nisn ?? mock.nisn,
-      nik: d.nik ?? mock.nik,
-      namaLengkap: d.nama_lengkap ?? mock.namaLengkap,
-      namaPanggilan: d.nama_panggilan ?? mock.namaPanggilan,
-      jenisKelamin: d.jenis_kelamin ?? mock.jenisKelamin,
-      tempatLahir: d.tempat_lahir ?? mock.tempatLahir,
-      tanggalLahir: d.tanggal_lahir ?? mock.tanggalLahir,
-      agama: (d.agama as Siswa["agama"]) ?? mock.agama,
-      kewarganegaraan: d.kewarganegaraan ?? mock.kewarganegaraan,
-      status: (d.status as Siswa["status"]) ?? mock.status,
-      jenjang: d.jenjang ?? mock.jenjang,
-      tahunMasuk: d.tahun_masuk ?? mock.tahunMasuk,
-      asalSekolah: d.asal_sekolah ?? mock.asalSekolah,
-      kebutuhanKhusus: d.kebutuhan_khusus ?? mock.kebutuhanKhusus,
-      wali: d.wali?.length ? mapWaliRows(d.wali) : mock.wali,
-    };
-  })();
   const navigate = useNavigate();
   const [openPesan, setOpenPesan] = useState(false);
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
@@ -1058,9 +916,25 @@ function SiswaDetailPage() {
     navigate({ to: "/sch/$sekolah/siswa/$nis", params: { sekolah, nis }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
-  if (!siswa) {
+  if (docQ.isLoading) {
+    return <div className="py-16 text-sm text-muted-fg">Memuat data siswa…</div>;
+  }
+  if (isMissingResource(docQ.error) || (!docQ.isLoading && !docQ.data)) {
     throw notFound();
   }
+  if (docQ.isError) {
+    return (
+      <div className="py-16">
+        <EmptyState title="Gagal memuat siswa" description={(docQ.error as Error)?.message ?? "Terjadi kesalahan."} />
+      </div>
+    );
+  }
+
+  // Real doc → complete view model (empty relations, zero summaries), then
+  // overlay the relation tabs that do have a live query.
+  const siswa: Siswa = siswaDocToView(docQ.data!);
+  if (nilaiQ.data?.length) siswa.nilai = mapEntriNilaiRows(nilaiQ.data);
+  if (mutasiQ.data?.length) siswa.mutasi = mapMutasiRows(mutasiQ.data);
 
   const counts: Partial<Record<TabKey, number>> = {
     akademik: siswa.nilai.length,
