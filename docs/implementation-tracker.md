@@ -18,7 +18,7 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 | Ads Manager | 4 | 4 | 0 | 0 | [ads](domains/ads/README.html) |
 | Perpustakaan | 4 | 4 | 0 | 0 | [perpustakaan](domains/perpustakaan/README.html) |
 | Ekstrakurikuler | 4 | 4 | 0 | 0 | [ekstrakurikuler](domains/ekstrakurikuler/README.html) |
-| Koperasi | 4 | 4 | 0 | 0 | [koperasi](domains/koperasi/README.html) |
+| Koperasi | 5 | 5 | 0 | 0 | [koperasi](domains/koperasi/README.html) |
 | Situs Sekolah | 4 | 4 | 0 | 0 | [situs](domains/situs/README.html) |
 | Manajemen Aset | 4 | 4 | 0 | 0 | [aset](domains/aset/README.html) |
 | Akademik | 6 | 6 | 0 | 0 | [akademik](domains/akademik/README.html) |
@@ -36,7 +36,7 @@ Status implementasi per-domain (tampilan CTO). Sumber kebenaran detail ada di
 | Audit Log | 4 | 4 | 0 | 0 | [audit](domains/audit/README.html) |
 | Verifikasi Penjemputan | 4 | 4 | 0 | 0 | [pickup-verify](domains/pickup-verify/README.html) |
 | OCR Identitas | 4 | 4 | 0 | 0 | [ocr](domains/ocr/README.html) |
-| **Total** | **86** | **86** | **0** | **0** | |
+| **Total** | **87** | **87** | **0** | **0** | |
 
 ## Ads Manager
 
@@ -79,6 +79,7 @@ ADR: [EKS-ADR-0001 — Lazy recap kehadiran (tanpa feeder)](domains/ekstrakuriku
 | KOP-002 | Halaman Suku Bunga read-only (khusus konvensional) | Feature | Done | typecheck/build |
 | KOP-003 | Transaksi simpanan (setor/tarik/transfer) + guard + sesi kas | Feature | Done | `transaksiGuard.test.ts`, `sesiKas.test.ts` |
 | KOP-004 | Persetujuan (buka/tutup/blokir/aktivasi rekening dormant) | Feature | Done | `worklist.test.ts` + render |
+| KOP-005 | Laporan rinci (mutasi simpanan, arus kas teller, komposisi simpanan, kualitas pembiayaan/NPF, ekspor CSV, filter periode) | Feature | Done | `laporan.test.ts` (10) |
 
 ADR: [KOP-ADR-0001 — Mode menu per jenis koperasi](domains/koperasi/ADR/KOP-ADR-0001-mode-menu-per-jenis.md)
 
