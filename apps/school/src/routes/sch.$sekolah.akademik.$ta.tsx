@@ -9,7 +9,7 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { useResourceList } from "@sekolahpro/api-client";
-import { Breadcrumb, SectionCard } from "@sekolahpro/ui";
+import { Breadcrumb, SectionCard, type SearchableOption } from "@sekolahpro/ui";
 import { AkademikContextProvider } from "../lib/akademikContext";
 import { AkademikContextBar } from "../components/akademik/AkademikContextBar";
 import { ModuleShell } from "../components/shell/ModuleShell";
@@ -28,6 +28,7 @@ import {
   isSubmodulePath,
   showContextBar,
   showPeriodeIntro,
+  submoduleRoot,
   workspaceSubLabel,
 } from "../lib/akademikNav";
 import { AkademikNav } from "../components/akademik/AkademikNav";
@@ -99,6 +100,15 @@ function AkademikWorkspaceLayout() {
   });
   const taList = useMemo(() => taQ.data ?? [], [taQ.data]);
 
+  // Tahun Ajaran options for the in-place switcher rendered in the sub-module
+  // strips. Value = raw `name` (the router encodes the path segment once; a
+  // pre-encoded value would double-encode); label prefers the friendly `nama`.
+  // Memoised so the period-context memo stays referentially stable.
+  const taOptions = useMemo<SearchableOption[]>(
+    () => taList.map((t) => ({ value: t.name, label: t.nama ?? t.name })),
+    [taList],
+  );
+
   // Stable reference date per mount (avoid re-resolving every render).
   const refDate = useRef(new Date()).current;
 
@@ -154,14 +164,29 @@ function AkademikWorkspaceLayout() {
     if (decodedTa && semester) writeStoredPeriode(sekolah, { ta: decodedTa, semester });
   }, [sekolah, decodedTa, semester, pathname]);
 
-  // Switching TA navigates to the new TA's workspace root (period bar no longer
-  // carries a TA dropdown; switching happens via the hub/breadcrumb).
+  // Switching TA re-enters the SAME sub-module under the new `$ta` (so a user on
+  // Absensi/Kelas/Jadwal/Ekskul stays where they are); on the dashboard/penilaian
+  // pages it lands on the new TA's workspace root. Deeper path/IDs are dropped to
+  // the module root so a switch never points at a row absent in the new year.
   const setTahunAjaran = useCallback(
     // Pass the RAW name — the router encodes the segment once (taPath would
     // double-encode; see decodedTa note above).
-    (v: string) =>
-      navigate({ to: "/sch/$sekolah/akademik/$ta", params: { sekolah, ta: v }, replace: true }),
-    [navigate, sekolah],
+    (v: string) => {
+      const root = submoduleRoot(pathname);
+      navigate(
+        root
+          ? // Runtime-built `to` (template) — TanStack's typed Link rejects a
+            // string `to`, so opt out with `as never` (same escape hatch as
+            // AkademikNav.linkProps).
+            {
+              to: `/sch/$sekolah/akademik/$ta/${root}` as never,
+              params: { sekolah, ta: v } as never,
+              replace: true,
+            }
+          : { to: "/sch/$sekolah/akademik/$ta", params: { sekolah, ta: v }, replace: true },
+      );
+    },
+    [navigate, sekolah, pathname],
   );
   const setSemester = useCallback(
     (v: string) => navigate({ to: ".", search: (prev) => ({ ...prev, semester: v }), replace: true }),
@@ -240,6 +265,7 @@ function AkademikWorkspaceLayout() {
         semester,
         setTahunAjaran,
         setSemester,
+        taOptions,
         isPastPeriod: past,
         // In a workspace a TA is always selected, so the "no active TA" banner
         // never applies here (it belongs to the hub's empty state).

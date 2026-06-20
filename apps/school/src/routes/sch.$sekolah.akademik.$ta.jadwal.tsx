@@ -5,6 +5,7 @@ import { StripTahun } from "../components/shell/StripTahun";
 import { AkademikNav } from "../components/akademik/AkademikNav";
 import { useAkademikRole, ROLE_LABEL } from "../lib/akademikRole";
 import { useAkademikContext } from "../lib/akademikContext";
+import { buildTaSwitch } from "../lib/akademikTaSwitch";
 import { JadwalPeriodProvider } from "../lib/jadwalPeriode";
 import { useSemesterDoc } from "../lib/semesterDoc";
 
@@ -18,12 +19,14 @@ import { useSemesterDoc } from "../lib/semesterDoc";
 // Pelajaran), whereas akademik.semester is a "Ganjil"/"Genap" LABEL — a separate
 // value space. So we resolve Semester docs for this TA locally (useSemesterDoc)
 // and feed only that docname into the provider; akademik.semester is never used
-// here. The TA strip is a read-only badge (switching TA happens via the hub).
+// here. The TA strip carries an in-place dropdown (buildTaSwitch) so the user can
+// switch year without leaving Jadwal; Semester stays a separate dropdown.
 function JadwalLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
   const { primary } = useAkademikRole();
   const akademik = useAkademikContext();
+  const taSwitch = buildTaSwitch(akademik);
   const { semester, setSemester, semOptions } = useSemesterDoc(sekolah, akademik.tahunAjaran, "jadwal");
 
   // Provider value: workspace period for TA/flags, LOCAL Semester docname (NOT
@@ -43,7 +46,7 @@ function JadwalLayout() {
         context={
           <StripTahun
             moduleLabel="Jadwal"
-            taLabel={akademik.tahunAjaran}
+            {...(taSwitch ? { taSwitch } : { taLabel: akademik.tahunAjaran })}
             semesterSwitch={{ value: semester, options: semOptions, onChange: setSemester }}
             isPastPeriod={akademik.isPastPeriod}
             noActiveTa={akademik.noActiveTa}
