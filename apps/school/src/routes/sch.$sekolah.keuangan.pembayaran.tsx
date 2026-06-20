@@ -64,7 +64,6 @@ function buildOptions(arr: readonly string[]) {
 
 function PembayaranPage() {
   const [metode, setMetode] = useState("Semua");
-  const [kelas, setKelas] = useState("Semua");
   const [search, setSearch] = useState("");
 
   const { rows: scoped, isLoading, refetch } = usePembayaranLive();
@@ -150,10 +149,9 @@ function PembayaranPage() {
     return scoped.filter((p) => {
       if (q && !`${p.siswa} ${p.judul} ${p.id} ${p.ref}`.toLowerCase().includes(q)) return false;
       if (metode !== "Semua" && p.metode !== metode) return false;
-      if (kelas !== "Semua" && p.kelas !== kelas) return false;
       return true;
     });
-  }, [scoped, search, metode, kelas]);
+  }, [scoped, search, metode]);
 
   const sumByMetode = useMemo(() => {
     const c: Record<MetodeBayar, number> = { Tunai: 0, Transfer: 0, QRIS: 0, "Virtual Account": 0, EDC: 0 };
@@ -173,7 +171,6 @@ function PembayaranPage() {
 
   const filters: SelectFilter[] = [
     { key: "metode", label: "Metode", value: metode, options: buildOptions(FILTER_OPTIONS.metode), onChange: setMetode },
-    { key: "kelas", label: "Kelas", value: kelas, options: buildOptions(FILTER_OPTIONS.kelas), onChange: setKelas },
   ];
 
   const cols: Column<PembayaranRow>[] = [
@@ -185,7 +182,6 @@ function PembayaranPage() {
       cell: (r) => (
         <div className="min-w-0">
           <div className="font-medium text-fg truncate">{r.siswa}</div>
-          <div className="text-xs text-muted-fg">{r.kelas}</div>
         </div>
       ),
     },

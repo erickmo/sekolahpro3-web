@@ -5,8 +5,9 @@
  * redesign — School Fee Invoice (Tagihan) and School Expense (Pengeluaran) —
  * and maps each Frappe document onto the existing UI row shapes so the pages
  * render unchanged. Company scoping reuses the akuntansi pattern
- * (useActiveCompany → company filter). Pembayaran / Buku Kas / dashboard stay on
- * mock fixtures until their own doctypes land.
+ * (useActiveCompany → company filter). Tagihan, Pembayaran and Pengeluaran are
+ * all Frappe-backed; the Buku Kas daily cash book is derived live from payments
+ * (cash in) and paid expenses (cash out) via deriveKasRows.
  */
 import { useResourceList } from "@sekolahpro/api-client";
 import { useActiveCompany } from "../lib/akuntansi-scope";
@@ -212,7 +213,6 @@ export interface PaymentDoc {
   jumlah: number;
   ref?: string;
   penerima?: string;
-  kelas?: string;
 }
 
 /** Map a School Fee Payment doc onto the UI PembayaranRow shape. */
@@ -221,7 +221,8 @@ export function mapPaymentToPembayaran(doc: PaymentDoc): PembayaranRow {
     id: doc.name,
     tanggal: doc.posting_date,
     siswa: doc.student_name || doc.student,
-    kelas: doc.kelas ?? "—",
+    // School Fee Payment carries no class; the row's `kelas` is always n/a.
+    kelas: "—",
     judul: doc.judul ?? "—",
     metode: doc.metode ?? "Tunai",
     jumlah: doc.jumlah,
