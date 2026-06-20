@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   mapFeeInvoiceToTagihan,
   mapExpenseToPengeluaran,
+  mapPaymentToPembayaran,
   type FeeInvoiceDoc,
   type ExpenseDoc,
+  type PaymentDoc,
 } from "./keuangan-live";
 
 const INVOICE: FeeInvoiceDoc = {
@@ -78,5 +80,48 @@ describe("mapExpenseToPengeluaran", () => {
     const doc = { ...EXP };
     delete doc.approver;
     expect(mapExpenseToPengeluaran(doc).approver).toBeUndefined();
+  });
+});
+
+describe("mapPaymentToPembayaran", () => {
+  const PAYMENT: PaymentDoc = {
+    name: "PAY-2026-00001",
+    posting_date: "2026-05-03",
+    company: "SMA Cendekia",
+    student: "SIS-002",
+    student_name: "Budi Santoso",
+    judul: "SPP Mei 2026",
+    invoice: "TAG-2026-00001",
+    metode: "Transfer",
+    jumlah: 600_000,
+    ref: "TRX-9",
+    penerima: "Bendahara",
+  };
+
+  it("maps core payment fields to the UI row", () => {
+    const row = mapPaymentToPembayaran(PAYMENT);
+    expect(row.id).toBe("PAY-2026-00001");
+    expect(row.tanggal).toBe("2026-05-03");
+    expect(row.siswa).toBe("Budi Santoso");
+    expect(row.judul).toBe("SPP Mei 2026");
+    expect(row.metode).toBe("Transfer");
+    expect(row.jumlah).toBe(600_000);
+    expect(row.ref).toBe("TRX-9");
+    expect(row.penerima).toBe("Bendahara");
+    expect(row.tagihanId).toBe("TAG-2026-00001");
+    expect(row.sekolah).toBe("SMA Cendekia");
+  });
+
+  it("falls back to the student id when student_name is absent", () => {
+    const doc = { ...PAYMENT };
+    delete doc.student_name;
+    expect(mapPaymentToPembayaran(doc).siswa).toBe("SIS-002");
+  });
+
+  it("reports class as n/a — School Fee Payment carries no kelas field", () => {
+    // Regression guard: the payment doctype has no `kelas`, so the row must
+    // never surface a class even if a stray value rides along on the raw object.
+    const withStrayClass = { ...PAYMENT, kelas: "X-A" } as unknown as PaymentDoc;
+    expect(mapPaymentToPembayaran(withStrayClass).kelas).toBe("—");
   });
 });
