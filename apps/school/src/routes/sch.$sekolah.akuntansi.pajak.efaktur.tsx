@@ -20,6 +20,7 @@ import {
   Modal,
   PageHeader,
   SectionCard,
+  Select,
   type Column,
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
@@ -32,6 +33,7 @@ import {
 import { KeuanganPageGuide } from "../components/keuangan";
 import { DistributionBar, type DistributionSegment } from "../components/viz";
 import { defOf } from "../lib/glossary";
+import { useActiveCompany, withCompanyFilter, efakturScopeFilter } from "../lib/akuntansi-scope";
 
 function EfakturPage() {
   const [q, setQ] = useState("");
@@ -42,11 +44,27 @@ function EfakturPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const list = useResourceList<EfakturExport>(DOCTYPE.EFAKTUR_EXPORT, {
-    fields: ["name", "tax_period", "export_date", "status", "format", "nsfp_from", "nsfp_to"],
-    order_by: "creation desc",
-    limit_page_length: 200,
+  // e-Faktur Export has no `company` field; scope it via the active company's
+  // Tax Periods (Tax Period IS company-scoped) so the list never shows another
+  // school's exports. Wait for the periods to load before firing the list.
+  const company = useActiveCompany();
+  const periodsQ = useResourceList<{ name: string }>(DOCTYPE.TAX_PERIOD, {
+    fields: ["name"],
+    filters: withCompanyFilter(undefined, company),
+    limit_page_length: 0,
   });
+  const periodNames = useMemo(() => (periodsQ.data ?? []).map((p) => p.name), [periodsQ.data]);
+
+  const list = useResourceList<EfakturExport>(
+    DOCTYPE.EFAKTUR_EXPORT,
+    {
+      fields: ["name", "tax_period", "export_date", "status", "format", "nsfp_from", "nsfp_to"],
+      filters: efakturScopeFilter(company, periodNames),
+      order_by: "creation desc",
+      limit_page_length: 200,
+    },
+    { enabled: !company || !periodsQ.isLoading },
+  );
   const create = useResourceCreate<EfakturExport>(DOCTYPE.EFAKTUR_EXPORT);
 
   const rows = useMemo(() => {
@@ -129,8 +147,13 @@ function EfakturPage() {
       <Modal open={open} onClose={() => setOpen(false)} title="e-Faktur Export Baru">
         {err && <Alert tone="danger" title="Error">{err}</Alert>}
         <FormGrid cols={2}>
-          <FormField label="Tax Period" required>
-            <Input value={form.tax_period} onChange={(e) => setForm({ ...form, tax_period: e.target.value })} />
+          <FormField label="Tax Period" required hint={periodNames.length === 0 ? "Buat Tax Period untuk sekolah ini dulu." : undefined}>
+            {/* Pilih dari Tax Period milik company aktif, supaya export baru
+                selalu masuk scope sekolah ini dan tampil di daftar. */}
+            <Select value={form.tax_period} onChange={(e) => setForm({ ...form, tax_period: e.target.value })}>
+              <option value="">— pilih periode —</option>
+              {periodNames.map((p) => <option key={p} value={p}>{p}</option>)}
+            </Select>
           </FormField>
           <FormField label="Export Date" required>
             <Input type="date" value={form.export_date} onChange={(e) => setForm({ ...form, export_date: e.target.value })} />

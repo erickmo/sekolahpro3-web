@@ -30,3 +30,15 @@ export function withCompanyFilter(
   }
   return [...base, ["company", "=", company]];
 }
+
+// Scope filter for e-Faktur Export. Unlike its sibling tax doctypes
+// (SPT Masa PPN, Withholding Tax Entry), e-Faktur Export has NO `company`
+// field of its own, so it cannot be filtered by company directly. We scope it
+// indirectly through its `tax_period` link — Tax Period IS company-scoped — by
+// passing the company's Tax Period names. Returns an empty filter when no
+// company is active (admin context sees all). The canonical fix is a backend
+// `company` field on the doctype; this is the FE-side tenant guard until then.
+export function efakturScopeFilter(company: string, periodNames: string[]): FilterTuple[] {
+  if (!company) return [];
+  return [["tax_period", "in", periodNames]];
+}

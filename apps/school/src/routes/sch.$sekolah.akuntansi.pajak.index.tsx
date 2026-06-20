@@ -5,7 +5,7 @@
  * composition donut over the SAME data the overview already fetches. Data hooks,
  * doctypes, filters, and totals are untouched.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import {
   PageHeader,
@@ -25,7 +25,7 @@ import {
   type WithholdingTaxEntry,
 } from "../data/akuntansi";
 import { scopedLinkProps } from "../lib/scoped";
-import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
+import { useActiveCompany, withCompanyFilter, efakturScopeFilter } from "../lib/akuntansi-scope";
 import { KeuanganPageGuide, KeuanganRoleChips } from "../components/keuangan";
 import { useKeuanganRole, type KeuanganRole } from "../lib/keuanganRole";
 import { DonutChart, type ChartDatum } from "../components/viz";
@@ -37,7 +37,11 @@ function PajakOverview() {
   const roleInfo = useKeuanganRole();
   const [activeRole, setActiveRole] = useState<KeuanganRole>(roleInfo.primary);
   const sptQ = useResourceList<SptMasaPPN>(DOCTYPE.SPT_MASA_PPN, { fields: ["name", "status", "ppn_kurang_bayar"], filters: withCompanyFilter(undefined, company), limit_page_length: 0 });
-  const efQ = useResourceList<EfakturExport>(DOCTYPE.EFAKTUR_EXPORT, { fields: ["name", "status"], limit_page_length: 0 });
+  // e-Faktur Export has no `company` field — scope it via the company's Tax
+  // Periods so the overview count never mixes in another school's exports.
+  const periodsQ = useResourceList<{ name: string }>(DOCTYPE.TAX_PERIOD, { fields: ["name"], filters: withCompanyFilter(undefined, company), limit_page_length: 0 });
+  const periodNames = useMemo(() => (periodsQ.data ?? []).map((p) => p.name), [periodsQ.data]);
+  const efQ = useResourceList<EfakturExport>(DOCTYPE.EFAKTUR_EXPORT, { fields: ["name", "status"], filters: efakturScopeFilter(company, periodNames), limit_page_length: 0 }, { enabled: !company || !periodsQ.isLoading });
   const whtQ = useResourceList<WithholdingTaxEntry>(DOCTYPE.WITHHOLDING_TAX_ENTRY, { fields: ["name", "status", "tax_amount"], filters: withCompanyFilter(undefined, company), limit_page_length: 0 });
 
   const sptDraft = (sptQ.data ?? []).filter((s) => (s.status ?? "Draft") === "Draft").length;
