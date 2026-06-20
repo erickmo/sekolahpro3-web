@@ -581,7 +581,10 @@ function Layout() {
                     .join("")
                     .toUpperCase()}
                 </span>
-                <span className="truncate">{session.activeSekolah.nama}</span>
+                {/* Hide the school name on very narrow phones (the initials box
+                    + ⇄ still identify/trigger the switcher) so the topbar cluster
+                    fits without forcing horizontal scroll below ~480px. */}
+                <span className="hidden min-[480px]:block truncate">{session.activeSekolah.nama}</span>
                 <span className="text-muted-fg text-xs">⇄</span>
               </button>
             ) : null}
