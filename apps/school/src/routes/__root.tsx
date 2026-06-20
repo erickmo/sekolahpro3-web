@@ -36,10 +36,10 @@ import { globalSearch, groupHitsByCategory } from "../lib/global-search";
 import {
   scopedTo,
   scopedParams,
+  scopedActivePath,
   kopScopedTo,
   kopActivePath,
 } from "../lib/scoped";
-import { makeMk, type SidebarItem } from "../lib/sidebarNav";
 import { KOPERASI_NAV } from "../lib/koperasi-nav";
 import { filterKoperasiNav } from "../lib/koperasi/filterKoperasiNav";
 import { useKoperasiMode } from "../lib/koperasi/useKoperasiMode";
@@ -307,6 +307,8 @@ function AvatarMenu({
   );
 }
 
+type SidebarItem = SidebarNavSection["items"][number] & { to: string };
+
 // Gradient brand-mark per shell — sekolah biru→violet, koperasi emerald
 // (selaras tema kartu koperasi di /pilih).
 const BRAND_GRADIENT = {
@@ -404,9 +406,43 @@ function Layout() {
     );
   }
 
-  // Sidebar item-builder bound to this render's slug + pathname. Extracted to
-  // lib/sidebarNav so the scoped-Link + ?search wiring is unit-tested in isolation.
-  const mk = makeMk(slug, pathname);
+  const mk = (
+    to: string,
+    label: string,
+    icon: React.ReactNode,
+    badge?: string | number,
+    // Optional query for the scoped Link (e.g. force the Akademik hub picker
+    // open). Omitted entirely when absent so other items render a bare path.
+    search?: Record<string, unknown>,
+  ): SidebarItem => {
+    const livePath = scopedActivePath(slug, to);
+    // Sidebar parent stays highlighted on nested routes (e.g. /infrastruktur/**),
+    // so deep-linking into a detail page keeps the module visibly active.
+    // Exception: "/" (Dashboard) must match exactly, else it lights up everywhere.
+    const isActive = to === "/" ? pathname === livePath : pathname === livePath || pathname.startsWith(`${livePath}/`);
+    return {
+      to,
+      label,
+      icon,
+      badge,
+      active: slug ? isActive : false,
+      render: ({ className, children }: { className: string; children: React.ReactNode }) =>
+        slug ? (
+          <Link
+            to={scopedTo(slug, to)}
+            params={scopedParams(slug)}
+            {...(search ? { search: search as never } : {})}
+            className={className}
+          >
+            {children}
+          </Link>
+        ) : (
+          <Link to="/pilih" className={className}>
+            {children}
+          </Link>
+        ),
+    };
+  };
 
   // Builder item sidebar koperasi — mirror `mk` tapi pakai prefix /kop.
   const mkKop = (to: string, label: string, icon: React.ReactNode): SidebarItem => {
