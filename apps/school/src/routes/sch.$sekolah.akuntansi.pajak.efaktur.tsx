@@ -20,6 +20,7 @@ import {
   Modal,
   PageHeader,
   SectionCard,
+  Select,
   type Column,
 } from "@sekolahpro/ui";
 import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
@@ -146,8 +147,13 @@ function EfakturPage() {
       <Modal open={open} onClose={() => setOpen(false)} title="e-Faktur Export Baru">
         {err && <Alert tone="danger" title="Error">{err}</Alert>}
         <FormGrid cols={2}>
-          <FormField label="Tax Period" required>
-            <Input value={form.tax_period} onChange={(e) => setForm({ ...form, tax_period: e.target.value })} />
+          <FormField label="Tax Period" required hint={periodNames.length === 0 ? "Buat Tax Period untuk sekolah ini dulu." : undefined}>
+            {/* Pilih dari Tax Period milik company aktif, supaya export baru
+                selalu masuk scope sekolah ini dan tampil di daftar. */}
+            <Select value={form.tax_period} onChange={(e) => setForm({ ...form, tax_period: e.target.value })}>
+              <option value="">— pilih periode —</option>
+              {periodNames.map((p) => <option key={p} value={p}>{p}</option>)}
+            </Select>
           </FormField>
           <FormField label="Export Date" required>
             <Input type="date" value={form.export_date} onChange={(e) => setForm({ ...form, export_date: e.target.value })} />
