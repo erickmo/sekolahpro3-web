@@ -49,7 +49,7 @@ import {
   type PeriodeRange,
   type SemesterPick,
 } from "../components/SiswaModals";
-import { openOrAlert, printDocument, stubAction } from "../lib/stub";
+import { downloadCsv, openOrAlert, printDocument } from "../lib/stub";
 import {
   Avatar,
   Badge,
@@ -81,7 +81,6 @@ import {
   IconId,
   IconMail,
   IconMapPin,
-  IconMore,
   IconPhone,
   IconPlus,
   IconPrint,
@@ -158,13 +157,12 @@ const TAGIHAN_TONE = {
   Cicilan: "brand",
 } as const;
 
-function Hero({ siswa, onEdit, onMessage, onPrintCard, onDownloadRapor, onMore }: {
+function Hero({ siswa, onEdit, onMessage, onPrintCard, onDownloadRapor }: {
   siswa: Siswa;
   onEdit: () => void;
   onMessage: () => void;
   onPrintCard: () => void;
   onDownloadRapor: () => void;
-  onMore: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-gradient-to-br from-brand/5 via-bg to-violet-500/5 p-6 shadow-sm">
@@ -215,9 +213,6 @@ function Hero({ siswa, onEdit, onMessage, onPrintCard, onDownloadRapor, onMore }
           </Button>
           <Button size="sm" onClick={onEdit}>
             <span className="h-4 w-4 mr-1.5"><IconEdit /></span>Edit
-          </Button>
-          <Button variant="outline" size="sm" className="!px-2" onClick={onMore}>
-            <span className="h-4 w-4"><IconMore /></span>
           </Button>
         </div>
       </div>
@@ -537,7 +532,7 @@ function AkademikTab({ siswa }: { siswa: Siswa }) {
         action={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpenSemester(true)}>Pilih Semester</Button>
-            <Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Nilai ${siswa.nis} ${semester.tahunAjaran} ${semester.semester}`)}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>
+            <Button variant="outline" size="sm" onClick={() => downloadCsv(`Nilai-${siswa.nis}`, siswa.nilai.map((n) => ({ mapel: n.mapel, guru: n.guru, pengetahuan: n.pengetahuan, keterampilan: n.keterampilan, rata: ((n.pengetahuan + n.keterampilan) / 2).toFixed(1), predikat: n.predikat })))}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>
           </div>
         }
         padded={false}
@@ -654,7 +649,7 @@ function KeuanganTab({ siswa }: { siswa: Siswa }) {
       >
         <DataTable data={siswa.tagihan} columns={tagCols} rowKey={(r) => r.id} />
       </SectionCard>
-      <SectionCard title="Riwayat Pembayaran" action={<Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Riwayat Pembayaran ${siswa.nis}`)}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>} padded={false}>
+      <SectionCard title="Riwayat Pembayaran" action={<Button variant="outline" size="sm" onClick={() => downloadCsv(`Pembayaran-${siswa.nis}`, siswa.pembayaran.map((p) => ({ tanggal: p.tanggal, ref: p.ref, metode: p.metode, jumlah: p.jumlah, penerima: p.penerima })))}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>} padded={false}>
         <DataTable data={siswa.pembayaran} columns={payCols} rowKey={(r) => r.id} />
       </SectionCard>
       {/* TODO wire to "Tagihan Siswa" once backend doctype confirmed */}
@@ -1179,7 +1174,6 @@ function SiswaDetailPage() {
                 ]),
               },
             })}
-            onMore={() => stubAction("Menu aksi lainnya")}
           />
           <PesanModal
             open={openPesan}
