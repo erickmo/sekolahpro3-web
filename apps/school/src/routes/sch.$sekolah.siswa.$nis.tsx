@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { createFileRoute, Link, notFound, useNavigate, useParams} from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { frappeFetch, uploadFile, useFrappeMutation, useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
 import { useSessionStore } from "@sekolahpro/auth";
 import { MaskedField } from "@sekolahpro/ui/components/MaskedField";
 import { ConsentGate } from "@sekolahpro/ui/components/ConsentGate";
@@ -15,9 +15,25 @@ const PII_ROLES = new Set([
 ]);
 
 async function logPiiAccess(field: string, siswaId: string, reason: string): Promise<void> {
-  // TODO wire to backend audit endpoint when available.
-  console.info("[pii_access_log]", { field, siswaId, reason, ts: new Date().toISOString() });
+  // Best-effort audit row; a failed log must never block the reveal itself.
+  try {
+    await frappeFetch("sekolahpro.siswa.api.detail.catat_akses_pii", {
+      siswa: siswaId,
+      field,
+      alasan: reason,
+    });
+  } catch {
+    // Audit is best-effort; swallow so PII reveal UX is never blocked.
+  }
 }
+
+// Catatan modal kategori → "Catatan Wali" doctype Select (Umum/Kontak/Akademik/
+// Perilaku). The modal's Disiplin maps to Perilaku; the rest fall back to Umum.
+const CATATAN_KATEGORI_MAP: Record<string, string> = {
+  Umum: "Umum",
+  Akademik: "Akademik",
+  Disiplin: "Perilaku",
+};
 import {
   AbsensiModal,
   CatatanModal,
@@ -29,6 +45,7 @@ import {
   SemesterModal,
   TagihanModal,
   WaliModal,
+  type CatatanPayload,
   type PeriodeRange,
   type SemesterPick,
 } from "../components/SiswaModals";
@@ -99,6 +116,22 @@ import {
   type SiswaDoc,
 } from "../lib/orang/siswaMapper";
 import { isMissingResource } from "../lib/resourceError";
+import {
+  computePersenKehadiran,
+  computeSaldoTagihan,
+  feeInvoiceToTagihanRow,
+  feePaymentToPembayaranRow,
+  mapRiwayatAbsensi,
+  type RiwayatAbsensiRow,
+} from "../lib/orang/siswaRelations";
+import {
+  KEUANGAN_DOCTYPE,
+  type FeeInvoiceDoc,
+  type PaymentDoc,
+} from "../data/keuangan-live";
+
+const INVOICE_FIELDS = ["name", "posting_date", "due_date", "company", "student", "student_name", "judul", "jumlah", "dibayar", "status", "kelas", "tahun_ajaran"];
+const PAYMENT_FIELDS = ["name", "posting_date", "company", "student", "student_name", "judul", "invoice", "metode", "jumlah", "ref", "penerima"];
 
 type TabKey = "ringkasan" | "profil" | "akademik" | "absensi" | "keuangan" | "wali" | "mutasi" | "dokumen" | "aktivitas";
 
@@ -202,6 +235,21 @@ function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: T
   const qc = useQueryClient();
   const createMutasi = useResourceCreate("Mutasi Siswa");
   const createOutbox = useResourceCreate("Mobile Outbox Entry");
+  const createCatatan = useFrappeMutation<{ siswa: string; isi: string; kategori: string }>(
+    "sekolahpro.siswa.api.detail.tambah_catatan_wali",
+  );
+
+  const handleCatatan = async (c: CatatanPayload) => {
+    try {
+      await createCatatan.mutateAsync({
+        siswa: siswa.nis,
+        isi: c.judul ? `${c.judul} — ${c.isi}` : c.isi,
+        kategori: CATATAN_KATEGORI_MAP[c.kategori] ?? "Umum",
+      });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal menyimpan catatan.");
+    }
+  };
 
   const handleMutasi = async (m: MutasiRow) => {
     try {
@@ -353,8 +401,7 @@ function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: T
       <CatatanModal
         open={openCatatan}
         onClose={() => setOpenCatatan(false)}
-        // TODO wire to "Catatan Siswa" once backend doctype confirmed
-        onSubmit={(c) => console.info("[siswa] catatan (stub)", siswa.nis, c)}
+        onSubmit={handleCatatan}
       />
       <PesanModal
         open={openTugas}
@@ -812,9 +859,71 @@ function MutasiTab({ siswa }: { siswa: Siswa }) {
   );
 }
 
+type DokumenListRow = {
+  name: string;
+  nama_dokumen?: string;
+  tipe?: string;
+  file?: string;
+  ukuran?: string;
+  creation?: string;
+};
+
 function DokumenTab({ siswa }: { siswa: Siswa }) {
   const [open, setOpen] = useState(false);
-  const cols: Column<DokumenRow>[] = [
+  const [busy, setBusy] = useState(false);
+  const qc = useQueryClient();
+  const dokQ = useQuery<DokumenListRow[]>({
+    queryKey: ["siswa-dokumen", siswa.nis],
+    queryFn: () =>
+      frappeFetch<DokumenListRow[]>("sekolahpro.siswa.api.detail.daftar_dokumen_siswa", { siswa: siswa.nis }),
+  });
+  const tambah = useFrappeMutation<{ siswa: string; nama_dokumen: string; file: string; tipe: string; ukuran?: string; wajib: number }>(
+    "sekolahpro.siswa.api.detail.tambah_dokumen_siswa",
+  );
+  const hapus = useFrappeMutation<{ name: string }>("sekolahpro.siswa.api.detail.hapus_dokumen_siswa");
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["siswa-dokumen", siswa.nis] });
+
+  const handleUpload = async (d: DokumenRow, file: File | null, wajib: boolean) => {
+    setBusy(true);
+    try {
+      const fileUrl = file ? (await uploadFile(file, { isPrivate: true })).file_url : (d.url ?? "");
+      await tambah.mutateAsync({
+        siswa: siswa.nis,
+        nama_dokumen: d.nama,
+        file: fileUrl,
+        tipe: d.tipe,
+        ukuran: d.ukuran,
+        wajib: wajib ? 1 : 0,
+      });
+      invalidate();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal mengunggah dokumen.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async (name: string, nama: string) => {
+    if (!window.confirm(`Hapus dokumen "${nama}"?`)) return;
+    try {
+      await hapus.mutateAsync({ name });
+      invalidate();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal menghapus dokumen.");
+    }
+  };
+
+  const rows = (dokQ.data ?? []).map((r) => ({
+    name: r.name,
+    nama: r.nama_dokumen ?? "—",
+    tipe: (r.tipe as DokumenRow["tipe"]) ?? "Lainnya",
+    ukuran: r.ukuran ?? "—",
+    diunggah: (r.creation ?? "").slice(0, 10),
+    url: r.file ?? "",
+  }));
+  type Row = (typeof rows)[number];
+
+  const cols: Column<Row>[] = [
     { key: "nama", header: "Dokumen", cell: (r) => (
       <div className="flex items-center gap-3">
         <span className="h-8 w-8 rounded-md bg-muted inline-flex items-center justify-center text-muted-fg"><span className="h-4 w-4"><IconFile /></span></span>
@@ -823,19 +932,25 @@ function DokumenTab({ siswa }: { siswa: Siswa }) {
     ) },
     { key: "tipe", header: "Tipe", cell: (r) => <Badge tone="neutral">{r.tipe}</Badge> },
     { key: "ukuran", header: "Ukuran", cell: (r) => <span className="text-muted-fg tabular-nums">{r.ukuran}</span> },
-    { key: "tgl", header: "Diunggah", cell: (r) => formatTanggal(r.diunggah) },
+    { key: "tgl", header: "Diunggah", cell: (r) => (r.diunggah ? formatTanggal(r.diunggah) : "—") },
     { key: "aksi", header: "", align: "right", cell: (r) => (
       <div className="flex justify-end gap-1">
-        <Button variant="ghost" size="sm" onClick={() => openOrAlert(r.url, `Pratinjau "${r.nama}" belum tersedia.`)}>Lihat</Button>
-        <Button variant="ghost" size="sm" onClick={() => openOrAlert(r.url, `Unduhan "${r.nama}" belum tersedia.`)}>Unduh</Button>
+        <Button variant="ghost" size="sm" onClick={() => openOrAlert(r.url, `Berkas "${r.nama}" tidak tersedia.`)}>Lihat</Button>
+        <Button variant="ghost" size="sm" onClick={() => void handleDelete(r.name, r.nama)}>Hapus</Button>
       </div>
     ) },
   ];
   return (
-    <SectionCard title="Dokumen" action={<Button size="sm" onClick={() => setOpen(true)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Unggah</Button>} padded={false}>
-      <DataTable data={siswa.dokumen} columns={cols} rowKey={(r) => r.nama} />
-      {/* TODO wire to "Dokumen Siswa" once backend doctype confirmed */}
-      <DokumenModal open={open} onClose={() => setOpen(false)} onSubmit={(d) => console.info("[siswa] dokumen (stub)", siswa.nis, d)} />
+    <SectionCard
+      title="Dokumen"
+      action={<Button size="sm" disabled={busy} onClick={() => setOpen(true)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Unggah</Button>}
+      padded={false}
+    >
+      {dokQ.isError ? (
+        <div className="m-5 rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">Gagal memuat dokumen.</div>
+      ) : null}
+      <DataTable data={rows} columns={cols} rowKey={(r) => r.name} />
+      <DokumenModal open={open} onClose={() => setOpen(false)} onSubmit={handleUpload} />
     </SectionCard>
   );
 }
@@ -909,6 +1024,27 @@ function SiswaDetailPage() {
     order_by: "tanggal_mutasi desc",
     limit_page_length: 50,
   });
+  // Per-student finance: School Fee Invoice/Payment are top-level docs keyed by
+  // `student` (= the Siswa name/nis), so they query directly (no join).
+  const tagihanQ = useResourceList<FeeInvoiceDoc>(KEUANGAN_DOCTYPE.SCHOOL_FEE_INVOICE, {
+    filters: { student: nis },
+    fields: INVOICE_FIELDS,
+    order_by: "posting_date desc",
+    limit_page_length: 0,
+  });
+  const pembayaranQ = useResourceList<PaymentDoc>(KEUANGAN_DOCTYPE.SCHOOL_FEE_PAYMENT, {
+    filters: { student: nis },
+    fields: PAYMENT_FIELDS,
+    order_by: "posting_date desc",
+    limit_page_length: 0,
+  });
+  // Attendance is joined server-side (Detail Absensi Harian + parent date) — the
+  // client cannot do that join efficiently, so it comes from a whitelisted method.
+  const absensiQ = useQuery<RiwayatAbsensiRow[]>({
+    queryKey: ["siswa-riwayat-absensi", nis],
+    queryFn: () =>
+      frappeFetch<RiwayatAbsensiRow[]>("sekolahpro.siswa.api.detail.get_riwayat_absensi", { siswa: nis }),
+  });
   const navigate = useNavigate();
   const [openPesan, setOpenPesan] = useState(false);
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
@@ -935,6 +1071,12 @@ function SiswaDetailPage() {
   const siswa: Siswa = siswaDocToView(docQ.data!);
   if (nilaiQ.data?.length) siswa.nilai = mapEntriNilaiRows(nilaiQ.data);
   if (mutasiQ.data?.length) siswa.mutasi = mapMutasiRows(mutasiQ.data);
+  siswa.tagihan = (tagihanQ.data ?? []).map(feeInvoiceToTagihanRow);
+  siswa.pembayaran = (pembayaranQ.data ?? []).map(feePaymentToPembayaranRow);
+  siswa.saldoTagihan = computeSaldoTagihan(siswa.tagihan);
+  const absensiRows = mapRiwayatAbsensi(absensiQ.data ?? []);
+  siswa.absensi = absensiRows;
+  siswa.persenKehadiran = computePersenKehadiran(absensiRows);
 
   const counts: Partial<Record<TabKey, number>> = {
     akademik: siswa.nilai.length,

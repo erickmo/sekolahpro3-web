@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { frappeFetch, useFrappeMutation, useResourceDoc } from "@sekolahpro/api-client";
+import { useFrappeMutation, useResourceDoc } from "@sekolahpro/api-client";
 import { useSessionStore } from "@sekolahpro/auth";
 import {
   Badge,
@@ -46,13 +46,17 @@ function MutasiDetailPage() {
   const docQuery = useResourceDoc<MutasiDoc>("Mutasi Siswa", id);
 
   const roles = useSessionStore((s) => s.roles);
-  const currentUser = useSessionStore((s) => s.user);
 
   const apply = useFrappeMutation<{
     doctype: string;
     docname: string;
     action: string;
   }>("frappe.model.workflow.apply_workflow");
+  // Atomic reject + reason in one server call (replaces the old apply_workflow +
+  // separate insert-comment, which lost the reason if the 2nd call failed).
+  const reject = useFrappeMutation<{ name: string; alasan: string }>(
+    "sekolahpro.siswa.api.detail.tolak_mutasi",
+  );
 
   const [rejectOpen, setRejectOpen] = useState(false);
 
@@ -67,27 +71,7 @@ function MutasiDetailPage() {
 
   async function handleReject(reason: string, _notify: boolean) {
     if (!doc) return;
-    await apply.mutateAsync({
-      doctype: "Mutasi Siswa",
-      docname: doc.name,
-      action: "Reject",
-    });
-    // Add comment with rejection reason via frappe.client.insert_comment (best-effort)
-    // TODO move to dedicated reject endpoint that bundles action + reason atomically.
-    try {
-      await frappeFetch("frappe.client.insert", {
-        doc: {
-          doctype: "Comment",
-          comment_type: "Workflow",
-          reference_doctype: "Mutasi Siswa",
-          reference_name: doc.name,
-          comment_email: currentUser ?? "system",
-          content: `Penolakan: ${reason}`,
-        },
-      });
-    } catch (_) {
-      // log via audit later
-    }
+    await reject.mutateAsync({ name: doc.name, alasan: reason });
     setRejectOpen(false);
     qc.invalidateQueries({ queryKey: ["resource:doc", "Mutasi Siswa", doc.name] });
   }
@@ -191,7 +175,7 @@ function MutasiDetailPage() {
         onClose={() => setRejectOpen(false)}
         onSubmit={handleReject}
         entityName="Mutasi Siswa"
-        pending={apply.isPending}
+        pending={reject.isPending}
       />
     </div>
   );

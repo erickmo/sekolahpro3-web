@@ -67,3 +67,37 @@ export async function frappeFetch<T = unknown>(
 
   return (body as { message: T }).message;
 }
+
+/** Upload a file via Frappe's /api/method/upload_file, reusing the shared auth +
+ *  active-tenant headers. Returns the stored file's URL. Content-Type is left
+ *  unset so the browser writes the multipart boundary. */
+export async function uploadFile(
+  file: File,
+  opts: { isPrivate?: boolean } = {},
+): Promise<{ file_url: string; file_name: string }> {
+  const url = `${config.baseUrl}/api/method/upload_file`;
+  const tenant = config.getActiveTenant?.() ?? null;
+  const sekolah =
+    tenant?.kind === "koperasi"
+      ? (tenant.schools[0] ?? "")
+      : (tenant?.sekolah ?? config.getActiveSekolah?.() ?? "");
+  const form = new FormData();
+  form.append("file", file, file.name);
+  form.append("is_private", opts.isPrivate === false ? "0" : "1");
+
+  const res = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "X-Frappe-CSRF-Token": config.csrfToken ?? "",
+      [ACTIVE_SEKOLAH_HEADER]: sekolah,
+      [ACTIVE_KOPERASI_HEADER]: tenant?.kind === "koperasi" ? tenant.koperasi : "",
+    },
+    body: form,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new FrappeError(res.status, body, `Upload failed: ${res.status}`);
+  }
+  return (body as { message: { file_url: string; file_name: string } }).message;
+}
