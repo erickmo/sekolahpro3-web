@@ -35,15 +35,12 @@ const CATATAN_KATEGORI_MAP: Record<string, string> = {
   Disiplin: "Perilaku",
 };
 import {
-  AbsensiModal,
   CatatanModal,
   DokumenModal,
   MutasiModal,
-  PembayaranModal,
   PeriodeModal,
   PesanModal,
   SemesterModal,
-  TagihanModal,
   WaliModal,
   type CatatanPayload,
   type PeriodeRange,
@@ -222,7 +219,8 @@ function Hero({ siswa, onEdit, onMessage, onPrintCard, onDownloadRapor }: {
 
 function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: TabKey) => void }) {
   const tagihanTertunda = siswa.tagihan.filter((t) => t.status !== "Lunas").length;
-  const [openPay, setOpenPay] = useState(false);
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const navigate = useNavigate();
   const [openMutasi, setOpenMutasi] = useState(false);
   const [openCatatan, setOpenCatatan] = useState(false);
   const [openTugas, setOpenTugas] = useState(false);
@@ -373,7 +371,7 @@ function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: T
 
           <SectionCard title="Aksi Cepat">
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" onClick={() => setOpenPay(true)}><span className="text-xs">Catat Pembayaran</span></Button>
+              <Button variant="outline" size="sm" onClick={() => navigate({ to: "/sch/$sekolah/keuangan/pembayaran", params: { sekolah } })}><span className="text-xs">Catat Pembayaran</span></Button>
               <Button variant="outline" size="sm" onClick={() => setOpenCatatan(true)}><span className="text-xs">Tambah Catatan</span></Button>
               <Button variant="outline" size="sm" onClick={() => setOpenTugas(true)}><span className="text-xs">Surat Tugas</span></Button>
               <Button variant="outline" size="sm" onClick={() => setOpenMutasi(true)}><span className="text-xs">Pindah Kelas</span></Button>
@@ -381,13 +379,6 @@ function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: T
           </SectionCard>
         </div>
       </div>
-      <PembayaranModal
-        open={openPay}
-        onClose={() => setOpenPay(false)}
-        tagihanList={siswa.tagihan}
-        // TODO wire to "Pembayaran Siswa" once backend doctype confirmed
-        onSubmit={(p) => console.info("[siswa] pembayaran (stub)", siswa.nis, p)}
-      />
       <MutasiModal
         open={openMutasi}
         onClose={() => setOpenMutasi(false)}
@@ -546,7 +537,6 @@ function AkademikTab({ siswa }: { siswa: Siswa }) {
 
 function AbsensiTab({ siswa }: { siswa: Siswa }) {
   const [openPeriode, setOpenPeriode] = useState(false);
-  const [openManual, setOpenManual] = useState(false);
   const [periode, setPeriode] = useState<PeriodeRange | null>(null);
   const cols: Column<AbsensiRow>[] = [
     { key: "tgl", header: "Tanggal", cell: (r) => <span className="tabular-nums">{formatTanggal(r.tanggal)}</span> },
@@ -582,7 +572,6 @@ function AbsensiTab({ siswa }: { siswa: Siswa }) {
             <Button variant="outline" size="sm" onClick={() => setOpenPeriode(true)}>
               {periode && (periode.from || periode.to) ? "Periode aktif" : "Filter Periode"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setOpenManual(true)}>Catat Manual</Button>
           </div>
         }
         padded={false}
@@ -596,20 +585,13 @@ function AbsensiTab({ siswa }: { siswa: Siswa }) {
         onApply={setPeriode}
         onClear={() => setPeriode(null)}
       />
-      <AbsensiModal
-        open={openManual}
-        onClose={() => setOpenManual(false)}
-        defaultPencatat="Wali Kelas"
-        // TODO wire to "Absensi Siswa" once backend doctype confirmed
-        onSubmit={(a) => console.info("[siswa] absensi manual (stub)", siswa.nis, a)}
-      />
     </div>
   );
 }
 
 function KeuanganTab({ siswa }: { siswa: Siswa }) {
-  const [openTag, setOpenTag] = useState(false);
-  const [openPay, setOpenPay] = useState(false);
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const navigate = useNavigate();
   const tagCols: Column<TagihanRow>[] = [
     { key: "id", header: "ID", cell: (r) => <span className="tabular-nums text-muted-fg">{r.id}</span> },
     { key: "judul", header: "Tagihan", cell: (r) => <span className="font-medium">{r.judul}</span> },
@@ -641,8 +623,8 @@ function KeuanganTab({ siswa }: { siswa: Siswa }) {
         title="Tagihan"
         action={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setOpenPay(true)}>Catat Pembayaran</Button>
-            <Button size="sm" onClick={() => setOpenTag(true)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Buat Tagihan</Button>
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/sch/$sekolah/keuangan/pembayaran", params: { sekolah } })}>Catat Pembayaran</Button>
+            <Button size="sm" onClick={() => navigate({ to: "/sch/$sekolah/keuangan/tagihan", params: { sekolah } })}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Buat Tagihan</Button>
           </div>
         }
         padded={false}
@@ -652,10 +634,6 @@ function KeuanganTab({ siswa }: { siswa: Siswa }) {
       <SectionCard title="Riwayat Pembayaran" action={<Button variant="outline" size="sm" onClick={() => downloadCsv(`Pembayaran-${siswa.nis}`, siswa.pembayaran.map((p) => ({ tanggal: p.tanggal, ref: p.ref, metode: p.metode, jumlah: p.jumlah, penerima: p.penerima })))}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>} padded={false}>
         <DataTable data={siswa.pembayaran} columns={payCols} rowKey={(r) => r.id} />
       </SectionCard>
-      {/* TODO wire to "Tagihan Siswa" once backend doctype confirmed */}
-      <TagihanModal open={openTag} onClose={() => setOpenTag(false)} onSubmit={(t) => console.info("[siswa] tagihan (stub)", siswa.nis, t)} />
-      {/* TODO wire to "Pembayaran Siswa" once backend doctype confirmed */}
-      <PembayaranModal open={openPay} onClose={() => setOpenPay(false)} tagihanList={siswa.tagihan} onSubmit={(p) => console.info("[siswa] pembayaran (stub)", siswa.nis, p)} />
     </div>
   );
 }
