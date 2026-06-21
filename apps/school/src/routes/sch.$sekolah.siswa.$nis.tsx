@@ -1019,6 +1019,8 @@ function SiswaDetailPage() {
       frappeFetch<RiwayatAbsensiRow[]>("sekolahpro.siswa.api.detail.get_riwayat_absensi", { siswa: nis }),
   });
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const createOutbox = useResourceCreate("Mobile Outbox Entry");
   const [openPesan, setOpenPesan] = useState(false);
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
@@ -1050,6 +1052,22 @@ function SiswaDetailPage() {
   const absensiRows = mapRiwayatAbsensi(absensiQ.data ?? []);
   siswa.absensi = absensiRows;
   siswa.persenKehadiran = computePersenKehadiran(absensiRows);
+
+  const handlePesan = async (p: { kanal: string; penerima: string; subjek: string; isi: string }) => {
+    try {
+      await createOutbox.mutateAsync({
+        idempotency_key: `siswa-pesan-${siswa.nis}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        op: `siswa_pesan:${p.kanal.toLowerCase()}`,
+        request_hash: "n/a",
+        status: "received",
+        response: JSON.stringify({ siswa: siswa.nis, ...p }),
+      });
+      qc.invalidateQueries({ queryKey: ["resource:list", "Mobile Outbox Entry"] });
+      setOpenPesan(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal mengirim pesan.");
+    }
+  };
 
   const counts: Partial<Record<TabKey, number>> = {
     akademik: siswa.nilai.length,
@@ -1158,7 +1176,7 @@ function SiswaDetailPage() {
             onClose={() => setOpenPesan(false)}
             defaultKanal="WhatsApp"
             defaultPenerima={siswa.telepon ?? ""}
-            onSubmit={(p) => console.info("[siswa] pesan", siswa.nis, p)}
+            onSubmit={handlePesan}
           />
         </>
       }
