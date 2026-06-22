@@ -33,7 +33,7 @@ import {
 import { KeuanganPageGuide } from "../components/keuangan";
 import { DistributionBar, type DistributionSegment } from "../components/viz";
 import { defOf } from "../lib/glossary";
-import { useActiveCompany, withCompanyFilter, efakturScopeFilter } from "../lib/akuntansi-scope";
+import { useActiveCompany, withCompanyFilter } from "../lib/akuntansi-scope";
 
 function EfakturPage() {
   const [q, setQ] = useState("");
@@ -44,10 +44,11 @@ function EfakturPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // e-Faktur Export has no `company` field; scope it via the active company's
-  // Tax Periods (Tax Period IS company-scoped) so the list never shows another
-  // school's exports. Wait for the periods to load before firing the list.
+  // e-Faktur Export is scoped directly by its own `company` field
+  // (vernon_accounting PR #2), like its sibling tax doctypes.
   const company = useActiveCompany();
+  // Tax Periods of the active company — feeds the create-form Select so a new
+  // export always lands in this school's scope.
   const periodsQ = useResourceList<{ name: string }>(DOCTYPE.TAX_PERIOD, {
     fields: ["name"],
     filters: withCompanyFilter(undefined, company),
@@ -55,16 +56,12 @@ function EfakturPage() {
   });
   const periodNames = useMemo(() => (periodsQ.data ?? []).map((p) => p.name), [periodsQ.data]);
 
-  const list = useResourceList<EfakturExport>(
-    DOCTYPE.EFAKTUR_EXPORT,
-    {
-      fields: ["name", "tax_period", "export_date", "status", "format", "nsfp_from", "nsfp_to"],
-      filters: efakturScopeFilter(company, periodNames),
-      order_by: "creation desc",
-      limit_page_length: 200,
-    },
-    { enabled: !company || !periodsQ.isLoading },
-  );
+  const list = useResourceList<EfakturExport>(DOCTYPE.EFAKTUR_EXPORT, {
+    fields: ["name", "tax_period", "company", "export_date", "status", "format", "nsfp_from", "nsfp_to"],
+    filters: withCompanyFilter(undefined, company),
+    order_by: "creation desc",
+    limit_page_length: 200,
+  });
   const create = useResourceCreate<EfakturExport>(DOCTYPE.EFAKTUR_EXPORT);
 
   const rows = useMemo(() => {
@@ -102,6 +99,7 @@ function EfakturPage() {
     try {
       await create.mutateAsync({
         tax_period: form.tax_period,
+        company: company || undefined,
         export_date: form.export_date,
         nsfp_from: form.nsfp_from || undefined,
         nsfp_to: form.nsfp_to || undefined,

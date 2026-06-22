@@ -290,6 +290,7 @@ export interface SptMasaPPN extends FrappeDoc {
 export interface EfakturExport extends FrappeDoc {
   naming_series?: string;
   tax_period: string;
+  company?: string;
   export_date?: string;
   status?: EfakturStatus;
   format?: "Coretax XML";
