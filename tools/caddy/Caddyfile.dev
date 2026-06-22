@@ -36,3 +36,13 @@ saas.sekolahpro.localhost:8443 {
         file_server
     }
 }
+
+guru.sekolahpro.localhost:8443 {
+    handle /api/*    { reverse_proxy host.docker.internal:8000 }
+    handle /assets/* { reverse_proxy host.docker.internal:8000 }
+    handle {
+        root * /srv/sekolahpro-web/guru
+        try_files {path} /index.html
+        file_server
+    }
+}

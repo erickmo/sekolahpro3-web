@@ -7,13 +7,13 @@ TARGET_DIR="${DEPLOY_TARGET_DIR:-/srv/sekolahpro-web}"
 pnpm install --frozen-lockfile
 pnpm build
 
-for app in landing school student saas; do
+for app in landing school student saas guru; do
   rsync -az --delete "apps/${app}/dist/" "${REMOTE}:${TARGET_DIR}/${app}/"
 done
 
 ssh "${REMOTE}" "caddy reload --config /etc/caddy/Caddyfile"
 
-for host in sekolahpro.id app.sekolahpro.id siswa.sekolahpro.id saas.sekolahpro.id; do
+for host in sekolahpro.id app.sekolahpro.id siswa.sekolahpro.id saas.sekolahpro.id guru.sekolahpro.id; do
   status=$(curl -s -o /dev/null -w '%{http_code}' "https://${host}/")
   if [ "${status}" != "200" ]; then
     echo "Healthcheck FAILED for ${host}: ${status}" >&2
