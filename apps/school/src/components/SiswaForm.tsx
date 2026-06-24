@@ -15,6 +15,13 @@ import {
   IconCheck,
 } from "@sekolahpro/ui";
 import type { Agama, JenisKelamin, Siswa, StatusSiswa, WaliRow } from "../data/siswa";
+import {
+  ALAT_TRANSPORTASI_OPTIONS,
+  JARAK_RUMAH_OPTIONS,
+  KEBUTUHAN_KHUSUS_OPTIONS,
+  PENGHASILAN_ORTU_OPTIONS,
+  WAKTU_TEMPUH_OPTIONS,
+} from "../lib/orang/siswaMapper";
 import { WaliModal } from "./SiswaModals";
 import { scanIdentitas } from "../lib/ocrApi";
 import { mapKtpToSiswa } from "../lib/ocrMapping";
@@ -31,22 +38,29 @@ const CURRENT_YEAR = new Date().getFullYear();
 const ENROLL_YEAR_FROM = CURRENT_YEAR - 10;
 const ENROLL_YEAR_TO = CURRENT_YEAR + 1;
 
+type LinkOption = { value: string; label: string };
+
 interface SiswaFormProps {
   initial?: Partial<SiswaFormValues>;
   mode: "create" | "edit";
   onCancel: () => void;
   onSubmit: (values: SiswaFormValues) => void;
   submitting?: boolean;
+  /** Real "Unit Jenjang" doc names. When provided, the jenjang picker is a live
+   *  Link select (jenjang is a reqd Link on the doctype). */
+  jenjangOptions?: LinkOption[];
+  /** Real "Tahun Ajaran" doc names for the tahun_masuk Link picker. */
+  tahunOptions?: LinkOption[];
 }
 
 const STATUS_OPTIONS: StatusSiswa[] = ["Calon", "Aktif", "Alumni", "Pindah Keluar", "DO"];
 const JK_OPTIONS: JenisKelamin[] = ["Laki-laki", "Perempuan"];
 const AGAMA_OPTIONS: Agama[] = ["Islam", "Kristen", "Katolik", "Hindu", "Budha", "Konghucu"];
-const JENJANG_OPTIONS = ["SD", "SMP", "SMA", "SMK"];
-const TAHUN_OPTIONS = ["2022/2023", "2023/2024", "2024/2025", "2025/2026"];
 const KELAS_OPTIONS = ["X-IPA-1","X-IPA-2","X-IPS-1","XI-IPA-1","XI-IPA-2","XI-IPS-1","XII-IPA-1","XII-IPA-2","XII-IPS-1"];
-const KEBUTUHAN_OPTIONS = ["Normal","Tunanetra","Tunarungu","Tunagrahita","Tunadaksa","Autisme","ADHD","Lainnya"];
-const TRANSPORT_OPTIONS = ["Jalan Kaki","Sepeda","Sepeda Motor","Mobil","Angkutan Umum","Antar Jemput"];
+// Dapodik Select options below mirror the Siswa doctype exactly (via siswaMapper)
+// so submitted values always pass the server-side Select validation.
+const KEBUTUHAN_OPTIONS = KEBUTUHAN_KHUSUS_OPTIONS;
+const TRANSPORT_OPTIONS = ALAT_TRANSPORTASI_OPTIONS;
 
 function defaults(initial?: Partial<SiswaFormValues>): SiswaFormValues {
   return {
@@ -61,10 +75,10 @@ function defaults(initial?: Partial<SiswaFormValues>): SiswaFormValues {
     agama: "Islam",
     kewarganegaraan: "WNI",
     status: "Calon",
-    jenjang: "SMA",
+    jenjang: "",
     kelas: KELAS_OPTIONS[0]!,
     rombel: "",
-    tahunMasuk: TAHUN_OPTIONS[2]!,
+    tahunMasuk: "",
     asalSekolah: "",
     noSttb: "",
     tanggalDiterima: "",
@@ -103,13 +117,24 @@ function validate(v: SiswaFormValues): Errors {
   if (v.nisn && !/^\d{10}$/.test(v.nisn)) e.nisn = "NISN harus 10 digit";
   if (!v.tanggalLahir) e.tanggalLahir = "Wajib diisi";
   if (!v.tempatLahir.trim()) e.tempatLahir = "Wajib diisi";
+  if (!v.jenjang.trim()) e.jenjang = "Wajib dipilih";
+  if (!v.tahunMasuk.trim()) e.tahunMasuk = "Wajib dipilih";
   if (v.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) e.email = "Format email tidak valid";
   if (v.nik && !/^\d{16}$/.test(v.nik)) e.nik = "NIK harus 16 digit";
   return e;
 }
 
-export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: SiswaFormProps) {
+export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting, jenjangOptions, tahunOptions }: SiswaFormProps) {
   const [values, setValues] = useState<SiswaFormValues>(() => defaults(initial));
+  // Live Link options when supplied by the route; fall back to the current
+  // value so an existing record's jenjang/tahun still renders if the list is
+  // still loading or empty.
+  const jenjangSelect: LinkOption[] = jenjangOptions?.length
+    ? jenjangOptions
+    : values.jenjang ? [{ value: values.jenjang, label: values.jenjang }] : [];
+  const tahunSelect: LinkOption[] = tahunOptions?.length
+    ? tahunOptions
+    : values.tahunMasuk ? [{ value: values.tahunMasuk, label: values.tahunMasuk }] : [];
   const [errors, setErrors] = useState<Errors>({});
   const [waliModalOpen, setWaliModalOpen] = useState(false);
   const [waliEditIdx, setWaliEditIdx] = useState<number | null>(null);
@@ -231,12 +256,12 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
               options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
             />
           </FormField>
-          <FormField label="Jenjang" required hint="Ditetapkan otomatis">
+          <FormField label="Jenjang" required hint="Unit Jenjang" error={errors.jenjang}>
             <SearchableSelect
               value={values.jenjang}
               onChange={(v) => set("jenjang", v)}
-              options={JENJANG_OPTIONS.map((j) => ({ value: j, label: j }))}
-              disabled
+              options={jenjangSelect}
+              placeholder="— Pilih jenjang —"
             />
           </FormField>
           <FormField label="Kelas" required hint="Ditetapkan otomatis">
@@ -257,11 +282,12 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
               className="bg-muted text-muted-fg cursor-not-allowed"
             />
           </FormField>
-          <FormField label="Tahun Masuk" required>
+          <FormField label="Tahun Masuk" required hint="Tahun Ajaran" error={errors.tahunMasuk}>
             <SearchableSelect
               value={values.tahunMasuk}
               onChange={(v) => set("tahunMasuk", v)}
-              options={TAHUN_OPTIONS.map((t) => ({ value: t, label: t }))}
+              options={tahunSelect}
+              placeholder="— Pilih tahun ajaran —"
             />
           </FormField>
           <FormField label="Tanggal Diterima">
@@ -301,13 +327,28 @@ export function SiswaForm({ initial, mode, onCancel, onSubmit, submitting }: Sis
             />
           </FormField>
           <FormField label="Jarak Rumah">
-            <Input name="jarakRumah" value={values.jarakRumah ?? ""} onChange={(e) => set("jarakRumah", e.target.value)} placeholder="contoh: 5 km" />
+            <SearchableSelect
+              value={values.jarakRumah ?? ""}
+              onChange={(v) => set("jarakRumah", v)}
+              options={JARAK_RUMAH_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— Pilih —"
+            />
           </FormField>
           <FormField label="Waktu Tempuh">
-            <Input name="waktuTempuh" value={values.waktuTempuh ?? ""} onChange={(e) => set("waktuTempuh", e.target.value)} placeholder="contoh: 20 menit" />
+            <SearchableSelect
+              value={values.waktuTempuh ?? ""}
+              onChange={(v) => set("waktuTempuh", v)}
+              options={WAKTU_TEMPUH_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— Pilih —"
+            />
           </FormField>
           <FormField label="Penghasilan Orang Tua">
-            <Input name="penghasilanOrtu" value={values.penghasilanOrtu ?? ""} onChange={(e) => set("penghasilanOrtu", e.target.value)} placeholder="contoh: Rp 3-5 juta" />
+            <SearchableSelect
+              value={values.penghasilanOrtu ?? ""}
+              onChange={(v) => set("penghasilanOrtu", v)}
+              options={PENGHASILAN_ORTU_OPTIONS.map((o) => ({ value: o, label: o }))}
+              placeholder="— Pilih —"
+            />
           </FormField>
           <div />
           <FormField label="KIP">

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { createFileRoute, Link, notFound, useNavigate, useParams} from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { frappeFetch, uploadFile, useFrappeMutation, useResourceCreate, useResourceUpdate } from "@sekolahpro/api-client";
 import { useSessionStore } from "@sekolahpro/auth";
 import { MaskedField } from "@sekolahpro/ui/components/MaskedField";
 import { ConsentGate } from "@sekolahpro/ui/components/ConsentGate";
@@ -15,24 +15,38 @@ const PII_ROLES = new Set([
 ]);
 
 async function logPiiAccess(field: string, siswaId: string, reason: string): Promise<void> {
-  // TODO wire to backend audit endpoint when available.
-  console.info("[pii_access_log]", { field, siswaId, reason, ts: new Date().toISOString() });
+  // Best-effort audit row; a failed log must never block the reveal itself.
+  try {
+    await frappeFetch("sekolahpro.siswa.api.detail.catat_akses_pii", {
+      siswa: siswaId,
+      field,
+      alasan: reason,
+    });
+  } catch {
+    // Audit is best-effort; swallow so PII reveal UX is never blocked.
+  }
 }
+
+// Catatan modal kategori → "Catatan Wali" doctype Select (Umum/Kontak/Akademik/
+// Perilaku). The modal's Disiplin maps to Perilaku; the rest fall back to Umum.
+const CATATAN_KATEGORI_MAP: Record<string, string> = {
+  Umum: "Umum",
+  Akademik: "Akademik",
+  Disiplin: "Perilaku",
+};
 import {
-  AbsensiModal,
   CatatanModal,
   DokumenModal,
   MutasiModal,
-  PembayaranModal,
   PeriodeModal,
   PesanModal,
   SemesterModal,
-  TagihanModal,
   WaliModal,
+  type CatatanPayload,
   type PeriodeRange,
   type SemesterPick,
 } from "../components/SiswaModals";
-import { openOrAlert, printDocument, stubAction } from "../lib/stub";
+import { downloadCsv, openOrAlert, printDocument } from "../lib/stub";
 import {
   Avatar,
   Badge,
@@ -64,7 +78,6 @@ import {
   IconId,
   IconMail,
   IconMapPin,
-  IconMore,
   IconPhone,
   IconPlus,
   IconPrint,
@@ -74,7 +87,6 @@ import {
 } from "@sekolahpro/ui";
 import { useResourceDoc, useResourceList } from "@sekolahpro/api-client";
 import {
-  findSiswa,
   formatRupiah,
   formatTanggal,
   umur,
@@ -89,6 +101,33 @@ import {
   type TagihanRow,
   type WaliRow,
 } from "../data/siswa";
+import {
+  enforceSinglePrimary,
+  mapEntriNilaiRows,
+  mapMutasiRows,
+  mapWaliRowsToDoc,
+  siswaDocToView,
+  type EntriNilaiRow,
+  type MutasiSiswaDoc,
+  type SiswaDoc,
+} from "../lib/orang/siswaMapper";
+import { isMissingResource } from "../lib/resourceError";
+import {
+  computePersenKehadiran,
+  computeSaldoTagihan,
+  feeInvoiceToTagihanRow,
+  feePaymentToPembayaranRow,
+  mapRiwayatAbsensi,
+  type RiwayatAbsensiRow,
+} from "../lib/orang/siswaRelations";
+import {
+  KEUANGAN_DOCTYPE,
+  type FeeInvoiceDoc,
+  type PaymentDoc,
+} from "../data/keuangan-live";
+
+const INVOICE_FIELDS = ["name", "posting_date", "due_date", "company", "student", "student_name", "judul", "jumlah", "dibayar", "status", "kelas", "tahun_ajaran"];
+const PAYMENT_FIELDS = ["name", "posting_date", "company", "student", "student_name", "judul", "invoice", "metode", "jumlah", "ref", "penerima"];
 
 type TabKey = "ringkasan" | "profil" | "akademik" | "absensi" | "keuangan" | "wali" | "mutasi" | "dokumen" | "aktivitas";
 
@@ -115,13 +154,12 @@ const TAGIHAN_TONE = {
   Cicilan: "brand",
 } as const;
 
-function Hero({ siswa, onEdit, onMessage, onPrintCard, onDownloadRapor, onMore }: {
+function Hero({ siswa, onEdit, onMessage, onPrintCard, onDownloadRapor }: {
   siswa: Siswa;
   onEdit: () => void;
   onMessage: () => void;
   onPrintCard: () => void;
   onDownloadRapor: () => void;
-  onMore: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-gradient-to-br from-brand/5 via-bg to-violet-500/5 p-6 shadow-sm">
@@ -173,9 +211,6 @@ function Hero({ siswa, onEdit, onMessage, onPrintCard, onDownloadRapor, onMore }
           <Button size="sm" onClick={onEdit}>
             <span className="h-4 w-4 mr-1.5"><IconEdit /></span>Edit
           </Button>
-          <Button variant="outline" size="sm" className="!px-2" onClick={onMore}>
-            <span className="h-4 w-4"><IconMore /></span>
-          </Button>
         </div>
       </div>
     </div>
@@ -184,7 +219,8 @@ function Hero({ siswa, onEdit, onMessage, onPrintCard, onDownloadRapor, onMore }
 
 function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: TabKey) => void }) {
   const tagihanTertunda = siswa.tagihan.filter((t) => t.status !== "Lunas").length;
-  const [openPay, setOpenPay] = useState(false);
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const navigate = useNavigate();
   const [openMutasi, setOpenMutasi] = useState(false);
   const [openCatatan, setOpenCatatan] = useState(false);
   const [openTugas, setOpenTugas] = useState(false);
@@ -192,6 +228,21 @@ function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: T
   const qc = useQueryClient();
   const createMutasi = useResourceCreate("Mutasi Siswa");
   const createOutbox = useResourceCreate("Mobile Outbox Entry");
+  const createCatatan = useFrappeMutation<{ siswa: string; isi: string; kategori: string }>(
+    "sekolahpro.siswa.api.detail.tambah_catatan_wali",
+  );
+
+  const handleCatatan = async (c: CatatanPayload) => {
+    try {
+      await createCatatan.mutateAsync({
+        siswa: siswa.nis,
+        isi: c.judul ? `${c.judul} — ${c.isi}` : c.isi,
+        kategori: CATATAN_KATEGORI_MAP[c.kategori] ?? "Umum",
+      });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal menyimpan catatan.");
+    }
+  };
 
   const handleMutasi = async (m: MutasiRow) => {
     try {
@@ -320,7 +371,7 @@ function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: T
 
           <SectionCard title="Aksi Cepat">
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" onClick={() => setOpenPay(true)}><span className="text-xs">Catat Pembayaran</span></Button>
+              <Button variant="outline" size="sm" onClick={() => navigate({ to: "/sch/$sekolah/keuangan/pembayaran", params: { sekolah } })}><span className="text-xs">Catat Pembayaran</span></Button>
               <Button variant="outline" size="sm" onClick={() => setOpenCatatan(true)}><span className="text-xs">Tambah Catatan</span></Button>
               <Button variant="outline" size="sm" onClick={() => setOpenTugas(true)}><span className="text-xs">Surat Tugas</span></Button>
               <Button variant="outline" size="sm" onClick={() => setOpenMutasi(true)}><span className="text-xs">Pindah Kelas</span></Button>
@@ -328,13 +379,6 @@ function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: T
           </SectionCard>
         </div>
       </div>
-      <PembayaranModal
-        open={openPay}
-        onClose={() => setOpenPay(false)}
-        tagihanList={siswa.tagihan}
-        // TODO wire to "Pembayaran Siswa" once backend doctype confirmed
-        onSubmit={(p) => console.info("[siswa] pembayaran (stub)", siswa.nis, p)}
-      />
       <MutasiModal
         open={openMutasi}
         onClose={() => setOpenMutasi(false)}
@@ -343,8 +387,7 @@ function RingkasanTab({ siswa, onChangeTab }: { siswa: Siswa; onChangeTab: (k: T
       <CatatanModal
         open={openCatatan}
         onClose={() => setOpenCatatan(false)}
-        // TODO wire to "Catatan Siswa" once backend doctype confirmed
-        onSubmit={(c) => console.info("[siswa] catatan (stub)", siswa.nis, c)}
+        onSubmit={handleCatatan}
       />
       <PesanModal
         open={openTugas}
@@ -480,7 +523,7 @@ function AkademikTab({ siswa }: { siswa: Siswa }) {
         action={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setOpenSemester(true)}>Pilih Semester</Button>
-            <Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Nilai ${siswa.nis} ${semester.tahunAjaran} ${semester.semester}`)}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>
+            <Button variant="outline" size="sm" onClick={() => downloadCsv(`Nilai-${siswa.nis}`, siswa.nilai.map((n) => ({ mapel: n.mapel, guru: n.guru, pengetahuan: n.pengetahuan, keterampilan: n.keterampilan, rata: ((n.pengetahuan + n.keterampilan) / 2).toFixed(1), predikat: n.predikat })))}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>
           </div>
         }
         padded={false}
@@ -494,7 +537,6 @@ function AkademikTab({ siswa }: { siswa: Siswa }) {
 
 function AbsensiTab({ siswa }: { siswa: Siswa }) {
   const [openPeriode, setOpenPeriode] = useState(false);
-  const [openManual, setOpenManual] = useState(false);
   const [periode, setPeriode] = useState<PeriodeRange | null>(null);
   const cols: Column<AbsensiRow>[] = [
     { key: "tgl", header: "Tanggal", cell: (r) => <span className="tabular-nums">{formatTanggal(r.tanggal)}</span> },
@@ -530,7 +572,6 @@ function AbsensiTab({ siswa }: { siswa: Siswa }) {
             <Button variant="outline" size="sm" onClick={() => setOpenPeriode(true)}>
               {periode && (periode.from || periode.to) ? "Periode aktif" : "Filter Periode"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setOpenManual(true)}>Catat Manual</Button>
           </div>
         }
         padded={false}
@@ -544,20 +585,13 @@ function AbsensiTab({ siswa }: { siswa: Siswa }) {
         onApply={setPeriode}
         onClear={() => setPeriode(null)}
       />
-      <AbsensiModal
-        open={openManual}
-        onClose={() => setOpenManual(false)}
-        defaultPencatat="Wali Kelas"
-        // TODO wire to "Absensi Siswa" once backend doctype confirmed
-        onSubmit={(a) => console.info("[siswa] absensi manual (stub)", siswa.nis, a)}
-      />
     </div>
   );
 }
 
 function KeuanganTab({ siswa }: { siswa: Siswa }) {
-  const [openTag, setOpenTag] = useState(false);
-  const [openPay, setOpenPay] = useState(false);
+  const { sekolah } = useParams({ from: "/sch/$sekolah" });
+  const navigate = useNavigate();
   const tagCols: Column<TagihanRow>[] = [
     { key: "id", header: "ID", cell: (r) => <span className="tabular-nums text-muted-fg">{r.id}</span> },
     { key: "judul", header: "Tagihan", cell: (r) => <span className="font-medium">{r.judul}</span> },
@@ -589,45 +623,19 @@ function KeuanganTab({ siswa }: { siswa: Siswa }) {
         title="Tagihan"
         action={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setOpenPay(true)}>Catat Pembayaran</Button>
-            <Button size="sm" onClick={() => setOpenTag(true)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Buat Tagihan</Button>
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/sch/$sekolah/keuangan/pembayaran", params: { sekolah } })}>Catat Pembayaran</Button>
+            <Button size="sm" onClick={() => navigate({ to: "/sch/$sekolah/keuangan/tagihan", params: { sekolah } })}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Buat Tagihan</Button>
           </div>
         }
         padded={false}
       >
         <DataTable data={siswa.tagihan} columns={tagCols} rowKey={(r) => r.id} />
       </SectionCard>
-      <SectionCard title="Riwayat Pembayaran" action={<Button variant="outline" size="sm" onClick={() => stubAction(`Unduh Riwayat Pembayaran ${siswa.nis}`)}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>} padded={false}>
+      <SectionCard title="Riwayat Pembayaran" action={<Button variant="outline" size="sm" onClick={() => downloadCsv(`Pembayaran-${siswa.nis}`, siswa.pembayaran.map((p) => ({ tanggal: p.tanggal, ref: p.ref, metode: p.metode, jumlah: p.jumlah, penerima: p.penerima })))}><span className="h-3.5 w-3.5 mr-1"><IconDownload /></span>Unduh</Button>} padded={false}>
         <DataTable data={siswa.pembayaran} columns={payCols} rowKey={(r) => r.id} />
       </SectionCard>
-      {/* TODO wire to "Tagihan Siswa" once backend doctype confirmed */}
-      <TagihanModal open={openTag} onClose={() => setOpenTag(false)} onSubmit={(t) => console.info("[siswa] tagihan (stub)", siswa.nis, t)} />
-      {/* TODO wire to "Pembayaran Siswa" once backend doctype confirmed */}
-      <PembayaranModal open={openPay} onClose={() => setOpenPay(false)} tagihanList={siswa.tagihan} onSubmit={(p) => console.info("[siswa] pembayaran (stub)", siswa.nis, p)} />
     </div>
   );
-}
-
-function serializeWali(rows: WaliRow[]): Record<string, unknown>[] {
-  return rows.map((w) => ({
-    hubungan: w.hubungan,
-    nama: w.nama,
-    nik: w.nik ?? null,
-    nik_ayah: w.nikAyah ?? null,
-    nik_ibu: w.nikIbu ?? null,
-    nama_ayah_kk: w.namaAyahKk ?? null,
-    is_primary: w.isPrimary ? 1 : 0,
-    pekerjaan: w.pekerjaan ?? null,
-    penghasilan: w.penghasilan ?? null,
-    pendidikan: w.pendidikan ?? null,
-    no_hp: w.telepon ?? null,
-    email: w.email ?? null,
-    alamat: w.alamat ?? null,
-  }));
-}
-
-function enforceSinglePrimary(rows: WaliRow[], primaryIdx: number): WaliRow[] {
-  return rows.map((r, i) => ({ ...r, isPrimary: i === primaryIdx }));
 }
 
 function WaliTab({ siswa }: { siswa: Siswa }) {
@@ -648,7 +656,7 @@ function WaliTab({ siswa }: { siswa: Siswa }) {
       try {
         await updateSiswa.mutateAsync({
           name: siswa.nis,
-          patch: { wali: serializeWali(next) },
+          patch: { wali: mapWaliRowsToDoc(next) },
         });
         setLocalWali(next);
         qc.invalidateQueries({ queryKey: ["resource:doc", "Siswa", siswa.nis] });
@@ -824,9 +832,71 @@ function MutasiTab({ siswa }: { siswa: Siswa }) {
   );
 }
 
+type DokumenListRow = {
+  name: string;
+  nama_dokumen?: string;
+  tipe?: string;
+  file?: string;
+  ukuran?: string;
+  creation?: string;
+};
+
 function DokumenTab({ siswa }: { siswa: Siswa }) {
   const [open, setOpen] = useState(false);
-  const cols: Column<DokumenRow>[] = [
+  const [busy, setBusy] = useState(false);
+  const qc = useQueryClient();
+  const dokQ = useQuery<DokumenListRow[]>({
+    queryKey: ["siswa-dokumen", siswa.nis],
+    queryFn: () =>
+      frappeFetch<DokumenListRow[]>("sekolahpro.siswa.api.detail.daftar_dokumen_siswa", { siswa: siswa.nis }),
+  });
+  const tambah = useFrappeMutation<{ siswa: string; nama_dokumen: string; file: string; tipe: string; ukuran?: string; wajib: number }>(
+    "sekolahpro.siswa.api.detail.tambah_dokumen_siswa",
+  );
+  const hapus = useFrappeMutation<{ name: string }>("sekolahpro.siswa.api.detail.hapus_dokumen_siswa");
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["siswa-dokumen", siswa.nis] });
+
+  const handleUpload = async (d: DokumenRow, file: File | null, wajib: boolean) => {
+    setBusy(true);
+    try {
+      const fileUrl = file ? (await uploadFile(file, { isPrivate: true })).file_url : (d.url ?? "");
+      await tambah.mutateAsync({
+        siswa: siswa.nis,
+        nama_dokumen: d.nama,
+        file: fileUrl,
+        tipe: d.tipe,
+        ukuran: d.ukuran,
+        wajib: wajib ? 1 : 0,
+      });
+      invalidate();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal mengunggah dokumen.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async (name: string, nama: string) => {
+    if (!window.confirm(`Hapus dokumen "${nama}"?`)) return;
+    try {
+      await hapus.mutateAsync({ name });
+      invalidate();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal menghapus dokumen.");
+    }
+  };
+
+  const rows = (dokQ.data ?? []).map((r) => ({
+    name: r.name,
+    nama: r.nama_dokumen ?? "—",
+    tipe: (r.tipe as DokumenRow["tipe"]) ?? "Lainnya",
+    ukuran: r.ukuran ?? "—",
+    diunggah: (r.creation ?? "").slice(0, 10),
+    url: r.file ?? "",
+  }));
+  type Row = (typeof rows)[number];
+
+  const cols: Column<Row>[] = [
     { key: "nama", header: "Dokumen", cell: (r) => (
       <div className="flex items-center gap-3">
         <span className="h-8 w-8 rounded-md bg-muted inline-flex items-center justify-center text-muted-fg"><span className="h-4 w-4"><IconFile /></span></span>
@@ -835,19 +905,25 @@ function DokumenTab({ siswa }: { siswa: Siswa }) {
     ) },
     { key: "tipe", header: "Tipe", cell: (r) => <Badge tone="neutral">{r.tipe}</Badge> },
     { key: "ukuran", header: "Ukuran", cell: (r) => <span className="text-muted-fg tabular-nums">{r.ukuran}</span> },
-    { key: "tgl", header: "Diunggah", cell: (r) => formatTanggal(r.diunggah) },
+    { key: "tgl", header: "Diunggah", cell: (r) => (r.diunggah ? formatTanggal(r.diunggah) : "—") },
     { key: "aksi", header: "", align: "right", cell: (r) => (
       <div className="flex justify-end gap-1">
-        <Button variant="ghost" size="sm" onClick={() => openOrAlert(r.url, `Pratinjau "${r.nama}" belum tersedia.`)}>Lihat</Button>
-        <Button variant="ghost" size="sm" onClick={() => openOrAlert(r.url, `Unduhan "${r.nama}" belum tersedia.`)}>Unduh</Button>
+        <Button variant="ghost" size="sm" onClick={() => openOrAlert(r.url, `Berkas "${r.nama}" tidak tersedia.`)}>Lihat</Button>
+        <Button variant="ghost" size="sm" onClick={() => void handleDelete(r.name, r.nama)}>Hapus</Button>
       </div>
     ) },
   ];
   return (
-    <SectionCard title="Dokumen" action={<Button size="sm" onClick={() => setOpen(true)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Unggah</Button>} padded={false}>
-      <DataTable data={siswa.dokumen} columns={cols} rowKey={(r) => r.nama} />
-      {/* TODO wire to "Dokumen Siswa" once backend doctype confirmed */}
-      <DokumenModal open={open} onClose={() => setOpen(false)} onSubmit={(d) => console.info("[siswa] dokumen (stub)", siswa.nis, d)} />
+    <SectionCard
+      title="Dokumen"
+      action={<Button size="sm" disabled={busy} onClick={() => setOpen(true)}><span className="h-3.5 w-3.5 mr-1"><IconPlus /></span>Unggah</Button>}
+      padded={false}
+    >
+      {dokQ.isError ? (
+        <div className="m-5 rounded-md border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">Gagal memuat dokumen.</div>
+      ) : null}
+      <DataTable data={rows} columns={cols} rowKey={(r) => r.name} />
+      <DokumenModal open={open} onClose={() => setOpen(false)} onSubmit={handleUpload} />
     </SectionCard>
   );
 }
@@ -897,114 +973,14 @@ const VALID_TABS = new Set<TabKey>([
   "ringkasan","profil","akademik","absensi","keuangan","wali","mutasi","dokumen","aktivitas",
 ]);
 
-// Wali Siswa child row (siswa/doctype/wali_siswa). Returned inline on the
-// parent Siswa doc fetch.
-type WaliSiswaRow = {
-  name: string;
-  hubungan?: "Ayah" | "Ibu" | "Wali";
-  nama?: string;
-  nik_ortu?: string;
-  pendidikan?: string;
-  pekerjaan?: string;
-  no_hp?: string;
-  email?: string;
-};
-
-// Backend Siswa doctype shape (snake_case). Nested child tables not yet
-// embedded here (nilai, absensi, tagihan, mutasi, dokumen) need their own
-// queries in a follow-up sprint.
-type SiswaDoc = {
-  name: string;
-  nis?: string;
-  nisn?: string;
-  nik?: string;
-  nama_lengkap?: string;
-  nama_panggilan?: string;
-  jenis_kelamin?: "Laki-laki" | "Perempuan";
-  tempat_lahir?: string;
-  tanggal_lahir?: string;
-  agama?: string;
-  kewarganegaraan?: "WNI" | "WNA";
-  status?: string;
-  jenjang?: string;
-  tahun_masuk?: string;
-  asal_sekolah?: string;
-  kebutuhan_khusus?: string;
-  wali?: WaliSiswaRow[];
-};
-
-// Entri Nilai list-row shape (akademik/doctype/entri_nilai). Only ref fields
-// available from list; numeric components live in `Nilai Komponen` child
-// table fetched via a follow-up doc query (out of scope here).
-type EntriNilaiRow = {
-  name: string;
-  siswa?: string;
-  mata_pelajaran?: string;
-};
-
-// Mutasi Siswa list-row shape (siswa/doctype/mutasi_siswa).
-type MutasiSiswaDoc = {
-  name: string;
-  siswa?: string;
-  jenis_mutasi?: "Naik Kelas" | "Tinggal Kelas" | "Pindah Keluar" | "Drop Out";
-  tanggal_mutasi?: string;
-  rombel_asal?: string;
-  rombel_tujuan?: string;
-  sekolah_tujuan?: string;
-  alasan_pindah?: string;
-  alasan_do?: string;
-  keterangan_do?: string;
-};
-
-function mapMutasiRows(rows: MutasiSiswaDoc[]): MutasiRow[] {
-  return rows.map((r) => {
-    const jenis: MutasiRow["jenis"] =
-      r.jenis_mutasi === "Drop Out" ? "DO" : (r.jenis_mutasi ?? "Naik Kelas");
-    const ket = r.alasan_pindah ?? r.keterangan_do ?? r.alasan_do ?? undefined;
-    const row: MutasiRow = {
-      tanggal: r.tanggal_mutasi ?? "",
-      jenis,
-    };
-    if (r.rombel_asal) row.dari = r.rombel_asal;
-    if (r.rombel_tujuan ?? r.sekolah_tujuan) row.ke = r.rombel_tujuan ?? r.sekolah_tujuan;
-    if (ket) row.keterangan = ket;
-    return row;
-  });
-}
-
-function mapEntriNilaiRows(rows: EntriNilaiRow[]): NilaiRow[] {
-  return rows.map((r) => ({
-    mapel: r.mata_pelajaran ?? r.name,
-    guru: "—",
-    pengetahuan: 0,
-    keterampilan: 0,
-    predikat: "C",
-  }));
-}
-
-function mapWaliRows(wali: WaliSiswaRow[]): WaliRow[] {
-  return wali.map((w) => {
-    const row: WaliRow = {
-      hubungan: w.hubungan ?? "Wali",
-      nama: w.nama ?? "",
-    };
-    if (w.nik_ortu) row.nik = w.nik_ortu;
-    if (w.pekerjaan) row.pekerjaan = w.pekerjaan;
-    if (w.pendidikan) row.pendidikan = w.pendidikan;
-    if (w.no_hp) row.telepon = w.no_hp;
-    if (w.email) row.email = w.email;
-    return row;
-  });
-}
-
 function SiswaDetailPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
 
   const { nis } = Route.useParams();
   const search = Route.useSearch();
-  // Primary lookup from backend; nested arrays (nilai, absensi, tagihan, wali,
-  // mutasi, dokumen) still come from mock until each child-table endpoint
-  // gets its own useResourceList wiring.
+  // Primary lookup from the real "Siswa" doc. Relation tabs that have their own
+  // live source (nilai, mutasi) are overlaid below; the rest render empty until
+  // their backend endpoints are wired (no mock fallback).
   const docQ = useResourceDoc<SiswaDoc>("Siswa", nis);
   const nilaiQ = useResourceList<EntriNilaiRow>("Entri Nilai", {
     filters: { siswa: nis },
@@ -1021,46 +997,77 @@ function SiswaDetailPage() {
     order_by: "tanggal_mutasi desc",
     limit_page_length: 50,
   });
-  const mock = findSiswa(nis, sekolah);
-  // Merge: real top-level fields override mock; nested arrays fall back.
-  const siswa: Siswa | undefined = (() => {
-    if (!mock) return undefined;
-    const d = docQ.data;
-    const nilaiRows = nilaiQ.data?.length ? mapEntriNilaiRows(nilaiQ.data) : mock.nilai;
-    const mutasiRows = mutasiQ.data?.length ? mapMutasiRows(mutasiQ.data) : mock.mutasi;
-    if (!d) return { ...mock, nilai: nilaiRows, mutasi: mutasiRows };
-    return {
-      ...mock,
-      nilai: nilaiRows,
-      mutasi: mutasiRows,
-      nis: d.nis ?? d.name ?? mock.nis,
-      nisn: d.nisn ?? mock.nisn,
-      nik: d.nik ?? mock.nik,
-      namaLengkap: d.nama_lengkap ?? mock.namaLengkap,
-      namaPanggilan: d.nama_panggilan ?? mock.namaPanggilan,
-      jenisKelamin: d.jenis_kelamin ?? mock.jenisKelamin,
-      tempatLahir: d.tempat_lahir ?? mock.tempatLahir,
-      tanggalLahir: d.tanggal_lahir ?? mock.tanggalLahir,
-      agama: (d.agama as Siswa["agama"]) ?? mock.agama,
-      kewarganegaraan: d.kewarganegaraan ?? mock.kewarganegaraan,
-      status: (d.status as Siswa["status"]) ?? mock.status,
-      jenjang: d.jenjang ?? mock.jenjang,
-      tahunMasuk: d.tahun_masuk ?? mock.tahunMasuk,
-      asalSekolah: d.asal_sekolah ?? mock.asalSekolah,
-      kebutuhanKhusus: d.kebutuhan_khusus ?? mock.kebutuhanKhusus,
-      wali: d.wali?.length ? mapWaliRows(d.wali) : mock.wali,
-    };
-  })();
+  // Per-student finance: School Fee Invoice/Payment are top-level docs keyed by
+  // `student` (= the Siswa name/nis), so they query directly (no join).
+  const tagihanQ = useResourceList<FeeInvoiceDoc>(KEUANGAN_DOCTYPE.SCHOOL_FEE_INVOICE, {
+    filters: { student: nis },
+    fields: INVOICE_FIELDS,
+    order_by: "posting_date desc",
+    limit_page_length: 0,
+  });
+  const pembayaranQ = useResourceList<PaymentDoc>(KEUANGAN_DOCTYPE.SCHOOL_FEE_PAYMENT, {
+    filters: { student: nis },
+    fields: PAYMENT_FIELDS,
+    order_by: "posting_date desc",
+    limit_page_length: 0,
+  });
+  // Attendance is joined server-side (Detail Absensi Harian + parent date) — the
+  // client cannot do that join efficiently, so it comes from a whitelisted method.
+  const absensiQ = useQuery<RiwayatAbsensiRow[]>({
+    queryKey: ["siswa-riwayat-absensi", nis],
+    queryFn: () =>
+      frappeFetch<RiwayatAbsensiRow[]>("sekolahpro.siswa.api.detail.get_riwayat_absensi", { siswa: nis }),
+  });
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const createOutbox = useResourceCreate("Mobile Outbox Entry");
   const [openPesan, setOpenPesan] = useState(false);
   const tab: TabKey = VALID_TABS.has(search.tab as TabKey) ? (search.tab as TabKey) : "ringkasan";
   const setTab = (next: TabKey) => {
     navigate({ to: "/sch/$sekolah/siswa/$nis", params: { sekolah, nis }, search: { tab: next === "ringkasan" ? undefined : next } });
   };
 
-  if (!siswa) {
+  if (docQ.isLoading) {
+    return <div className="py-16 text-sm text-muted-fg">Memuat data siswa…</div>;
+  }
+  if (isMissingResource(docQ.error) || (!docQ.isLoading && !docQ.data)) {
     throw notFound();
   }
+  if (docQ.isError) {
+    return (
+      <div className="py-16">
+        <EmptyState title="Gagal memuat siswa" description={(docQ.error as Error)?.message ?? "Terjadi kesalahan."} />
+      </div>
+    );
+  }
+
+  // Real doc → complete view model (empty relations, zero summaries), then
+  // overlay the relation tabs that do have a live query.
+  const siswa: Siswa = siswaDocToView(docQ.data!);
+  if (nilaiQ.data?.length) siswa.nilai = mapEntriNilaiRows(nilaiQ.data);
+  if (mutasiQ.data?.length) siswa.mutasi = mapMutasiRows(mutasiQ.data);
+  siswa.tagihan = (tagihanQ.data ?? []).map(feeInvoiceToTagihanRow);
+  siswa.pembayaran = (pembayaranQ.data ?? []).map(feePaymentToPembayaranRow);
+  siswa.saldoTagihan = computeSaldoTagihan(siswa.tagihan);
+  const absensiRows = mapRiwayatAbsensi(absensiQ.data ?? []);
+  siswa.absensi = absensiRows;
+  siswa.persenKehadiran = computePersenKehadiran(absensiRows);
+
+  const handlePesan = async (p: { kanal: string; penerima: string; subjek: string; isi: string }) => {
+    try {
+      await createOutbox.mutateAsync({
+        idempotency_key: `siswa-pesan-${siswa.nis}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        op: `siswa_pesan:${p.kanal.toLowerCase()}`,
+        request_hash: "n/a",
+        status: "received",
+        response: JSON.stringify({ siswa: siswa.nis, ...p }),
+      });
+      qc.invalidateQueries({ queryKey: ["resource:list", "Mobile Outbox Entry"] });
+      setOpenPesan(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal mengirim pesan.");
+    }
+  };
 
   const counts: Partial<Record<TabKey, number>> = {
     akademik: siswa.nilai.length,
@@ -1163,14 +1170,13 @@ function SiswaDetailPage() {
                 ]),
               },
             })}
-            onMore={() => stubAction("Menu aksi lainnya")}
           />
           <PesanModal
             open={openPesan}
             onClose={() => setOpenPesan(false)}
             defaultKanal="WhatsApp"
             defaultPenerima={siswa.telepon ?? ""}
-            onSubmit={(p) => console.info("[siswa] pesan", siswa.nis, p)}
+            onSubmit={handlePesan}
           />
         </>
       }

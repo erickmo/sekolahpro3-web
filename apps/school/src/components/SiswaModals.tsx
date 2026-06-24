@@ -444,7 +444,7 @@ export function MutasiModal({ open, onClose, onSubmit }: MutasiModalProps) {
 // ─── Dokumen ────────────────────────────────────────────────────────────────
 
 interface DokumenModalProps extends BaseModalProps {
-  onSubmit: (d: DokumenRow) => void;
+  onSubmit: (d: DokumenRow, file: File | null, wajib: boolean) => void;
 }
 
 const DOKUMEN_TIPE: DokumenRow["tipe"][] = ["Ijazah","Akta","KK","KTP","Foto","Rapor","Lainnya"];
@@ -464,22 +464,24 @@ export function DokumenModal({ open, onClose, onSubmit }: DokumenModalProps) {
     url: "",
   });
   const [wajib, setWajib] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const [err, setErr] = useState<Record<string, string>>({});
 
-  const onFile = (file: File | null) => {
-    if (!file) return;
+  const onFile = (picked: File | null) => {
+    setFile(picked);
+    if (!picked) return;
     setV((prev) => ({
       ...prev,
-      nama: prev.nama || file.name,
-      ukuran: formatSize(file.size),
+      nama: prev.nama || picked.name,
+      ukuran: formatSize(picked.size),
     }));
   };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!v.nama.trim()) { setErr({ nama: "Wajib diisi" }); return; }
-    onSubmit(v);
-    console.info("[dokumen] wajib?", wajib);
+    if (!file && !(v.url ?? "").trim()) { setErr({ nama: "Pilih berkas dulu" }); return; }
+    onSubmit(v, file, wajib);
     onClose();
   };
 

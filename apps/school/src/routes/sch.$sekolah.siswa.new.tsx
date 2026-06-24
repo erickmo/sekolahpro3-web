@@ -1,24 +1,51 @@
-import { createFileRoute, Link, useNavigate, useParams} from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import {
   Breadcrumb,
   PageHeader,
   IconArrowLeft,
   Button,
 } from "@sekolahpro/ui";
+import { useResourceCreate, useResourceList } from "@sekolahpro/api-client";
+import { useQueryClient } from "@tanstack/react-query";
 import { SiswaForm, type SiswaFormValues } from "../components/SiswaForm";
+import { siswaFormToDoc } from "../lib/orang/siswaMapper";
 import { PageGuide } from "../components/guide";
 import { SISWA_PAGE_GUIDES } from "../components/siswa/pageGuides";
 import { SCHOOL_ROLE_LABEL } from "../lib/schoolGuideRole";
 
+/** Map a duplicate-NIS / validation failure to a human message; falls back to
+ *  the raw error text for anything else. */
+function createErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/duplicate|already exists|exists/i.test(msg)) return "NIS sudah terdaftar. Gunakan NIS lain.";
+  return `Gagal menyimpan siswa: ${msg}`;
+}
+
 function SiswaNewPage() {
   const { sekolah } = useParams({ from: "/sch/$sekolah" });
-
   const navigate = useNavigate();
+  const qc = useQueryClient();
+  const create = useResourceCreate<{ name: string }>("Siswa");
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (values: SiswaFormValues) => {
-    // TODO: integrate @sekolahpro/api-client.createSiswa(values)
-    console.info("[siswa.new] submit", values);
-    navigate({ to: "/sch/$sekolah/siswa", params: { sekolah } });
+  // Real Link options so jenjang / tahun_masuk resolve to actual doc names
+  // (both are reqd Links on the Siswa doctype — free text would hard-fail).
+  const jenjangQ = useResourceList<{ name: string }>("Unit Jenjang", { fields: ["name"], limit_page_length: 200 });
+  const tahunQ = useResourceList<{ name: string }>("Tahun Ajaran", { fields: ["name"], order_by: "name desc", limit_page_length: 50 });
+  const jenjangOptions = (jenjangQ.data ?? []).map((j) => ({ value: j.name, label: j.name }));
+  const tahunOptions = (tahunQ.data ?? []).map((t) => ({ value: t.name, label: t.name }));
+
+  const handleSubmit = async (values: SiswaFormValues) => {
+    setError(null);
+    try {
+      await create.mutateAsync(siswaFormToDoc(values));
+      // Create hook does not auto-invalidate; refresh the directory list.
+      qc.invalidateQueries({ queryKey: ["resource:list", "Siswa"] });
+      navigate({ to: "/sch/$sekolah/siswa/$nis", params: { sekolah, nis: values.nis } });
+    } catch (err) {
+      setError(createErrorMessage(err));
+    }
   };
 
   return (
@@ -50,7 +77,19 @@ function SiswaNewPage() {
         tips={SISWA_PAGE_GUIDES["siswa-baru"].tips}
         roleLabels={SCHOOL_ROLE_LABEL}
       />
-      <SiswaForm mode="create" onCancel={() => navigate({ to: "/sch/$sekolah/siswa", params: { sekolah } })} onSubmit={handleSubmit} />
+      {error ? (
+        <div role="alert" className="rounded-md border border-danger/40 bg-danger/5 px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      ) : null}
+      <SiswaForm
+        mode="create"
+        jenjangOptions={jenjangOptions}
+        tahunOptions={tahunOptions}
+        submitting={create.isPending}
+        onCancel={() => navigate({ to: "/sch/$sekolah/siswa", params: { sekolah } })}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }
